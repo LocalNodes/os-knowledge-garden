@@ -1,0 +1,125 @@
+# Roadmap: Open Social AI Knowledge Gardens
+
+## Overview
+
+Build an AI-powered knowledge garden that gives each Open Social Group its own intelligent assistant. The journey starts with AI infrastructure (providers, vector DB), builds the indexing pipeline for content, implements permission-aware retrieval, enables natural language Q&A and search, and delivers polished user interfaces.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: AI Infrastructure** - Core AI modules, Deepseek provider, vector database, embeddings pipeline
+- [ ] **Phase 2: Content Indexing** - Index posts, comments, files with embeddings and Group metadata
+- [ ] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks
+- [ ] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking
+- [ ] **Phase 5: User Interface** - Chat interfaces for Group and community-wide queries
+
+## Phase Details
+
+### Phase 1: AI Infrastructure
+**Goal**: AI capabilities are available and functional — the foundation for all AI features
+**Depends on**: Nothing (first phase)
+**Requirements**: AI-01, AI-02, AI-03, AI-04, AI-05
+**Success Criteria** (what must be TRUE):
+  1. Administrator can configure Deepseek as the LLM provider in Drupal admin UI
+  2. Vector database (Milvus) is operational and can store/retrieve vector embeddings
+  3. Test embeddings can be generated for sample content and stored in vector DB
+  4. AI provider handles rate limits gracefully with retry/fallback logic
+  5. AI Agents module provides a working agent framework for future tool-calling
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: Install and configure Drupal AI core and Deepseek provider
+- [ ] 01-02: Deploy and connect Milvus vector database
+- [ ] 01-03: Configure embedding generation pipeline
+
+### Phase 2: Content Indexing
+**Goal**: Group content (posts, comments, files) is indexed with embeddings and ready for semantic retrieval
+**Depends on**: Phase 1
+**Requirements**: IDX-01, IDX-02, IDX-03, IDX-04, IDX-05, IDX-06
+**Success Criteria** (what must be TRUE):
+  1. New posts are automatically indexed with embeddings upon creation
+  2. Comments are indexed with context from their parent posts
+  3. File uploads (PDFs, Office docs) are parsed and their content is indexed
+  4. Content is chunked appropriately for retrieval (256-512 tokens with overlap)
+  5. Each indexed item has Group ID metadata attached for permission filtering
+  6. Content updates and deletes trigger embedding regeneration/invalidation
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: Index posts and comments with embeddings
+- [ ] 02-02: Index file uploads (PDFs, Office docs)
+- [ ] 02-03: Implement chunking strategy with metadata
+
+### Phase 3: Permission-Aware Retrieval
+**Goal**: AI only surfaces content the user is authorized to see — no permission leakage
+**Depends on**: Phase 2
+**Requirements**: PERM-01, PERM-02, PERM-03, PERM-04, PERM-05
+**Success Criteria** (what must be TRUE):
+  1. Vector queries are pre-filtered by user's accessible Group IDs before retrieval
+  2. Retrieved results pass Drupal entity access check before inclusion in AI response
+  3. AI-generated responses contain only content the querying user is authorized to see
+  4. Community-wide search only returns public content when queried globally
+  5. Group-scoped queries only return content from that specific Group
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: Implement pre-retrieval metadata filtering
+- [ ] 03-02: Implement post-retrieval entity access checks
+- [ ] 03-03: Test permission boundaries with adversarial queries
+
+### Phase 4: Q&A & Search
+**Goal**: Users can ask natural language questions and search content semantically with citations
+**Depends on**: Phase 3
+**Requirements**: QA-01, QA-02, QA-03, QA-04, QA-05, SRCH-01, SRCH-02, SRCH-03, SRCH-04
+**Success Criteria** (what must be TRUE):
+  1. Users can ask questions in natural language and receive relevant, contextual answers
+  2. Every answer includes clickable citations linking back to source content (posts, comments, files)
+  3. AI gracefully responds with "I couldn't find information about that" when no relevant content exists
+  4. Semantic search returns results based on meaning, not just keyword matching
+  5. Hybrid search combines vector similarity with existing Solr keyword matching
+  6. Related content suggestions appear alongside Q&A results
+  7. Response latency is acceptable for demo purposes (under 10 seconds)
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: Implement RAG pipeline for natural language Q&A
+- [ ] 04-02: Implement semantic and hybrid search
+- [ ] 04-03: Implement citation linking and related content
+
+### Phase 5: User Interface
+**Goal**: Users have intuitive interfaces for AI interactions — chat and search
+**Depends on**: Phase 4
+**Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05
+**Success Criteria** (what must be TRUE):
+  1. Chat interface is available for natural language queries
+  2. Chat interface is accessible within Group context for Group-scoped queries
+  3. Community-wide search interface is accessible outside Group context
+  4. Source citations are clickable and navigate to original content
+  5. Clear visual distinction between AI-generated content and user-created content
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: Build Group-scoped chat interface
+- [ ] 05-02: Build community-wide search interface
+- [ ] 05-03: Polish UX with citations and visual distinction
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. AI Infrastructure | 0/3 | Not started | - |
+| 2. Content Indexing | 0/3 | Not started | - |
+| 3. Permission-Aware Retrieval | 0/3 | Not started | - |
+| 4. Q&A & Search | 0/3 | Not started | - |
+| 5. User Interface | 0/3 | Not started | - |
+
+---
+*Roadmap created: 2026-02-23*
