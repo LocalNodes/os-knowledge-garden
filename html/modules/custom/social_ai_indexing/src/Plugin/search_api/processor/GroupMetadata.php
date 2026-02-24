@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
 
+use Drupal\comment\CommentInterface;
 use Drupal\group\Entity\GroupContent;
 use Drupal\search_api\Datasource\DatasourceInterface;
 use Drupal\search_api\Item\ItemInterface;
@@ -60,6 +61,16 @@ class GroupMetadata extends ProcessorPluginBase {
 
     if (!$entity_id) {
       return;
+    }
+
+    // For comments, get group from parent entity.
+    if ($entity_type === 'comment' && $entity instanceof CommentInterface) {
+      $parent_type = $entity->getCommentedEntityTypeId();
+      $parent_id = $entity->getCommentedEntityId();
+      if ($parent_type && $parent_id) {
+        $entity_type = $parent_type;
+        $entity_id = $parent_id;
+      }
     }
 
     $group_ids = $this->getGroupIdsForEntity($entity_type, (int) $entity_id);
