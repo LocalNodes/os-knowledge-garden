@@ -12,7 +12,7 @@ Build an AI-powered knowledge garden that gives each Open Social Group its own i
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: AI Infrastructure** - Core AI modules, Deepseek provider, vector database, embeddings pipeline
+- [x] **Phase 1: AI Infrastructure** - Core AI modules, Deepseek provider, vector database, embeddings pipeline (completed 2026-02-24)
 - [ ] **Phase 2: Content Indexing** - Index posts, comments, files with embeddings and Group metadata
 - [ ] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks
 - [ ] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking
@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. AI Infrastructure | 1/3 | In Progress | 2026-02-24 |
+| 1. AI Infrastructure | 3/3 | Complete   | 2026-02-24 |
 | 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
 | 3. Permission-Aware Retrieval | 0/3 | Not started | - |
 | 4. Q&A & Search | 0/3 | Not started | - |
