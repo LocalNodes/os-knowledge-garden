@@ -3,6 +3,7 @@
 **Researched:** 2026-02-24
 **Domain:** Drupal AI content indexing, vector embeddings, RAG
 **Confidence:** HIGH
+**Depends on:** Phase 1 Research (.planning/research/PHASE-1-RESEARCH.md)
 
 ## Summary
 
@@ -11,6 +12,8 @@ Drupal's AI ecosystem provides mature modules for content indexing with embeddin
 **Key finding:** Do NOT build custom indexing infrastructure. The ai_search module handles chunking, embedding generation, vector storage, and invalidation through Search API's proven tracker system. Open Social uses the Group module (not Organic Groups), and content-to-group relationships are managed via "group content" entities that link nodes to groups.
 
 **Primary recommendation:** Use ai_search with Search API for all content indexing. Configure "Contextual Chunks" embedding strategy with 256-512 token chunks and 10-20% overlap. Store Group ID as metadata in Milvus for permission filtering.
+
+**Critical constraint from Phase 1:** Embedding generation uses **Ollama** with `nomic-embed-text` model (local, free), NOT DeepSeek. DeepSeek provides chat/LLM only. This is configured in Phase 1 via DDEV AI add-on or standalone Ollama service.
 
 <phase_requirements>
 
@@ -42,10 +45,13 @@ Drupal's AI ecosystem provides mature modules for content indexing with embeddin
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| ai_provider_deepseek | custom | DeepSeek API provider | DeepSeek uses OpenAI-compatible API format |
+| ai_provider_ollama | 1.x | Ollama embedding provider | **Required for embeddings** (configured in Phase 1) |
+| ai_provider_deepseek | 1.0.x | DeepSeek chat/LLM provider | Chat only - NOT for embeddings |
 | unstructured | 2.x | File parsing (PDF, Office) | IDX-03 file parsing |
 | ai_file_to_text | 1.x | PHP-native file extraction | Simpler alternative to Unstructured |
 | group | 1.x | Group relationship management | Required for Open Social Group integration |
+
+**Ollama embedding model:** `nomic-embed-text` (768 dimensions, local, free)
 
 ### Alternatives Considered
 
@@ -57,8 +63,13 @@ Drupal's AI ecosystem provides mature modules for content indexing with embeddin
 
 **Installation:**
 ```bash
+# Core modules (Phase 1 should have installed most of these)
 composer require drupal/ai:^1.2 drupal/ai_search:^2.0@alpha drupal/ai_vdb_provider_milvus
 composer require drupal/search_api drupal/group
+
+# Ollama provider for embeddings (if not installed in Phase 1)
+composer require drupal/ai_provider_ollama
+
 # For file parsing:
 composer require drupal/unstructured
 ```
@@ -86,9 +97,9 @@ modules/custom/
 
 **Configuration steps:**
 1. Create Search API server with "Drupal AI Search" backend
-2. Configure Milvus connection via ai_vdb_provider_milvus
+2. Configure Milvus connection via ai_vdb_provider_milvus (set up in Phase 1)
 3. Create Search API index for each content type (posts, comments, files)
-4. Set embedding engine to DeepSeek (via custom or OpenAI-compatible provider)
+4. Set embedding engine to **Ollama** (nomic-embed-text) - already configured in Phase 1
 5. Configure "Contextual Chunks" embedding strategy
 
 ```yaml
@@ -97,7 +108,8 @@ id: social_content_vector
 name: 'Social Content Vector Index'
 backend: ai_search
 backend_config:
-  embedding_engine: deepseek
+  embedding_engine: ollama  # Ollama for embeddings (Phase 1 decision)
+  embedding_model: nomic-embed-text
   vdb_provider: milvus
   embedding_strategy: contextual_chunks
   chunk_size: 384
@@ -227,12 +239,12 @@ class GroupMetadata extends ProcessorPluginBase {
 **How to avoid:** Verify Search API index is tracking the content type; enable "Index items immediately"
 **Warning signs:** Search finds old content that was edited; deletes still return in search
 
-### Pitfall 4: DeepSeek Embedding API Incompatibility
+### Pitfall 4: Ollama Service Not Running
 
-**What goes wrong:** ai_search configured for OpenAI but using DeepSeek
-**Why it happens:** DeepSeek uses OpenAI-compatible format but requires different base URL
-**How to avoid:** Configure custom provider with DeepSeek base URL (`https://api.deepseek.com/v1`)
-**Warning signs:** 401 errors, "model not found" errors, wrong embedding dimensions
+**What goes wrong:** Embedding generation fails with connection errors
+**Why it happens:** Ollama service must be running in DDEV; `nomic-embed-text` model must be pulled
+**How to avoid:** Ensure DDEV AI add-on is installed and Ollama service is running; pull model with `ddev exec ollama pull nomic-embed-text`
+**Warning signs:** Connection refused errors, "ollama not found" errors, timeout during indexing
 
 ### Pitfall 5: Context Loss in Comment Chunks
 
@@ -294,56 +306,26 @@ options:
 server: social_vector_server
 ```
 
-### DeepSeek Provider Configuration
+### Embedding Provider Configuration (Phase 1 Reference)
 
-```php
-// If ai_provider_deepseek doesn't exist, create minimal provider
-// Using OpenAI-compatible endpoint format
-
-// ai_provider_deepseek.services.yml
-services:
-  ai.provider.deepseek:
-    class: Drupal\ai_provider_deepseek\Plugin\AiProvider\DeepSeekProvider
-    arguments: ['@logger.factory', '@http_client']
-    tags:
-      - { name: ai_provider, id: deepseek }
-
-// src/Plugin/AiProvider/DeepSeekProvider.php
-namespace Drupal\ai_provider_deepseek\Plugin\AiProvider;
-
-use Drupal\ai\AiProvider\PluginBase;
-use Drupal\ai\OperationType\Embeddings\EmbeddingsInput;
-
-/**
- * DeepSeek provider using OpenAI-compatible API.
- *
- * @AiProvider(
- *   id = "deepseek",
- *   label = @Translation("DeepSeek"),
- * )
- */
-class DeepSeekProvider extends PluginBase {
-  
-  protected string $baseUrl = 'https://api.deepseek.com/v1';
-  
-  public function getEmbedding(EmbeddingsInput $input): array {
-    // DeepSeek uses OpenAI-compatible format
-    // Model: deepseek-embedding-v2 or similar
-    $response = $this->httpClient->post($this->baseUrl . '/embeddings', [
-      'headers' => [
-        'Authorization' => 'Bearer ' . $this->getApiKey(),
-        'Content-Type' => 'application/json',
-      ],
-      'json' => [
-        'model' => 'deepseek-embedding-v2',
-        'input' => $input->getText(),
-      ],
-    ]);
-    
-    $data = json_decode($response->getBody(), TRUE);
-    return $data['data'][0]['embedding'];
-  }
-}
+```yaml
+# Embedding provider is configured in Phase 1
+# See: .planning/research/PHASE-1-RESEARCH.md for full details
+#
+# Ollama Provider (for embeddings):
+#   - Model: nomic-embed-text
+#   - Dimensions: 768
+#   - Host: ollama (DDEV service name)
+#   - Port: 11434
+#   - Config: /admin/config/ai/providers/ollama
+#
+# DeepSeek Provider (for chat only - NOT embeddings):
+#   - Models: deepseek-chat, deepseek-reasoner
+#   - Config: /admin/config/ai/providers/deepseek
+#
+# DDEV setup:
+#   ddev add-on get lpeabody/ddev-ai
+#   ddev exec ollama pull nomic-embed-text
 ```
 
 ### Immediate Indexing Toggle
@@ -388,20 +370,25 @@ function social_ai_indexing_entity_insert(EntityInterface $entity) {
 
 ## Open Questions
 
-1. **DeepSeek embedding model dimensions**
-   - What we know: DeepSeek uses OpenAI-compatible API format
-   - What's unclear: Exact embedding dimensions (OpenAI ada-002 is 1536)
-   - Recommendation: Test during Phase 1 setup; ai_search should auto-detect
-
-2. **Open Social comment entity type**
+1. **Open Social comment entity type**
    - What we know: Open Social uses standard Drupal comment entity
    - What's unclear: Custom fields or bundles specific to Open Social
    - Recommendation: Inspect Open Social schema during implementation
 
-3. **Group visibility field interaction**
+2. **Group visibility field interaction**
    - What we know: Open Social has `field_group_allowed_visibility`
    - What's unclear: How visibility affects indexing (should secret content be indexed?)
    - Recommendation: Clarify with product requirements; may need to exclude secret groups
+
+3. **File parsing approach selection**
+   - What we know: Unstructured.io handles PDFs, Office docs well
+   - What's unclear: Whether to use external Unstructured service or ai_file_to_text (PHP-native)
+   - Recommendation: Start with ai_file_to_text for simplicity; upgrade to Unstructured if format support needed
+
+**Resolved by Phase 1:**
+- Embedding provider: Ollama (nomic-embed-text, 768 dimensions) - NOT DeepSeek
+- Vector database: Milvus via ai_vdb_provider_milvus
+- Rate limiting: ai_usage_limits module
 
 ## Sources
 
