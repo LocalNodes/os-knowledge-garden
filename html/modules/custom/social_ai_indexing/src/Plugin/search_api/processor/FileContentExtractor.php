@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\social_ai_indexing\Plugin\SearchApi\Processor;
+namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\file\FileInterface;
