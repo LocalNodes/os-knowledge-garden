@@ -30,12 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Test embeddings can be generated for sample content and stored in vector DB
   4. AI provider handles rate limits gracefully with retry/fallback logic
   5. AI Agents module provides a working agent framework for future tool-calling
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 01-01: Install and configure Drupal AI core and Deepseek provider
-- [ ] 01-02: Deploy and connect Milvus vector database
-- [ ] 01-03: Configure embedding generation pipeline
+- [ ] 01-01: Install and configure Drupal AI core and providers (Deepseek + OpenAI) — Wave 1
+- [ ] 01-02: Deploy and connect Milvus vector database via DDEV — Wave 1
+- [ ] 01-03: Configure AI Search and verify embedding pipeline — Wave 2 (depends on 01-01, 01-02)
 
 ### Phase 2: Content Indexing
 **Goal**: Group content (posts, comments, files) is indexed with embeddings and ready for semantic retrieval
@@ -115,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. AI Infrastructure | 0/3 | Not started | - |
+| 1. AI Infrastructure | 3/3 | Planned | - |
 | 2. Content Indexing | 0/3 | Not started | - |
 | 3. Permission-Aware Retrieval | 0/3 | Not started | - |
 | 4. Q&A & Search | 0/3 | Not started | - |
