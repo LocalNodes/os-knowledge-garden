@@ -1,0 +1,23 @@
+uuid: a8d96e4e-bf6c-40be-afec-0f87fd56eaee
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.create_content_in_joined_group
+  module:
+    - options
+_core:
+  default_config_hash: thWHXqQNKewliQReD0OpmtxmBxZEap431iJDj0h3gtU
+id: message.create_content_in_joined_group.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: create_content_in_joined_group
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

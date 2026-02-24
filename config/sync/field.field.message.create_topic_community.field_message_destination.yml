@@ -1,0 +1,23 @@
+uuid: 8124a606-b5fb-48f9-9dcb-69ce4859898b
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.create_topic_community
+  module:
+    - options
+_core:
+  default_config_hash: ct_0eR-TLfLcn4g96tzah5BKe6sAfXNCG3hVewK92-M
+id: message.create_topic_community.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: create_topic_community
+label: Destinations
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

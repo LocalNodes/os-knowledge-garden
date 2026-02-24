@@ -1,0 +1,231 @@
+uuid: b2eb92d9-0ab2-49e3-9ef2-74735202e708
+langcode: en
+status: true
+dependencies:
+  config:
+    - block_content.type.hero_call_to_action_block
+    - filter.format.full_html
+    - filter.format.mail_html
+    - node.type.event
+    - node.type.page
+    - node.type.topic
+    - taxonomy.vocabulary.expertise
+    - taxonomy.vocabulary.group_type
+    - taxonomy.vocabulary.interests
+    - taxonomy.vocabulary.profile_tag
+    - taxonomy.vocabulary.topic_types
+  module:
+    - block_content
+    - comment
+    - entity_access_by_field
+    - filter
+    - flag
+    - group
+    - group_core_comments
+    - like_and_dislike
+    - mentions
+    - node
+    - override_node_options
+    - path
+    - profile
+    - role_delegation
+    - social_comment
+    - social_comment_upload
+    - social_core
+    - social_event
+    - social_event_managers
+    - social_font
+    - social_footer
+    - social_group
+    - social_post
+    - social_profile
+    - social_search
+    - social_swiftmail
+    - social_topic
+    - social_user
+    - system
+    - taxonomy
+    - taxonomy_access_fix
+    - toolbar
+_core:
+  default_config_hash: xWbc2o96o-mwekHr6DcdYVj6DAf0Oj9tygpEBB8ZC50
+id: sitemanager
+label: 'Site manager'
+weight: 4
+is_admin: null
+permissions:
+  - 'access administration pages'
+  - 'access comments'
+  - 'access content overview'
+  - 'access cross-group posting'
+  - 'access font overview'
+  - 'access group overview'
+  - 'access mentions'
+  - 'access social theme settings'
+  - 'access social_core dashboard'
+  - 'access taxonomy overview'
+  - 'access toolbar'
+  - 'access user profiles'
+  - 'access users search'
+  - 'add font entities'
+  - 'add or remove like votes on comment of comment'
+  - 'add or remove like votes on event of node'
+  - 'add or remove like votes on photo of post'
+  - 'add or remove like votes on post of post'
+  - 'add or remove like votes on post_comment of comment'
+  - 'add or remove like votes on topic of node'
+  - 'add photo post entities'
+  - 'add post entities'
+  - 'add post post entities'
+  - 'administer account settings'
+  - 'administer comments'
+  - 'administer navigation settings'
+  - 'administer nodes'
+  - 'administer own comments'
+  - 'administer post entities'
+  - 'administer profile settings'
+  - 'administer social menu links'
+  - 'administer social site configuration'
+  - 'administer social swiftmail'
+  - 'administer social_comment_upload settings'
+  - 'administer social_event settings'
+  - 'administer social_footer_block settings'
+  - 'administer social_topic settings'
+  - 'administer social_user settings'
+  - 'administer users'
+  - 'administer visibility settings'
+  - 'assign contentmanager role'
+  - 'assign sitemanager role'
+  - 'assign verified role'
+  - 'block users'
+  - 'bypass create group access'
+  - 'bypass node access'
+  - 'create event content'
+  - 'create flexible_group group'
+  - 'create page content'
+  - 'create terms in expertise'
+  - 'create terms in group_type'
+  - 'create terms in interests'
+  - 'create terms in profile_tag'
+  - 'create terms in topic_types'
+  - 'create topic content'
+  - 'create url aliases'
+  - 'delete all comments'
+  - 'delete all revisions'
+  - 'delete any event content'
+  - 'delete any page content'
+  - 'delete any post entities'
+  - 'delete any topic content'
+  - 'delete event revisions'
+  - 'delete font entities'
+  - 'delete own comments'
+  - 'delete own event content'
+  - 'delete own page content'
+  - 'delete own post entities'
+  - 'delete own topic content'
+  - 'delete page revisions'
+  - 'delete terms in expertise'
+  - 'delete terms in group_type'
+  - 'delete terms in interests'
+  - 'delete terms in profile_tag'
+  - 'delete terms in topic_types'
+  - 'delete topic revisions'
+  - 'edit any event content'
+  - 'edit any hero_call_to_action_block block content'
+  - 'edit any page content'
+  - 'edit any post entities'
+  - 'edit any topic content'
+  - 'edit font entities'
+  - 'edit group types'
+  - 'edit own comments'
+  - 'edit own event content'
+  - 'edit own page content'
+  - 'edit own post entities'
+  - 'edit own topic content'
+  - 'edit profile tags'
+  - 'edit terms in expertise'
+  - 'edit terms in group_type'
+  - 'edit terms in interests'
+  - 'edit terms in profile_tag'
+  - 'edit terms in topic_types'
+  - 'flag follow_content'
+  - 'flag mute_group_notifications'
+  - 'manage all groups'
+  - 'manage everything enrollments'
+  - 'override disabled public visibility'
+  - 'override event authored by option'
+  - 'override event authored on option'
+  - 'override event promote to front page option'
+  - 'override event published option'
+  - 'override event revision option'
+  - 'override event sticky option'
+  - 'override page authored by option'
+  - 'override page authored on option'
+  - 'override page promote to front page option'
+  - 'override page published option'
+  - 'override page revision option'
+  - 'override page sticky option'
+  - 'override topic authored by option'
+  - 'override topic authored on option'
+  - 'override topic promote to front page option'
+  - 'override topic published option'
+  - 'override topic revision option'
+  - 'override topic sticky option'
+  - 'post comments'
+  - 'revert all revisions'
+  - 'revert event revisions'
+  - 'revert page revisions'
+  - 'revert topic revisions'
+  - 'select account cancellation method'
+  - 'select terms in expertise'
+  - 'select terms in interests'
+  - 'select terms in profile_tag'
+  - 'select terms in topic_types'
+  - 'set social event managers settings'
+  - 'set social group settings'
+  - 'skip comment approval'
+  - 'unflag follow_content'
+  - 'unflag mute_group_notifications'
+  - 'update any profile profile'
+  - 'use select2 autocomplete'
+  - 'use text format full_html'
+  - 'use text format mail_html'
+  - 'view all revisions'
+  - 'view any profile profile'
+  - 'view blocked user'
+  - 'view community flexible_group group'
+  - 'view community posts'
+  - 'view event revisions'
+  - 'view events on my profile'
+  - 'view events on other profiles'
+  - 'view group stream page'
+  - 'view groups on my profile'
+  - 'view groups on other profiles'
+  - 'view members flexible_group group'
+  - 'view node.event.field_content_visibility:community content'
+  - 'view node.event.field_content_visibility:group content'
+  - 'view node.page.field_content_visibility:community content'
+  - 'view node.page.field_content_visibility:group content'
+  - 'view node.topic.field_content_visibility:community content'
+  - 'view node.topic.field_content_visibility:group content'
+  - 'view own unpublished post entities'
+  - 'view page revisions'
+  - 'view profile email'
+  - 'view profile language'
+  - 'view public flexible_group group'
+  - 'view published event enrollment entities'
+  - 'view published font entities'
+  - 'view term names in expertise'
+  - 'view term names in interests'
+  - 'view term names in profile_tag'
+  - 'view term names in topic_types'
+  - 'view terms in expertise'
+  - 'view terms in interests'
+  - 'view terms in profile_tag'
+  - 'view terms in topic_types'
+  - 'view topic revisions'
+  - 'view topics on my profile'
+  - 'view topics on other profiles'
+  - 'view unpublished font entities'
+  - 'view unpublished post entities'
+  - 'view users'

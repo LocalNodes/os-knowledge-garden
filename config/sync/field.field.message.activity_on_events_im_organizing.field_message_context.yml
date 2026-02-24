@@ -1,0 +1,23 @@
+uuid: 8b1f9c90-5893-4691-b933-f1b129a92d98
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_context
+    - message.template.activity_on_events_im_organizing
+  module:
+    - options
+_core:
+  default_config_hash: eGoad-8IrVcg8HjN7WH_rMKecwCOJLg8S0-SclEGuuE
+id: message.activity_on_events_im_organizing.field_message_context
+field_name: field_message_context
+entity_type: message
+bundle: activity_on_events_im_organizing
+label: field_message_context
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

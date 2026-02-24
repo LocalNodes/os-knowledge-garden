@@ -1,0 +1,23 @@
+uuid: 25b75663-44a6-4714-8bd0-c7add8a71d46
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.create_event_gc
+  module:
+    - options
+_core:
+  default_config_hash: E1ViTeMvp6SWntR_4A0d9CWA4hrWd0E4eoxiVU9AhXQ
+id: message.create_event_gc.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: create_event_gc
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

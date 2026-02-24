@@ -1,0 +1,60 @@
+uuid: 6328bfd4-1f7c-4ae4-8e15-17c9ead06424
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.group.small_teaser
+    - field.field.group.flexible_group.field_flexible_group_visibility
+    - field.field.group.flexible_group.field_group_address
+    - field.field.group.flexible_group.field_group_allowed_join_method
+    - field.field.group.flexible_group.field_group_allowed_visibility
+    - field.field.group.flexible_group.field_group_description
+    - field.field.group.flexible_group.field_group_image
+    - field.field.group.flexible_group.field_group_invite_by_member
+    - field.field.group.flexible_group.field_group_location
+    - field.field.group.flexible_group.field_group_posts_enabled
+    - field.field.group.flexible_group.field_group_type
+    - group.type.flexible_group
+    - image.style.social_medium
+  module:
+    - image
+_core:
+  default_config_hash: _KWLOx4LZ28kgTYnbD8mOcbThs9wuLR1GRN8-ArPxmM
+id: group.flexible_group.small_teaser
+targetEntityType: group
+bundle: flexible_group
+mode: small_teaser
+content:
+  field_group_image:
+    type: image
+    label: hidden
+    settings:
+      image_link: content
+      image_style: social_medium
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  label:
+    type: string
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 1
+    region: content
+hidden:
+  changed: true
+  created: true
+  field_flexible_group_visibility: true
+  field_group_address: true
+  field_group_allowed_join_method: true
+  field_group_allowed_visibility: true
+  field_group_description: true
+  field_group_invite_by_member: true
+  field_group_location: true
+  field_group_posts_enabled: true
+  field_group_type: true
+  flag_mute_group_notifications: true
+  langcode: true
+  search_api_excerpt: true
+  uid: true

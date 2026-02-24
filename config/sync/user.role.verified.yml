@@ -1,0 +1,102 @@
+uuid: e6112a9b-e357-41dc-81ae-16aed4d88c9b
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.mail_html
+    - node.type.event
+    - node.type.topic
+    - taxonomy.vocabulary.expertise
+    - taxonomy.vocabulary.interests
+    - taxonomy.vocabulary.profile_tag
+    - taxonomy.vocabulary.topic_types
+  module:
+    - comment
+    - entity_access_by_field
+    - filter
+    - flag
+    - group
+    - like_and_dislike
+    - mentions
+    - node
+    - override_node_options
+    - profile
+    - social_comment
+    - social_core
+    - social_event
+    - social_group
+    - social_post
+    - social_search
+    - social_topic
+    - taxonomy_access_fix
+_core:
+  default_config_hash: N_EVY02CgNEqw9slStmtWAwwUhlEZ7xbuUXjiPnvvGc
+id: verified
+label: 'Verified user'
+weight: 3
+is_admin: null
+permissions:
+  - 'access comments'
+  - 'access mentions'
+  - 'access user profiles'
+  - 'access users search'
+  - 'add or remove like votes on comment of comment'
+  - 'add or remove like votes on event of node'
+  - 'add or remove like votes on photo of post'
+  - 'add or remove like votes on post of post'
+  - 'add or remove like votes on post_comment of comment'
+  - 'add or remove like votes on topic of node'
+  - 'add photo post entities'
+  - 'add post entities'
+  - 'add post post entities'
+  - 'administer own comments'
+  - 'create event content'
+  - 'create flexible_group group'
+  - 'create topic content'
+  - 'delete own comments'
+  - 'delete own event content'
+  - 'delete own post entities'
+  - 'delete own topic content'
+  - 'edit own comments'
+  - 'edit own event content'
+  - 'edit own post entities'
+  - 'edit own topic content'
+  - 'flag follow_content'
+  - 'flag mute_group_notifications'
+  - 'override event published option'
+  - 'override topic published option'
+  - 'post comments'
+  - 'select account cancellation method'
+  - 'select terms in expertise'
+  - 'select terms in interests'
+  - 'select terms in profile_tag'
+  - 'select terms in topic_types'
+  - 'skip comment approval'
+  - 'unflag follow_content'
+  - 'unflag mute_group_notifications'
+  - 'use select2 autocomplete'
+  - 'use text format mail_html'
+  - 'view any profile profile'
+  - 'view community flexible_group group'
+  - 'view community posts'
+  - 'view events on my profile'
+  - 'view events on other profiles'
+  - 'view group stream page'
+  - 'view groups on my profile'
+  - 'view groups on other profiles'
+  - 'view members flexible_group group'
+  - 'view node.event.field_content_visibility:community content'
+  - 'view node.page.field_content_visibility:community content'
+  - 'view node.topic.field_content_visibility:community content'
+  - 'view own unpublished post entities'
+  - 'view public flexible_group group'
+  - 'view term names in expertise'
+  - 'view term names in interests'
+  - 'view term names in profile_tag'
+  - 'view term names in topic_types'
+  - 'view terms in expertise'
+  - 'view terms in interests'
+  - 'view terms in profile_tag'
+  - 'view terms in topic_types'
+  - 'view topics on my profile'
+  - 'view topics on other profiles'

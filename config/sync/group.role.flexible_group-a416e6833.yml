@@ -1,0 +1,20 @@
+uuid: 6ff11fc7-3d47-4cf9-b4a1-60dddbe68192
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.administrator
+  enforced:
+    config:
+      - user.role.administrator
+_core:
+  default_config_hash: zsDwFLbKLF3ZvbWD0uJ8qP9t-b6acug5MEm4thhr53Q
+id: flexible_group-a416e6833
+label: Administrator
+weight: 2
+admin: true
+scope: outsider
+global_role: administrator
+group_type: flexible_group
+permissions: {  }

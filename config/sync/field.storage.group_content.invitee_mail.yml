@@ -1,0 +1,24 @@
+uuid: a85f2023-b8da-4a6c-a4f2-596878646ef6
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+  enforced:
+    module:
+      - group
+      - ginvite
+_core:
+  default_config_hash: ow14LHTBlMag_8_LSWH0Z-5M1mWicpKQVlt4Vc7UwzI
+id: group_content.invitee_mail
+field_name: invitee_mail
+entity_type: group_content
+type: email
+settings: {  }
+module: core
+locked: true
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: true
+custom_storage: false

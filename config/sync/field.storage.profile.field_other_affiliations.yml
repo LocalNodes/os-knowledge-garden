@@ -1,0 +1,23 @@
+uuid: c89ad8a9-c10f-4dbc-86d1-96834294fd85
+langcode: en
+status: true
+dependencies:
+  module:
+    - entity_reference_revisions
+    - paragraphs
+    - profile
+_core:
+  default_config_hash: 9hA8Fly1xDbniQi5OFO40KyE_Y8KrJWGgFXUHvjeo_Q
+id: profile.field_other_affiliations
+field_name: field_other_affiliations
+entity_type: profile
+type: entity_reference_revisions
+settings:
+  target_type: paragraph
+module: entity_reference_revisions
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,23 @@
+uuid: 30e2421f-36ff-495b-aec5-b234045c592f
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.background_process_finished
+  module:
+    - options
+_core:
+  default_config_hash: O2HDZnPqGNkhphMadP6wL_rnLLS2rcYKRSoc9oyQ2g4
+id: message.background_process_finished.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: background_process_finished
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

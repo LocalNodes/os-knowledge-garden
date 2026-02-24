@@ -1,0 +1,13 @@
+uuid: 87e01ca4-74dd-4761-b977-4d9b275bb97a
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_post
+_core:
+  default_config_hash: C7jN5Ir6IticKf_T5catiIapjlD2RLRF6P-Y13NCqfQ
+id: post.activity
+label: Activity
+description: ''
+targetEntityType: post
+cache: true

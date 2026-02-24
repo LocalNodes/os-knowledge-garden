@@ -1,0 +1,25 @@
+uuid: 01b402c1-7548-4341-bca7-489ace67b6ac
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.user.full
+    - field.field.user.user.field_external_identifier
+  module:
+    - user
+_core:
+  default_config_hash: wjHsWMcrdEODqrHhn4wvsT6YPfxCg0Ssq9wgQsNyjKU
+id: user.user.full
+targetEntityType: user
+bundle: user
+mode: full
+content: {  }
+hidden:
+  field_external_identifier: true
+  groups: true
+  langcode: true
+  member_for: true
+  profile_main: true
+  profile_profile: true
+  profile_profiles: true
+  search_api_excerpt: true

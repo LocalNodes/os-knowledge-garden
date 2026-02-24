@@ -1,0 +1,20 @@
+uuid: 3ffd7c0e-9075-4f28-abf4-1c106a61324d
+langcode: en
+status: true
+dependencies:
+  config:
+    - block_content.type.hero_call_to_action_block
+  module:
+    - content_translation
+third_party_settings:
+  content_translation:
+    enabled: false
+    bundle_settings:
+      untranslatable_fields_hide: '0'
+_core:
+  default_config_hash: 94Tz0F77GVX5nItzki4JVcNFOTX_NmYTdtavoVjp63Y
+id: block_content.hero_call_to_action_block
+target_entity_type_id: block_content
+target_bundle: hero_call_to_action_block
+default_langcode: site_default
+language_alterable: false

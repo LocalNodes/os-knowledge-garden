@@ -1,0 +1,32 @@
+uuid: d8da7d6b-54b4-400a-8b01-42f461077cc0
+langcode: en
+status: true
+dependencies:
+  module:
+    - block_content
+    - file
+    - image
+_core:
+  default_config_hash: R9PM8TMS5PrI1mIIdK4Zd3h484PAv8k2UBZpUebE-RU
+id: block_content.field_hero_image
+field_name: field_hero_image
+entity_type: block_content
+type: image
+settings:
+  uri_scheme: secret
+  default_image:
+    uuid: ''
+    alt: ''
+    title: ''
+    width: null
+    height: null
+  target_type: file
+  display_field: false
+  display_default: false
+module: image
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

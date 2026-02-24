@@ -1,0 +1,28 @@
+_core:
+  default_config_hash: 7Znt1G53yrQvq0AyUdiXXvVLFltNw0DF-nCR1n7eYSw
+files:
+  - social_core.sitemanager_access_hero_block_permissions
+  - social_core.system_performance_maximum_age
+  - social_event.metatag_settings
+  - social_event.metatag_settings_open_graph
+  - social_like.check_vote_init
+  - social_page.metatag_settings
+  - social_page.metatag_settings_open_graph
+  - social_profile.authenticated_taxonomy_permissions
+  - social_profile.metatag_settings
+  - social_profile.metatag_settings_open_graph
+  - social_profile.taxonomy_permissions
+  - social_topic.anonymous_taxonomy_permissions
+  - social_topic.authenticated_taxonomy_permissions
+  - social_topic.contentmanager_taxonomy_permissions
+  - social_topic.metatag_settings
+  - social_topic.metatag_settings_open_graph
+  - social_topic.sitemanager_taxonomy_permissions
+  - social_topic.verified_taxonomy_permissions
+  - social_user.metatag_settings
+  - social_user.metatag_settings_open_graph
+  - social_group_flexible_group.authenticated_taxonomy_permissions
+  - social_group_flexible_group.field_group_type_overview_filter
+  - social_group_flexible_group.group_affiliation
+  - social_group_flexible_group.search
+  - social_group_flexible_group.view_hubs_flexible_groups

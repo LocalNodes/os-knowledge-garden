@@ -1,0 +1,28 @@
+uuid: 2a42b9b9-faf4-4d2b-a49a-32056a94909d
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_post
+    - system
+  theme:
+    - socialblue
+_core:
+  default_config_hash: NYfgZobU2seVo1qPqOzGjLK-vS3C_QIe-wRzb60OeJk
+id: socialblue_postongroupblock
+theme: socialblue
+region: hidden
+weight: -9
+provider: null
+plugin: post_group_block
+settings:
+  id: post_group_block
+  label: 'Post on group block'
+  label_display: '0'
+  provider: social_post
+visibility:
+  request_path:
+    id: request_path
+    pages: '/group/*/stream'
+    negate: false
+    context_mapping: {  }

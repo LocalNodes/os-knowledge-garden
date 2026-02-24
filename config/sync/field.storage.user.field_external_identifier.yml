@@ -1,0 +1,22 @@
+uuid: 1669037c-1cb5-4f04-9685-b2dc808377bb
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_core
+    - user
+_core:
+  default_config_hash: T8z1kqYVpM8x8bwiBOG9K84Qvsk_VQE8NN0MYrrTp54
+id: user.field_external_identifier
+field_name: field_external_identifier
+entity_type: user
+type: social_external_identifier
+settings:
+  target_types: {  }
+module: social_core
+locked: true
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

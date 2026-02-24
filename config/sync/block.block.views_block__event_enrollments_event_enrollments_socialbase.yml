@@ -1,0 +1,35 @@
+uuid: ba4038f9-ab51-4095-862a-b553f5c81d96
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.event_enrollments
+  module:
+    - node
+    - views
+  theme:
+    - socialbase
+_core:
+  default_config_hash: 5IlyFFO21XceRorH3gxF1myDQWfYPxfiN4CLmHKtwl8
+id: views_block__event_enrollments_event_enrollments_socialbase
+theme: socialbase
+region: complementary_top
+weight: -20
+provider: null
+plugin: 'views_block:event_enrollments-event_enrollments'
+settings:
+  id: 'views_block:event_enrollments-event_enrollments'
+  label: ''
+  label_display: visible
+  provider: views
+  views_label: ''
+  items_per_page: none
+  type: none
+visibility:
+  'entity_bundle:node':
+    id: 'entity_bundle:node'
+    bundles:
+      event: event
+    negate: false
+    context_mapping:
+      node: '@node.node_route_context:node'

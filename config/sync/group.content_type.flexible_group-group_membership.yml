@@ -1,0 +1,18 @@
+uuid: 4d74371f-379e-43b7-bdb2-a4f832acc84c
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+  module:
+    - social_group_flexible_group
+    - user
+_core:
+  default_config_hash: 3KAQc6TXh1EMGrsI8qT0fiM9CFAgzJk7pudOE1Do4qY
+id: flexible_group-group_membership
+group_type: flexible_group
+content_plugin: group_membership
+plugin_config:
+  group_cardinality: 0
+  entity_cardinality: 1
+  use_creation_wizard: false

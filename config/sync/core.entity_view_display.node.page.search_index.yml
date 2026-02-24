@@ -1,0 +1,53 @@
+uuid: 0e4c5074-de5e-4a52-a71a-1e142249454d
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_display.comment.comment.default
+    - core.entity_view_mode.node.search_index
+    - field.field.node.page.body
+    - field.field.node.page.field_content_visibility
+    - field.field.node.page.field_files
+    - field.field.node.page.field_page_comments
+    - field.field.node.page.field_page_image
+    - node.type.page
+  module:
+    - comment
+    - text
+    - user
+_core:
+  default_config_hash: 3D-FBpIrEEqrzRtygu7VeBwiUWbeEZ8iMmhD_cz3XwI
+id: node.page.search_index
+targetEntityType: node
+bundle: page
+mode: search_index
+content:
+  body:
+    label: hidden
+    type: text_default
+    weight: 0
+    settings: {  }
+    third_party_settings: {  }
+    region: content
+  field_page_comments:
+    weight: 1
+    label: above
+    settings:
+      pager_id: 0
+      view_mode: default
+    third_party_settings: {  }
+    type: comment_default
+    region: content
+  flag_follow_content:
+    weight: 2
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  field_content_visibility: true
+  field_files: true
+  field_page_image: true
+  groups: true
+  langcode: true
+  links: true
+  search_api_excerpt: true

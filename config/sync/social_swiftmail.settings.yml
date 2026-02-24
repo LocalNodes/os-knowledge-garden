@@ -1,0 +1,10 @@
+disabled_user_greeting_keys: |-
+  register_admin_created
+  register_pending_approval
+  register_pending_approval_admin
+  register_no_approval_required
+  status_activated
+  status_blocked
+  cancel_confirm
+  status_canceled
+  password_reset

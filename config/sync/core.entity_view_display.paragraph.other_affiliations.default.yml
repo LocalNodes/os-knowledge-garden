@@ -1,0 +1,33 @@
+uuid: 2104f2f2-4f43-49f1-a4e0-9e4dc1fe6bfe
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.paragraph.other_affiliations.field_affiliation_org_function
+    - field.field.paragraph.other_affiliations.field_affiliation_org_name
+    - paragraphs.paragraphs_type.other_affiliations
+_core:
+  default_config_hash: MAiHPS7rH3JvUNqJ8mBh0JExjukEchzha1M7Fo47Z6k
+id: paragraph.other_affiliations.default
+targetEntityType: paragraph
+bundle: other_affiliations
+mode: default
+content:
+  field_affiliation_org_function:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_affiliation_org_name:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 0
+    region: content
+hidden:
+  search_api_excerpt: true

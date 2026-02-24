@@ -1,0 +1,23 @@
+uuid: 11161114-0b4c-40be-bcb8-09790569bd2a
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+  enforced:
+    module:
+      - social_event_invite
+_core:
+  default_config_hash: WL-B_9VO-m22uZjNaaJMT4pf97RDe8og4ddbNj41hb4
+id: node.field_event_send_invite_by_user
+field_name: field_event_send_invite_by_user
+entity_type: node
+type: boolean
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

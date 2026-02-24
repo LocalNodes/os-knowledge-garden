@@ -1,0 +1,26 @@
+uuid: 73c643f0-87a0-4df6-ae1b-f56c5a55ed77
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.profile.user_removed_affiliations
+    - profile.type.profile
+  enforced:
+    module:
+      - social_profile
+_core:
+  default_config_hash: KklujipC5TRO9EV54VkbW5lDT98vVkFWUbzZCONFjds
+id: profile.profile.user_removed_affiliations
+field_name: user_removed_affiliations
+entity_type: profile
+bundle: profile
+label: 'User removed affiliations'
+description: "A list of affiliations the user has manually removed from their profile. These entries are retained to prevent the system from automatically re-adding them, ensuring the user's preferences are respected."
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:group'
+  handler_settings: {  }
+field_type: entity_reference

@@ -1,0 +1,65 @@
+uuid: 4a29968e-c36f-466c-bfe2-d7ca577fd4e1
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.activity.field_activity_entity
+  module:
+    - activity_creator
+    - dynamic_entity_reference
+_core:
+  default_config_hash: qq9-zIrnn6IHd9-f2sh00jl_L4nkwQ0BPl1mmqqMftw
+id: activity.activity.field_activity_entity
+field_name: field_activity_entity
+entity_type: activity
+bundle: activity
+label: Entity
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  activity:
+    handler: 'default:activity'
+    handler_settings: {  }
+  comment:
+    handler: 'default:comment'
+    handler_settings: {  }
+  group_config_wrapper:
+    handler: 'default:group_config_wrapper'
+    handler_settings: {  }
+  node:
+    handler: 'default:node'
+    handler_settings: {  }
+  block_content:
+    handler: 'default:block_content'
+    handler_settings: {  }
+  menu_link_content:
+    handler: 'default:menu_link_content'
+    handler_settings: {  }
+  file:
+    handler: 'default:file'
+    handler_settings: {  }
+  group:
+    handler: 'default:group'
+    handler_settings: {  }
+  group_content:
+    handler: 'default:group_content'
+    handler_settings: {  }
+  message:
+    handler: 'default:message'
+    handler_settings: {  }
+  profile:
+    handler: 'default:profile'
+    handler_settings: {  }
+  taxonomy_term:
+    handler: 'default:taxonomy_term'
+    handler_settings: {  }
+  path_alias:
+    handler: 'default:path_alias'
+    handler_settings: {  }
+  user:
+    handler: 'default:user'
+    handler_settings: {  }
+field_type: dynamic_entity_reference

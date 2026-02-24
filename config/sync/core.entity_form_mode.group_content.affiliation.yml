@@ -1,0 +1,13 @@
+uuid: d625468d-8ffe-454f-ab0d-aa40726ea7e5
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+_core:
+  default_config_hash: nUz_i2JxTiqbh5m4uwhlsVwb7u4Iv73oIV_1-hiLTLQ
+id: group_content.affiliation
+label: Affiliation
+description: 'Affiliation is a feature, that allows members to determine which organization they represent in the community. Users can define this through their the profile settings and this display must be used to show group type related fields on the affiliation widget.'
+targetEntityType: group_content
+cache: true

@@ -1,0 +1,23 @@
+uuid: 925c6fd4-f92b-44cd-bccb-95cff038b452
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.group.field_flexible_group_visibility
+    - group.type.flexible_group
+  module:
+    - options
+_core:
+  default_config_hash: A4mustSQJuw0xRPIJSXHPWDugsek_BmpmaVs-8T3JV0
+id: group.flexible_group.field_flexible_group_visibility
+field_name: field_flexible_group_visibility
+entity_type: group
+bundle: flexible_group
+label: 'Group visibility'
+description: 'Who can find and view your group.'
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

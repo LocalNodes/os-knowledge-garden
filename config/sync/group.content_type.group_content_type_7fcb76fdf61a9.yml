@@ -1,0 +1,22 @@
+uuid: 95bc9c69-84c2-4c9c-b774-27cac4615f9e
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+  module:
+    - grequest
+    - user
+  enforced:
+    module:
+      - social_group_flexible_group
+      - social_group_request
+_core:
+  default_config_hash: wJTG1SaBl7_62tb8mTrx2z_1S1gqgN-p4NFTeact6_A
+id: group_content_type_7fcb76fdf61a9
+group_type: flexible_group
+content_plugin: group_membership_request
+plugin_config:
+  group_cardinality: 0
+  entity_cardinality: 1
+  use_creation_wizard: false

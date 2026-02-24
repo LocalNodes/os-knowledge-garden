@@ -1,0 +1,14 @@
+uuid: fd741c9c-998c-4935-b172-0ed38d4fb250
+langcode: en
+status: true
+dependencies: {  }
+_core:
+  default_config_hash: UiiDzWwsv6XOpSmO4iIT1PB8aaXWNq_fdJWki4TlE6I
+id: profile_medium
+label: 'Profile medium'
+description: 'Medium sized profile image'
+aspect_ratio: '44:44'
+soft_limit_width: null
+soft_limit_height: null
+hard_limit_width: null
+hard_limit_height: null

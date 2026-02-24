@@ -1,0 +1,23 @@
+uuid: 00b94090-e881-4ae1-9384-1c3dac1971ed
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.request_event_enrollment
+  module:
+    - options
+_core:
+  default_config_hash: R0VxDtg6BddeMtlKj_MbMWarUa1FRZ0Nb-TVEsmoRHY
+id: message.request_event_enrollment.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: request_event_enrollment
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

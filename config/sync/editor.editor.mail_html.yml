@@ -1,0 +1,40 @@
+uuid: 0bbf9ff3-a930-4278-a63a-de8dd85c47da
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.mail_html
+  module:
+    - ckeditor5
+_core:
+  default_config_hash: ekO5gR1IEcMyPoU4EqlxP9eB7C5c_5mh2qt0Zc2GovM
+format: mail_html
+editor: ckeditor5
+settings:
+  toolbar:
+    items:
+      - bold
+      - italic
+      - underline
+      - '|'
+      - link
+      - '|'
+      - alignment
+      - '|'
+      - fullScreen
+  plugins:
+    ckeditor5_alignment:
+      enabled_alignments:
+        - left
+        - center
+        - right
+        - justify
+    editor_advanced_link_link:
+      enabled_attributes:
+        - class
+        - id
+        - rel
+        - target
+        - title
+image_upload:
+  status: false

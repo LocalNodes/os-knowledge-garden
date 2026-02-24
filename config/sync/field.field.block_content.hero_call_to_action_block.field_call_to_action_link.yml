@@ -1,0 +1,25 @@
+uuid: 0e4b8830-91bf-4c3d-8d4b-13ba4ce7e315
+langcode: en
+status: true
+dependencies:
+  config:
+    - block_content.type.hero_call_to_action_block
+    - field.storage.block_content.field_call_to_action_link
+  module:
+    - link
+_core:
+  default_config_hash: 89wVWXZQWrbkCxBJw70Tf25JIE13VEb91lMP6laeBAA
+id: block_content.hero_call_to_action_block.field_call_to_action_link
+field_name: field_call_to_action_link
+entity_type: block_content
+bundle: hero_call_to_action_block
+label: 'Call to action link'
+description: 'Creates a call to action link in a block'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  link_type: 17
+  title: 1
+field_type: link

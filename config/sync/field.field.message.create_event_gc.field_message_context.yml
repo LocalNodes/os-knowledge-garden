@@ -1,0 +1,23 @@
+uuid: be833d32-4737-41fc-9822-6a6345d9b140
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_context
+    - message.template.create_event_gc
+  module:
+    - options
+_core:
+  default_config_hash: VS4ZqUASu93_uliEhHGjOTh50Da1PP3_JSrMTgnaYqU
+id: message.create_event_gc.field_message_context
+field_name: field_message_context
+entity_type: message
+bundle: create_event_gc
+label: field_message_context
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

@@ -1,0 +1,42 @@
+_core:
+  default_config_hash: Ns05eL8VLQDyIA-VFS4S72lFmUtbyM0gaOIgbrRlGuA
+favicon:
+  mimetype: image/vnd.microsoft.icon
+  path: ''
+  url: /profiles/contrib/social/themes/socialbase/favicon.ico
+  use_default: true
+features:
+  comment_user_picture: true
+  comment_user_verification: false
+  favicon: true
+  node_user_picture: true
+logo:
+  path: ''
+  url: ''
+  use_default: true
+schema: '8000'
+region_wells:
+  header: ''
+  breadcrumb: ''
+  hero: ''
+  primary_action: ''
+  secondary_navigation: ''
+  content: ''
+  complementary: ''
+  footer: ''
+  navigation: ''
+  navigation_collapsible: ''
+  highlighted: ''
+  help: ''
+  sidebar_first: ''
+  sidebar_second: well
+forms_smart_descriptions: false
+cdn_provider: ''
+popover_trigger: hover
+tooltip_enabled: false
+button_colorize: false
+button_iconize: false
+modal_enabled: false
+schemas:
+  bootstrap: 8000
+  socialbase: 8000

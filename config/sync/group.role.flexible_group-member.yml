@@ -1,0 +1,39 @@
+uuid: 3b27460c-9ddd-4810-ad6c-f09f4dacd8be
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.authenticated
+_core:
+  default_config_hash: hy4T1dJxXjLKXaskgz45zQHF1OvRFmZYnpwU_HzoSMY
+id: flexible_group-member
+label: Member
+weight: -100
+admin: false
+scope: insider
+global_role: authenticated
+group_type: flexible_group
+permissions:
+  - 'access comments'
+  - 'access group_membership overview'
+  - 'access posts in group'
+  - 'add post entities in group'
+  - 'create group_node:event entity'
+  - 'create group_node:topic entity'
+  - 'delete own group_node:event entity'
+  - 'delete own group_node:topic entity'
+  - 'edit own comments'
+  - 'enroll to events in groups'
+  - 'leave group'
+  - 'post comments'
+  - 'update own group_membership relationship'
+  - 'update own group_node:event entity'
+  - 'update own group_node:topic entity'
+  - 'view group'
+  - 'view group stream page'
+  - 'view group_membership relationship'
+  - 'view group_node:event entity'
+  - 'view group_node:event relationship'
+  - 'view group_node:topic entity'
+  - 'view group_node:topic relationship'

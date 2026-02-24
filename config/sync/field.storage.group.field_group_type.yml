@@ -1,0 +1,22 @@
+uuid: 1d7ddda0-72d4-4b94-b046-05c9421590fe
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+    - taxonomy
+_core:
+  default_config_hash: vdB9o5YEHq6ZET64a2dAuhzbCryPN5MiC1XeoTeZZlI
+id: group.field_group_type
+field_name: field_group_type
+entity_type: group
+type: entity_reference
+settings:
+  target_type: taxonomy_term
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

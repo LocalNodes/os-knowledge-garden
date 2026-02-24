@@ -1,0 +1,23 @@
+uuid: c3c1e4a7-3727-4618-9358-1eb167e87e4f
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.activity_on_events_im_organizing
+  module:
+    - options
+_core:
+  default_config_hash: dhItJJfPFMQ1m2X8RTAz-SHOTGZpq9DnLov-zf8aWEc
+id: message.activity_on_events_im_organizing.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: activity_on_events_im_organizing
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

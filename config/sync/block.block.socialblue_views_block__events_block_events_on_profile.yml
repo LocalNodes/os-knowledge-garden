@@ -1,0 +1,33 @@
+uuid: 38ca63e8-c3b6-46a0-98bd-504bd5bdd06b
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.events
+  module:
+    - system
+    - views
+  theme:
+    - socialblue
+_core:
+  default_config_hash: iFGheRPqpxtxvtlrb49kr6X5xYk27v0WHVYD3L6hkZw
+id: socialblue_views_block__events_block_events_on_profile
+theme: socialblue
+region: complementary_bottom
+weight: 1
+provider: null
+plugin: 'views_block:events-block_events_on_profile'
+settings:
+  id: 'views_block:events-block_events_on_profile'
+  label: ''
+  label_display: visible
+  provider: views
+  views_label: ''
+  items_per_page: none
+  type: none
+visibility:
+  request_path:
+    id: request_path
+    pages: '/user/*/stream'
+    negate: false
+    context_mapping: {  }

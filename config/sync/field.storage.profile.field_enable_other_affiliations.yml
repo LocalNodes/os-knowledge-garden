@@ -1,0 +1,20 @@
+uuid: 6dbf5ba1-cbd1-4772-a42e-6f143dd76fb2
+langcode: en
+status: true
+dependencies:
+  module:
+    - profile
+_core:
+  default_config_hash: Owd59PsHcOLaKK4OVG6y7dK4cKnQ6irRlNZbnEtQbfc
+id: profile.field_enable_other_affiliations
+field_name: field_enable_other_affiliations
+entity_type: profile
+type: boolean
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

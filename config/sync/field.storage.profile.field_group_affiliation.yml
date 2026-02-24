@@ -1,0 +1,26 @@
+uuid: 964319da-5470-4c03-bcf6-01a1c8734f30
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+    - profile
+    - social_profile
+_core:
+  default_config_hash: qrHANc58CwVWTCEqEgzZmkvgqQTVpxnwbPaIZGHNJNQ
+id: profile.field_group_affiliation
+field_name: field_group_affiliation
+entity_type: profile
+type: group_affiliation
+settings:
+  target_type: group
+  handler_settings:
+    target_bundles:
+      flexible_group: flexible_group
+module: social_profile
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

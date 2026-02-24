@@ -1,0 +1,23 @@
+uuid: da168f64-301e-4152-9ca5-c30cf28bf9d8
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_context
+    - message.template.member_added_by_event_organiser
+  module:
+    - options
+_core:
+  default_config_hash: kTi-eJywn9ieSL_31yKBL2sKMdJmvy96v_73R6exw04
+id: message.member_added_by_event_organiser.field_message_context
+field_name: field_message_context
+entity_type: message
+bundle: member_added_by_event_organiser
+label: field_message_context
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

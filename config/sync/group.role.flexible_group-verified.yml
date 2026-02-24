@@ -1,0 +1,28 @@
+uuid: 9e8a0564-f4ee-4175-aaee-4a7367694b70
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.verified
+_core:
+  default_config_hash: GMd5NuM6FMD0dr-P_MsJaaGS0kynB5RsCO7gNoGCGgc
+id: flexible_group-verified
+label: Verified
+weight: 5
+admin: false
+scope: outsider
+global_role: verified
+group_type: flexible_group
+permissions:
+  - 'access comments'
+  - 'access posts in group'
+  - 'join group'
+  - 'request group membership'
+  - 'update own group_node:event entity'
+  - 'update own group_node:topic entity'
+  - 'view group'
+  - 'view group_node:event entity'
+  - 'view group_node:event relationship'
+  - 'view group_node:topic entity'
+  - 'view group_node:topic relationship'

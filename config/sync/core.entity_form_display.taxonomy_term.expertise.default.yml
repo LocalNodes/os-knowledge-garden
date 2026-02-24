@@ -1,0 +1,47 @@
+uuid: fbdc183c-2d6c-4e09-bf92-b3eedc9ab0fc
+langcode: en
+status: true
+dependencies:
+  config:
+    - taxonomy.vocabulary.expertise
+  module:
+    - text
+_core:
+  default_config_hash: SNzkFFE_nRdemvbZLLI6aZm5s8v2RkUcXUdirjRQQmA
+id: taxonomy_term.expertise.default
+targetEntityType: taxonomy_term
+bundle: expertise
+mode: default
+content:
+  description:
+    type: text_textarea
+    weight: 1
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  langcode:
+    type: language_select
+    weight: 2
+    region: content
+    settings:
+      include_locked: true
+    third_party_settings: {  }
+  name:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    weight: 3
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+hidden:
+  path: true

@@ -1,0 +1,21 @@
+uuid: 6457fafa-8435-4665-91ac-c76ff6c45f6e
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.paragraph.field_affiliation_org_name
+    - paragraphs.paragraphs_type.other_affiliations
+_core:
+  default_config_hash: x09XE55S30ChkgKgTsiLQeVH4VIZ7cuXPSnpW4bVKts
+id: paragraph.other_affiliations.field_affiliation_org_name
+field_name: field_affiliation_org_name
+entity_type: paragraph
+bundle: other_affiliations
+label: 'Name of the affiliated organization'
+description: ''
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

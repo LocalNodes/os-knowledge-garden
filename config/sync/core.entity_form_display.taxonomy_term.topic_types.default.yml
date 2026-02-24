@@ -1,0 +1,54 @@
+uuid: b200a59a-786b-468f-a3b3-cf18aefceb0b
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.taxonomy_term.topic_types.field_topic_type_icon
+    - taxonomy.vocabulary.topic_types
+  module:
+    - text
+_core:
+  default_config_hash: dpEhebQ3RdAHDCj55IgJuPw8CijhOZ736PMzgoVZeDk
+id: taxonomy_term.topic_types.default
+targetEntityType: taxonomy_term
+bundle: topic_types
+mode: default
+content:
+  description:
+    type: text_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_topic_type_icon:
+    weight: 31
+    settings: {  }
+    third_party_settings: {  }
+    type: options_select
+    region: content
+  langcode:
+    type: language_select
+    weight: 2
+    region: content
+    settings:
+      include_locked: true
+    third_party_settings: {  }
+  name:
+    type: string_textfield
+    weight: -5
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    settings:
+      display_label: true
+    weight: 100
+    region: content
+    third_party_settings: {  }
+hidden:
+  path: true

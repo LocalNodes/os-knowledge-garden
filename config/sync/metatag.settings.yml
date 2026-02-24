@@ -1,0 +1,27 @@
+_core:
+  default_config_hash: DrYt8PcXA0xB3C3L1SvtefnkO5SwUonhY3n4Ld8yun4
+entity_type_groups:
+  node:
+    event:
+      basic: basic
+      open_graph: open_graph
+    page:
+      basic: basic
+      open_graph: open_graph
+    topic:
+      basic: basic
+      open_graph: open_graph
+  profile:
+    profile:
+      basic: basic
+      open_graph: open_graph
+  user:
+    user:
+      basic: basic
+      open_graph: open_graph
+separator: ''
+tag_trim_method: beforeValue
+use_maxlength: true
+tag_trim_maxlength: {  }
+tag_scroll_max_height: ''
+tag_trim_end: '|.,-:;/+&([{"'''

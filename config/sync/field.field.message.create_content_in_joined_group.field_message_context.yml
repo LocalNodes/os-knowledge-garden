@@ -1,0 +1,23 @@
+uuid: b2e69c68-06b3-476a-802b-49e2e1a9f8d7
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_context
+    - message.template.create_content_in_joined_group
+  module:
+    - options
+_core:
+  default_config_hash: '-TNoVwsoOberJMKOvfNVU3rFNtGSOiPzweDKI1deDso'
+id: message.create_content_in_joined_group.field_message_context
+field_name: field_message_context
+entity_type: message
+bundle: create_content_in_joined_group
+label: field_message_context
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

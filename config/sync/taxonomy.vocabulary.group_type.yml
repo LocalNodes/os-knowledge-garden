@@ -1,0 +1,11 @@
+uuid: 4d3567d4-b7fd-46fa-ab89-bc582be17c0d
+langcode: en
+status: true
+dependencies: {  }
+_core:
+  default_config_hash: U0LCfZAZHGrbbXtshPDNXBFKnCvKN6BrMbiuS5zfUxI
+name: 'Group type'
+vid: group_type
+description: 'Group types'
+weight: 0
+new_revision: false

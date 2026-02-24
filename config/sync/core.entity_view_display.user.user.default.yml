@@ -1,0 +1,24 @@
+uuid: fda176fb-64bc-4e53-9953-07f50f1ffd4e
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.user.user.field_external_identifier
+  module:
+    - user
+_core:
+  default_config_hash: pi8gowixvqiiSruH9ngIJB2DHoxbFiupbCS43UU9lbA
+id: user.user.default
+targetEntityType: user
+bundle: user
+mode: default
+content: {  }
+hidden:
+  field_external_identifier: true
+  groups: true
+  langcode: true
+  member_for: true
+  profile_main: true
+  profile_profile: true
+  profile_profiles: true
+  search_api_excerpt: true

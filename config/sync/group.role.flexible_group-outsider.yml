@@ -1,0 +1,26 @@
+uuid: 39f92fcb-3bb1-416e-baf5-fcf38cad6e16
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.authenticated
+_core:
+  default_config_hash: kt_8TeaqBDLm5JnIvavGbQpqho9FelnIFz1DkAnYPdA
+id: flexible_group-outsider
+label: Outsider
+weight: -101
+admin: false
+scope: outsider
+global_role: authenticated
+group_type: flexible_group
+permissions:
+  - 'access comments'
+  - 'access posts in group'
+  - 'update own group_node:event entity'
+  - 'update own group_node:topic entity'
+  - 'view group'
+  - 'view group_node:event entity'
+  - 'view group_node:event relationship'
+  - 'view group_node:topic entity'
+  - 'view group_node:topic relationship'

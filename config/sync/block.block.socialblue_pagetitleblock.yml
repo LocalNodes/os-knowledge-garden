@@ -1,0 +1,38 @@
+uuid: 244ce58a-4336-4488-8eff-e6712487325b
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - social_core
+    - system
+  theme:
+    - socialblue
+_core:
+  default_config_hash: Pzq7vhlBYeTM1oPHnKbGaHj_mZdGI4L1-ye5gD0HNMI
+id: socialblue_pagetitleblock
+theme: socialblue
+region: hero
+weight: -15
+provider: null
+plugin: social_page_title_block
+settings:
+  id: social_page_title_block
+  label: 'Page title for nodes'
+  label_display: '0'
+  provider: social_core
+visibility:
+  'entity_bundle:node':
+    id: 'entity_bundle:node'
+    bundles:
+      event: event
+      page: page
+      topic: topic
+    negate: false
+    context_mapping:
+      node: '@node.node_route_context:node'
+  request_path:
+    id: request_path
+    pages: "/node/add/*\r\n/node/*/edit\r\n/node/*/delete\r\n/node/*/translations/add/*"
+    negate: true
+    context_mapping: {  }

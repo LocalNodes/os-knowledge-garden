@@ -1,0 +1,32 @@
+uuid: b8e9f178-5dfd-4f00-b0b3-b38a3a562b19
+langcode: en
+status: true
+dependencies:
+  module:
+    - file
+    - image
+    - profile
+_core:
+  default_config_hash: pAcdl6oOxajm-fYaLl1EuM_q-tl5i90X4R-y8RwBaEA
+id: profile.field_profile_image
+field_name: field_profile_image
+entity_type: profile
+type: image
+settings:
+  uri_scheme: secret
+  default_image:
+    uuid: ''
+    alt: ''
+    title: ''
+    width: null
+    height: null
+  target_type: file
+  display_field: false
+  display_default: false
+module: image
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

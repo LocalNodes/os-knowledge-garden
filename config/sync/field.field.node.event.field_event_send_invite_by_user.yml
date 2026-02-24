@@ -1,0 +1,25 @@
+uuid: be9aeeb3-75d7-476f-8edb-e4381aeded16
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_event_send_invite_by_user
+    - node.type.event
+_core:
+  default_config_hash: 8A7b-12LvYhA8TWjFMfU1pYzYM8KZTOqQSYijknR-ik
+id: node.event.field_event_send_invite_by_user
+field_name: field_event_send_invite_by_user
+entity_type: node
+bundle: event
+label: 'Allow users to share the event with others'
+description: ''
+required: false
+translatable: false
+default_value:
+  -
+    value: 0
+default_value_callback: ''
+settings:
+  on_label: 'On'
+  off_label: 'Off'
+field_type: boolean

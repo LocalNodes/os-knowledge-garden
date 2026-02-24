@@ -1,0 +1,31 @@
+uuid: 2a00eef1-d57a-406e-9d4b-4bc7fff127b6
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.search_users
+  module:
+    - system
+    - views
+  theme:
+    - socialbase
+_core:
+  default_config_hash: QP9Hg0-yhZhLEJkRbUl2wVh2TYSV3wGoaKW4ByB3T3s
+id: exposed_form_search_users_page_sidebar
+theme: socialbase
+region: complementary_top
+weight: 4
+provider: null
+plugin: 'views_exposed_filter_block:search_users-page'
+settings:
+  id: 'views_exposed_filter_block:search_users-page'
+  label: ''
+  label_display: visible
+  provider: views
+  views_label: Filter
+visibility:
+  request_path:
+    id: request_path
+    pages: "/search/users\r\n/search/users/*"
+    negate: false
+    context_mapping: {  }

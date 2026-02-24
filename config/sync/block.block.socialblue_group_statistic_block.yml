@@ -1,0 +1,29 @@
+uuid: 36f77d65-59f2-4fd6-a972-a89695bc4005
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_group
+    - system
+  theme:
+    - socialblue
+_core:
+  default_config_hash: BFY2OSj7iZemS6zLLd2sewKFmrahCDpKbxZCFXdtNJ8
+id: socialblue_group_statistic_block
+theme: socialblue
+region: complementary_top
+weight: -100
+provider: null
+plugin: group_statistic_block
+settings:
+  id: group_statistic_block
+  label: 'Group statistic block'
+  label_display: '0'
+  provider: social_group
+  context_mapping: {  }
+visibility:
+  request_path:
+    id: request_path
+    pages: "/group/*/stream\r\n/group/*/about\r\n/group/*/events\r\n/group/*/topics\r\n/group/*/members\r\n/group/*/discussions\r\n/group/*/ideas"
+    negate: false
+    context_mapping: {  }

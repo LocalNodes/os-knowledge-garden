@@ -1,0 +1,21 @@
+uuid: ed8b3f1e-69e3-4607-9274-ba6551262dec
+langcode: en
+status: true
+dependencies:
+  module:
+    - address
+    - node
+_core:
+  default_config_hash: Cw4zMPX5baU9ygQFDu_ym2hMezfWv58GV6wdaAjHUXk
+id: node.field_event_address
+field_name: field_event_address
+entity_type: node
+type: address
+settings: {  }
+module: address
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

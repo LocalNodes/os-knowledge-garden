@@ -1,0 +1,33 @@
+uuid: 2b8d3820-0a83-4d62-ac3c-2cd47abc02ba
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.profile.field_group_affiliation
+    - group.type.flexible_group
+    - profile.type.profile
+  module:
+    - social_profile
+_core:
+  default_config_hash: yV2ITXH8riTpo9DnD4TBlpe3WzzLw_QMYlAQrs0f000
+id: profile.profile.field_group_affiliation
+field_name: field_group_affiliation
+entity_type: profile
+bundle: profile
+label: 'Group affiliation'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:group'
+  handler_settings:
+    target_bundles:
+      flexible_group: flexible_group
+    sort:
+      field: _none
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: group_affiliation

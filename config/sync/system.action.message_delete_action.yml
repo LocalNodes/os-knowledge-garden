@@ -1,0 +1,13 @@
+uuid: b9b02798-357c-48f9-b5d4-888e23a5c499
+langcode: en
+status: true
+dependencies:
+  module:
+    - message
+_core:
+  default_config_hash: PJPmPUkSYcTP7w_-3oQMpNBRje9Q8seK3OxvwQcRKVU
+id: message_delete_action
+label: 'Delete selected messages'
+type: message
+plugin: 'entity:delete_action:message'
+configuration: {  }

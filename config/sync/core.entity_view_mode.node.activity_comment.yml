@@ -1,0 +1,13 @@
+uuid: 9521bbd2-6749-455e-b5b4-48948323c55a
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+_core:
+  default_config_hash: epUnKT076SuTjQqSLpgt9KR9cPGPg7_p6koQnrY11lU
+id: node.activity_comment
+label: 'Activity comment'
+description: ''
+targetEntityType: node
+cache: true

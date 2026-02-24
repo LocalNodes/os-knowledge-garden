@@ -1,0 +1,23 @@
+uuid: 1afe78eb-3d4a-46d3-a95e-2e514d28b4f4
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_context
+    - message.template.create_post_profile_stream
+  module:
+    - options
+_core:
+  default_config_hash: GNHwUG5RKdYjscJjfupL7-_Fm0dnSYFHwrJiPwUnIe0
+id: message.create_post_profile_stream.field_message_context
+field_name: field_message_context
+entity_type: message
+bundle: create_post_profile_stream
+label: field_message_context
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

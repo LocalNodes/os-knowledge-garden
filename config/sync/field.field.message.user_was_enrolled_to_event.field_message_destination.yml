@@ -1,0 +1,23 @@
+uuid: 4f1ac203-aaef-404f-b223-02d3447da4b4
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.user_was_enrolled_to_event
+  module:
+    - options
+_core:
+  default_config_hash: rVCzm7v9AbYz4GUqWdJHzRFfxn4lYf3mPuCtmGkr3sM
+id: message.user_was_enrolled_to_event.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: user_was_enrolled_to_event
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

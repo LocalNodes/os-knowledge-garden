@@ -1,0 +1,31 @@
+uuid: 77e92ca5-14be-4f6b-b3d2-c1423f7a0c1a
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.newest_users
+  module:
+    - system
+    - views
+  theme:
+    - socialbase
+_core:
+  default_config_hash: INsRD-naKLpiWzF8GqRzlDzl7_S6UwL0kv250HeOJIs
+id: exposedformnewest_userspage_newest_users
+theme: socialbase
+region: complementary_top
+weight: 0
+provider: null
+plugin: 'views_exposed_filter_block:newest_users-page_newest_users'
+settings:
+  id: 'views_exposed_filter_block:newest_users-page_newest_users'
+  label: ''
+  label_display: visible
+  provider: views
+  views_label: Filter
+visibility:
+  request_path:
+    id: request_path
+    pages: /all-members
+    negate: false
+    context_mapping: {  }

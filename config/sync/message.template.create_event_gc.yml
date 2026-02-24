@@ -1,0 +1,35 @@
+uuid: 296abe2f-d4f6-4d19-a4a3-494508ae5b61
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.basic_html
+  module:
+    - activity_logger
+third_party_settings:
+  activity_logger:
+    activity_bundle_entities:
+      group_content-flexible_group-group_node-event: group_content-flexible_group-group_node-event
+    activity_action: create_entitiy_action
+    activity_context: group_activity_context
+    activity_destinations:
+      stream_group: stream_group
+    activity_create_direct: false
+    activity_aggregate: false
+    activity_entity_condition: ''
+    email_subject: ''
+_core:
+  default_config_hash: yFulzRCcBVDIilQ-YBG4G2nHo0ECHII-O6p0viNiLkg
+template: create_event_gc
+label: 'Create event as group content'
+description: 'A user add (create) a event to a group (or groups)'
+text:
+  -
+    value: '<p><a href="[message:revision_author:url:absolute]" translate="no">[message:revision_author:display-name]</a> created an event in <a href="[message:gurl]">[message:gtitle]</a></p>'
+    format: basic_html
+settings:
+  'token options':
+    clear: false
+    'token replace': true
+  purge_override: false
+  purge_methods: {  }

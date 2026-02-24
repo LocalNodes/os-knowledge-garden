@@ -1,0 +1,25 @@
+uuid: 83026fe4-9fd5-4bd2-b4f0-5affd0e42002
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+    - profile
+  enforced:
+    module:
+      - social_profile
+_core:
+  default_config_hash: 3fU7Sc2-DbxBA6wJVLpe1oZuEcfMwI6woRL5j1qkuJ0
+id: profile.user_removed_affiliations
+field_name: user_removed_affiliations
+entity_type: profile
+type: entity_reference
+settings:
+  target_type: group
+module: core
+locked: true
+cardinality: -1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,25 @@
+uuid: c71d55a8-f279-4f69-8bca-517163018e95
+langcode: en
+status: true
+dependencies:
+  module:
+    - comment
+    - file
+_core:
+  default_config_hash: yZbNUV_y_gDVUxDyV1crBGLRFOCgPUxkLnJ6KB1xuvE
+id: comment.field_comment_files
+field_name: field_comment_files
+entity_type: comment
+type: file
+settings:
+  display_field: false
+  display_default: false
+  uri_scheme: secret
+  target_type: file
+module: file
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

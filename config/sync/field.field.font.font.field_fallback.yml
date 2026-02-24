@@ -1,0 +1,25 @@
+uuid: f2aa03ee-2278-486e-81ac-26b9c270c440
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.font.field_fallback
+  module:
+    - options
+    - social_font
+_core:
+  default_config_hash: xNgLqOltHR6usR9URkrfQZvMXHmD7H3Asokk2_ZX3-s
+id: font.font.field_fallback
+field_name: field_fallback
+entity_type: font
+bundle: font
+label: Fallback
+description: ''
+required: true
+translatable: false
+default_value:
+  -
+    value: '0'
+default_value_callback: ''
+settings: {  }
+field_type: list_string

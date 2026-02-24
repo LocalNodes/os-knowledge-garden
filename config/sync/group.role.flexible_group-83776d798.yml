@@ -1,0 +1,20 @@
+uuid: b19bf464-8c76-45d3-809e-da60a69791e4
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.contentmanager
+  enforced:
+    config:
+      - user.role.contentmanager
+_core:
+  default_config_hash: 65VqiqVUKifLX2HqFKSG_CccAI24xdaD3EqaG1OqM38
+id: flexible_group-83776d798
+label: 'Content manager'
+weight: 3
+admin: true
+scope: outsider
+global_role: contentmanager
+group_type: flexible_group
+permissions: {  }

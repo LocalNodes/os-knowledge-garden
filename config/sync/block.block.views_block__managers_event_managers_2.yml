@@ -1,0 +1,35 @@
+uuid: 5ca8bb1d-4be5-4592-9b36-3204825cc9e5
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.managers
+  module:
+    - node
+    - views
+  theme:
+    - socialblue
+_core:
+  default_config_hash: wZtce0S0hsM4iY-Co3Ovq17GruDu2lxAxdsYOuJrqnE
+id: views_block__managers_event_managers_2
+theme: socialblue
+region: complementary_bottom
+weight: 0
+provider: null
+plugin: 'views_block:managers-event_managers'
+settings:
+  id: 'views_block:managers-event_managers'
+  label: ''
+  label_display: visible
+  provider: views
+  views_label: ''
+  items_per_page: none
+  type: none
+visibility:
+  'entity_bundle:node':
+    id: 'entity_bundle:node'
+    bundles:
+      event: event
+    negate: false
+    context_mapping:
+      node: '@node.node_route_context:node'

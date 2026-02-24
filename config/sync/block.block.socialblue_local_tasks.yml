@@ -1,0 +1,38 @@
+uuid: 6857d85b-b236-4b61-b6c8-cd5d5f8d20f8
+langcode: en
+status: true
+dependencies:
+  module:
+    - system
+    - user
+  theme:
+    - socialblue
+_core:
+  default_config_hash: DI3Pt8FWvvY7-xgU5TxTyM5chclowx82bUbSX3CYgZk
+id: socialblue_local_tasks
+theme: socialblue
+region: secondary_navigation
+weight: -6
+provider: null
+plugin: local_tasks_block
+settings:
+  id: local_tasks_block
+  label: Tabs
+  label_display: '0'
+  provider: core
+  primary: true
+  secondary: true
+visibility:
+  user_role:
+    id: user_role
+    roles:
+      anonymous: anonymous
+      authenticated: authenticated
+    negate: false
+    context_mapping:
+      user: '@user.current_user_context:current_user'
+  request_path:
+    id: request_path
+    pages: "/post/*/edit\r\n/post/*/delete\r\n/user/*/edit\r\n/user/*/profile\r\n/group/*/edit"
+    negate: true
+    context_mapping: {  }

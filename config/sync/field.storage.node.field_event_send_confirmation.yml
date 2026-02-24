@@ -1,0 +1,23 @@
+uuid: 7c490bf0-abce-4c81-a36d-bb360c63fb26
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+  enforced:
+    module:
+      - social_event
+_core:
+  default_config_hash: tXh267qKPd25pW4ZdZdlem9v9oRrbtNXWZ0HxZOrHPU
+id: node.field_event_send_confirmation
+field_name: field_event_send_confirmation
+entity_type: node
+type: boolean
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

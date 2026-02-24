@@ -1,0 +1,12 @@
+uuid: 723f463a-6e2e-4e23-9eb7-a681a4a79e25
+langcode: en
+status: true
+dependencies: {  }
+_core:
+  default_config_hash: mcepfZToXrhpjIdtz2b5_A2FlJNBsZyt2To-3qA_C5M
+id: other_affiliations
+label: 'Non-platform affiliations'
+icon_uuid: null
+icon_default: null
+description: 'Affiliation is a feature, that allows members to determine which organization they represent in the community. Users can define this through their the profile settings and this paragraph type is used to add non-platform affiliations.'
+behavior_plugins: {  }

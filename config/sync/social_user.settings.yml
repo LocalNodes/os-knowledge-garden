@@ -1,0 +1,7 @@
+_core:
+  default_config_hash: C0mrL9nJdlTqxkNqOf1aINrgfODEoVHeN_g7WvKpgC4
+langcode: en
+signup_help: 'A welcome message with further instructions will be sent to your email address after you successfully enter your email address and a username.'
+login_help: ''
+social_user_profile_landingpage: social_user.stream
+verified_immediately: true

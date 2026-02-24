@@ -1,0 +1,42 @@
+uuid: a8464941-5736-4e4c-ae84-93e1e7c57139
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.full_html
+  module:
+    - activity_logger
+third_party_settings:
+  activity_logger:
+    activity_bundle_entities:
+      event_enrollment-event_enrollment: event_enrollment-event_enrollment
+    activity_action: create_entitiy_action
+    activity_context: event_request_activity_context
+    activity_destinations:
+      notifications: notifications
+      email: email
+    activity_create_direct: false
+    activity_aggregate: false
+    activity_entity_condition: ''
+    email_subject: 'Someone wants to enroll to your event'
+_core:
+  default_config_hash: OBvHiSfmVVOS-MLi-Y7TsdTG6loYvBAFs1MOoF0txhY
+template: request_event_enrollment
+label: 'Request event enrollment'
+description: 'A user request an enrollment for event'
+text:
+  -
+    value: "<p><a href=\"[social_event:enrolled_event_url]\">[social_event:enrolled_user]</a> has requested enrollment to the event [social_event:event_iam_organizing] you are organizing</p>\r\n"
+    format: full_html
+  -
+    value: "<p><a href=\"[social_event:enrolled_event_url]\">[social_event:enrolled_user]</a> has requested enrollment to the event [social_event:event_iam_organizing] you are organizing</p>\r\n"
+    format: full_html
+  -
+    value: "<p><a href=\"[social_event:enrolled_event_url]\">[social_event:enrolled_user]</a> has requested enrollment to the event [social_event:event_iam_organizing] you are organizing</p>\r\n\r\n<p>[message:preview]</p>\r\n\r\n<p>[message:cta_button]</p>\r\n"
+    format: full_html
+settings:
+  'token options':
+    clear: false
+    'token replace': true
+  purge_override: false
+  purge_methods: {  }

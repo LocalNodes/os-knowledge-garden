@@ -1,0 +1,28 @@
+uuid: d82b64bb-5e6f-40a0-bfa9-309543ee29d3
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_topic
+    - system
+  theme:
+    - socialbase
+_core:
+  default_config_hash: jqoyaPsPUNAwGs_HjofeXbLr4BO8s5c_9VRCmAqacZs
+id: topic_add_block
+theme: socialbase
+region: complementary_top
+weight: -98
+provider: null
+plugin: topic_add_block
+settings:
+  id: topic_add_block
+  label: 'Topic add block'
+  label_display: '0'
+  provider: social_topic
+visibility:
+  request_path:
+    id: request_path
+    pages: '/user/*/topics'
+    negate: false
+    context_mapping: {  }

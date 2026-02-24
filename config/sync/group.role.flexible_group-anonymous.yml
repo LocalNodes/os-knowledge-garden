@@ -1,0 +1,22 @@
+uuid: 1295f0cb-5480-4bec-a433-caf42be5f193
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.anonymous
+_core:
+  default_config_hash: 6iHQrNZFguxCx8PyljP1HbIPxj0Uwoz1H7DPLqO7pU4
+id: flexible_group-anonymous
+label: Anonymous
+weight: -102
+admin: false
+scope: outsider
+global_role: anonymous
+group_type: flexible_group
+permissions:
+  - 'view group'
+  - 'view group_node:event entity'
+  - 'view group_node:event relationship'
+  - 'view group_node:topic entity'
+  - 'view group_node:topic relationship'

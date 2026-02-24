@@ -1,0 +1,6 @@
+_core:
+  default_config_hash: HHNWmZy7bQLE6FXxBxFyVRfZys0APfHsn6abQlOjPM8
+prompt_logging: false
+prompt_logging_tags: ''
+default_providers: {  }
+request_timeout: 60

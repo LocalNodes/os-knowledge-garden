@@ -1,0 +1,20 @@
+uuid: 6f26baa5-d587-4f05-a49f-0c9b63846861
+langcode: en
+status: true
+dependencies:
+  config:
+    - group.type.flexible_group
+    - user.role.sitemanager
+  enforced:
+    config:
+      - user.role.sitemanager
+_core:
+  default_config_hash: y9MRhkWUQi2fv4fPuS8ftn0myhtDKuePT7P_QLTNTRI
+id: flexible_group-ba5854c29
+label: 'Site manager'
+weight: 4
+admin: true
+scope: outsider
+global_role: sitemanager
+group_type: flexible_group
+permissions: {  }

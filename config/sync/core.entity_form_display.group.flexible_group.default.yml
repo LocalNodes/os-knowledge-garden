@@ -1,0 +1,226 @@
+uuid: 290f643c-1a4b-42c4-b065-ba2071a14a43
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.group.flexible_group.field_flexible_group_visibility
+    - field.field.group.flexible_group.field_group_address
+    - field.field.group.flexible_group.field_group_allowed_join_method
+    - field.field.group.flexible_group.field_group_allowed_visibility
+    - field.field.group.flexible_group.field_group_description
+    - field.field.group.flexible_group.field_group_image
+    - field.field.group.flexible_group.field_group_invite_by_member
+    - field.field.group.flexible_group.field_group_location
+    - field.field.group.flexible_group.field_group_posts_enabled
+    - field.field.group.flexible_group.field_group_type
+    - group.type.flexible_group
+    - image.style.social_x_large
+  module:
+    - address
+    - field_group
+    - image_widget_crop
+    - path
+    - social_profile
+    - text
+third_party_settings:
+  field_group:
+    group_content:
+      children:
+        - field_group_type
+        - label
+        - field_group_image
+        - field_group_description
+      label: 'Basic information'
+      region: content
+      parent_name: ''
+      weight: 0
+      format_type: fieldset
+      format_settings:
+        classes: ''
+        id: ''
+        description: ''
+        required_fields: true
+    group_location:
+      children:
+        - field_group_location
+        - field_group_address
+      label: Location
+      region: content
+      parent_name: ''
+      weight: 3
+      format_type: fieldset
+      format_settings:
+        classes: ''
+        id: ''
+        description: ''
+        required_fields: true
+    group_settings:
+      children:
+        - path
+      label: Settings
+      region: content
+      parent_name: ''
+      weight: 5
+      format_type: details
+      format_settings:
+        classes: social-collapsible-fieldset
+        id: ''
+        open: false
+        description: ''
+        required_fields: true
+    group_access_permissions:
+      children:
+        - field_flexible_group_visibility
+        - field_group_allowed_visibility
+        - field_group_allowed_join_method
+      label: 'Access permissions'
+      region: content
+      parent_name: ''
+      weight: 2
+      format_type: fieldset
+      format_settings:
+        classes: ''
+        id: ''
+        description: ''
+        required_fields: true
+    group_additional_details:
+      children: {  }
+      label: 'Additional information'
+      region: content
+      parent_name: ''
+      weight: 4
+      format_type: details
+      format_settings:
+        classes: social-collapsible-fieldset
+        id: ''
+        open: false
+        description: ''
+        required_fields: true
+    group_personalisation:
+      children:
+        - field_group_posts_enabled
+      label: Personalisation
+      region: content
+      parent_name: ''
+      weight: 1
+      format_type: fieldset
+      format_settings:
+        classes: ''
+        id: ''
+        description: ''
+        required_fields: true
+_core:
+  default_config_hash: BUh3_lUyv-eI-Bs5EaPw88kZ_K1lBZfWl2ZaqKZkWIk
+id: group.flexible_group.default
+targetEntityType: group
+bundle: flexible_group
+mode: default
+content:
+  allow_request:
+    type: boolean_checkbox
+    weight: 99
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+  field_flexible_group_visibility:
+    type: options_buttons
+    weight: 100
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_group_address:
+    type: address_default
+    weight: 6
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_group_allowed_join_method:
+    type: options_buttons
+    weight: 102
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_group_allowed_visibility:
+    type: options_buttons
+    weight: 101
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_group_description:
+    type: text_textarea
+    weight: 103
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_group_image:
+    type: image_widget_crop
+    weight: 102
+    region: content
+    settings:
+      progress_indicator: throbber
+      preview_image_style: social_x_large
+      crop_preview_image_style: crop_thumbnail
+      crop_list:
+        - hero_small
+        - hero
+        - teaser
+      crop_types_required: {  }
+      warn_multiple_usages: true
+      show_crop_area: true
+      show_default_crop: true
+    third_party_settings: {  }
+  field_group_location:
+    type: string_textfield
+    weight: 5
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_group_posts_enabled:
+    type: boolean_checkbox
+    weight: 99
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+  field_group_type:
+    type: categorized_options_buttons
+    weight: 100
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  label:
+    type: string_textfield
+    weight: 101
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  langcode:
+    type: language_select
+    weight: 2
+    region: content
+    settings:
+      include_locked: true
+    third_party_settings: {  }
+  path:
+    type: path
+    weight: 4
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    weight: 120
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+hidden:
+  field_group_invite_by_member: true
+  uid: true

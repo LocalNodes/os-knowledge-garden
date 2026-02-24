@@ -1,0 +1,17 @@
+uuid: dd236ab3-1ffc-4db0-b039-f5e3fb6b8d9d
+langcode: en
+status: true
+dependencies:
+  module:
+    - ai_usage_limits
+title: 'Default cron handler'
+id: ai_usage_limits_cron
+weight: 0
+module: ai_usage_limits
+callback: ai_usage_limits_cron
+scheduler:
+  id: simple
+launcher:
+  id: serial
+logger:
+  id: database

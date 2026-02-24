@@ -1,0 +1,26 @@
+uuid: ee8747a5-ac80-481c-82a9-9e46b4c3eac8
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+  enforced:
+    module:
+      - group
+      - ginvite
+_core:
+  default_config_hash: vWlrgn38n5VJOjdyON2AnkJNV5IyLEkHpWAvziE5El4
+id: group_content.invitation_status
+field_name: invitation_status
+entity_type: group_content
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: true
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: true
+custom_storage: false

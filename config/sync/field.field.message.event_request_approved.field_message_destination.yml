@@ -1,0 +1,23 @@
+uuid: 3915e9e0-c4a5-433f-bf7d-faf9d06b2079
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_message_destination
+    - message.template.event_request_approved
+  module:
+    - options
+_core:
+  default_config_hash: HMjnZ4hsM90VaWcZR6RpMrfw79YBgrhsHUQJeMQW9ZM
+id: message.event_request_approved.field_message_destination
+field_name: field_message_destination
+entity_type: message
+bundle: event_request_approved
+label: field_message_destination
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

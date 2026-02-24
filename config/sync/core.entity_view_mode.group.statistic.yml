@@ -1,0 +1,13 @@
+uuid: b825dfa7-18c4-4888-8724-baa09adb46fd
+langcode: en
+status: true
+dependencies:
+  module:
+    - group
+_core:
+  default_config_hash: IkZplQk_mMWNaQjW0ESRtJgoCM3Do0KgQ9D0SQuZCK4
+id: group.statistic
+label: Statistic
+description: ''
+targetEntityType: group
+cache: true

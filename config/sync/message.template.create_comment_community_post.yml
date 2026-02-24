@@ -1,0 +1,38 @@
+uuid: 6be16125-4da4-4b9d-ba69-4f8b5b497643
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.full_html
+  module:
+    - activity_logger
+third_party_settings:
+  activity_logger:
+    activity_bundle_entities:
+      comment-post_comment: comment-post_comment
+    activity_action: create_entitiy_action
+    activity_context: community_activity_context
+    activity_destinations:
+      stream_explore: stream_explore
+      stream_profile: stream_profile
+    activity_create_direct: true
+    activity_aggregate: true
+    activity_entity_condition: comment_not_reply
+    email_subject: ''
+_core:
+  default_config_hash: CmSl7AGqH3p5pOa44QWXNj7fwmt37Ss7Sh3qY6XKCOg
+template: create_comment_community_post
+label: 'Create comment on post in the community'
+description: 'A user add a comment to post in the community'
+text:
+  -
+    format: full_html
+    value: '<p><a href="[message:author:url:absolute]">[message:author:display-name]</a> commented on a post</p>'
+  -
+    format: full_html
+    value: '<p><a href="[message:author:url:absolute]">[message:author:display-name]</a> and @count others commented on a post</p>'
+settings:
+  'token options':
+    clear: false
+    'token replace': true
+  purge_methods: {  }

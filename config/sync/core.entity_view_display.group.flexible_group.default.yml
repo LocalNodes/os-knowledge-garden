@@ -1,0 +1,73 @@
+uuid: 69a2b08b-0912-433c-963f-480f4ea4529e
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.group.flexible_group.field_flexible_group_visibility
+    - field.field.group.flexible_group.field_group_address
+    - field.field.group.flexible_group.field_group_allowed_join_method
+    - field.field.group.flexible_group.field_group_allowed_visibility
+    - field.field.group.flexible_group.field_group_description
+    - field.field.group.flexible_group.field_group_image
+    - field.field.group.flexible_group.field_group_invite_by_member
+    - field.field.group.flexible_group.field_group_location
+    - field.field.group.flexible_group.field_group_posts_enabled
+    - field.field.group.flexible_group.field_group_type
+    - group.type.flexible_group
+  module:
+    - options
+_core:
+  default_config_hash: 5ztsT5ELM-3nHO1Tu6Aw2JlFzK42SZv7-hLG-PeryP4
+id: group.flexible_group.default
+targetEntityType: group
+bundle: flexible_group
+mode: default
+content:
+  field_group_allowed_join_method:
+    type: list_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_group_allowed_visibility:
+    type: list_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_group_description:
+    type: basic_string
+    label: hidden
+    settings: {  }
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_group_type:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  flag_mute_group_notifications:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 10
+    region: content
+hidden:
+  changed: true
+  created: true
+  field_flexible_group_visibility: true
+  field_group_address: true
+  field_group_description: true
+  field_group_image: true
+  field_group_invite_by_member: true
+  field_group_location: true
+  field_group_posts_enabled: true
+  label: true
+  langcode: true
+  search_api_excerpt: true
+  uid: true

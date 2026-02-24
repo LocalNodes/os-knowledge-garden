@@ -1,0 +1,20 @@
+uuid: f2548774-6a59-4d61-98f9-6aab4dc5fdd5
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_profile
+third_party_settings:
+  social_profile:
+    affiliation_candidate: true
+    affiliation_enabled: false
+_core:
+  default_config_hash: sFNhA-8g_MoYiDnLPgjxKBMGq85vAKoG6bIWjHjMdyc
+id: flexible_group
+label: 'Flexible group'
+description: 'By choosing this option you can customize many group settings to your needs.'
+new_revision: false
+creator_membership: true
+creator_wizard: false
+creator_roles:
+  - flexible_group-group_manager

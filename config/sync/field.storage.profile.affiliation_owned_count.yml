@@ -1,0 +1,25 @@
+uuid: c8f1aba9-9349-4b49-b69d-81744076f5b5
+langcode: en
+status: true
+dependencies:
+  module:
+    - profile
+  enforced:
+    module:
+      - social_profile
+_core:
+  default_config_hash: uZwH8encIK62Q5w3HAKhHGt4jkyOh8pah-cSc938UGM
+id: profile.affiliation_owned_count
+field_name: affiliation_owned_count
+entity_type: profile
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: true
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,27 @@
+uuid: a316b387-9aa2-4c08-bd54-a91f970c5f09
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.group.field_group_allowed_join_method
+    - group.type.flexible_group
+  module:
+    - options
+_core:
+  default_config_hash: VtgTXNfjsaADUCJe7ivuTQOsEB0aCpW4VnfHMTWFuyc
+id: group.flexible_group.field_group_allowed_join_method
+field_name: field_group_allowed_join_method
+entity_type: group
+bundle: flexible_group
+label: 'Allowed join method'
+description: 'Choose how people can join this group.'
+required: true
+translatable: false
+default_value:
+  -
+    value: direct
+  -
+    value: added
+default_value_callback: ''
+settings: {  }
+field_type: list_string
