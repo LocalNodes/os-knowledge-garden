@@ -22,7 +22,7 @@ tech-stack:
 
 key-files:
   created:
-    - html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/FileContentExtractor.php
+    - html/modules/custom/social_ai_indexing/src/Plugin/search_api/processor/FileContentExtractor.php
   modified: []
 
 key-decisions:
@@ -65,12 +65,12 @@ Each task was committed atomically:
 1. **Task 1: Create File Content Extractor processor** - `b6dcfd2` (feat)
 2. **Task 2: Add file content field to post index** - (database config, no file commit)
 
-**Plan metadata:** `pending` (docs: complete plan)
+**Plan metadata:** `tbd` (docs: complete File Content Extractor plan)
 
 _Note: TDD tasks may have multiple commits (test → feat → refactor)_
 
 ## Files Created/Modified
-- `html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/FileContentExtractor.php` - Search API processor that extracts text from PDF and Office document attachments
+- `html/modules/custom/social_ai_indexing/src/Plugin/search_api/processor/FileContentExtractor.php` - Search API processor that extracts text from PDF and Office document attachments
 
 ## Decisions Made
 - Used Search API processor pattern for file content extraction (consistent with GroupMetadata)
@@ -108,7 +108,7 @@ None - no external service configuration required.
 - Ready for 02-03c (invalidation/regeneration on content updates)
 
 ## Self-Check: PASSED
-- FileContentExtractor.php exists at expected path
+- FileContentExtractor.php exists at Plugin/search_api/processor/ path (PSR-4 compliant)
 - Commit b6dcfd2 verified in git log
 - file_content field present in index config
 - file_content_extractor processor present in index config
