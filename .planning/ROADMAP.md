@@ -48,12 +48,12 @@ Plans:
   4. Content is chunked appropriately for retrieval (256-512 tokens with overlap)
   5. Each indexed item has Group ID metadata attached for permission filtering
   6. Content updates and deletes trigger embedding regeneration/invalidation
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 02-01: Index posts and comments with embeddings
-- [ ] 02-02: Index file uploads (PDFs, Office docs)
-- [ ] 02-03: Implement chunking strategy with metadata
+- [ ] 02-01: Create Group Metadata processor and post index — Wave 1
+- [ ] 02-02: Configure comment indexing with parent context — Wave 2 (depends on 02-01)
+- [ ] 02-03: Configure file indexing and verify pipeline — Wave 2 (depends on 02-01)
 
 ### Phase 3: Permission-Aware Retrieval
 **Goal**: AI only surfaces content the user is authorized to see — no permission leakage
@@ -116,7 +116,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. AI Infrastructure | 3/3 | Planned | - |
-| 2. Content Indexing | 0/3 | Not started | - |
+| 2. Content Indexing | 0/3 | Planned | - |
 | 3. Permission-Aware Retrieval | 0/3 | Not started | - |
 | 4. Q&A & Search | 0/3 | Not started | - |
 | 5. User Interface | 0/3 | Not started | - |
