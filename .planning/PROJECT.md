@@ -55,8 +55,9 @@ An AI-powered knowledge garden enhancement for an Open Social community platform
 ## Constraints
 
 - **Platform:** Must integrate with Open Social / Drupal ecosystem
-- **LLM Provider:** Deepseek (via ai_provider_deepseek module)
-- **Search Backend:** Solr already in place, adding vector + graph capabilities
+- **LLM Provider:** Deepseek (via ai_provider_deepseek module) for chat/generation
+- **Embedding Provider:** Ollama (local) for vector embeddings — no external API dependency
+- **Search Backend:** Solr already in place, adding vector capabilities via Milvus
 - **Auth Model:** Drupal permissions system must be respected
 - **PHP Version:** 8.3
 
@@ -64,10 +65,12 @@ An AI-powered knowledge garden enhancement for an Open Social community platform
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Deepseek as LLM provider | User selected via ai_provider_deepseek module | — Pending |
-| Solr + Vector + Graph stack | Existing Solr, expand capabilities | — Pending |
+| Deepseek as LLM provider | User selected via ai_provider_deepseek module | ✓ Implemented |
+| Ollama for embeddings (local) | Free, private, no rate limits, data stays local. Deepseek module doesn't support embeddings. | ✓ Implemented |
+| Milvus for vector DB | Highest adoption in Drupal AI ecosystem, DDEV add-on available | ✓ Implemented |
+| Drupal AI ecosystem modules | Leverage existing integrations, avoid reinventing | ✓ Implemented |
+| Solr + Vector (no Graph) | Neo4j module abandoned; defer graph capabilities | — Scoped out |
 | Flexible auth implementation | Research best approach during discovery | — Pending |
-| Drupal AI ecosystem modules | Leverage existing integrations, avoid reinventing | — Pending |
 
 ---
-*Last updated: 2026-02-23 after initialization*
+*Last updated: 2026-02-24 after Phase 1 infrastructure setup*

@@ -6,11 +6,13 @@
 
 ## Summary
 
-Phase 1 establishes the AI infrastructure foundation for the Open Social Knowledge Gardens. The core stack consists of the Drupal AI module (stable 1.2.x with security coverage), ai_provider_deepseek for LLM capabilities, a separate embedding provider (OpenAI or Ollama), and Milvus as the vector database. 
+Phase 1 establishes the AI infrastructure foundation for the Open Social Knowledge Gardens. The core stack consists of the Drupal AI module (dev 1.3.x), ai_provider_deepseek for LLM capabilities, ai_provider_ollama for local embeddings, and Milvus as the vector database. 
 
-**Critical Discovery:** The ai_provider_deepseek module provides only chat/LLM capabilities—it does NOT include embedding support. A separate embedding provider is required. The recommended approach is to use OpenAI's embedding API (via ai_provider_openai) or a local Ollama instance with embedding models like `nomic-embed-text`.
+**Critical Discovery:** The ai_provider_deepseek module provides only chat/LLM capabilities—it does NOT include embedding support. A separate embedding provider is required. 
 
-**Primary recommendation:** Install Drupal AI core with Deepseek provider for chat, OpenAI provider for embeddings, and Milvus via DDEV add-on for vector storage.
+**Decision:** Use Ollama (local) for embeddings instead of OpenAI. Benefits: free, private, no rate limits, data stays local. Requires running `ollama pull nomic-embed-text` locally.
+
+**Implemented Stack:** Drupal AI core with Deepseek provider for chat, Ollama provider for embeddings, and Milvus via DDEV add-on for vector storage.
 
 ---
 
@@ -36,10 +38,10 @@ Phase 1 establishes the AI infrastructure foundation for the Open Social Knowled
 
 | Module | Version | Stability | Purpose | Why Standard |
 |--------|---------|-----------|---------|--------------|
-| **drupal/ai** | ^1.2 | **STABLE** (security covered) | Core AI abstraction layer | 11,313 sites, official framework |
-| **drupal/ai_agents** | ^1.2 | **STABLE** (security covered) | Agent framework for tool-calling | 6,780 sites, integrates with AI core |
-| **drupal/ai_provider_deepseek** | ^1.0 | STABLE (no security coverage) | Deepseek LLM for chat/generation | Matches user's provider choice |
-| **drupal/ai_provider_openai** | ^1.2 | **STABLE** (security covered) | OpenAI for embeddings | Recommended fallback for embeddings |
+| **drupal/ai** | dev-1.3.x | **STABLE** (security covered) | Core AI abstraction layer | 11,313+ sites, official framework |
+| **drupal/ai_agents** | dev-1.3.x | **STABLE** (security covered) | Agent framework for tool-calling | 6,780+ sites, integrates with AI core |
+| **drupal/ai_provider_deepseek** | dev-1.x | STABLE (no security coverage) | Deepseek LLM for chat/generation | Matches user's provider choice |
+| **drupal/ai_provider_ollama** | dev-1.2.x | STABLE | Local embeddings via Ollama | **CHOSEN** — Free, private, no rate limits |
 | **drupal/key** | ^1.19 | STABLE | API key management | Required by AI providers |
 
 ### Vector Database
@@ -58,12 +60,12 @@ Phase 1 establishes the AI infrastructure foundation for the Open Social Knowled
 
 ### Alternatives Considered
 
-| Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
-| OpenAI embeddings | Ollama (local) | Free but requires local model hosting, lower quality |
-| OpenAI embeddings | Deepseek embeddings | Not available via ai_provider_deepseek module |
-| Milvus | PostgreSQL pgvector | Alpha quality module, limited scale |
-| Milvus | SQLite | Stable but very low adoption (25 sites), not production-ready |
+| Instead of | Could Use | Tradeoff | Decision |
+|------------|-----------|----------|----------|
+| **Ollama embeddings (CHOSEN)** | OpenAI embeddings | API costs, rate limits, data leaves local | Ollama selected for privacy/cost |
+| Ollama embeddings | Deepseek embeddings | Not available via ai_provider_deepseek module | N/A |
+| Milvus | PostgreSQL pgvector | Alpha quality module, limited scale | Milvus selected |
+| Milvus | SQLite | Stable but very low adoption (25 sites), not production-ready | Milvus selected |
 
 ---
 
@@ -86,7 +88,7 @@ Phase 1 establishes the AI infrastructure foundation for the Open Social Knowled
 │           │                        │                        │                │
 │           ▼                        ▼                        ▼                │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐          │
-│  │ Deepseek        │    │ OpenAI          │    │ AI Usage        │          │
+│  │ Deepseek        │    │ Ollama          │    │ AI Usage        │          │
 │  │ Provider        │    │ Provider        │    │ Limits          │          │
 │  │ (Chat/LLM)      │    │ (Embeddings)    │    │ (Rate Control)  │          │
 │  └────────┬────────┘    └────────┬────────┘    └─────────────────┘          │
@@ -108,11 +110,10 @@ Phase 1 establishes the AI infrastructure foundation for the Open Social Knowled
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐          │
-│  │ Deepseek API    │    │ OpenAI API      │    │ Milvus DB       │          │
-│  │ api.deepseek.com│    │ api.openai.com  │    │ (DDEV/Cloud)    │          │
-│  │ Chat: V3/R1     │    │ Embeddings:     │    │ Port: 19530     │          │
-│  └─────────────────┘    │ text-embedding-3 │    └─────────────────┘          │
-│                         └─────────────────┘                                 │
+│  │ Deepseek API    │    │ Ollama (Local)  │    │ Milvus DB       │          │
+│  │ api.deepseek.com│    │ localhost:11434 │    │ (DDEV/Cloud)    │          │
+│  │ Chat: V3/R1     │    │ nomic-embed-text│    │ Port: 19530     │          │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘          │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
