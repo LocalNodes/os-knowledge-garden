@@ -30,4 +30,4 @@ vendor/
 /.gitattributes
 
 private/
-.claude/
+.claude/.ddev/milvus/
