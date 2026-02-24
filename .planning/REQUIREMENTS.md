@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **AI-01**: Drupal AI core module (ai) is installed and configured with Deepseek provider
 - [ ] **AI-02**: AI Agents module (ai_agents) is installed and provides agent framework
-- [ ] **AI-03**: Vector database (Milvus) is deployed and connected via ai_search module
+- [x] **AI-03**: Vector database (Milvus) is deployed and connected via ai_search module
 - [ ] **AI-04**: Embedding generation pipeline is configured for content indexing
 - [ ] **AI-05**: Deepseek API integration is tested with fallback/retry logic for rate limits
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | AI-01 | Phase 1 | Pending |
 | AI-02 | Phase 1 | Pending |
-| AI-03 | Phase 1 | Pending |
+| AI-03 | Phase 1 | Complete |
 | AI-04 | Phase 1 | Pending |
 | AI-05 | Phase 1 | Pending |
 | IDX-01 | Phase 2 | Complete |
@@ -136,4 +136,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-24 after completing AI-03*
