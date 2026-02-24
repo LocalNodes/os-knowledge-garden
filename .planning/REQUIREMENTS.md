@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
 - [x] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
 - [x] **IDX-05**: Group ID metadata is attached to all indexed content
-- [ ] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
+- [x] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
 
 ### Permission-Aware Retrieval
 
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDX-03 | Phase 2 | Complete |
 | IDX-04 | Phase 2 | Complete |
 | IDX-05 | Phase 2 | Complete |
-| IDX-06 | Phase 2 | Pending |
+| IDX-06 | Phase 2 | Complete |
 | PERM-01 | Phase 3 | Pending |
 | PERM-02 | Phase 3 | Pending |
 | PERM-03 | Phase 3 | Pending |
