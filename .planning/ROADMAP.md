@@ -48,12 +48,16 @@ Plans:
   4. Content is chunked appropriately for retrieval (256-512 tokens with overlap)
   5. Each indexed item has Group ID metadata attached for permission filtering
   6. Content updates and deletes trigger embedding regeneration/invalidation
-**Plans**: 3 plans in 2 waves
+**Plans**: 7 plans in 3 waves
 
 Plans:
-- [ ] 02-01: Create Group Metadata processor and post index — Wave 1
-- [ ] 02-02: Configure comment indexing with parent context — Wave 2 (depends on 02-01)
-- [ ] 02-03: Configure file indexing and verify pipeline — Wave 2 (depends on 02-01)
+- [ ] 02-01a: Create social_ai_indexing module and GroupMetadata processor — Wave 1
+- [ ] 02-03a: Install and enable ai_file_to_text module — Wave 1
+- [ ] 02-01b: Create post index and verify chunking — Wave 2 (depends on 02-01a)
+- [ ] 02-02a: Create CommentParentContext processor and comment index — Wave 2 (depends on 02-01a)
+- [ ] 02-03b: Create FileContentExtractor processor and configure index — Wave 2 (depends on 02-01a, 02-03a)
+- [ ] 02-02b: Update GroupMetadata for comments and verify — Wave 3 (depends on 02-02a)
+- [ ] 02-03c: Verify complete indexing pipeline — Wave 3 (depends on 02-01b, 02-03b)
 
 ### Phase 3: Permission-Aware Retrieval
 **Goal**: AI only surfaces content the user is authorized to see — no permission leakage
@@ -116,7 +120,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. AI Infrastructure | 3/3 | Planned | - |
-| 2. Content Indexing | 0/3 | Planned | - |
+| 2. Content Indexing | 0/7 | Planned | - |
 | 3. Permission-Aware Retrieval | 0/3 | Not started | - |
 | 4. Q&A & Search | 0/3 | Not started | - |
 | 5. User Interface | 0/3 | Not started | - |

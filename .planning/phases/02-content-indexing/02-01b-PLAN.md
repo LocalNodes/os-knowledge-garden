@@ -1,10 +1,10 @@
 ---
 phase: 02-content-indexing
-plan: 01
+plan: 01b
 type: execute
-wave: 1
-depends_on: []
-files_modified: [modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/GroupMetadata.php, modules/custom/social_ai_indexing/social_ai_indexing.info.yml, modules/custom/social_ai_indexing/social_ai_indexing.module]
+wave: 2
+depends_on: [02-01a]
+files_modified: []
 autonomous: true
 requirements: [IDX-01, IDX-04, IDX-05]
 user_setup: []
@@ -16,20 +16,10 @@ must_haves:
     - "Each indexed post has Group ID metadata attached for filtering"
     - "Search API tracker monitors posts for changes"
   artifacts:
-    - path: "html/modules/custom/social_ai_indexing/social_ai_indexing.module"
-      provides: "Custom indexing module"
-      contains: "social_ai_indexing.module"
-    - path: "html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/GroupMetadata.php"
-      provides: "Group ID metadata extraction"
-      contains: "class GroupMetadata"
-    - path: "html/modules/contrib/search_api"
-      provides: "Indexing framework"
-      contains: "search_api.module"
+    - path: "search_api.index.social_posts"
+      provides: "Post index configuration"
+      contains: "social_posts"
   key_links:
-    - from: "GroupMetadata processor"
-      to: "group_content entities"
-      via: "EntityQuery on group_content"
-      pattern: "group_content.*entity_id"
     - from: "Search API index"
       to: "Ollama embeddings"
       via: "ai_search backend"
@@ -41,12 +31,12 @@ must_haves:
 ---
 
 <objective>
-Create the foundation for content indexing: a custom Search API processor for Group metadata and a Search API index for posts with proper chunking configuration.
+Create the Search API index for posts with proper chunking configuration and verify Group metadata extraction.
 
 Purpose: Enable automatic embedding generation for posts with Group ID metadata attached for future permission filtering.
 Output: Working post index with Group metadata processor, chunking configured, immediate indexing enabled.
 
-**Dependency on Phase 1:** Assumes Ollama (nomic-embed-text, 768 dimensions) and Milvus are configured via ai_search module.
+**Dependency on 02-01a:** Requires the GroupMetadata processor from Plan 02-01a.
 </objective>
 
 <execution_context>
@@ -59,202 +49,13 @@ Output: Working post index with Group metadata processor, chunking configured, i
 @.planning/ROADMAP.md
 @.planning/REQUIREMENTS.md
 @.planning/phases/02-content-indexing/02-RESEARCH.md
+@.planning/phases/02-content-indexing/02-01a-SUMMARY.md
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Create social_ai_indexing custom module</name>
-  <files>html/modules/custom/social_ai_indexing/social_ai_indexing.info.yml</files>
-  <action>
-Create the custom module directory and info file:
-
-```bash
-mkdir -p html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor
-```
-
-Create `html/modules/custom/social_ai_indexing/social_ai_indexing.info.yml`:
-```yaml
-name: 'Social AI Indexing'
-type: module
-description: 'Custom indexing configuration for Open Social AI Knowledge Garden'
-core_version_requirement: ^10 || ^11
-package: 'Open Social AI'
-dependencies:
-  - search_api:search_api
-  - group:group
-  - ai_search:ai_search
-```
-
-Enable the module:
-```bash
-cd html
-drush en social_ai_indexing -y
-```
-  </action>
-  <verify>
-    <automated>cd html && drush pm-list --type=module --status=enabled --pipe | grep social_ai_indexing && echo "PASS: Module enabled" || echo "FAIL: Module not enabled"</automated>
-    <manual>Module should appear in enabled list</manual>
-    <sampling_rate>run after this task commits, before next task begins</sampling_rate>
-  </verify>
-  <done>social_ai_indexing module created and enabled</done>
-</task>
-
-<task type="auto">
-  <name>Task 2: Create Group Metadata Search API processor</name>
-  <files>html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/GroupMetadata.php</files>
-  <action>
-Create the custom Search API processor that extracts Group ID from group_content relationships:
-
-Create `html/modules/custom/social_ai_indexing/src/Plugin/SearchApi/Processor/GroupMetadata.php`:
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Drupal\social_ai_indexing\Plugin\SearchApi\Processor;
-
-use Drupal\group\Entity\GroupContent;
-use Drupal\search_api\Datasource\DatasourceInterface;
-use Drupal\search_api\Item\ItemInterface;
-use Drupal\search_api\Processor\ProcessorPluginBase;
-use Drupal\search_api\Processor\ProcessorProperty;
-
-/**
- * Adds Group ID metadata to indexed items for permission filtering.
- *
- * @SearchApiProcessor(
- *   id = "group_metadata",
- *   label = @Translation("Group Metadata"),
- *   description = @Translation("Adds Group ID from group_content relationships for permission filtering."),
- *   stages = {
- *     "add_properties" = 0,
- *   },
- *   locked = false,
- *   hidden = false,
- * )
- */
-class GroupMetadata extends ProcessorPluginBase {
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getPropertyDefinitions(DatasourceInterface $datasource = NULL): array {
-    $properties = [];
-
-    if (!$datasource) {
-      $definition = [
-        'label' => $this->t('Group ID'),
-        'description' => $this->t('The ID of the group this content belongs to.'),
-        'type' => 'integer',
-        'processor_id' => $this->getPluginId(),
-      ];
-      $properties['group_id'] = new ProcessorProperty($definition);
-    }
-
-    return $properties;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function addFieldValues(ItemInterface $item): void {
-    $entity = $item->getOriginalObject()->getValue();
-
-    if (!$entity || !method_exists($entity, 'getEntityTypeId')) {
-      return;
-    }
-
-    $entity_type = $entity->getEntityTypeId();
-    $entity_id = $entity->id();
-
-    if (!$entity_id) {
-      return;
-    }
-
-    $group_ids = $this->getGroupIdsForEntity($entity_type, (int) $entity_id);
-
-    if (empty($group_ids)) {
-      return;
-    }
-
-    $fields = $item->getFields(FALSE);
-    foreach ($fields as $field) {
-      if ($field->getPropertyPath() === 'group_id') {
-        foreach ($group_ids as $group_id) {
-          $field->addValue((int) $group_id);
-        }
-      }
-    }
-  }
-
-  /**
-   * Get Group IDs for an entity via group_content relationships.
-   *
-   * @param string $entity_type
-   *   The entity type ID.
-   * @param int $entity_id
-   *   The entity ID.
-   *
-   * @return array
-   *   Array of Group IDs.
-   */
-  protected function getGroupIdsForEntity(string $entity_type, int $entity_id): array {
-    $group_ids = [];
-
-    try {
-      $storage = \Drupal::entityTypeManager()->getStorage('group_content');
-      
-      $query = $storage->getQuery()
-        ->condition('entity_id', $entity_id)
-        ->accessCheck(FALSE);
-
-      $group_content_ids = $query->execute();
-
-      if (empty($group_content_ids)) {
-        return $group_ids;
-      }
-
-      $group_contents = $storage->loadMultiple($group_content_ids);
-
-      foreach ($group_contents as $group_content) {
-        if ($group_content instanceof GroupContent) {
-          $gid = $group_content->get('gid')->target_id;
-          if ($gid) {
-            $group_ids[] = (int) $gid;
-          }
-        }
-      }
-    }
-    catch (\Exception $e) {
-      \Drupal::logger('social_ai_indexing')->warning(
-        'Failed to get Group IDs for @type @id: @message',
-        ['@type' => $entity_type, '@id' => $entity_id, '@message' => $e->getMessage()]
-      );
-    }
-
-    return array_unique($group_ids);
-  }
-
-}
-```
-
-Clear cache to register the plugin:
-```bash
-cd html
-drush cr
-```
-  </action>
-  <verify>
-    <automated>cd html && drush eval "echo class_exists('Drupal\\social_ai_indexing\\Plugin\\SearchApi\\Processor\\GroupMetadata') ? 'PASS: Processor class exists' : 'FAIL';"</automated>
-    <manual>Processor class should exist and be discoverable</manual>
-    <sampling_rate>run after this task commits, before next task begins</sampling_rate>
-  </verify>
-  <done>GroupMetadata processor created and registered with Search API</done>
-</task>
-
-<task type="auto">
-  <name>Task 3: Create Search API index for posts</name>
+  <name>Task 1: Create Search API index for posts</name>
   <files>N/A (database configuration)</files>
   <action>
 Create the Search API index for Open Social posts via Drush:
@@ -342,7 +143,7 @@ drush search-api:list
 </task>
 
 <task type="auto">
-  <name>Task 4: Verify chunking configuration</name>
+  <name>Task 2: Verify chunking configuration</name>
   <files>N/A (runtime verification)</files>
   <action>
 Verify the chunking settings on the AI Search backend:
@@ -380,7 +181,7 @@ drush config:set search_api.server.ai_knowledge_garden backend_config.chunk_over
 </task>
 
 <task type="auto">
-  <name>Task 5: Test post indexing with Group metadata</name>
+  <name>Task 3: Test post indexing with Group metadata</name>
   <files>N/A (runtime verification)</files>
   <action>
 Test that posts are being indexed with Group metadata:
@@ -432,7 +233,7 @@ drush search-api:index social_posts
 </task>
 
 <task type="auto">
-  <name>Task 6: Verify Group metadata in indexed items</name>
+  <name>Task 4: Verify Group metadata in indexed items</name>
   <files>N/A (runtime verification)</files>
   <action>
 Verify that Group ID is being added to indexed items:
@@ -487,42 +288,31 @@ if (\$processor) {
 </tasks>
 
 <verification>
-## Phase 2 Plan 01 Verification
+## Phase 2 Plan 01b Verification
 
-1. **Module Creation:**
-   - [ ] social_ai_indexing module exists in html/modules/custom/
-   - [ ] Module enabled and listed in `drush pm-list`
-
-2. **Group Metadata Processor:**
-   - [ ] GroupMetadata.php exists with correct namespace
-   - [ ] Processor registered with Search API
-   - [ ] `drush eval` confirms processor extract Group IDs
-
-3. **Search API Index:**
+1. **Search API Index:**
    - [ ] social_posts index exists
    - [ ] Index configured for post and topic bundles
    - [ ] Group ID field present in index
 
-4. **Chunking Configuration:**
+2. **Chunking Configuration:**
    - [ ] Chunk size ~384 tokens
    - [ ] Chunk overlap ~50 tokens
 
-5. **Indexing Status:**
+3. **Indexing Status:**
    - [ ] Items being tracked
    - [ ] `index_directly` enabled
 </verification>
 
 <success_criteria>
-1. ✅ New posts are automatically indexed with embeddings upon creation (index_directly enabled)
-2. ✅ Content is chunked appropriately (384 tokens with 50 overlap, within 256-512 range)
-3. ✅ Each indexed post has Group ID metadata attached for permission filtering
-4. ✅ Search API tracker monitors posts for changes (default tracker enabled)
+1. New posts are automatically indexed with embeddings upon creation (index_directly enabled)
+2. Content is chunked appropriately (384 tokens with 50 overlap, within 256-512 range)
+3. Each indexed post has Group ID metadata attached for permission filtering
+4. Search API tracker monitors posts for changes (default tracker enabled)
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/02-content-indexing/02-01-SUMMARY.md` with:
-- Module creation details
-- GroupMetadata processor implementation notes
+After completion, create `.planning/phases/02-content-indexing/02-01b-SUMMARY.md` with:
 - Index configuration
 - Chunking settings
 - Test results for Group ID extraction
