@@ -1,0 +1,8 @@
+name: ai
+repository: lpeabody/ddev-ai
+version: 1.0-beta3
+install_date: "2026-02-24T01:59:41-07:00"
+project_files:
+    - docker-compose.ai.yaml
+global_files: []
+removal_actions: []
