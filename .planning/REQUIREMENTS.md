@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **IDX-01**: Open Social posts are automatically indexed with embeddings on create/update
 - [ ] **IDX-02**: Comments are indexed with parent post context for retrieval
-- [ ] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
+- [x] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
 - [ ] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
 - [ ] **IDX-05**: Group ID metadata is attached to all indexed content
 - [ ] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-05 | Phase 1 | Pending |
 | IDX-01 | Phase 2 | Pending |
 | IDX-02 | Phase 2 | Pending |
-| IDX-03 | Phase 2 | Pending |
+| IDX-03 | Phase 2 | Complete |
 | IDX-04 | Phase 2 | Pending |
 | IDX-05 | Phase 2 | Pending |
 | IDX-06 | Phase 2 | Pending |
