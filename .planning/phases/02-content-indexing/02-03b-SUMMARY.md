@@ -65,7 +65,7 @@ Each task was committed atomically:
 1. **Task 1: Create File Content Extractor processor** - `b6dcfd2` (feat)
 2. **Task 2: Add file content field to post index** - (database config, no file commit)
 
-**Plan metadata:** `tbd` (docs: complete File Content Extractor plan)
+**Plan metadata:** `f1007da` (docs: complete File Content Extractor plan)
 
 _Note: TDD tasks may have multiple commits (test → feat → refactor)_
 

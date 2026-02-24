@@ -53,9 +53,9 @@ Plans:
 Plans:
 - [x] 02-01a: Create social_ai_indexing module and GroupMetadata processor — Wave 1
 - [x] 02-03a: Install and enable ai_file_to_text module — Wave 1
-- [ ] 02-01b: Create post index and verify chunking — Wave 2 (depends on 02-01a)
-- [ ] 02-02a: Create CommentParentContext processor and comment index — Wave 2 (depends on 02-01a)
-- [ ] 02-03b: Create FileContentExtractor processor and configure index — Wave 2 (depends on 02-01a, 02-03a)
+- [x] 02-01b: Create post index and verify chunking — Wave 2 (depends on 02-01a)
+- [x] 02-02a: Create CommentParentContext processor and comment index — Wave 2 (depends on 02-01a)
+- [x] 02-03b: Create FileContentExtractor processor and configure index — Wave 2 (depends on 02-01a, 02-03a)
 - [ ] 02-02b: Update GroupMetadata for comments and verify — Wave 3 (depends on 02-02a)
 - [ ] 02-03c: Verify complete indexing pipeline — Wave 3 (depends on 02-01b, 02-03b)
 
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. AI Infrastructure | 3/3 | Planned | - |
-| 2. Content Indexing | 2/7 | In Progress | 2026-02-24 |
+| 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
 | 3. Permission-Aware Retrieval | 0/3 | Not started | - |
 | 4. Q&A & Search | 0/3 | Not started | - |
 | 5. User Interface | 0/3 | Not started | - |
