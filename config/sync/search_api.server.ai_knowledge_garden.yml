@@ -13,14 +13,14 @@ backend_config:
   chat_model: ''
   database: milvus
   database_settings:
-    database_name: knowledge_garden
+    database_name: default
     collection: knowledge_garden
     metric: cosine_similarity
-  embeddings_engine: ollama
+  embeddings_engine: 'ollama__nomic-embed-text:latest'
   embeddings_engine_configuration:
     set_dimensions: true
     dimensions: 768
-  embedding_strategy: default
+  embedding_strategy: average_pool
   embedding_strategy_configuration:
     chunk_size: '384'
     chunk_min_overlap: '50'
