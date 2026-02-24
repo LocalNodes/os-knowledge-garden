@@ -1,0 +1,30 @@
+uuid: 02ca849d-9012-4cce-b328-2c34d2053c6b
+langcode: en
+status: true
+dependencies:
+  module:
+    - ai_search
+    - ai_vdb_provider_milvus
+id: ai_knowledge_garden
+name: 'AI Knowledge Garden'
+description: 'Vector database server for AI-powered knowledge retrieval'
+backend: search_api_ai_search
+backend_config:
+  chat_model: ''
+  database: milvus
+  database_settings:
+    database_name: knowledge_garden
+    collection: knowledge_garden
+    metric: cosine_similarity
+  embeddings_engine: ollama
+  embeddings_engine_configuration:
+    set_dimensions: true
+    dimensions: 768
+  embedding_strategy: default
+  embedding_strategy_configuration:
+    chunk_size: '384'
+    chunk_min_overlap: '50'
+    contextual_content_max_percentage: '10'
+    skip_moderation: true
+  chunk_size: '384'
+  chunk_overlap: '50'

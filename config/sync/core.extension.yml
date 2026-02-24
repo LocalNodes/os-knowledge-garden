@@ -12,8 +12,10 @@ module:
   advancedqueue: 0
   ai: 0
   ai_agents: 0
+  ai_file_to_text: 0
   ai_provider_deepseek: 0
   ai_provider_ollama: 0
+  ai_provider_openai: 0
   ai_search: 0
   ai_usage_limits: 0
   ai_vdb_provider_milvus: 0
@@ -95,6 +97,7 @@ module:
   select2: 0
   social_activity: 0
   social_advanced_queue: 0
+  social_ai_indexing: 0
   social_comment: 0
   social_comment_upload: 0
   social_core: 0

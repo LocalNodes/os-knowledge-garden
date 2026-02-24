@@ -18,7 +18,8 @@
         "drupal/ai_vdb_provider_milvus": "dev-1.1.x",
         "drupal/ai_usage_limits": "dev-1.0.x",
         "drupal/ai_file_to_text": "^1.0",
-        "drupal/ai_provider_openai": "^1.2"
+        "drupal/ai_provider_openai": "^1.2",
+        "drupal/search_api": "^1.40"
     },
     "repositories": [
         {
