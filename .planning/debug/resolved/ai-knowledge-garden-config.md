@@ -70,9 +70,11 @@ started: Issue discovered after Phase 2 UAT completion
 
 root_cause: Two configuration issues: (1) embeddings_engine was "ollama" instead of "ollama__model" format, causing null model_id in embeddingsVectorSize() call; (2) database_name was "knowledge_garden" but Milvus standalone doesn't support database creation via REST API
 fix: |
-  1. Updated embeddings_engine from "ollama" to "ollama__nomic-embed-text:latest"
+  1. Updated embeddings_engine from "ollama" to "ollama__nomic-embed-text:latest" (INCORRECT - see v2 session)
   2. Updated database_name from "knowledge_garden" to "default" (Milvus standalone only supports "default" database via REST API)
   3. Created the "knowledge_garden" collection in the default database with 768 dimensions and COSINE metric
+  
+  **REVISED in v2 session:** The correct format is "ollama__nomic_embed_text_latest" (machine name with underscores, not original model name with dashes/colons)
 verification: |
   - embeddingsVectorSize() returns 768 correctly
   - Milvus ping succeeds

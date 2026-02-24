@@ -10,15 +10,15 @@ name: 'AI Knowledge Garden'
 description: 'Vector database server for AI-powered knowledge retrieval'
 backend: search_api_ai_search
 backend_config:
-  chat_model: ''
+  chat_model: deepseek__deepseek-chat
   database: milvus
   database_settings:
     database_name: default
     collection: knowledge_garden
     metric: cosine_similarity
-  embeddings_engine: 'ollama__nomic-embed-text:latest'
+  embeddings_engine: ollama__nomic_embed_text_latest
   embeddings_engine_configuration:
-    set_dimensions: true
+    set_dimensions: false
     dimensions: 768
   embedding_strategy: average_pool
   embedding_strategy_configuration:
@@ -26,5 +26,5 @@ backend_config:
     chunk_min_overlap: '50'
     contextual_content_max_percentage: '10'
     skip_moderation: true
-  chunk_size: '384'
-  chunk_overlap: '50'
+  embedding_strategy_details: ''
+  include_raw_embedding_vector: true
