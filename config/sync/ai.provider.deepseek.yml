@@ -1,0 +1,3 @@
+api_key: deepseek
+default_chat_model: deepseek-chat
+enabled: 'true'
