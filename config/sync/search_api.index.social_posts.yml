@@ -1,0 +1,133 @@
+uuid: 8d4805dd-1cfa-474e-b6cc-35f946b40887
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.node.search_index
+    - field.storage.node.field_content_visibility
+    - search_api.server.ai_knowledge_garden
+  module:
+    - node
+    - search_api_solr
+    - social_ai_indexing
+    - social_event_managers
+    - social_group
+    - social_node
+id: social_posts
+name: 'Social Posts'
+description: 'Vector index for Open Social posts and topics'
+read_only: false
+field_settings:
+  citation_title:
+    label: 'Citation Title'
+    property_path: citation_title
+    type: string
+  citation_type:
+    label: 'Citation Type'
+    property_path: citation_type
+    type: string
+  citation_url:
+    label: 'Citation URL'
+    property_path: citation_url
+    type: string
+  field_content_visibility:
+    label: 'Entity access field'
+    datasource_id: 'entity:node'
+    property_path: field_content_visibility
+    type: string
+    dependencies:
+      config:
+        - field.storage.node.field_content_visibility
+  file_content:
+    label: 'File Content'
+    property_path: file_content
+    type: text
+  groups:
+    label: 'Entity reference'
+    datasource_id: 'entity:node'
+    property_path: groups
+    type: integer
+    dependencies:
+      module:
+        - social_group
+  rendered_item:
+    label: 'Rendered content'
+    property_path: rendered_item
+    type: text
+    configuration:
+      view_mode:
+        'entity:node':
+          post: search_index
+          topic: search_index
+  status:
+    label: Boolean
+    datasource_id: 'entity:node'
+    property_path: status
+    type: boolean
+    dependencies:
+      module:
+        - node
+  title:
+    label: Title
+    datasource_id: 'entity:node'
+    property_path: title
+    type: string
+    dependencies:
+      module:
+        - node
+  type:
+    label: 'Entity reference'
+    datasource_id: 'entity:node'
+    property_path: type
+    type: string
+    dependencies:
+      module:
+        - node
+  uid:
+    label: 'Entity reference'
+    datasource_id: 'entity:node'
+    property_path: uid
+    type: integer
+    dependencies:
+      module:
+        - node
+datasource_settings:
+  'entity:node':
+    bundles:
+      default: false
+      selected:
+        - post
+        - topic
+    languages:
+      default: true
+      selected: {  }
+processor_settings:
+  add_url: {  }
+  aggregated_field: {  }
+  auto_aggregated_fulltext_field: {  }
+  citation_metadata:
+    weights:
+      add_properties: 0
+  custom_value: {  }
+  entity_type: {  }
+  file_content_extractor:
+    weights:
+      add_properties: 0
+  group_metadata:
+    weights:
+      add_properties: 0
+  language_with_fallback: {  }
+  rendered_item: {  }
+  social_event_managers_query_alter: {  }
+  social_group_query_alter: {  }
+  social_node_query_alter: {  }
+  solr_date_range: {  }
+tracker_settings:
+  default:
+    indexing_order: fifo
+options:
+  cron_limit: 50
+  delete_on_fail: true
+  index_directly: true
+  track_changes_in_references: true
+server: ai_knowledge_garden

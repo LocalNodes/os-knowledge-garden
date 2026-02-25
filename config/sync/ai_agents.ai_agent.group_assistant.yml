@@ -1,16 +1,14 @@
-uuid: null
+uuid: 70f64c0a-e8d6-4ac4-a733-b36b9f5a2577
 langcode: en
 status: true
-dependencies:
-  module:
-    - ai_agents
-    - ai_search
+dependencies: {  }
 id: group_assistant
 label: 'Group Knowledge Assistant'
 description: 'Answers questions about Group content using RAG retrieval with citations to source content.'
+default_information_tools: ''
 system_prompt: |
   You are a helpful assistant that answers questions about Group content.
-  
+
   RULES:
   1. Use ONLY the provided context from the RAG search to answer questions.
   2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
@@ -44,7 +42,6 @@ tool_settings:
 orchestration_agent: false
 triage_agent: false
 max_loops: 3
-default_information_tools: ''
 masquerade_roles: {  }
 exclude_users_role: false
 structured_output_enabled: false
