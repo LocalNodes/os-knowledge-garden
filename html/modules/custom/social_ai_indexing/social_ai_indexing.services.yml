@@ -1,7 +1,7 @@
 services:
   social_ai_indexing.permission_filter:
     class: Drupal\social_ai_indexing\Service\PermissionFilterService
-    arguments: ['@group.membership_loader', '@current_user', '@current_route_match']
+    arguments: ['@group.membership_loader', '@current_user', '@current_route_match', '@entity_type.manager']
 
   social_ai_indexing.search_query_subscriber:
     class: Drupal\social_ai_indexing\EventSubscriber\SearchQuerySubscriber

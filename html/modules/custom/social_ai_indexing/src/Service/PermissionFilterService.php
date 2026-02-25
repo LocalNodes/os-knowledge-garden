@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\social_ai_indexing\Service;
 
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\group\Plugin\Field\FieldType\GroupItem;
@@ -13,7 +14,8 @@ use Drupal\search_api\Query\QueryInterface;
  * Service for permission-aware query filtering.
  *
  * Provides methods to determine user's accessible groups, detect query context
- * (community-wide vs group-scoped), and apply permission filters to Search API queries.
+ * (community-wide vs group-scoped), apply permission filters to Search API queries,
+ * and perform post-retrieval access checks for defense-in-depth security.
  */
 class PermissionFilterService {
 
@@ -39,6 +41,13 @@ class PermissionFilterService {
   protected $currentRouteMatch;
 
   /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a PermissionFilterService.
    *
    * @param object $membership_loader
@@ -47,15 +56,19 @@ class PermissionFilterService {
    *   The current user account.
    * @param \Drupal\Core\Routing\RouteMatchInterface $current_route_match
    *   The current route match.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    */
   public function __construct(
     $membership_loader,
     AccountInterface $current_user,
-    RouteMatchInterface $current_route_match
+    RouteMatchInterface $current_route_match,
+    EntityTypeManagerInterface $entity_type_manager
   ) {
     $this->membershipLoader = $membership_loader;
     $this->currentUser = $current_user;
     $this->currentRouteMatch = $current_route_match;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -145,6 +158,56 @@ class PermissionFilterService {
         $query->addCondition('group_id', -1);
       }
     }
+  }
+
+  /**
+   * Filter search results by entity access (defense-in-depth).
+   *
+   * This is a secondary security layer that validates each result against the
+   * Drupal entity access system. It catches any edge cases that the pre-retrieval
+   * filtering might miss (e.g., permission changes since indexing, edge cases
+   * in filter logic).
+   *
+   * @param array $results
+   *   Search results with entity metadata (drupal_entity_type, drupal_entity_id/id).
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   User account to check access for.
+   *
+   * @return array
+   *   Filtered results containing only entities the user can view.
+   */
+  public function filterResultsByAccess(array $results, AccountInterface $account): array {
+    $filtered = [];
+
+    foreach ($results as $result) {
+      // Extract entity info from result.
+      $entity_type = $result['drupal_entity_type'] ?? 'node';
+      $entity_id = $result['drupal_entity_id'] ?? $result['id'] ?? NULL;
+
+      if (!$entity_id) {
+        // Skip results without entity ID.
+        continue;
+      }
+
+      try {
+        $entity = $this->entityTypeManager
+          ->getStorage($entity_type)
+          ->load($entity_id);
+
+        if ($entity && $entity->access('view', $account)) {
+          $filtered[] = $result;
+        }
+      }
+      catch (\Exception $e) {
+        // Log but don't fail - skip this result.
+        \Drupal::logger('social_ai_indexing')->warning(
+          'Post-retrieval access check failed for @type @id: @message',
+          ['@type' => $entity_type, '@id' => $entity_id, '@message' => $e->getMessage()]
+        );
+      }
+    }
+
+    return $filtered;
   }
 
 }
