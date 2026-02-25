@@ -55,6 +55,8 @@ field_settings:
     property_path: rendered_item
     type: text
     configuration:
+      roles:
+        - anonymous
       view_mode:
         'entity:node':
           post: search_index
@@ -117,7 +119,9 @@ processor_settings:
     weights:
       add_properties: 0
   language_with_fallback: {  }
-  rendered_item: {  }
+  rendered_item:
+    roles:
+      - anonymous
   social_event_managers_query_alter: {  }
   social_group_query_alter: {  }
   social_node_query_alter: {  }
