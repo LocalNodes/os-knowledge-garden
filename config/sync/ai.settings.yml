@@ -2,5 +2,21 @@ _core:
   default_config_hash: HHNWmZy7bQLE6FXxBxFyVRfZys0APfHsn6abQlOjPM8
 prompt_logging: false
 prompt_logging_tags: ''
-default_providers: {  }
+default_providers:
+  chat:
+    provider_id: deepseek
+    model_id: deepseek-chat
+  chat_with_complex_json:
+    provider_id: deepseek
+    model_id: deepseek-coder
+  chat_with_structured_response:
+    provider_id: deepseek
+    model_id: deepseek-chat
+  chat_with_tools:
+    provider_id: deepseek
+    model_id: deepseek-coder
+  embeddings:
+    provider_id: ollama
+    model_id: nomic_embed_text_latest
+default_vdb_provider: milvus
 request_timeout: 60

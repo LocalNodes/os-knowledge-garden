@@ -7,3 +7,5 @@ dependencies:
   - search_api:search_api
   - group:group
   - ai_search:ai_search
+  - ai:ai_assistant_api
+  - ai:ai_chatbot
