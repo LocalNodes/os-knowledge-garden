@@ -2,3 +2,9 @@ services:
   social_ai_indexing.permission_filter:
     class: Drupal\social_ai_indexing\Service\PermissionFilterService
     arguments: ['@group.membership_loader', '@current_user', '@current_route_match']
+
+  social_ai_indexing.search_query_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\SearchQuerySubscriber
+    arguments: ['@social_ai_indexing.permission_filter', '@current_user']
+    tags:
+      - { name: event_subscriber }
