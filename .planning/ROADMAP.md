@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: AI Infrastructure** - Core AI modules, Deepseek provider, vector database, embeddings pipeline (completed 2026-02-24)
 - [ ] **Phase 2: Content Indexing** - Index posts, comments, files with embeddings and Group metadata
-- [ ] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks
+- [x] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks (completed 2026-02-25)
 - [ ] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking
 - [ ] **Phase 5: User Interface** - Chat interfaces for Group and community-wide queries
 
@@ -72,9 +72,9 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 03-01: Build pre-retrieval filtering infrastructure (ContentVisibility processor + PermissionFilterService) — Wave 1
-- [ ] 03-02: Integrate filters with Search API and add post-retrieval checks — Wave 2 (depends on 03-01)
-- [ ] 03-03: Verify permission boundaries with adversarial queries — Wave 3 (depends on 03-02)
+- [x] 03-01: Build pre-retrieval filtering infrastructure (ContentVisibility processor + PermissionFilterService) — Wave 1
+- [x] 03-02: Integrate filters with Search API and add post-retrieval checks — Wave 2 (depends on 03-01)
+- [x] 03-03: Verify permission boundaries with adversarial queries — Wave 3 (depends on 03-02)
 
 ### Phase 4: Q&A & Search
 **Goal**: Users can ask natural language questions and search content semantically with citations
@@ -121,7 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. AI Infrastructure | 3/3 | Complete   | 2026-02-24 |
 | 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
-| 3. Permission-Aware Retrieval | 2/3 | In Progress|  |
+| 3. Permission-Aware Retrieval | 3/3 | Complete   | 2026-02-25 |
 | 4. Q&A & Search | 0/3 | Not started | - |
 | 5. User Interface | 0/3 | Not started | - |
 
