@@ -1,0 +1,7 @@
+name: 'LocalNodes Demo Content'
+type: module
+description: 'Provides bioregionalism-themed demo content for the LocalNodes.xyz platform, showcasing AI knowledge garden features.'
+core_version_requirement: ^9 || ^10
+package: LocalNodes
+dependencies:
+  - social_demo:social_demo
