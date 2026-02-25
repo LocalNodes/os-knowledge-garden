@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 2: Content Indexing
+**Current focus:** Phase 3: Permission-Aware Retrieval
 
 ## Current Position
 
-Phase: 1 of 5 (AI Infrastructure) - Complete
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-24 — Completed 01-03: AI Search Configuration
+Phase: 3 of 5 (Permission-Aware Retrieval) - In Progress
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-25 — Completed 03-01: Pre-Retrieval Permission Filtering
 
-Progress: [███░░░░░░░░░] 20%
+Progress: [████░░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 6 min
-- Total execution time: 1.02 hours
+- Total execution time: 1.45 hours
 
 **By Phase:**
 
@@ -29,7 +29,7 @@ Progress: [███░░░░░░░░░] 20%
 |-------|-------|-------|----------|
 | 1. AI Infrastructure | 3/3 | 23 min | 8 min |
 | 2. Content Indexing | 7/7 | 35 min | 5 min |
-| 3. Permission-Aware Retrieval | 0/3 | - | - |
+| 3. Permission-Aware Retrieval | 1/3 | 17 min | 17 min |
 | 4. Q&A & Search | 0/3 | - | - |
 | 5. User Interface | 0/3 | - | - |
 
@@ -44,6 +44,7 @@ Progress: [███░░░░░░░░░] 20%
 | Phase 02-02b P02b | 3 min | 3 tasks | 1 files |
 | Phase 02-02a P02a | 2 min | 2 tasks | 1 files |
 | Phase 02-01b P01b | 10 min | 4 tasks | 3 files |
+| Phase 03 P01 | 17 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 02-03c]: Verified complete indexing pipeline operational with update/delete handling and file extraction
 - [Phase 01-01]: Use Ollama with nomic-embed-text for embeddings (768 dimensions, local, no API costs) instead of OpenAI
 - [Phase 01-03]: Used ai_search submodule (bundled with ai package) instead of standalone drupal/ai_search (requires ai 2.x)
+- [Phase 03-01]: Default visibility to 'group_content' for empty fields (safest default)
+- [Phase 03-01]: Never cache permission decisions (re-evaluate at query time)
 
 ### Pending Todos
 
@@ -78,10 +81,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Completed 01-03-PLAN.md (AI Search Configuration) - Phase 1 Complete
+Last session: 2026-02-25
+Stopped at: Completed 03-01-PLAN.md (Pre-Retrieval Permission Filtering)
 Resume file: None
 
 ---
 *State initialized: 2026-02-23*
-*Last updated: 2026-02-24*
+*Last updated: 2026-02-25*
