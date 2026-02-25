@@ -147,12 +147,36 @@ class PermissionFilterService {
       $query->addCondition('content_visibility', ['public', 'community'], 'IN');
     }
     else {
+    // Anonymous users: only public content.
+    if ($account->isAnonymous()) {
+      $query->addCondition('content_visibility', 'public');
+      return;
+    }
+
+    // If a specific group scope is provided, filter by that group only.
+    if ($scopeGroupId !== NULL) {
+      $query->addCondition('group_id', $scopeGroupId);
+      return;
+    }
+
+    // Check if this is a community-wide or group-scoped query.
+    if ($this->isCommunityWideQuery()) {
+      // Community-wide (authenticated): public + community content.
+      $query->addCondition('groups', $group_ids, 'IN');
+    }
+    else {
       // Group-scoped: filter by user's accessible groups.
       $group_ids = $this->getAccessibleGroupIds($account);
 
       if (!empty($group_ids)) {
-        $query->addCondition('group_id', $group_ids, 'IN');
+        $query->addCondition('groups', $group_ids, 'IN');
       }
+      else {
+        // No groups accessible: add impossible condition to return no results.
+        $query->addCondition('groups', -1);
+      }
+    }
+  }
       else {
         // No groups accessible: add impossible condition to return no results.
         $query->addCondition('group_id', -1);

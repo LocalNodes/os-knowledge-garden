@@ -284,7 +284,7 @@ class HybridSearchService {
   protected function normalizeResults(ResultSetInterface $results, string $source_index): array {
     $normalized = [];
 
-    foreach ($results as $item) {
+    foreach ($results->getResultItems() as $item) {
       /** @var \Drupal\search_api\Item\ItemInterface $item */
       $result_data = [
         'id' => $item->getId(),
