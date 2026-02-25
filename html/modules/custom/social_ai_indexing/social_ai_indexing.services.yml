@@ -14,3 +14,9 @@ services:
     arguments:
       - '@social_ai_indexing.permission_filter'
       - '@entity_type.manager'
+
+  social_ai_indexing.related_content:
+    class: Drupal\social_ai_indexing\Service\RelatedContentService
+    arguments:
+      - '@entity_type.manager'
+      - '@social_ai_indexing.permission_filter'
