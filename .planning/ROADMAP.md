@@ -69,12 +69,12 @@ Plans:
   3. AI-generated responses contain only content the querying user is authorized to see
   4. Community-wide search only returns public content when queried globally
   5. Group-scoped queries only return content from that specific Group
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 03-01: Implement pre-retrieval metadata filtering
-- [ ] 03-02: Implement post-retrieval entity access checks
-- [ ] 03-03: Test permission boundaries with adversarial queries
+- [ ] 03-01: Build pre-retrieval filtering infrastructure (ContentVisibility processor + PermissionFilterService) — Wave 1
+- [ ] 03-02: Integrate filters with Search API and add post-retrieval checks — Wave 2 (depends on 03-01)
+- [ ] 03-03: Verify permission boundaries with adversarial queries — Wave 3 (depends on 03-02)
 
 ### Phase 4: Q&A & Search
 **Goal**: Users can ask natural language questions and search content semantically with citations
