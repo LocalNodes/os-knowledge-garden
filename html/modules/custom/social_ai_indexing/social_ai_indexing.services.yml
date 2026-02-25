@@ -1,0 +1,4 @@
+services:
+  social_ai_indexing.permission_filter:
+    class: Drupal\social_ai_indexing\Service\PermissionFilterService
+    arguments: ['@group.membership_loader', '@current_user', '@current_route_match']
