@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 6 of 6 (Demo Content) - In Progress
-Plan: 1 of 3 in current phase
-Status: Executing Phase 6 - Plan 01 Complete
-Last activity: 2026-02-25 — Completed 06-01: Demo Content Module Scaffolding
+Plan: 2 of 3 in current phase
+Status: Executing Phase 6 - Plan 02 Complete
+Last activity: 2026-02-25 — Completed 06-02: Demo Content YAML Files
 
-Progress: [██████████░░] 88%
+Progress: [███████████░] 94%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 7 min
-- Total execution time: 2.1 hours
+- Total execution time: 2.3 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [██████████░░] 88%
 | 3. Permission-Aware Retrieval | 3/3 | 35 min | 12 min |
 | 4. Q&A & Search | 1/3 | 27 min | 27 min |
 | 5. User Interface | 0/3 | - | - |
-| 6. Demo Content | 1/3 | 3 min | 3 min |
+| 6. Demo Content | 2/3 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (6 min), 01-01 (10 min), 01-02 (7 min), 02-03c (5 min), 02-02b (3 min)
-- Trend: Stable (~6 min avg)
+- Last 5 plans: 06-02 (11 min), 06-01 (3 min), 01-03 (6 min), 01-01 (10 min), 01-02 (7 min)
+- Trend: Stable (~7 min avg)
 
 | Phase 01-03 P03 | 6 min | 7 tasks | 4 files |
 | Phase 01-01 P01 | 10 min | 5 tasks | 5 files |
@@ -50,6 +50,7 @@ Progress: [██████████░░] 88%
 | Phase 03-permission-aware-retrieval P03 | 7 min | 3 tasks | 2 files |
 | Phase 04-q-a-search P01 | 27 min | 4 tasks | 6 files |
 | Phase 06-demo-content P01 | 3 min | 3 tasks | 14 files |
+| Phase 06-demo-content P02 | 11 min | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [Phase 04-q-a-search]: Set RAG threshold to 0.7, max_results to 5 — Balance precision/recall while maintaining acceptable latency
 - [Phase 06-01]: Extend social_demo Plugin classes (Topic, Event, Post, Like, EventEnrollment, EventType, UserTerms) rather than base classes directly to inherit entity-specific getEntry() logic
 - [Phase 06-01]: No .services.yml needed -- module reuses social_demo services entirely
+- [Phase 06-02]: Copied social_demo profile photos renamed for personas rather than downloading new images
+- [Phase 06-02]: Used social_demo landscape images as group headers rather than downloading from Unsplash
+- [Phase 06-02]: Created 121 unique UUIDs with zero overlap against social_demo
 
 ### Roadmap Evolution
 
@@ -100,7 +104,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 06-01-PLAN.md (Demo Content Module Scaffolding)
+Stopped at: Completed 06-02-PLAN.md (Demo Content YAML Files)
 Resume file: None
 
 ---
