@@ -133,9 +133,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 **Plans:** 3 plans in 3 waves
 
 Plans:
-- [ ] 06-01-PLAN.md -- Create localnodes_demo module with DemoContent plugins and Unsplash images (Wave 1)
-- [ ] 06-02-PLAN.md -- Create YAML content files with bioregionalism-themed entities (Wave 2)
-- [ ] 06-03-PLAN.md -- Install demo content, remove social_demo content, and verify in UI (Wave 3)
+- [ ] 06-01-PLAN.md -- Create localnodes_demo module scaffolding with 11 DemoContent plugins (Wave 1)
+- [ ] 06-02-PLAN.md -- Create 11 YAML content files with bioregionalism-themed entities and AI coverage annotations (Wave 2)
+- [ ] 06-03-PLAN.md -- Remove social_demo content, install localnodes_demo content, and verify in UI (Wave 3)
 
 ---
 *Roadmap created: 2026-02-23*
