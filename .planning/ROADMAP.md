@@ -127,12 +127,15 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 ### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
 
-**Goal:** [To be planned]
+**Goal:** LocalNodes.xyz platform is populated with bioregionalism-themed demo content showcasing all AI features built in phases 1-5
 **Depends on:** Phase 5
-**Plans:** 2/3 plans executed
+**Requirements:** DEMO-SCAFFOLDING, DEMO-CONTENT, DEMO-INSTALL
+**Plans:** 3 plans in 3 waves
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6 to break down)
+- [ ] 06-01-PLAN.md -- Create localnodes_demo module with DemoContent plugins and Unsplash images (Wave 1)
+- [ ] 06-02-PLAN.md -- Create YAML content files with bioregionalism-themed entities (Wave 2)
+- [ ] 06-03-PLAN.md -- Install demo content, remove social_demo content, and verify in UI (Wave 3)
 
 ---
 *Roadmap created: 2026-02-23*
