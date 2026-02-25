@@ -12,6 +12,8 @@ module:
   advancedqueue: 0
   ai: 0
   ai_agents: 0
+  ai_assistant_api: 0
+  ai_chatbot: 0
   ai_file_to_text: 0
   ai_provider_deepseek: 0
   ai_provider_ollama: 0
@@ -72,6 +74,7 @@ module:
   language: 0
   like_and_dislike: 0
   link: 0
+  localnodes_demo: 0
   mailer_transport: 0
   mentions: 0
   menu_link_content: 0
@@ -101,6 +104,7 @@ module:
   social_comment: 0
   social_comment_upload: 0
   social_core: 0
+  social_demo: 0
   social_editor: 0
   social_email_broadcast: 0
   social_emoji: 0

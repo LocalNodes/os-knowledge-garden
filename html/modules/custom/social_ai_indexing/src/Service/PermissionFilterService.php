@@ -163,11 +163,6 @@ class PermissionFilterService {
     if ($this->isCommunityWideQuery()) {
       // Community-wide (authenticated): public + community content.
       $query->addCondition('groups', $group_ids, 'IN');
-    }
-    else {
-      // Group-scoped: filter by user's accessible groups.
-      $group_ids = $this->getAccessibleGroupIds($account);
-
       if (!empty($group_ids)) {
         $query->addCondition('groups', $group_ids, 'IN');
       }
@@ -175,6 +170,16 @@ class PermissionFilterService {
         // No groups accessible: add impossible condition to return no results.
         $query->addCondition('groups', -1);
       }
+    }
+  }
+}
+      else {
+        // No groups accessible: add impossible condition to return no results.
+        $query->addCondition('groups', -1);
+      }
+    }
+  }
+}
     }
   }
       else {

@@ -3,3 +3,4 @@ _core:
 api_key: ''
 server: milvus
 port: 19530
+host: milvus

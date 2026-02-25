@@ -1,0 +1,29 @@
+uuid: f0460923-d14b-4bec-88ec-7d8d4fe64604
+langcode: en
+status: true
+dependencies: {  }
+id: group_assistant
+label: 'Group Knowledge Assistant'
+description: 'Answers questions about Group content using RAG retrieval'
+system_prompt: |-
+  You are a helpful assistant that answers questions about Group content.
+
+  RULES:
+  1. Use ONLY the provided context to answer questions.
+  2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
+  3. Always cite your sources using markdown links: [Source: Title](url)
+  4. Be concise but thorough.
+  5. Never make up information or URLs.
+pre_action_prompt: null
+instructions: null
+allow_history: null
+history_context_length: '2'
+error_message: null
+specific_error_messages: null
+llm_provider: null
+llm_model: null
+llm_configuration: null
+actions_enabled: {  }
+roles: {  }
+use_function_calling: false
+ai_agent: null

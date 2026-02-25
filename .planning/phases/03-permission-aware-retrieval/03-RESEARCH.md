@@ -2,7 +2,7 @@
 
 **Researched:** 2026-02-24
 **Domain:** RAG Permission Filtering, Drupal Group Access Control, Milvus Metadata Filtering
-**Confidence:** HIGH
+**Confidence:** HIGH (user-validated)
 
 ## Summary
 
@@ -10,9 +10,13 @@ Permission-aware retrieval in RAG systems requires a **defense-in-depth** approa
 
 Pre-retrieval filtering uses Milvus scalar filtering to restrict vector search scope to only content in groups the user can access. Post-retrieval checks use Drupal's core entity access system to validate each result. This two-layer approach ensures that even if one layer fails, unauthorized content never reaches the AI response.
 
-The existing `social_ai_indexing` module already indexes `group_id` metadata via the `GroupMetadata` processor, providing the foundation for pre-retrieval filtering.
+The existing `social_ai_indexing` module already indexes `group_id` metadata via the `GroupMetadata` processor. Open Social content types (Topics, Events, etc.) have a `field_content_visibility` field with values: `public`, `community`, or `group_content`.
 
-**Primary recommendation:** Use Search API conditions with `group_id` field for pre-filtering, combined with `$entity->access('view')` for post-retrieval validation.
+**Primary recommendations:**
+1. Add `ContentVisibility` processor to index `field_content_visibility` value
+2. Use Search API conditions with `group_id` field for group-scoped filtering
+3. Use `content_visibility` field for community-wide and anonymous access
+4. Combine with `$entity->access('view')` for post-retrieval validation
 
 <phase_requirements>
 
@@ -23,7 +27,7 @@ The existing `social_ai_indexing` module already indexes `group_id` metadata via
 | PERM-01 | Pre-retrieval metadata filtering respects Drupal Group permissions | Use `group.membership_loader` service to get user's groups, then add Search API condition on `group_id` field |
 | PERM-02 | Post-retrieval entity access check provides defense-in-depth | Use `$entity->access('view', $account)` for each retrieved entity; ai_search has built-in support |
 | PERM-03 | AI responses only contain content the querying user is authorized to see | Combine PERM-01 + PERM-02 for defense-in-depth |
-| PERM-04 | Community-wide search only surfaces public content when queried globally | Handle "no group context" as public-only filter; Open Social has visibility fields |
+| PERM-04 | Community-wide search only surfaces public content when queried globally | Use `content_visibility` field: anonymous = 'public' only; authenticated = 'public' + 'community' |
 | PERM-05 | Group-scoped queries only surface content from that Group | Single Group ID filter when context is a specific group |
 
 </phase_requirements>
@@ -100,36 +104,40 @@ if (!$entity->access('view', $account)) {
 
 **Source:** ai_search module documentation confirms "Post-query access checks ensure users only see content they are authorized to view."
 
-### Pattern 3: Community-Wide Public Content Filter
+### Pattern 3: Content Visibility Field Integration
 
-**What:** When no group context is specified, only return publicly visible content.
+**What:** Use Open Social's per-content visibility field (Public, Community, Group Content) for access control.
 
-**When to use:** Community-wide search queries that span all groups.
+**When to use:** All queries — content visibility is the authoritative source for public/private status.
 
 **Implementation:**
 ```php
-// Option 1: Filter by group visibility (Open Social specific)
-// Public groups have specific visibility settings
-$query->addCondition('group_visibility', 'public');
+// Content visibility field exists on Topics, Events, etc.
+// Values: 'public', 'community', 'group_content'
 
-// Option 2: Use a special "public" marker in metadata
-// During indexing, mark public content with group_id = 0 or a flag
+// Anonymous users: only public content
+if ($account->isAnonymous()) {
+  $query->addCondition('content_visibility', 'public');
+}
+
+// Community-wide search (authenticated): public + community content
+if ($is_community_wide && !$account->isAnonymous()) {
+  $query->addCondition('content_visibility', ['public', 'community'], 'IN');
+}
 ```
+
+**Indexing:** Add `content_visibility` processor to extract and index the visibility field value.
 
 ### Recommended Project Structure
 
 ```
-html/modules/custom/social_ai_retrieval/
-├── social_ai_retrieval.info.yml
-├── social_ai_retrieval.services.yml
+html/modules/custom/social_ai_indexing/
 ├── src/
-│   ├── Service/
-│   │   ├── PermissionFilterService.php    # Pre-retrieval filtering
-│   │   └── AccessCheckService.php         # Post-retrieval validation
 │   └── Plugin/
 │       └── search_api/
 │           └── processor/
-│               └── PublicContentMarker.php # Mark public content at index time
+│               ├── GroupMetadata.php           # Existing - indexes group_id
+│               └── ContentVisibility.php       # NEW - indexes content_visibility field
 ```
 
 ### Anti-Patterns to Avoid
@@ -148,6 +156,7 @@ html/modules/custom/social_ai_retrieval/
 | Filter by group_id | Raw Milvus filter string | `$query->addCondition('group_id', $ids, 'IN')` | MilvusProvider handles conversion, escaping |
 | Check entity access | Custom permission logic | `$entity->access('view', $account)` | Respects Group module permissions, visibility fields |
 | Build filter expressions | String concatenation | Search API Query conditions | Proper escaping, handles multiple value types |
+| Determine content visibility | Custom logic based on group settings | `field_content_visibility` field | Open Social already provides per-content visibility |
 
 **Key insight:** The Drupal AI ecosystem already provides the security primitives. The task is wiring them together correctly, not building new permission systems.
 
@@ -171,14 +180,14 @@ html/modules/custom/social_ai_retrieval/
 
 **Warning signs:** Recently removed members still finding group content.
 
-### Pitfall 3: Public Content in Private Groups
-**What goes wrong:** Content marked "public" within a private group appears in community-wide search.
+### Pitfall 3: Content Visibility vs Group Visibility Confusion
+**What goes wrong:** Assuming group visibility determines content visibility, when Open Social has per-content visibility fields.
 
-**Why it happens:** Open Social allows per-content visibility settings within groups.
+**Why it happens:** Content in a "public" group can still be marked as "group_content" (private), and vice versa.
 
-**How to avoid:** Check both group visibility AND content visibility fields. Public content in private groups may need special handling based on requirements.
+**How to avoid:** Always check `field_content_visibility` on the content itself, not just the group's visibility setting.
 
-**Warning signs:** Private group content appearing in public search results.
+**Warning signs:** Content unexpectedly visible or hidden in search results.
 
 ### Pitfall 4: Missing Group ID Metadata
 **What goes wrong:** Some content types don't have `group_id` in the index, causing permission bypass.
@@ -190,6 +199,63 @@ html/modules/custom/social_ai_retrieval/
 **Warning signs:** Search results include content from unexpected sources.
 
 ## Code Examples
+
+### ContentVisibility Processor (Index Time)
+
+```php
+<?php
+// File: social_ai_indexing/src/Plugin/search_api/processor/ContentVisibility.php
+
+namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
+
+use Drupal\search_api\Processor\ProcessorPluginBase;
+use Drupal\search_api\Item\ItemInterface;
+
+/**
+ * Indexes content visibility field value.
+ *
+ * @SearchApiProcessor(
+ *   id = "content_visibility",
+ *   label = @Translation("Content Visibility"),
+ *   description = @Translation("Indexes the content visibility field (public/community/group_content)"),
+ *   stages = {
+ *     "add_properties" = 0,
+ *   },
+ * )
+ */
+class ContentVisibility extends ProcessorPluginBase {
+
+  public function getPropertyDefinitions(DatasourceInterface $datasource = NULL) {
+    $properties = [];
+    
+    if ($datasource && $datasource->getEntityTypeId() === 'node') {
+      $properties['content_visibility'] = new StringProperty([
+        'label' => $this->t('Content Visibility'),
+        'description' => $this->t('Visibility setting: public, community, or group_content'),
+        'processor_id' => $this->getPluginId(),
+      ]);
+    }
+    
+    return $properties;
+  }
+
+  public function addFieldValues(ItemInterface $item) {
+    $node = $item->getOriginalObject()->getValue();
+    
+    // Field name in Open Social: field_content_visibility
+    if ($node->hasField('field_content_visibility') && !$node->get('field_content_visibility')->isEmpty()) {
+      $visibility = $node->get('field_content_visibility')->value;
+      $fields = $item->getFields(FALSE);
+      $fields = $this->getFieldsHelper()
+        ->filterForPropertyPath($fields, NULL, 'content_visibility');
+      
+      foreach ($fields as $field) {
+        $field->addValue($visibility);
+      }
+    }
+  }
+}
+```
 
 ### Get User's Accessible Group IDs
 
@@ -236,18 +302,24 @@ class PermissionFilterService {
 ```php
 <?php
 // Source: MilvusProvider::processConditionGroup() pattern
-// Applies group_id filter to Search API query
+// Applies group_id and content_visibility filters to Search API query
 
 public function applyPermissionFilter(QueryInterface $query, AccountInterface $account): void {
+  // Anonymous users: only public content
+  if ($account->isAnonymous()) {
+    $query->addCondition('content_visibility', 'public');
+    return;
+  }
+  
   $group_ids = $this->getAccessibleGroupIds($account);
   
   if ($this->isCommunityWideQuery()) {
-    // Community-wide: only public content
-    // Requires a "is_public" field or similar marker
-    $query->addCondition('is_public', TRUE);
+    // Community-wide (authenticated): public + community content
+    $query->addCondition('content_visibility', ['public', 'community'], 'IN');
   }
   elseif (!empty($group_ids)) {
     // Group-scoped: filter by accessible groups
+    // "Any access = visible" pattern - content visible if in ANY accessible group
     $query->addCondition('group_id', $group_ids, 'IN');
   }
   else {
@@ -317,22 +389,41 @@ public function filterResultsByAccess(array $results, AccountInterface $account)
 - OG (Organic Groups) module: Open Social now uses the Group module; OG-specific patterns don't apply
 - Hardcoded permission checks: Use Drupal's access system for flexibility
 
-## Open Questions
+## Design Decisions (User-Confirmed)
 
-1. **How should "public" content be identified in the index?**
-   - What we know: Open Social has visibility fields but they're on groups, not individual content
-   - What's unclear: Should we add an `is_public` metadata field during indexing, or derive it at query time?
-   - Recommendation: Add `is_public` boolean field during indexing via a new processor that checks group visibility settings
+### Decision 1: Public Content Identification
+**Question:** How should "public" content be identified in the index?
 
-2. **What about content in multiple groups with different visibility?**
-   - What we know: Content can belong to multiple groups (e.g., public group + private group)
-   - What's unclear: Should the content be visible if user has access to ANY of the groups, or only the "most restrictive"?
-   - Recommendation: Follow Drupal's access pattern — if user can access ANY of the groups, they can see the content. Post-retrieval check handles edge cases.
+**Finding:** Open Social content types (Topics, Events, etc.) have a **content visibility field** with options: Public, Community, or Group Content. This is per-content, not just group-level.
 
-3. **Should we handle anonymous users differently?**
-   - What we know: Anonymous users have no group memberships
-   - What's unclear: Should community-wide search show public content to anonymous users?
-   - Recommendation: Yes — if requirements allow anonymous access to public content, the `is_public` filter will handle this automatically.
+**Decision:** Use the existing content visibility field directly. Add `content_visibility` metadata field during indexing via processor that reads the visibility field value.
+
+**Implementation:**
+```php
+// Content visibility field values:
+// - 'public' → Visible to everyone including anonymous
+// - 'community' → Visible to authenticated users only
+// - 'group_content' → Only visible within group context
+```
+
+### Decision 2: Multi-Group Content Visibility
+**Question:** For content in multiple groups with different visibility, what's the behavior?
+
+**Decision:** **Any access = visible** — User sees content if they can access ANY of the groups it belongs to.
+
+**Rationale:** Follows Drupal's standard access pattern. Post-retrieval access check provides defense-in-depth for edge cases.
+
+### Decision 3: Anonymous User Handling
+**Question:** How should anonymous users be handled for community-wide search?
+
+**Decision:** Return only truly public content (visibility = 'public').
+
+**Implementation:**
+```php
+if ($account->isAnonymous()) {
+  $query->addCondition('content_visibility', 'public');
+}
+```
 
 ## Sources
 
@@ -347,15 +438,16 @@ public function filterResultsByAccess(array $results, AccountInterface $account)
 - Milvus scalar filtering documentation - Verified filter expression syntax
 - RAG security best practices 2024 - Defense-in-depth pattern confirmed
 
-### Tertiary (LOW confidence)
-- Open Social group visibility fields - Need validation during implementation for exact field names
+### Tertiary → Secondary (User-Verified)
+- Open Social content visibility field (`field_content_visibility`) - User confirmed: Topics, Events have visibility options (Public, Community, Group Content)
 
 ## Metadata
 
 **Confidence breakdown:**
 - Standard stack: HIGH - All components already installed and configured
 - Architecture: HIGH - Patterns verified against source code and documentation
-- Pitfalls: MEDIUM - Based on general RAG security best practices; Open Social specifics need validation during implementation
+- Pitfalls: HIGH - Open Social specifics validated with user
+- Content visibility: HIGH - User confirmed field exists on Topics, Events
 
 **Research date:** 2026-02-24
 **Valid until:** 30 days - Core patterns stable; Open Social visibility fields may need re-verification
