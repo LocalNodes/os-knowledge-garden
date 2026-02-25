@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 5 (Permission-Aware Retrieval) - In Progress
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-25 — Completed 03-01: Pre-Retrieval Permission Filtering
+Last activity: 2026-02-25 — Completed 03-02: Query Pipeline Integration
 
-Progress: [████░░░░░░░░] 33%
+Progress: [████████░░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 6 min
-- Total execution time: 1.45 hours
+- Total execution time: 1.63 hours
 
 **By Phase:**
 
@@ -29,7 +29,7 @@ Progress: [████░░░░░░░░] 33%
 |-------|-------|-------|----------|
 | 1. AI Infrastructure | 3/3 | 23 min | 8 min |
 | 2. Content Indexing | 7/7 | 35 min | 5 min |
-| 3. Permission-Aware Retrieval | 1/3 | 17 min | 17 min |
+| 3. Permission-Aware Retrieval | 2/3 | 28 min | 14 min |
 | 4. Q&A & Search | 0/3 | - | - |
 | 5. User Interface | 0/3 | - | - |
 
@@ -45,6 +45,7 @@ Progress: [████░░░░░░░░] 33%
 | Phase 02-02a P02a | 2 min | 2 tasks | 1 files |
 | Phase 02-01b P01b | 10 min | 4 tasks | 3 files |
 | Phase 03 P01 | 17 min | 2 tasks | 3 files |
+| Phase 03 P02 | 11 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,13 @@ Recent decisions affecting current work:
 - [Phase 01-03]: Used ai_search submodule (bundled with ai package) instead of standalone drupal/ai_search (requires ai 2.x)
 - [Phase 03-01]: Default visibility to 'group_content' for empty fields (safest default)
 - [Phase 03-01]: Never cache permission decisions (re-evaluate at query time)
+- [Phase 03-02]: Only filter AI search indexes (social_posts, social_comments) to avoid breaking regular search
+- [Phase 03-02]: Log warnings instead of throwing exceptions to ensure search never breaks
+- [Phase 03-02]: Post-retrieval filtering as defense-in-depth, not primary security layer
+
+### Roadmap Evolution
+
+- Phase 6 added: Create demo content for LocalNodes.xyz based on social_demo module
 
 ### Pending Todos
 
@@ -82,7 +90,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 03-01-PLAN.md (Pre-Retrieval Permission Filtering)
+Stopped at: Completed 03-02-PLAN.md (Query Pipeline Integration)
 Resume file: None
 
 ---

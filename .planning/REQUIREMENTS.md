@@ -27,8 +27,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Permission-Aware Retrieval
 
 - [x] **PERM-01**: Pre-retrieval metadata filtering respects Drupal Group permissions
-- [ ] **PERM-02**: Post-retrieval entity access check provides defense-in-depth
-- [ ] **PERM-03**: AI responses only contain content the querying user is authorized to see
+- [x] **PERM-02**: Post-retrieval entity access check provides defense-in-depth
+- [x] **PERM-03**: AI responses only contain content the querying user is authorized to see
 - [x] **PERM-04**: Community-wide search only surfaces public content when queried globally
 - [x] **PERM-05**: Group-scoped queries only surface content from that Group
 
@@ -110,8 +110,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDX-05 | Phase 2 | Complete |
 | IDX-06 | Phase 2 | Complete |
 | PERM-01 | Phase 3 | Complete |
-| PERM-02 | Phase 3 | Pending |
-| PERM-03 | Phase 3 | Pending |
+| PERM-02 | Phase 3 | Complete |
+| PERM-03 | Phase 3 | Complete |
 | PERM-04 | Phase 3 | Complete |
 | PERM-05 | Phase 3 | Complete |
 | QA-01 | Phase 4 | Pending |

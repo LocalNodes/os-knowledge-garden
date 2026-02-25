@@ -121,9 +121,18 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. AI Infrastructure | 3/3 | Complete   | 2026-02-24 |
 | 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
-| 3. Permission-Aware Retrieval | 0/3 | Not started | - |
+| 3. Permission-Aware Retrieval | 2/3 | In Progress|  |
 | 4. Q&A & Search | 0/3 | Not started | - |
 | 5. User Interface | 0/3 | Not started | - |
+
+### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
+
+**Goal:** [To be planned]
+**Depends on:** Phase 5
+**Plans:** 2/3 plans executed
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
 
 ---
 *Roadmap created: 2026-02-23*
