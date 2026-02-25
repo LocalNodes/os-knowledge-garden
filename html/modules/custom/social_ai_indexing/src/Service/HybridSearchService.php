@@ -159,8 +159,8 @@ class HybridSearchService {
       $search_query->keys($query);
       $search_query->range(0, $limit);
 
-      // Filter to post and topic content types (same as social_posts index).
-      $search_query->addCondition('type', ['post', 'topic'], 'IN');
+      // Include all content types searchable in social_content index.
+      $search_query->addCondition('type', ['post', 'topic', 'event'], 'IN');
 
       // Apply permission filters to the query.
       $this->permissionFilter->applyPermissionFilters($search_query, $account);
