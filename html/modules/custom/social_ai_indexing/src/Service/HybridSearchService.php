@@ -302,13 +302,25 @@ class HybridSearchService {
       }
 
       // Try to extract entity type and ID from the item ID.
+      // Format: entity:node/123:en or entity:node:123:en
       $item_id = $item->getId();
       if (str_contains($item_id, ':')) {
         $parts = explode(':', $item_id);
         if (count($parts) >= 3) {
-          $result_data['drupal_entity_type'] = $parts[1] ?? 'node';
-          if (is_numeric($parts[2] ?? NULL)) {
-            $result_data['drupal_entity_id'] = (int) $parts[2];
+          // Check if parts[1] contains a slash (e.g., "node/123")
+          if (str_contains($parts[1] ?? '', '/')) {
+            $entity_parts = explode('/', $parts[1]);
+            $result_data['drupal_entity_type'] = $entity_parts[0] ?? 'node';
+            if (is_numeric($entity_parts[1] ?? NULL)) {
+              $result_data['drupal_entity_id'] = (int) $entity_parts[1];
+            }
+          }
+          else {
+            // Old format: entity:node:123:en
+            $result_data['drupal_entity_type'] = $parts[1] ?? 'node';
+            if (is_numeric($parts[2] ?? NULL)) {
+              $result_data['drupal_entity_id'] = (int) $parts[2];
+            }
           }
         }
       }

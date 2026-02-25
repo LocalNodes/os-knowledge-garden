@@ -119,17 +119,17 @@ class HybridSearchController extends ControllerBase {
     // Extract title.
     $title = '';
     if (isset($result['citation_title'][0])) {
-      $title = $result['citation_title'][0];
+      $title = $this->extractStringValue($result['citation_title'][0]);
     }
     elseif (isset($result['title'][0])) {
-      $title = $result['title'][0];
+      $title = $this->extractStringValue($result['title'][0]);
     }
     elseif (isset($result['title']) && is_string($result['title'])) {
       $title = $result['title'];
     }
 
     // Extract URL.
-    $url = $result['citation_url'][0] ?? '';
+    $url = $this->extractStringValue($result['citation_url'][0] ?? '');
     if (empty($url) && isset($result['drupal_entity_id']) && isset($result['drupal_entity_type'])) {
       // Generate entity URL.
       try {
@@ -146,13 +146,14 @@ class HybridSearchController extends ControllerBase {
     }
 
     // Extract content type.
-    $type = $result['citation_type'][0] ?? $result['drupal_entity_type'] ?? '';
+    $type = $this->extractStringValue($result['citation_type'][0] ?? $result['drupal_entity_type'] ?? '');
 
     // Extract snippet from rendered content.
     $snippet = '';
     if (isset($result['rendered_item'][0])) {
-      // Strip HTML tags and truncate.
-      $text = strip_tags($result['rendered_item'][0]);
+      // Extract string value and strip HTML tags.
+      $text = $this->extractStringValue($result['rendered_item'][0]);
+      $text = strip_tags($text);
       $snippet = substr($text, 0, 200);
       if (strlen($text) > 200) {
         $snippet .= '...';
@@ -168,6 +169,28 @@ class HybridSearchController extends ControllerBase {
       'score' => $result['score'] ?? NULL,
       'source' => $result['source_index'] ?? NULL,
     ];
+  }
+
+  /**
+   * Extract string value from various field value types.
+   *
+   * @param mixed $value
+   *   The field value (could be string, TextValue object, etc.).
+   *
+   * @return string
+   *   The extracted string value.
+   */
+  protected function extractStringValue(mixed $value): string {
+    if (is_string($value)) {
+      return $value;
+    }
+    if (is_object($value) && method_exists($value, '__toString')) {
+      return (string) $value;
+    }
+    if (is_object($value) && method_exists($value, 'getText')) {
+      return $value->getText();
+    }
+    return '';
   }
 
 }
