@@ -34,11 +34,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Natural Language Q&A
 
-- [ ] **QA-01**: Users can ask questions in natural language about Group content
-- [ ] **QA-02**: AI assistant returns coherent, contextual answers from indexed content
-- [ ] **QA-03**: Every answer includes citation links back to source content (posts, comments, files)
-- [ ] **QA-04**: AI gracefully responds when no relevant information exists ("I couldn't find...")
-- [ ] **QA-05**: Response latency is acceptable for demo purposes (<10 seconds)
+- [x] **QA-01**: Users can ask questions in natural language about Group content
+- [x] **QA-02**: AI assistant returns coherent, contextual answers from indexed content
+- [x] **QA-03**: Every answer includes citation links back to source content (posts, comments, files)
+- [x] **QA-04**: AI gracefully responds when no relevant information exists ("I couldn't find...")
+- [x] **QA-05**: Response latency is acceptable for demo purposes (<10 seconds)
 
 ### Search & Discovery
 
@@ -114,11 +114,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERM-03 | Phase 3 | Complete |
 | PERM-04 | Phase 3 | Complete |
 | PERM-05 | Phase 3 | Complete |
-| QA-01 | Phase 4 | Pending |
-| QA-02 | Phase 4 | Pending |
-| QA-03 | Phase 4 | Pending |
-| QA-04 | Phase 4 | Pending |
-| QA-05 | Phase 4 | Pending |
+| QA-01 | Phase 4 | Complete |
+| QA-02 | Phase 4 | Complete |
+| QA-03 | Phase 4 | Complete |
+| QA-04 | Phase 4 | Complete |
+| QA-05 | Phase 4 | Complete |
 | SRCH-01 | Phase 4 | Pending |
 | SRCH-02 | Phase 4 | Pending |
 | SRCH-03 | Phase 4 | Pending |
