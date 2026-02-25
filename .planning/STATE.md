@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 3: Permission-Aware Retrieval
+**Current focus:** Phase 6: Demo Content for LocalNodes.xyz
 
 ## Current Position
 
-Phase: 4 of 5 (Q&A & Search) - In Progress
+Phase: 6 of 6 (Demo Content) - In Progress
 Plan: 1 of 3 in current phase
-Status: Executing Phase 4 - Plan 01 Complete
-Last activity: 2026-02-25 — Completed 04-01: RAG Q&A Pipeline
+Status: Executing Phase 6 - Plan 01 Complete
+Last activity: 2026-02-25 — Completed 06-01: Demo Content Module Scaffolding
 
-Progress: [██████████░░] 87%
+Progress: [██████████░░] 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 7 min
-- Total execution time: 2.0 hours
+- Total execution time: 2.1 hours
 
 **By Phase:**
 
@@ -32,6 +32,7 @@ Progress: [██████████░░] 87%
 | 3. Permission-Aware Retrieval | 3/3 | 35 min | 12 min |
 | 4. Q&A & Search | 1/3 | 27 min | 27 min |
 | 5. User Interface | 0/3 | - | - |
+| 6. Demo Content | 1/3 | 3 min | 3 min |
 
 **Recent Trend:**
 - Last 5 plans: 01-03 (6 min), 01-01 (10 min), 01-02 (7 min), 02-03c (5 min), 02-02b (3 min)
@@ -48,6 +49,7 @@ Progress: [██████████░░] 87%
 | Phase 03 P02 | 11 min | 2 tasks | 3 files |
 | Phase 03-permission-aware-retrieval P03 | 7 min | 3 tasks | 2 files |
 | Phase 04-q-a-search P01 | 27 min | 4 tasks | 6 files |
+| Phase 06-demo-content P01 | 3 min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -77,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 03-03]: Configuration items documented as setup steps rather than failures
 - [Phase 04-q-a-search]: Use ai_agents module with RAG tool instead of direct ai_assistant_api RAG properties — Current module architecture uses ai_agents with tools/tool_usage_limits pattern
 - [Phase 04-q-a-search]: Set RAG threshold to 0.7, max_results to 5 — Balance precision/recall while maintaining acceptable latency
+- [Phase 06-01]: Extend social_demo Plugin classes (Topic, Event, Post, Like, EventEnrollment, EventType, UserTerms) rather than base classes directly to inherit entity-specific getEntry() logic
+- [Phase 06-01]: No .services.yml needed -- module reuses social_demo services entirely
 
 ### Roadmap Evolution
 
@@ -96,7 +100,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 04-01-PLAN.md (RAG Q&A Pipeline)
+Stopped at: Completed 06-01-PLAN.md (Demo Content Module Scaffolding)
 Resume file: None
 
 ---
