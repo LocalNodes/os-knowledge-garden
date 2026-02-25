@@ -1,0 +1,250 @@
+---
+# 10 topics for LocalNodes.xyz bioregionalism community
+# AI Coverage: "Welcome" and "Bioregionalism" topics have long bodies (300+ words) for chunking exercise
+# AI Coverage: "Treasury" topic in Governance Council with group visibility exercises permission filtering
+# AI Coverage: Topics across different groups exercise cross-group semantic search
+# AI Coverage: Varied bioregionalism vocabulary exercises embedding quality and semantic matching
+
+# Topic 1: Welcome to LocalNodes (Blog, public, no group) -- LONG for chunking
+90f14e5e-ac2c-4f5f-a06e-f274d82e1214:
+  uuid: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  title: "Welcome to LocalNodes: Building the Infrastructure of Belonging"
+  type: topic
+  langcode: en
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  body: >
+    <p><strong>What is LocalNodes?</strong></p>
+
+    <p>LocalNodes is a platform for bioregional organizing -- a digital commons where people who care about their watersheds, their communities, and the living systems that sustain them can connect, coordinate, and create together. We believe that the most meaningful change happens at the scale of the bioregion: the natural territory defined by watersheds, soil types, plant communities, and the cultural relationships that have grown from living in place over generations.</p>
+
+    <p><strong>Why Bioregionalism?</strong></p>
+
+    <p>Bioregionalism is the practice of living as if your place matters. It means understanding the watershed you drink from, the soil that grows your food, the species you share your home with, and the human communities that steward these relationships. In a time of ecological crisis and social fragmentation, bioregionalism offers a path toward resilience rooted in the particular -- not abstract global solutions, but concrete local practices that connect to a larger web of cosmolocal coordination.</p>
+
+    <p><strong>How This Platform Works</strong></p>
+
+    <p>LocalNodes is organized around groups that reflect the working structure of our bioregional network. You will find groups for watershed stewardship, community land trusts, regenerative economics, governance councils, and more. Within each group, members share knowledge through topics, coordinate through events, and stay connected through posts. The platform is powered by Open Social and enhanced with AI features that help surface relevant knowledge across the network -- so the wisdom shared in one watershed can benefit stewards in another.</p>
+
+    <p><strong>Getting Started</strong></p>
+
+    <p>We encourage you to fill out your profile with your interests and expertise, join groups that align with your work, and introduce yourself to the community. Browse the topics to see what conversations are happening, check the events calendar for upcoming gatherings, and do not hesitate to post questions or share what you are learning. Every contribution strengthens the knowledge commons we are building together.</p>
+
+    <p><strong>Our Principles</strong></p>
+
+    <p>LocalNodes is guided by the principles of polycentric governance, data sovereignty, and commons stewardship. We believe that the people closest to the land should have the most voice in decisions about it. We believe that community-generated knowledge belongs to the community. And we believe that technology should serve life, not extract from it. Welcome to the network. Welcome home to your bioregion.</p>
+  field_topic_type: Blog
+  image: fa8a9b98-fb48-4945-8001-cd6c0ed02540
+  image_alt: Bioregional community gathering
+  field_content_visibility: public
+
+# Topic 2: What is Bioregionalism? (Blog, community, no group) -- LONG for embedding quality
+686671f1-2341-4634-99d7-782e50732e88:
+  uuid: 686671f1-2341-4634-99d7-782e50732e88
+  title: "What is Bioregionalism? A Living Systems Approach"
+  type: topic
+  langcode: en
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  body: >
+    <p>Bioregionalism is the idea that human communities should organize themselves around the natural systems that sustain them -- watersheds, soil types, plant communities, and ecological boundaries -- rather than arbitrary political borders drawn on maps. It is both an ancient practice (indigenous peoples have always organized this way) and a modern movement responding to the disconnection that industrial civilization has created between people and place.</p>
+
+    <p><strong>The Watershed as Organizing Principle</strong></p>
+
+    <p>At the heart of bioregionalism is the watershed. Water flows downhill, gathering in streams and rivers that define the natural boundaries of our home places. When we organize around watersheds, we organize around the fundamental ecological unit that connects mountain to sea, forest to farmland, city to countryside. Your watershed is your address in the community of life.</p>
+
+    <p><strong>Polycentric Governance</strong></p>
+
+    <p>Bioregionalism practices polycentric governance -- decision-making that happens at multiple scales simultaneously. Neighborhood assemblies address local concerns, watershed councils coordinate across communities, and bioregional congresses tackle issues that affect the whole region. This is governance that grows from the ground up, like a forest, rather than being imposed from the top down. Each scale of governance is accountable to the others, creating a web of mutual responsibility.</p>
+
+    <p><strong>Cosmolocal Organizing</strong></p>
+
+    <p>While bioregionalism is rooted in the local, it is not parochial. The concept of cosmolocalism describes how bioregional communities can share knowledge globally while acting locally. What one watershed learns about salmon restoration can benefit stewards in another watershed thousands of miles away. Platforms like LocalNodes make this cosmolocal coordination possible -- sharing knowledge as a global commons while keeping action rooted in place.</p>
+
+    <p><strong>The Commons and Mutual Aid</strong></p>
+
+    <p>Bioregional economics is based on the commons -- shared resources governed by the communities that depend on them. Land trusts hold territory for community benefit rather than private speculation. Seed libraries preserve genetic diversity as a shared inheritance. Mutual aid networks ensure that everyone has access to the resources they need. These are not utopian abstractions but practical tools that communities across Cascadia are using right now to build resilience and care for each other and the land.</p>
+
+    <p><strong>Indigenous Foundations</strong></p>
+
+    <p>Any honest bioregional practice must acknowledge that indigenous peoples have been practicing place-based living for thousands of years on these lands. The watersheds we are learning to steward have been tended by indigenous communities long before the bioregionalism movement gave it a name. True bioregionalism centers indigenous knowledge, respects treaty rights, and works toward right relationship with the original stewards of the land.</p>
+  field_topic_type: Blog
+  image: 1319f89f-83ed-453b-9c08-17a4e1ab0742
+  image_alt: River flowing through forest
+  field_content_visibility: community
+
+# Topic 3: Watershed Restoration Q1 Update (News, community, Watershed group)
+# AI Coverage: Group-scoped content exercises retrieval within group boundaries
+a07da695-03f4-4411-99bc-c448e8b4a203:
+  uuid: a07da695-03f4-4411-99bc-c448e8b4a203
+  title: "Watershed Restoration Progress: Q1 Update"
+  type: topic
+  langcode: en
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  body: >
+    <p>Hello Watershed Guardians! Here is our quarterly update on restoration projects across the Cascadia watersheds we are monitoring.</p>
+
+    <p><strong>Nooksack River Basin:</strong> Our citizen science team completed 47 water quality sampling events this quarter. Dissolved oxygen levels continue to improve in the upper tributaries where we planted riparian buffers three years ago. We spotted 12 returning Chinook salmon in the Nooksack mainstem, which is the highest count since we began monitoring.</p>
+
+    <p><strong>Willamette Valley:</strong> The riparian restoration project at the Wheatland Ferry crossing is progressing well. Over 200 native willows and cottonwoods were planted by volunteers. We need more hands for the next planting day in March.</p>
+
+    <p><strong>Data Dashboard:</strong> Noah has updated our community science dashboard with the latest water quality data. You can access it through the group files. If you are interested in contributing monitoring data from your local stream, please reach out to me or Noah for training.</p>
+  field_topic_type: News
+  image: 01e1d6a0-7ea7-423d-921a-92337ed5e589
+  image_alt: Forest canopy along a river
+  group: fdcc1818-ced4-4af6-b4b3-527b757da1f0
+  field_content_visibility: community
+
+# Topic 4: Proposal: Community Solar Installation (Dialog, community, Land Trust group)
+2f229d29-7327-4517-ba61-cfdcc639a7cd:
+  uuid: 2f229d29-7327-4517-ba61-cfdcc639a7cd
+  title: "Proposal: Community Solar Installation at the Commons"
+  type: topic
+  langcode: en
+  uid: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+  body: >
+    <p>Fellow land trust members, I would like to propose that we install a community-owned solar array on the south-facing roof of the Commons workshop building. The Sunroot Energy Collective has offered to coordinate the installation through their cooperative model.</p>
+
+    <p><strong>The Proposal:</strong> A 15kW solar array that would generate approximately 18,000 kWh per year -- enough to power the workshop, community kitchen, and common areas, with surplus fed back to the grid as community solar credits.</p>
+
+    <p><strong>Cost and Financing:</strong> Estimated cost of $35,000, which we propose to fund through a combination of community shares (invest-to-own model) and a grant from the Cascadia Resilience Fund. Each community share would be $500 and would receive annual dividend payments once the system is generating credits.</p>
+
+    <p>I would love to hear your thoughts on this proposal. What questions do you have? What concerns should we address before bringing this to the full trust membership for a vote?</p>
+  field_topic_type: Dialog
+  image: fa8a9b98-fb48-4945-8001-cd6c0ed02540
+  image_alt: Community gathering space
+  group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
+  field_content_visibility: community
+
+# Topic 5: Cosmolocal Coordination (Blog, community, Bioregional Hub)
+# AI Coverage: Cross-concept linking exercises semantic search across topics
+ca9fa81a-a4cf-43cd-9d98-20d55ef5e0f5:
+  uuid: ca9fa81a-a4cf-43cd-9d98-20d55ef5e0f5
+  title: "Cosmolocal Coordination: Sharing Knowledge, Acting Locally"
+  type: topic
+  langcode: en
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  body: >
+    <p>One of the most powerful ideas in the bioregional movement is cosmolocalism: the practice of sharing knowledge globally while keeping production and action rooted in local communities and ecosystems. This is not a new idea -- indigenous trade networks have practiced versions of this for millennia -- but digital tools give us new ways to coordinate across bioregional boundaries.</p>
+
+    <p>Here at LocalNodes, we are practicing cosmolocal coordination every day. When Maria shares her watershed monitoring protocols, stewards in other bioregions can adapt those methods to their own rivers. When Kwame documents the Cascadia Commons land trust model, communities across Turtle Island can learn from that experience. The knowledge is global commons; the action is place-based.</p>
+
+    <p>What I find most exciting is how this approach challenges the extractive logic of globalization. Instead of concentrating resources in distant corporations, cosmolocalism distributes productive capacity to communities while connecting them through shared knowledge and mutual aid. This is regenerative economics at the bioregional scale.</p>
+  field_topic_type: Blog
+  image: 030215c2-7cd1-4519-a16c-a9a2e722bb8c
+  image_alt: Mountain valley landscape
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+  field_content_visibility: community
+
+# Topic 6: Polycentric Governance in Practice (Blog, community, no group)
+# AI Coverage: Rich governance vocabulary for embedding quality testing
+93fb7141-7168-4927-9e5b-348fe72731f0:
+  uuid: 93fb7141-7168-4927-9e5b-348fe72731f0
+  title: "Polycentric Governance in Practice: Lessons from Our First Year"
+  type: topic
+  langcode: en
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  body: >
+    <p>A year ago, we established the Cascadia Governance Council as an experiment in polycentric decision-making for our bioregional network. Now, twelve months in, I want to share what we have learned about practicing governance that serves both people and place.</p>
+
+    <p><strong>What Worked:</strong> Consensus-based decision making, even though it is slower than majority vote, has produced decisions that everyone can live with. Our rotating facilitation model ensures no single person holds too much power. The principle of subsidiarity -- decisions made at the most local level possible -- has kept our governance grounded in the lived experience of community members.</p>
+
+    <p><strong>What We Are Still Learning:</strong> Balancing transparency with the need for confidential deliberation remains challenging. We are also working on better ways to ensure that the council reflects the diversity of our bioregion -- not just geographically, but in terms of age, culture, and relationship to the land.</p>
+
+    <p><strong>Key Takeaway:</strong> Polycentric governance is not a structure to be designed once and implemented. It is a living practice that must evolve as our understanding of the bioregion deepens and as new challenges emerge. The governance council is one node in a much larger web of decision-making that includes watershed councils, neighborhood assemblies, and the everyday negotiations of community life.</p>
+  field_topic_type: Blog
+  image:
+  image_alt:
+  field_content_visibility: community
+
+# Topic 7: Food Forest Design Workshop Follow-up (News, community, Watershed group)
+fb18bb32-6545-471d-b172-eb1a831c2189:
+  uuid: fb18bb32-6545-471d-b172-eb1a831c2189
+  title: Food Forest Design Workshop Follow-up
+  type: topic
+  langcode: en
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  body: >
+    <p>Thank you to everyone who attended last week's food forest design workshop! We had 24 participants and covered the seven layers of a food forest, guild planting for our Pacific Northwest bioregion, and how to read your site's water flow patterns.</p>
+
+    <p>The design plans we created are available in the group files. Remember, the key to a good food forest is patience and observation. Spend at least one full season observing your site before you start planting. Watch where the water flows, where the sun hits, where the frost settles.</p>
+
+    <p>Our next planting day is scheduled for three weeks from now. Please sign up in the comments if you can help with the installation at the Nooksack demonstration site.</p>
+  field_topic_type: News
+  image: e75443e6-5a70-4243-9a5c-fd72da789339
+  image_alt: Garden plants and seedlings
+  group: fdcc1818-ced4-4af6-b4b3-527b757da1f0
+  field_content_visibility: community
+
+# Topic 8: How to Contribute to LocalNodes (Blog, public, no group)
+324107b0-611b-4a9c-a945-fc7eecbdd4ce:
+  uuid: 324107b0-611b-4a9c-a945-fc7eecbdd4ce
+  title: How to Contribute to the LocalNodes Platform
+  type: topic
+  langcode: en
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  body: >
+    <p>LocalNodes is a community-maintained platform, and there are many ways to contribute beyond just using it. Here is how you can help strengthen our digital commons.</p>
+
+    <p><strong>Content Stewardship:</strong> Share your knowledge, experience, and stories. Write blog posts about your bioregional work, contribute news updates from your watershed, and start dialog topics on issues that matter to your community. Every piece of content enriches the knowledge base that serves all of us.</p>
+
+    <p><strong>Community Moderation:</strong> Help maintain the quality and safety of our shared spaces by flagging inappropriate content and welcoming new members. If you are interested in becoming a community steward, contact Omar.</p>
+
+    <p><strong>Technical Contributions:</strong> LocalNodes is built on open source technology. If you have development skills, you can contribute to the platform's code, help with translations, or assist with accessibility improvements.</p>
+  field_topic_type: Blog
+  image:
+  image_alt:
+  field_content_visibility: public
+
+# Topic 9: Treasury Allocation Discussion (Dialog, group, Governance Council)
+# AI Coverage: PERMISSION TEST -- group-only visibility in closed Governance Council
+2a641aa7-2b8e-4455-a3ce-146efe3429e3:
+  uuid: 2a641aa7-2b8e-4455-a3ce-146efe3429e3
+  title: Treasury Allocation Discussion for Q2
+  type: topic
+  langcode: en
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  body: >
+    <p>Council members, it is time to discuss how we allocate our shared treasury for the coming quarter. Our current balance is $12,400 from membership contributions and event revenue.</p>
+
+    <p><strong>Proposed Allocations:</strong></p>
+    <ul>
+    <li>Watershed monitoring equipment: $3,000</li>
+    <li>Community solar project seed funding: $2,500</li>
+    <li>Platform hosting and maintenance: $1,200</li>
+    <li>Youth bioregion program stipends: $2,000</li>
+    <li>Emergency mutual aid reserve: $2,000</li>
+    <li>Assembly event costs: $1,700</li>
+    </ul>
+
+    <p>Please share your thoughts and any alternative proposals in the comments. We will aim to reach consensus at the next governance circle meeting. Remember, our allocation should reflect our commitment to polycentric governance -- funding should flow to where communities need it most.</p>
+  field_topic_type: Dialog
+  image:
+  image_alt:
+  group: 1e96acbd-da9b-41e0-b823-01b5407917cf
+  field_content_visibility: group
+
+# Topic 10: Mapping Our Bioregion: Participatory GIS (Dialog, community, Bioregional Hub)
+fe0ddb71-d564-4388-89c2-a236ada605b1:
+  uuid: fe0ddb71-d564-4388-89c2-a236ada605b1
+  title: "Mapping Our Bioregion: Participatory GIS Project"
+  type: topic
+  langcode: en
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  body: >
+    <p>I am excited to announce a new participatory GIS project to create a comprehensive map of our bioregion's ecological and community assets. The goal is to build a shared spatial database that helps us understand the relationships between watersheds, habitats, food systems, and human settlements across Cascadia.</p>
+
+    <p><strong>What We Want to Map:</strong></p>
+    <ul>
+    <li>Watershed boundaries and major waterways</li>
+    <li>Salmon spawning habitat and restoration sites</li>
+    <li>Community gardens, food forests, and seed libraries</li>
+    <li>Community land trust properties and commons</li>
+    <li>Mutual aid network nodes</li>
+    <li>Indigenous cultural sites (with tribal consent and guidance)</li>
+    </ul>
+
+    <p>The Cascadia Water Institute can provide the base layers and hosting for the GIS platform. What we need from the community is local knowledge -- you know your places better than any satellite can. Who wants to help build this map?</p>
+  field_topic_type: Dialog
+  image: cd4a7ee5-d64a-407f-90f5-d75223056087
+  image_alt: Bioregional landscape
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+  field_content_visibility: community

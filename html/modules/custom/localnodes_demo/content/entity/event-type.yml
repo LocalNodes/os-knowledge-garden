@@ -1,0 +1,18 @@
+---
+# Event type taxonomy terms for LocalNodes bioregionalism events
+ae629674-25e5-47a7-bf05-a34a21b8b4aa:
+  uuid: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+  name: Community Gathering
+  vid: event_types
+1fa2259f-3098-4140-9b62-95a47f63a02d:
+  uuid: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  name: Workshop
+  vid: event_types
+f7a31497-13ab-4ec8-8674-64c5bbd64b76:
+  uuid: f7a31497-13ab-4ec8-8674-64c5bbd64b76
+  name: Assembly
+  vid: event_types
+43048f01-387c-45d8-9ae2-c42c9f060770:
+  uuid: 43048f01-387c-45d8-9ae2-c42c9f060770
+  name: Working Session
+  vid: event_types

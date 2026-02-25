@@ -1,0 +1,203 @@
+---
+# 8 events for LocalNodes.xyz bioregionalism community
+# AI Coverage: Events in Governance Council group exercise permission-filtered retrieval
+# AI Coverage: Public events exercise community-wide search
+# AI Coverage: Past events exercise historical content retrieval
+
+# Cascadia Bioregional Assembly (future +30 day, community, Bioregional Hub)
+99cbb48a-9cb0-480e-a6e1-43c352cb2434:
+  uuid: 99cbb48a-9cb0-480e-a6e1-43c352cb2434
+  title: Cascadia Bioregional Assembly
+  type: event
+  langcode: en
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  body: >
+    <p>Join us for the annual Cascadia Bioregional Assembly, our largest gathering of the year. This is where delegates from watersheds across Cascadia come together to share reports, make collective decisions, and strengthen the bonds that hold our bioregional network together.</p>
+
+    <p>This year's assembly will focus on three themes: watershed health indicators, cosmolocal resource sharing, and polycentric governance in practice. Each watershed group will present their annual stewardship report, and we will hold council circles to address cross-bioregional challenges.</p>
+
+    <p>Whether you are a long-time bioregionalist or just beginning to explore what it means to live in place, the Assembly is for you. Come learn, contribute, and celebrate the living systems that sustain us all.</p>
+  field_event_address:
+    country_code: US
+    locality: Seattle
+    postal_code: 98101
+    address_line1: 305 Harrison Street
+  field_event_date: +30 day|09:00
+  field_event_date_end: +30 day|18:00
+  image: cd4a7ee5-d64a-407f-90f5-d75223056087
+  image_alt: Cascadia bioregional landscape
+  field_event_location: Seattle Center
+  field_content_visibility: community
+  field_event_type: f7a31497-13ab-4ec8-8674-64c5bbd64b76
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+
+# Watershed Monitoring Training (future +14 day, public, no group)
+ed8e50c0-3215-4c96-968a-7a571cd20829:
+  uuid: ed8e50c0-3215-4c96-968a-7a571cd20829
+  title: Watershed Monitoring Training
+  type: event
+  langcode: en
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  body: >
+    <p>Learn how to monitor the health of your local watershed. This hands-on training covers water quality testing, macroinvertebrate sampling, and riparian habitat assessment. Open to everyone -- no prior experience needed.</p>
+
+    <p>We will meet at the Nooksack River trailhead and spend the morning learning field techniques, followed by an afternoon of actual data collection that will be contributed to our community science database. Bring waterproof boots and a notebook.</p>
+  field_event_address:
+    country_code: US
+    locality: Bellingham
+    postal_code: 98225
+    address_line1: 3000 Lakeway Drive
+  field_event_date: +14 day|09:00
+  field_event_date_end: +14 day|15:00
+  image: 01e1d6a0-7ea7-423d-921a-92337ed5e589
+  image_alt: Forest canopy along a river
+  field_event_location: Nooksack River Trailhead
+  field_content_visibility: public
+  field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+
+# Community Land Trust Open House (future +21 day, public, Land Trust group)
+59bc2859-4716-4f5b-abb3-fb12bdfe0aca:
+  uuid: 59bc2859-4716-4f5b-abb3-fb12bdfe0aca
+  title: Community Land Trust Open House
+  type: event
+  langcode: en
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  body: >
+    <p>Come visit the Cascadia Commons and see what community land stewardship looks like in practice. We will tour the community gardens, affordable housing units, and the new food forest that was planted last season.</p>
+
+    <p>This open house is a chance to learn about the commons-based model of land holding, ask questions about how the trust works, and meet the people who live and grow here. Light refreshments will be provided from our on-site garden.</p>
+  field_event_address:
+    country_code: US
+    locality: Portland
+    postal_code: 97202
+    address_line1: 834 Commons Way
+  field_event_date: +21 day|10:00
+  field_event_date_end: +21 day|14:00
+  image: 6a503fe4-5993-492c-babf-e0d6e4827e82
+  image_alt: Community garden with raised beds
+  field_event_location: Cascadia Commons Grounds
+  field_content_visibility: public
+  field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+  group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
+
+# Monthly Governance Circle (past -14 day, community, Governance Council)
+# AI Coverage: Past event in closed group exercises permission filtering for historical content
+99726051-3b78-4ee7-bdf4-391544544c85:
+  uuid: 99726051-3b78-4ee7-bdf4-391544544c85
+  title: Monthly Governance Circle
+  type: event
+  langcode: en
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  body: >
+    <p>Our regular monthly governance circle where council members discuss current proposals, review stewardship reports, and practice consensus-based decision making. This month's agenda includes the Q2 treasury allocation and the proposal for expanding watershed monitoring partnerships.</p>
+  field_event_address:
+    country_code: US
+    locality: Seattle
+    postal_code: 98104
+    address_line1: 789 Council House Lane
+  field_event_date: -14 day|18:00
+  field_event_date_end: -14 day|21:00
+  image:
+  image_alt:
+  field_event_location: Council House Community Room
+  field_content_visibility: community
+  field_event_type: f7a31497-13ab-4ec8-8674-64c5bbd64b76
+  group: 1e96acbd-da9b-41e0-b823-01b5407917cf
+
+# Seed Swap and Plant Exchange (future +7 day, community, no group)
+0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e:
+  uuid: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
+  title: Seed Swap and Plant Exchange
+  type: event
+  langcode: en
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  body: >
+    <p>Bring your saved seeds, plant starts, and garden abundance to share with fellow bioregional growers. This is our seasonal seed swap where we strengthen the genetic diversity of our regional food systems by exchanging locally adapted varieties.</p>
+
+    <p>Juniper will lead a short workshop on seed saving techniques, and we will have tables organized by plant family. Even if you do not have seeds to bring, come learn and take home something to grow. Food sovereignty starts in the seed.</p>
+  field_event_address:
+    country_code: US
+    locality: Eugene
+    postal_code: 97401
+    address_line1: 44 East Broadway
+  field_event_date: +7 day|10:00
+  field_event_date_end: +7 day|13:00
+  image: e75443e6-5a70-4243-9a5c-fd72da789339
+  image_alt: Garden seedlings and plants
+  field_event_location: Whiteaker Community Market
+  field_content_visibility: community
+  field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+
+# Regenerative Economics Workshop (future +45 day, community, Economics group)
+906174f4-167c-47f5-998a-c19cc7e0dcbb:
+  uuid: 906174f4-167c-47f5-998a-c19cc7e0dcbb
+  title: Regenerative Economics Workshop
+  type: event
+  langcode: en
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  body: >
+    <p>Explore the principles and practices of regenerative economics in this hands-on workshop. We will cover mutual aid network design, community currency models, cooperative governance structures, and resource pooling strategies that keep wealth circulating within bioregions.</p>
+
+    <p>This workshop is for anyone who wants to move beyond extractive economics and build systems where resources flow like water through a healthy watershed -- nourishing everything they touch.</p>
+  field_event_address:
+    country_code: US
+    locality: Portland
+    postal_code: 97214
+    address_line1: 2233 Solidarity Avenue
+  field_event_date: +45 day|13:00
+  field_event_date_end: +45 day|17:00
+  image: 030215c2-7cd1-4519-a16c-a9a2e722bb8c
+  image_alt: Mountain valley landscape
+  field_event_location: Solidarity House
+  field_content_visibility: community
+  field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  group: 80dea4a2-dcec-4eaa-88a7-60785d6107a8
+
+# Solstice Gathering: Celebrating Place (future +60 day, public, no group)
+ab2574c1-ef7d-4fe6-b69a-17ae5ad94bfc:
+  uuid: ab2574c1-ef7d-4fe6-b69a-17ae5ad94bfc
+  title: "Solstice Gathering: Celebrating Place"
+  type: event
+  langcode: en
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  body: >
+    <p>Gather with your bioregional community to celebrate the solstice and honor the living systems that sustain us. This is a time for storytelling, song, shared food, and renewing our commitment to the land we call home.</p>
+
+    <p>Willow Redcedar will open the gathering with an acknowledgment of the Coast Salish peoples whose territory we are on, followed by community sharing circles and a potluck feast featuring food grown within our bioregion.</p>
+  field_event_address:
+    country_code: US
+    locality: Olympia
+    postal_code: 98501
+    address_line1: Priest Point Park
+  field_event_date: +60 day|16:00
+  field_event_date_end: +60 day|21:00
+  image: d431b19e-1545-47d9-ad86-11893c053340
+  image_alt: River estuary landscape
+  field_event_location: Priest Point Park Amphitheater
+  field_content_visibility: public
+  field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+
+# Data Sovereignty Workshop (past -30 day, community, Bioregional Hub)
+27a45a80-357d-4a27-819a-167d826ad7c3:
+  uuid: 27a45a80-357d-4a27-819a-167d826ad7c3
+  title: Data Sovereignty Workshop
+  type: event
+  langcode: en
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  body: >
+    <p>How do we govern the data our communities generate? This workshop explored the principles of data sovereignty as they apply to bioregional organizing. We covered community data governance frameworks, privacy-preserving tools, and the ethics of AI in community platforms.</p>
+
+    <p>Omar Hassan led this session drawing on indigenous data sovereignty principles and modern cooperative data governance models. The workshop notes and resources are available in the Bioregional Hub group files.</p>
+  field_event_address:
+    country_code: US
+    locality: Seattle
+    postal_code: 98104
+    address_line1: 901 Data Commons Blvd
+  field_event_date: -30 day|14:00
+  field_event_date_end: -30 day|17:00
+  image:
+  image_alt:
+  field_event_location: LocalNodes Community Space
+  field_content_visibility: community
+  field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82

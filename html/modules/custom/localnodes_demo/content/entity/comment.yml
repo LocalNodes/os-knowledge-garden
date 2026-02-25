@@ -1,0 +1,171 @@
+---
+# 14 comments for LocalNodes.xyz bioregionalism community
+# AI Coverage: Comments exercise parent-context retrieval (CommentParentContext processor)
+# AI Coverage: Threaded replies test context chain
+# AI Coverage: Comments across different entity types test comment indexing completeness
+
+# --- Comments on "Welcome to LocalNodes" topic (3 comments) ---
+b1bbe7d2-e031-4d28-9fae-9c25b37b68f3:
+  uuid: b1bbe7d2-e031-4d28-9fae-9c25b37b68f3
+  uid: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+  type: comment
+  langcode: en
+  body: >
+    This is exactly the kind of platform our bioregion needs. As a young organizer, I have been looking for a space where the different threads of bioregional work can come together. Excited to be part of building this knowledge commons!
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  field_name: field_topic_comments
+  created: -29 day|10:30
+0f698f17-5f22-432a-91e2-1223aff9fdfe:
+  uuid: 0f698f17-5f22-432a-91e2-1223aff9fdfe
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  type: comment
+  langcode: en
+  body: >
+    Thank you for this thoughtful introduction. I want to emphasize that any platform for bioregional organizing must center indigenous perspectives. The Coast Salish peoples have been stewarding these watersheds for thousands of years. I look forward to contributing that perspective here.
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  field_name: field_topic_comments
+  created: -28 day|14:00
+a54f1ba9-490f-4fae-b0fc-aa3ba5bb6ec4:
+  uuid: a54f1ba9-490f-4fae-b0fc-aa3ba5bb6ec4
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  type: comment
+  langcode: en
+  parent: 0f698f17-5f22-432a-91e2-1223aff9fdfe
+  body: >
+    Absolutely, Willow. The mutual aid networks we build must be grounded in right relationship with indigenous communities. Solidarity Cascadia has been working with Coast Salish organizations on a land-back initiative, and I would love to connect you with that work through this platform.
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  field_name: field_topic_comments
+  created: -27 day|09:15
+
+# --- Comments on "Proposal: Community Solar" topic (3 comments) ---
+0d650a9d-d054-41ac-a04c-83d4880e7832:
+  uuid: 0d650a9d-d054-41ac-a04c-83d4880e7832
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  type: comment
+  langcode: en
+  body: >
+    This is a great proposal, Anil. From the land trust perspective, solar infrastructure on commons property would benefit all trust members. I have a few questions about the community share structure -- can households invest in fractions of a share? We want to make sure this is accessible to everyone, not just those with $500 to invest.
+  entity_id: 2f229d29-7327-4517-ba61-cfdcc639a7cd
+  entity_type: node
+  field_name: field_topic_comments
+  created: -16 day|11:00
+0a379466-6bd5-46c0-8eb4-ee433ba9c79c:
+  uuid: 0a379466-6bd5-46c0-8eb4-ee433ba9c79c
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  type: comment
+  langcode: en
+  parent: 0d650a9d-d054-41ac-a04c-83d4880e7832
+  body: >
+    Great point, Kwame. At Solidarity Cascadia, we have been exploring a mutual aid approach to community investment -- where those who can invest more subsidize shares for those who cannot. What if we structured the solar shares with a sliding scale?
+  entity_id: 2f229d29-7327-4517-ba61-cfdcc639a7cd
+  entity_type: node
+  field_name: field_topic_comments
+  created: -15 day|14:30
+63bdf1f5-e48d-42e0-a313-80c4bd11cc77:
+  uuid: 63bdf1f5-e48d-42e0-a313-80c4bd11cc77
+  uid: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+  type: comment
+  langcode: en
+  parent: 0a379466-6bd5-46c0-8eb4-ee433ba9c79c
+  body: >
+    I love the sliding scale idea, Elena. We could structure it as $100 minimum with suggested $500, and use the Cascadia Resilience Fund grant to cover the gap. Let me draft a revised proposal with these adjustments and bring it to the next group meeting.
+  entity_id: 2f229d29-7327-4517-ba61-cfdcc639a7cd
+  entity_type: node
+  field_name: field_topic_comments
+  created: -14 day|08:45
+
+# --- Comments on events (3 comments) ---
+# Comment on Watershed Monitoring Training event
+e7b96a71-9b9b-44d9-a678-f50820172f05:
+  uuid: e7b96a71-9b9b-44d9-a678-f50820172f05
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  type: comment
+  langcode: en
+  body: >
+    I will be there with the portable water testing kits from the institute. We have some new dissolved oxygen meters that are much easier to use than the old ones. Looking forward to training the next generation of watershed monitors!
+  entity_id: ed8e50c0-3215-4c96-968a-7a571cd20829
+  entity_type: node
+  field_name: field_event_comments
+  created: -10 day|09:00
+
+# Comment on Seed Swap event
+27932676-44f3-434a-9562-137ccc509325:
+  uuid: 27932676-44f3-434a-9562-137ccc509325
+  uid: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
+  type: comment
+  langcode: en
+  body: >
+    Can I bring herb starts from City Roots? We have tons of oregano, thyme, and sage that are ready to find new homes. Also wondering if anyone has sugar snap pea seeds adapted to our Pacific Northwest growing season.
+  entity_id: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
+  entity_type: node
+  field_name: field_event_comments
+  created: -5 day|12:30
+
+# Comment on Cascadia Assembly event
+e1ba250f-4f8d-4212-af80-f04e7d7ae9be:
+  uuid: e1ba250f-4f8d-4212-af80-f04e7d7ae9be
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  type: comment
+  langcode: en
+  body: >
+    The Watershed Guardians will present our annual stewardship report at the Assembly. We have seen real improvements in several tributaries this year. Looking forward to hearing what other groups have been doing across the bioregion.
+  entity_id: 99cbb48a-9cb0-480e-a6e1-43c352cb2434
+  entity_type: node
+  field_name: field_event_comments
+  created: -3 day|16:00
+
+# --- Comments on posts (4 comments) ---
+# Comment on the tool lending library question post
+4c575df8-8afc-4165-bd31-befb944f9dc1:
+  uuid: 4c575df8-8afc-4165-bd31-befb944f9dc1
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  type: post_comment
+  langcode: en
+  body: >
+    We ran a small tool library through the Commons for two years. My advice: start with a simple spreadsheet for inventory, get basic liability insurance through your cooperative, and cap the borrowing period at one week. Happy to share our template with you, Sage!
+  entity_id: e7a43f0b-4f6f-4387-ab29-5feccd04b27e
+  entity_type: post
+  field_name: field_post_comments
+  created: -17 day|11:00
+
+# Comment on the mushroom cultivation question post
+005c6890-e49e-4f95-acb7-9a0195f343ee:
+  uuid: 005c6890-e49e-4f95-acb7-9a0195f343ee
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  type: post_comment
+  langcode: en
+  body: >
+    Mushrooms are a fantastic food forest layer! I have been growing shiitake on alder logs for three years now. The key is getting fresh-cut logs in late winter when the sap is down. I can bring some inoculated logs to the next seed swap if you want to see the technique.
+  entity_id: c7c90109-8455-497b-a265-b2700502a02d
+  entity_type: post
+  field_name: field_post_comments
+  created: -4 day|10:00
+
+# Comment on the community science post
+e954ea69-1de4-4c81-9d35-ec5fae5700b7:
+  uuid: e954ea69-1de4-4c81-9d35-ec5fae5700b7
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  type: post_comment
+  langcode: en
+  body: >
+    This confirms what we have been seeing on the ground. The watersheds where community members are actively monitoring and restoring show dramatically better outcomes than those relying solely on agency management. People caring for place makes a real difference.
+  entity_id: 02158fe6-6be9-4930-8d4b-fe1c9a892c39
+  entity_type: post
+  field_name: field_post_comments
+  created: -11 day|09:30
+
+# Comment on the youth ambassador post
+7a346a9a-2e46-4ef8-9025-43e7f15455a9:
+  uuid: 7a346a9a-2e46-4ef8-9025-43e7f15455a9
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  type: post_comment
+  langcode: en
+  body: >
+    This is wonderful, River. The governance council has been discussing how to include youth voices in our decision-making. Could we connect the ambassador program with the council as an observer pathway?
+  entity_id: 7b1996db-fa98-4827-8770-8c18b641570d
+  entity_type: post
+  field_name: field_post_comments
+  created: -1 day|16:30

@@ -1,0 +1,99 @@
+---
+# 10 likes for LocalNodes.xyz bioregionalism community
+# Spread across popular topics and posts to create engagement signals
+
+# Likes on "Welcome to LocalNodes" topic (3 likes - popular)
+d7ac6430-b9e7-46ab-bc91-2c9b8d31044e:
+  uuid: d7ac6430-b9e7-46ab-bc91-2c9b8d31044e
+  type: like
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+691abb30-ca90-46e5-85a8-03eba2e3b0f2:
+  uuid: 691abb30-ca90-46e5-85a8-03eba2e3b0f2
+  type: like
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+c15e9cfc-2afd-4933-acad-6b01c4aa5462:
+  uuid: c15e9cfc-2afd-4933-acad-6b01c4aa5462
+  type: like
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on "What is Bioregionalism?" topic
+71af74a0-f7c0-499c-8b31-03003d5f9bf0:
+  uuid: 71af74a0-f7c0-499c-8b31-03003d5f9bf0
+  type: like
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  entity_id: 686671f1-2341-4634-99d7-782e50732e88
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on "Polycentric Governance" topic
+f4a61774-55cf-4c26-b0d9-20acef34e854:
+  uuid: f4a61774-55cf-4c26-b0d9-20acef34e854
+  type: like
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  entity_id: 93fb7141-7168-4927-9e5b-348fe72731f0
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Likes on posts (4 likes)
+# Like on community welcome post
+92d7ef96-5019-481f-bb5b-4237e828a06e:
+  uuid: 92d7ef96-5019-481f-bb5b-4237e828a06e
+  type: like
+  uid: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+  entity_id: e22d9db6-816c-4c92-ac9a-8f5f40d7cfef
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on watershed data post
+a093cf6c-f0ff-47c5-b302-c43459c787d5:
+  uuid: a093cf6c-f0ff-47c5-b302-c43459c787d5
+  type: like
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  entity_id: b78cafe9-57ed-46d8-9318-40d4d1d4d89a
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on land trust news post
+23ce1a81-e36d-469a-8f48-ecabd94b72b2:
+  uuid: 23ce1a81-e36d-469a-8f48-ecabd94b72b2
+  type: like
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  entity_id: 8dc25f15-79f0-49f1-9d65-f09b9a59e294
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on youth ambassador post
+b8d21e46-f0e0-4c47-858a-bbeeb8260db5:
+  uuid: b8d21e46-f0e0-4c47-858a-bbeeb8260db5
+  type: like
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  entity_id: 7b1996db-fa98-4827-8770-8c18b641570d
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost

@@ -1,0 +1,93 @@
+---
+# 10 event enrollments for LocalNodes.xyz bioregionalism community
+# 3-5 users enrolled per upcoming event
+
+# Enrollments for Cascadia Bioregional Assembly (+30 day)
+96cfc972-f72a-4389-82ec-9d6693e192ca:
+  uuid: 96cfc972-f72a-4389-82ec-9d6693e192ca
+  title: riverkeeper_maria @ Cascadia Bioregional Assembly
+  langcode: en
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  field_event: 99cbb48a-9cb0-480e-a6e1-43c352cb2434
+  field_enrollment_status: 1
+  field_account: bcead200-a74f-4e24-93c4-2746436a5207
+57eeaaea-23d4-49fe-b9e0-6f31aa40dafc:
+  uuid: 57eeaaea-23d4-49fe-b9e0-6f31aa40dafc
+  title: kwame_commons @ Cascadia Bioregional Assembly
+  langcode: en
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  field_event: 99cbb48a-9cb0-480e-a6e1-43c352cb2434
+  field_enrollment_status: 1
+  field_account: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+cb8ad452-c265-4867-97b5-0b092197dbb7:
+  uuid: cb8ad452-c265-4867-97b5-0b092197dbb7
+  title: elena_solidarity @ Cascadia Bioregional Assembly
+  langcode: en
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  field_event: 99cbb48a-9cb0-480e-a6e1-43c352cb2434
+  field_enrollment_status: 1
+  field_account: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+
+# Enrollments for Watershed Monitoring Training (+14 day)
+66235ebf-3d87-490b-9f67-55cb58101205:
+  uuid: 66235ebf-3d87-490b-9f67-55cb58101205
+  title: river_nextgen @ Watershed Monitoring Training
+  langcode: en
+  uid: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+  field_event: ed8e50c0-3215-4c96-968a-7a571cd20829
+  field_enrollment_status: 1
+  field_account: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+6f4e94e0-d4ce-4b82-98b8-38e4cb34e0c7:
+  uuid: 6f4e94e0-d4ce-4b82-98b8-38e4cb34e0c7
+  title: noah_watershed @ Watershed Monitoring Training
+  langcode: en
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  field_event: ed8e50c0-3215-4c96-968a-7a571cd20829
+  field_enrollment_status: 1
+  field_account: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+
+# Enrollments for Seed Swap (+7 day)
+5774108a-984d-4c4b-b47d-7238fdb29184:
+  uuid: 5774108a-984d-4c4b-b47d-7238fdb29184
+  title: sage_cityroots @ Seed Swap and Plant Exchange
+  langcode: en
+  uid: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
+  field_event: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
+  field_enrollment_status: 1
+  field_account: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
+e89a94d1-f9ec-49b2-806a-6479e3f99888:
+  uuid: e89a94d1-f9ec-49b2-806a-6479e3f99888
+  title: willow_salish @ Seed Swap and Plant Exchange
+  langcode: en
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  field_event: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
+  field_enrollment_status: 1
+  field_account: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+
+# Enrollments for Regenerative Economics Workshop (+45 day)
+67214612-eccf-43a4-9794-6d304bab954f:
+  uuid: 67214612-eccf-43a4-9794-6d304bab954f
+  title: anil_sunroot @ Regenerative Economics Workshop
+  langcode: en
+  uid: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+  field_event: 906174f4-167c-47f5-998a-c19cc7e0dcbb
+  field_enrollment_status: 1
+  field_account: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+54b67cc0-9ead-42b4-949e-fbd60b82a363:
+  uuid: 54b67cc0-9ead-42b4-949e-fbd60b82a363
+  title: kwame_commons @ Regenerative Economics Workshop
+  langcode: en
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  field_event: 906174f4-167c-47f5-998a-c19cc7e0dcbb
+  field_enrollment_status: 1
+  field_account: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+
+# Enrollment for Community Land Trust Open House (+21 day)
+f6594638-2d5f-4f06-b7db-5b2b65a01ff3:
+  uuid: f6594638-2d5f-4f06-b7db-5b2b65a01ff3
+  title: juniper_rewild @ Community Land Trust Open House
+  langcode: en
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  field_event: 59bc2859-4716-4f5b-abb3-fb12bdfe0aca
+  field_enrollment_status: 1
+  field_account: 3fe46397-9193-4d85-9848-f8972eba32f2

@@ -1,0 +1,214 @@
+---
+# 18 social posts for LocalNodes.xyz bioregionalism community
+# AI Coverage: Posts with visibility 3 in groups exercise group-scoped retrieval
+# AI Coverage: Posts with visibility 0 (direct messages) exercise recipient-only filtering
+# AI Coverage: Cross-group posts exercise community-wide search
+# AI Coverage: Similar themes across groups test semantic deduplication
+
+# Post 1: Welcome post (community, no group)
+e22d9db6-816c-4c92-ac9a-8f5f40d7cfef:
+  uuid: e22d9db6-816c-4c92-ac9a-8f5f40d7cfef
+  langcode: en
+  type: post
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  field_visibility: 1
+  created: -30 day|09:00
+  field_post: >
+    Welcome to LocalNodes.xyz! This platform is our shared digital commons for bioregional organizing across Cascadia. Join a group, introduce yourself, and start connecting with fellow stewards of this beautiful bioregion.
+
+# Post 2: Resource sharing in Watershed group (group visibility)
+b78cafe9-57ed-46d8-9318-40d4d1d4d89a:
+  uuid: b78cafe9-57ed-46d8-9318-40d4d1d4d89a
+  langcode: en
+  type: post
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  field_visibility: 3
+  created: -28 day|14:30
+  group: fdcc1818-ced4-4af6-b4b3-527b757da1f0
+  field_post: >
+    Just uploaded the latest water quality data from our monitoring stations along the Nooksack. Dissolved oxygen levels are looking great in the restored reaches. Check the group files for the full dataset.
+
+# Post 3: Cross-group update (community, no group)
+8dc25f15-79f0-49f1-9d65-f09b9a59e294:
+  uuid: 8dc25f15-79f0-49f1-9d65-f09b9a59e294
+  langcode: en
+  type: post
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  field_visibility: 1
+  created: -25 day|11:15
+  field_post: >
+    Exciting news from the Cascadia Commons Land Trust -- we just closed on a new 5-acre parcel that will become community garden space. This would not have been possible without the mutual aid contributions from across our bioregional network. Thank you all!
+
+# Post 4: Direct message (recipient only)
+bb10d978-1665-454a-805a-a25c5d71ec2b:
+  uuid: bb10d978-1665-454a-805a-a25c5d71ec2b
+  langcode: en
+  type: post
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  field_visibility: 0
+  recipient: bcead200-a74f-4e24-93c4-2746436a5207
+  created: -24 day|16:45
+  field_post: >
+    Hi Maria, I was thinking about the riparian restoration project along the Nooksack. I have some native willow starts from our nursery that would be perfect for the riverbank. Want to coordinate a planting day?
+
+# Post 5: Group resource sharing in Economics group
+9dc351c7-298b-49db-9ace-ada0a4a69660:
+  uuid: 9dc351c7-298b-49db-9ace-ada0a4a69660
+  langcode: en
+  type: post
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  field_visibility: 3
+  created: -22 day|10:00
+  group: 80dea4a2-dcec-4eaa-88a7-60785d6107a8
+  field_post: >
+    I found a great resource on community currency design from the Totnes bioregion in the UK. They have been running a local currency for over a decade. Anyone interested in exploring something similar for Cascadia?
+
+# Post 6: Community building (public)
+94ba371c-e43b-4d53-824a-6bbbbb0df9db:
+  uuid: 94ba371c-e43b-4d53-824a-6bbbbb0df9db
+  langcode: en
+  type: post
+  uid: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+  field_visibility: 2
+  created: -20 day|13:30
+  field_post: >
+    Just got back from my first watershed monitoring training with Maria and the Guardians team. Learning to read a stream is like learning a new language -- once you start paying attention, the river tells you everything about the health of the bioregion. Highly recommend it!
+
+# Post 7: Question / mutual aid (community)
+e7a43f0b-4f6f-4387-ab29-5feccd04b27e:
+  uuid: e7a43f0b-4f6f-4387-ab29-5feccd04b27e
+  langcode: en
+  type: post
+  uid: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
+  field_visibility: 1
+  created: -18 day|09:45
+  field_post: >
+    Does anyone have experience setting up a tool lending library? City Roots Collective wants to start one for our neighborhood but we need advice on inventory management and liability. Would love to connect with others who have done this.
+
+# Post 8: Resource sharing in Land Trust group
+3d254f8e-9691-4a07-b1d4-fc01f41562eb:
+  uuid: 3d254f8e-9691-4a07-b1d4-fc01f41562eb
+  langcode: en
+  type: post
+  uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
+  field_visibility: 3
+  created: -17 day|15:00
+  group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
+  field_post: >
+    Reminder to all Commons members: the community garden plot assignments for next season are open. If you want to grow food on trust land, please fill out the application form in our group files. Priority goes to households that will grow for mutual aid distribution.
+
+# Post 9: Direct message about governance
+09e3d536-3b88-474e-aeb9-190ef289c919:
+  uuid: 09e3d536-3b88-474e-aeb9-190ef289c919
+  langcode: en
+  type: post
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  field_visibility: 0
+  recipient: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  created: -15 day|08:30
+  field_post: >
+    Omar, can we schedule a call about the data governance proposal? I want to make sure the council has a clear framework before we discuss it at the next circle. Also need your input on the AI features -- how do we ensure they respect our data sovereignty principles?
+
+# Post 10: Community update with image (community)
+7847eb1b-6c30-4897-8dc6-bbd4cf2fb174:
+  uuid: 7847eb1b-6c30-4897-8dc6-bbd4cf2fb174
+  langcode: en
+  type: photo
+  uid: 3fe46397-9193-4d85-9848-f8972eba32f2
+  field_visibility: 1
+  created: -14 day|11:20
+  field_post: >
+    Look at these beautiful heirloom tomato starts from our seed library! These varieties have been selected over five years by growers in the Willamette Valley. Food sovereignty starts with seeds adapted to our bioregion.
+  field_post_image: fa8a9b98-fb48-4945-8001-cd6c0ed02540
+
+# Post 11: Group post in Bioregional Hub
+02158fe6-6be9-4930-8d4b-fe1c9a892c39:
+  uuid: 02158fe6-6be9-4930-8d4b-fe1c9a892c39
+  langcode: en
+  type: post
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  field_visibility: 3
+  created: -12 day|16:00
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+  field_post: >
+    The Cascadia Water Institute just published our annual state of the watersheds report. Key finding: bioregions with active community monitoring programs show 30% faster recovery in water quality indicators. Community science works!
+
+# Post 12: Cross-group mutual aid (community)
+8a915f21-2def-4b34-8c0d-d832203dfa87:
+  uuid: 8a915f21-2def-4b34-8c0d-d832203dfa87
+  langcode: en
+  type: post
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  field_visibility: 1
+  created: -10 day|14:15
+  field_post: >
+    Solidarity Cascadia is organizing a tool-sharing network across Portland neighborhoods. If you have tools sitting in your garage that others could use, or if you need to borrow something, check our new mutual aid board. Sharing is the heart of regenerative economics.
+
+# Post 13: Group-only governance post
+024236e3-9c57-4f29-b78c-457a7d2f4465:
+  uuid: 024236e3-9c57-4f29-b78c-457a7d2f4465
+  langcode: en
+  type: post
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  field_visibility: 3
+  created: -8 day|09:00
+  group: 1e96acbd-da9b-41e0-b823-01b5407917cf
+  field_post: >
+    Council members: please review the draft bylaws amendment about expanding representation to include youth delegates. River Thompson from Next Gen Bioregion has been doing excellent work and their generation deserves a seat at the governance table.
+
+# Post 14: Public event promotion
+6aab496c-209c-4fe1-b928-03f959d986f9:
+  uuid: 6aab496c-209c-4fe1-b928-03f959d986f9
+  langcode: en
+  type: post
+  uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
+  field_visibility: 2
+  created: -7 day|10:00
+  field_post: >
+    The Solstice Gathering is coming up! This is open to everyone. Bring food to share, stories to tell, and your gratitude for the living systems that sustain us. Let us celebrate being rooted in this bioregion together.
+
+# Post 15: Question about permaculture (community)
+c7c90109-8455-497b-a265-b2700502a02d:
+  uuid: c7c90109-8455-497b-a265-b2700502a02d
+  langcode: en
+  type: post
+  uid: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
+  field_visibility: 1
+  created: -5 day|15:30
+  field_post: >
+    Has anyone tried integrating mushroom cultivation into their food forest design? I am interested in growing shiitake and oyster mushrooms on logs within our urban food forest at City Roots. Looking for advice from experienced growers in the bioregion.
+
+# Post 16: Direct message about collaboration
+79b90804-8aea-4207-a046-f584bac3bc1f:
+  uuid: 79b90804-8aea-4207-a046-f584bac3bc1f
+  langcode: en
+  type: post
+  uid: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+  field_visibility: 0
+  recipient: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  created: -4 day|11:00
+  field_post: >
+    Elena, the solar cooperative model we discussed could pair really well with Solidarity Cascadia's mutual aid network. What if we offered community solar shares through the mutual aid framework? Could reach folks who normally cannot afford renewable energy.
+
+# Post 17: Photo post with community image (community)
+151413b7-ee20-4d24-b609-246965ed7267:
+  uuid: 151413b7-ee20-4d24-b609-246965ed7267
+  langcode: en
+  type: photo
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  field_visibility: 1
+  created: -3 day|08:45
+  field_post: >
+    Sunrise over the Nooksack this morning. Moments like these remind me why we do this work. Every stream we restore, every riparian buffer we plant, every water sample we collect is an act of love for the watershed that sustains us.
+  field_post_image: 1319f89f-83ed-453b-9c08-17a4e1ab0742
+
+# Post 18: Youth engagement (public)
+7b1996db-fa98-4827-8770-8c18b641570d:
+  uuid: 7b1996db-fa98-4827-8770-8c18b641570d
+  langcode: en
+  type: post
+  uid: 5a1431bd-d7e5-4e62-916e-fbc89f89f003
+  field_visibility: 2
+  created: -1 day|14:00
+  field_post: >
+    Next Gen Bioregion is launching a youth watershed ambassador program! If you know young people aged 16-25 who care about their local streams and rivers, send them our way. We will train them in watershed monitoring, bioregional organizing, and climate advocacy. The future of bioregionalism is intergenerational.
