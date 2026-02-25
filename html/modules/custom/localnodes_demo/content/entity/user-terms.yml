@@ -1,0 +1,50 @@
+---
+# Profile tag taxonomy terms for LocalNodes bioregionalism community
+2400a8b3-9124-4624-b497-94e5c0633275:
+  uuid: 2400a8b3-9124-4624-b497-94e5c0633275
+  name: Watershed Ecology
+  vid: profile_tag
+5498f93b-d8ca-48fc-9f68-d4de86920516:
+  uuid: 5498f93b-d8ca-48fc-9f68-d4de86920516
+  name: Bioregionalism
+  vid: profile_tag
+c50bab8f-a3d2-411c-b99b-9e79a83e4e70:
+  uuid: c50bab8f-a3d2-411c-b99b-9e79a83e4e70
+  name: Regenerative Agriculture
+  vid: profile_tag
+b7228cf5-36b0-4c30-8172-0a8ac0ae3133:
+  uuid: b7228cf5-36b0-4c30-8172-0a8ac0ae3133
+  name: Permaculture Design
+  vid: profile_tag
+0aa6a64f-d30f-42c8-a7a1-ecb7084ac2b2:
+  uuid: 0aa6a64f-d30f-42c8-a7a1-ecb7084ac2b2
+  name: Community Land Trust
+  vid: profile_tag
+03c64592-9d1f-47ce-b36f-194adb11e01a:
+  uuid: 03c64592-9d1f-47ce-b36f-194adb11e01a
+  name: Polycentric Governance
+  vid: profile_tag
+bdca8e59-6d6a-4203-9c87-412321a8eaed:
+  uuid: bdca8e59-6d6a-4203-9c87-412321a8eaed
+  name: Mutual Aid
+  vid: profile_tag
+4f8aa3cf-93a9-47a5-9ce1-14b46be8168b:
+  uuid: 4f8aa3cf-93a9-47a5-9ce1-14b46be8168b
+  name: Data Sovereignty
+  vid: profile_tag
+07d75f59-a9b0-4996-adf9-3aeeea4bb6d0:
+  uuid: 07d75f59-a9b0-4996-adf9-3aeeea4bb6d0
+  name: Food Sovereignty
+  vid: profile_tag
+dcdcbb8d-0c45-4555-a9ef-2cc391b68ddd:
+  uuid: dcdcbb8d-0c45-4555-a9ef-2cc391b68ddd
+  name: Community Energy
+  vid: profile_tag
+d4ca5b12-4bce-40df-9792-78470ccaa750:
+  uuid: d4ca5b12-4bce-40df-9792-78470ccaa750
+  name: Indigenous Knowledge
+  vid: profile_tag
+7c7bbdcc-f416-45f5-a111-cfcc0f643a44:
+  uuid: 7c7bbdcc-f416-45f5-a111-cfcc0f643a44
+  name: Climate Action
+  vid: profile_tag

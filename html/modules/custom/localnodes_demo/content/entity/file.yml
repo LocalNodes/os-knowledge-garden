@@ -1,0 +1,424 @@
+---
+# Profile photos for 12 user personas (copied from social_demo and renamed)
+84c95bee-b4d4-4f70-b592-a037d22ab4b8:
+  uuid: 84c95bee-b4d4-4f70-b592-a037d22ab4b8
+  langcode: en
+  path: content/files/maria_chen.jpg
+  uri: public://maria_chen.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+22817914-98ab-40a3-8aec-476b47b922b2:
+  uuid: 22817914-98ab-40a3-8aec-476b47b922b2
+  langcode: en
+  path: content/files/kwame_asante.jpg
+  uri: public://kwame_asante.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+6a945d9e-2092-434e-8e02-16171284bc97:
+  uuid: 6a945d9e-2092-434e-8e02-16171284bc97
+  langcode: en
+  path: content/files/juniper_walsh.jpg
+  uri: public://juniper_walsh.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+d9b39547-6915-486f-b8db-68819785951f:
+  uuid: d9b39547-6915-486f-b8db-68819785951f
+  langcode: en
+  path: content/files/anil_patel.jpg
+  uri: public://anil_patel.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+39397185-9e43-417a-a8dd-4429cfe90c64:
+  uuid: 39397185-9e43-417a-a8dd-4429cfe90c64
+  langcode: en
+  path: content/files/suki_yamamoto.jpg
+  uri: public://suki_yamamoto.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+6389684b-fdb7-4a81-9952-3bd24e8beb4b:
+  uuid: 6389684b-fdb7-4a81-9952-3bd24e8beb4b
+  langcode: en
+  path: content/files/river_thompson.jpg
+  uri: public://river_thompson.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+885a237d-1f8f-48f0-96ff-707675b98004:
+  uuid: 885a237d-1f8f-48f0-96ff-707675b98004
+  langcode: en
+  path: content/files/elena_vasquez.jpg
+  uri: public://elena_vasquez.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+16b12d9a-e7ac-4c70-9a56-1a0bca7f4866:
+  uuid: 16b12d9a-e7ac-4c70-9a56-1a0bca7f4866
+  langcode: en
+  path: content/files/omar_hassan.jpg
+  uri: public://omar_hassan.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+ede448ba-8e98-45d6-b8a2-8e20f123d88c:
+  uuid: ede448ba-8e98-45d6-b8a2-8e20f123d88c
+  langcode: en
+  path: content/files/willow_redcedar.jpg
+  uri: public://willow_redcedar.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+3cefa342-5e56-4cc5-93e8-0e9659ba3c87:
+  uuid: 3cefa342-5e56-4cc5-93e8-0e9659ba3c87
+  langcode: en
+  path: content/files/sage_moreno.jpg
+  uri: public://sage_moreno.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+7082ccb7-b343-4015-bd5b-14d367771a45:
+  uuid: 7082ccb7-b343-4015-bd5b-14d367771a45
+  langcode: en
+  path: content/files/noah_eriksen.jpg
+  uri: public://noah_eriksen.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+8d0a03ca-a2dd-4434-b38e-ad06faf97fd4:
+  uuid: 8d0a03ca-a2dd-4434-b38e-ad06faf97fd4
+  langcode: en
+  path: content/files/localnodes_admin.jpg
+  uri: public://localnodes_admin.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+# Content images: 3 reused from social_demo numbered images
+fa8a9b98-fb48-4945-8001-cd6c0ed02540:
+  uuid: fa8a9b98-fb48-4945-8001-cd6c0ed02540
+  langcode: en
+  path: content/files/01.jpg
+  uri: public://01.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+1319f89f-83ed-453b-9c08-17a4e1ab0742:
+  uuid: 1319f89f-83ed-453b-9c08-17a4e1ab0742
+  langcode: en
+  path: content/files/02.jpg
+  uri: public://02.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+e75443e6-5a70-4243-9a5c-fd72da789339:
+  uuid: e75443e6-5a70-4243-9a5c-fd72da789339
+  langcode: en
+  path: content/files/03.jpg
+  uri: public://03.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+# Group header / landscape images (reused from social_demo as themed images)
+cd4a7ee5-d64a-407f-90f5-d75223056087:
+  uuid: cd4a7ee5-d64a-407f-90f5-d75223056087
+  langcode: en
+  path: content/files/watershed_landscape.jpg
+  uri: public://watershed_landscape.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 202
+      width: 1920
+      height: 677
+    teaser:
+      x: 420
+      y: 0
+      width: 1080
+      height: 1080
+01e1d6a0-7ea7-423d-921a-92337ed5e589:
+  uuid: 01e1d6a0-7ea7-423d-921a-92337ed5e589
+  langcode: en
+  path: content/files/forest_canopy.jpg
+  uri: public://forest_canopy.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 305
+      width: 1919
+      height: 677
+    teaser:
+      x: 317
+      y: 0
+      width: 1286
+      height: 1286
+6a503fe4-5993-492c-babf-e0d6e4827e82:
+  uuid: 6a503fe4-5993-492c-babf-e0d6e4827e82
+  langcode: en
+  path: content/files/community_garden.jpg
+  uri: public://community_garden.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 0
+      width: 961
+      height: 339
+    teaser:
+      x: 300
+      y: 0
+      width: 423
+      height: 423
+030215c2-7cd1-4519-a16c-a9a2e722bb8c:
+  uuid: 030215c2-7cd1-4519-a16c-a9a2e722bb8c
+  langcode: en
+  path: content/files/mountain_valley.jpg
+  uri: public://mountain_valley.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 300
+      width: 2000
+      height: 700
+    teaser:
+      x: 315
+      y: 0
+      width: 1280
+      height: 1280
+d431b19e-1545-47d9-ad86-11893c053340:
+  uuid: d431b19e-1545-47d9-ad86-11893c053340
+  langcode: en
+  path: content/files/river_estuary.jpg
+  uri: public://river_estuary.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 300
+      width: 2000
+      height: 700
+    teaser:
+      x: 315
+      y: 0
+      width: 1280
+      height: 1280
