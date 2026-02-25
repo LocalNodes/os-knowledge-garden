@@ -88,12 +88,12 @@ Plans:
   5. Hybrid search combines vector similarity with existing Solr keyword matching
   6. Related content suggestions appear alongside Q&A results
   7. Response latency is acceptable for demo purposes (under 10 seconds)
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 04-01: Implement RAG pipeline for natural language Q&A
-- [ ] 04-02: Implement semantic and hybrid search
-- [ ] 04-03: Implement citation linking and related content
+- [ ] 04-01: Enable RAG pipeline with ai_assistant_api and CitationMetadata processor — Wave 1
+- [ ] 04-02: Implement hybrid search with RRF algorithm and JSON API — Wave 2 (depends on 04-01)
+- [ ] 04-03: Implement related content and comprehensive verification — Wave 3 (depends on 04-01, 04-02)
 
 ### Phase 5: User Interface
 **Goal**: Users have intuitive interfaces for AI interactions — chat and search
