@@ -8,3 +8,9 @@ services:
     arguments: ['@social_ai_indexing.permission_filter', '@current_user']
     tags:
       - { name: event_subscriber }
+
+  social_ai_indexing.hybrid_search:
+    class: Drupal\social_ai_indexing\Service\HybridSearchService
+    arguments:
+      - '@social_ai_indexing.permission_filter'
+      - '@entity_type.manager'
