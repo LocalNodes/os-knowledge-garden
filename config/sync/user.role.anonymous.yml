@@ -5,6 +5,7 @@ dependencies:
   config:
     - taxonomy.vocabulary.topic_types
   module:
+    - ai_chatbot
     - comment
     - entity_access_by_field
     - social_group
@@ -23,6 +24,7 @@ permissions:
   - 'access comments'
   - 'access content'
   - 'access content search'
+  - 'access deepchat api'
   - 'access group search'
   - 'select terms in topic_types'
   - 'view like widget'
