@@ -31,3 +31,6 @@ vendor/
 
 private/
 .claude/
+
+# DDEV service volumes (binary runtime data)
+.ddev/milvus/volumes/
