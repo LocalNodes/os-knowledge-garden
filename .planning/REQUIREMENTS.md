@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SRCH-01**: Community-wide search across all public Group content is available
 - [ ] **SRCH-02**: Semantic search returns results based on meaning, not just keywords
 - [ ] **SRCH-03**: Hybrid search combines vector similarity with existing Solr keyword matching
-- [ ] **SRCH-04**: Related content suggestions appear alongside Q&A results
+- [x] **SRCH-04**: Related content suggestions appear alongside Q&A results
 
 ### User Interface
 
@@ -122,7 +122,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-01 | Phase 4 | Pending |
 | SRCH-02 | Phase 4 | Pending |
 | SRCH-03 | Phase 4 | Pending |
-| SRCH-04 | Phase 4 | Pending |
+| SRCH-04 | Phase 4 | Complete |
 | UI-01 | Phase 5 | Pending |
 | UI-02 | Phase 5 | Pending |
 | UI-03 | Phase 5 | Pending |

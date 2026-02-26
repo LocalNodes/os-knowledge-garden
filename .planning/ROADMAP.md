@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: AI Infrastructure** - Core AI modules, Deepseek provider, vector database, embeddings pipeline (completed 2026-02-24)
 - [ ] **Phase 2: Content Indexing** - Index posts, comments, files with embeddings and Group metadata
 - [x] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks (completed 2026-02-25)
-- [ ] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking
+- [x] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking (completed 2026-02-26)
 - [ ] **Phase 5: User Interface** - Chat interfaces for Group and community-wide queries
 
 ## Phase Details
@@ -91,9 +91,9 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 04-01: Enable RAG pipeline with ai_assistant_api and CitationMetadata processor — Wave 1
-- [ ] 04-02: Implement hybrid search with RRF algorithm and JSON API — Wave 2 (depends on 04-01)
-- [ ] 04-03: Implement related content and comprehensive verification — Wave 3 (depends on 04-01, 04-02)
+- [x] 04-01: Enable RAG pipeline with ai_assistant_api and CitationMetadata processor — Wave 1
+- [x] 04-02: Implement hybrid search with RRF algorithm and JSON API — Wave 2 (depends on 04-01)
+- [x] 04-03: Implement related content and comprehensive verification — Wave 3 (depends on 04-01, 04-02)
 
 ### Phase 5: User Interface
 **Goal**: Users have intuitive interfaces for AI interactions — chat and search
@@ -122,7 +122,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. AI Infrastructure | 3/3 | Complete   | 2026-02-24 |
 | 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
 | 3. Permission-Aware Retrieval | 3/3 | Complete   | 2026-02-25 |
-| 4. Q&A & Search | 0/3 | Not started | - |
+| 4. Q&A & Search | 3/3 | Complete | 2026-02-26 |
 | 5. User Interface | 0/3 | Not started | - |
 
 ### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
