@@ -109,8 +109,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Gemini provider switch COMPLETE. Root cause was Milvus IN operator bug (not permission issue). All patches regenerated, debug logging removed, E2E verified. Ready to commit.
-Resume file: none
+Stopped at: Fixed Milvus IN operator bug, granted anon chatbot access, committed. Related Content block untested in browser. Phase 6 Plan 03 (demo content install) not yet executed. Phase 5 needs assessment.
+Resume file: .planning/phases/06-create-demo-content-for-localnodes-xyz-based-on-social-demo-module/.continue-here.md
 
 ---
 *State initialized: 2026-02-23*
