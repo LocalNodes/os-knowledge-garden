@@ -28,8 +28,8 @@ settings:
 visibility:
   'entity_bundle:node':
     id: 'entity_bundle:node'
-    bundles:
-      event: event
     negate: false
     context_mapping:
       node: '@node.node_route_context:node'
+    bundles:
+      event: event

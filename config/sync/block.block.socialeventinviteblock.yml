@@ -25,6 +25,6 @@ settings:
 visibility:
   request_path:
     id: request_path
-    pages: '*/all-enrollments'
     negate: false
     context_mapping: {  }
+    pages: '*/all-enrollments'

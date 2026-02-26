@@ -200,13 +200,6 @@ class DeepChatApi extends ControllerBase {
 
       // Process the user's message.
       try {
-        \Drupal::logger('deepchat_debug')->notice('Processing message: @msg, verbose=@verbose, thread=@thread, stream=@stream, keys=@keys', [
-          '@msg' => substr($latestUserMessage->getMessage(), 0, 50),
-          '@verbose' => isset($data['verbose_mode']) && $data['verbose_mode'] ? 'true' : 'false',
-          '@thread' => $data['thread_id'] ?? 'none',
-          '@stream' => isset($data['stream']) ? ($data['stream'] ? 'yes' : 'no') : 'not_set',
-          '@keys' => implode(',', array_keys($data)),
-        ]);
         $response = $this->aiAssistantClient->process();
 
         // Handle the response, which could be a ChatMessage or Stream.
@@ -306,11 +299,6 @@ class DeepChatApi extends ControllerBase {
     // response should never have pending tools for the browser to handle.
     $should_continue = $this->aiAssistantClient->getVerboseMode()
       && !empty($normalizedResponse->getTools());
-    \Drupal::logger('deepchat_debug')->notice('createResponse: has_tools=@tools, should_continue=@continue, text_len=@len', [
-      '@tools' => $normalizedResponse->getTools() ? count($normalizedResponse->getTools()) : 0,
-      '@continue' => $should_continue ? 'true' : 'false',
-      '@len' => strlen($assistantResponseText),
-    ]);
     // Default to JSON response.
     return new JsonResponse([
       'html' => $assistantResponseText,

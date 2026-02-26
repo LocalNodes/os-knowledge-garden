@@ -89,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Cache RelatedContentBlock per-user (not per-role) for permission accuracy
 - [Phase 04-03]: Similarity threshold 0.7 to avoid returning unrelated content
 - [Phase 06-02]: Created 121 unique UUIDs with zero overlap against social_demo
+- [Phase 04-q-a-search]: Fixed MilvusProvider IN/NOT IN operator — was generating invalid filter syntax, causing zero results for authenticated users
 
 ### Roadmap Evolution
 
@@ -108,8 +109,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Gemini provider switch tasks 1-6 complete, task 7 (E2E verification) blocked on API quota — billing now enabled
-Resume file: .planning/phases/04-q-a-search/.continue-here.md
+Stopped at: Gemini provider switch COMPLETE. Root cause was Milvus IN operator bug (not permission issue). All patches regenerated, debug logging removed, E2E verified. Ready to commit.
+Resume file: none
 
 ---
 *State initialized: 2026-02-23*

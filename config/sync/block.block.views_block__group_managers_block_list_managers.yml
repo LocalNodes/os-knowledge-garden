@@ -15,7 +15,7 @@ _core:
 id: views_block__group_managers_block_list_managers
 theme: socialblue
 region: content
-weight: -15
+weight: -27
 provider: null
 plugin: 'views_block:group_managers-block_list_managers'
 settings:
@@ -23,20 +23,20 @@ settings:
   label: ''
   label_display: visible
   provider: views
+  context_mapping: {  }
   views_label: ''
   items_per_page: none
   type: none
-  context_mapping: {  }
 visibility:
   group_type:
     id: group_type
-    group_types:
-      flexible_group: flexible_group
     negate: false
     context_mapping:
       group: '@group.group_route_context:group'
+    group_types:
+      flexible_group: flexible_group
   request_path:
     id: request_path
-    pages: '/group/*/about'
     negate: false
     context_mapping: {  }
+    pages: '/group/*/about'

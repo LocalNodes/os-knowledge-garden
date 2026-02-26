@@ -87,7 +87,7 @@ field_settings:
     type: text
     configuration:
       roles:
-        - anonymous
+        - authenticated
       view_mode:
         'entity:node':
           book: search_index

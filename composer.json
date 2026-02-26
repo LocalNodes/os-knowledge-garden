@@ -70,6 +70,17 @@
         "enable-patching": true,
         "patchLevel": {
             "drupal/core": "-p2"
+        },
+        "patches": {
+            "drupal/gemini_provider": {
+                "Add chat_with_tools support, fix response role and tool role mapping": "patches/gemini-provider-chat-with-tools-and-roles.patch"
+            },
+            "drupal/ai": {
+                "Fix deepchat infinite loop, add agent max_loops guard, verbose mode, null safety": "patches/ai-deepchat-and-agent-fixes.patch"
+            },
+            "drupal/ai_vdb_provider_milvus": {
+                "Fix IN/NOT IN operator handling for Milvus filter expressions": "patches/milvus-provider-fix-in-operator-filter.patch"
+            }
         }
     },
     "config": {

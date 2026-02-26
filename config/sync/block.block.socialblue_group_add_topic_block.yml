@@ -23,6 +23,6 @@ settings:
 visibility:
   request_path:
     id: request_path
-    pages: '/group/*/topics'
     negate: false
     context_mapping: {  }
+    pages: '/group/*/topics'

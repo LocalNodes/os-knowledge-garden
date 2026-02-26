@@ -9,3 +9,5 @@ dependencies:
   - ai_search:ai_search
   - ai:ai_assistant_api
   - ai:ai_chatbot
+components:
+  - templates/social-ai-related-content.html.twig

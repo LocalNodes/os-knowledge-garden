@@ -24,15 +24,15 @@ settings:
 visibility:
   'entity_bundle:node':
     id: 'entity_bundle:node'
+    negate: false
+    context_mapping:
+      node: '@node.node_route_context:node'
     bundles:
       event: event
       page: page
       topic: topic
-    negate: false
-    context_mapping:
-      node: '@node.node_route_context:node'
   request_path:
     id: request_path
-    pages: "/node/add/*\r\n/node/*/edit\r\n/node/*/delete\r\n/node/*/translations/add/*"
     negate: true
     context_mapping: {  }
+    pages: "/node/add/*\r\n/node/*/edit\r\n/node/*/delete\r\n/node/*/translations/add/*"

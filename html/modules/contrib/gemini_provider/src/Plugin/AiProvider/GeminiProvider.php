@@ -267,11 +267,6 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
     if ($input instanceof ChatInput) {
       $chat_input = [];
 
-      if ($this->systemMessage) {
-        $role = Role::from('model');
-        $chat_input[] = Content::parse($this->systemMessage, $role);
-      }
-
       /** @var \Drupal\ai\OperationType\Chat\ChatMessage $message */
       foreach ($input->getMessages() as $message) {
         if ($message->getRole() == 'system') {
@@ -279,6 +274,11 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
         }
 
         if ($message->getRole() == 'assistant') {
+          $message->setRole('model');
+        }
+
+        // Map tool results to user role for Gemini compatibility.
+        if ($message->getRole() == 'tool') {
           $message->setRole('user');
         }
 
@@ -321,6 +321,15 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
     // Generate response.
     $response = $this->client->generativeModel($model_id)
       ->withGenerationConfig($config);
+
+    // Handle system prompt from ChatInput (used by ai_agents entity wrapper).
+    if ($input instanceof ChatInput && $input->getSystemPrompt()) {
+      $response->withSystemInstruction(Content::parse($input->getSystemPrompt(), Role::from('model')));
+    }
+    elseif ($this->systemMessage) {
+      // Fallback to legacy setChatSystemRole if no ChatInput system prompt.
+      $response->withSystemInstruction($this->systemMessage);
+    }
 
     // Handle chat tools if defined.
     $chat_tools = $input->getChatTools();
@@ -378,7 +387,7 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
         }
       }
 
-      $message = new ChatMessage('', $text);
+      $message = new ChatMessage('model', $text);
       if (!empty($tool_outputs)) {
         $message->setTools($tool_outputs);
       }

@@ -14,7 +14,7 @@ _core:
 id: socialblue_views_block__activity_stream_group_block_stream_group
 theme: socialblue
 region: content
-weight: -9
+weight: -25
 provider: null
 plugin: 'views_block:activity_stream_group-block_stream_group'
 settings:
@@ -28,6 +28,6 @@ settings:
 visibility:
   request_path:
     id: request_path
-    pages: '/group/*/stream'
     negate: false
     context_mapping: {  }
+    pages: '/group/*/stream'

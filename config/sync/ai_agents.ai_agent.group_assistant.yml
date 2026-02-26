@@ -5,7 +5,6 @@ dependencies: {  }
 id: group_assistant
 label: 'Group Knowledge Assistant'
 description: 'Answers questions about Group content using RAG retrieval with citations to source content.'
-default_information_tools: ''
 system_prompt: |
   You are a helpful assistant that answers questions about Group content.
 
@@ -19,30 +18,35 @@ system_prompt: |
 secured_system_prompt: '[ai_agent:agent_instructions]'
 tools:
   'ai_search:rag_search': true
-tool_usage_limits:
-  'ai_search:rag_search':
-    index:
-      action: ''
-      hide_property: 1
-      values:
-        - social_posts
-    min_score:
-      action: ''
-      hide_property: 0
-      values:
-        - '0.7'
-    amount:
-      action: ''
-      hide_property: 0
-      values:
-        - '5'
 tool_settings:
   'ai_search:rag_search':
     return_directly: 0
+    require_usage: 1
+    description_override: ''
+    progress_message: Searching...
+    use_artifacts: 0
 orchestration_agent: false
 triage_agent: false
-max_loops: 3
-masquerade_roles: {  }
+max_loops: 20
+default_information_tools: ''
+tool_usage_limits:
+  'ai_search:rag_search':
+    index:
+      values:
+        - social_posts
+      action: force_value
+      hide_property: 1
+    amount:
+      values:
+        - '5'
+      action: force_value
+      hide_property: 1
+    min_score:
+      values:
+        - '0.3'
+      action: force_value
+      hide_property: 1
 exclude_users_role: false
+masquerade_roles: {  }
 structured_output_enabled: false
 structured_output_schema: ''

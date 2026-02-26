@@ -10,7 +10,7 @@ label: 'Group Knowledge Assistant'
 description: 'Answers questions about Group content using RAG retrieval with citations to source content.'
 system_prompt: |
   You are a helpful assistant that answers questions about Group content.
-  
+
   RULES:
   1. Use ONLY the provided context from the RAG search to answer questions.
   2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
@@ -21,31 +21,43 @@ system_prompt: |
 secured_system_prompt: '[ai_agent:agent_instructions]'
 tools:
   'ai_search:rag_search': true
-tool_usage_limits:
-  'ai_search:rag_search':
-    index:
-      action: ''
-      hide_property: 1
-      values:
-        - social_posts
-    min_score:
-      action: ''
-      hide_property: 0
-      values:
-        - '0.7'
-    amount:
-      action: ''
-      hide_property: 0
-      values:
-        - '5'
 tool_settings:
   'ai_search:rag_search':
     return_directly: 0
+    require_usage: 1
+    description_override: ''
+    progress_message: 'Searching...'
+    use_artifacts: 0
 orchestration_agent: false
-triage_agent: false
+triage_agent: true
 max_loops: 3
 default_information_tools: ''
-masquerade_roles: {  }
+tool_usage_limits:
+  'ai_search:rag_search':
+    index:
+      action: force_value
+      hide_property: 1
+      not_break: 0
+      values:
+        - social_posts
+    search_string:
+      action: ''
+      hide_property: 0
+      not_break: 0
+      values: ''
+    amount:
+      action: force_value
+      hide_property: 1
+      not_break: 0
+      values:
+        - '5'
+    min_score:
+      action: force_value
+      hide_property: 1
+      not_break: 0
+      values:
+        - '0.3'
 exclude_users_role: false
+masquerade_roles: {  }
 structured_output_enabled: false
 structured_output_schema: ''

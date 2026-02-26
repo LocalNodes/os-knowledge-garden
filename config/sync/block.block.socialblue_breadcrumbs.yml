@@ -23,14 +23,14 @@ settings:
 visibility:
   user_role:
     id: user_role
-    roles:
-      authenticated: authenticated
-      administrator: administrator
     negate: false
     context_mapping:
       user: '@user.current_user_context:current_user'
+    roles:
+      authenticated: authenticated
+      administrator: administrator
   request_path:
     id: request_path
-    pages: "/node/*/all-enrollment-requests\r\n/node/*/all-enrollment-invites"
     negate: true
     context_mapping: {  }
+    pages: "/node/*/all-enrollment-requests\r\n/node/*/all-enrollment-invites"

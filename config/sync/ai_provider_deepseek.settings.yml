@@ -1,2 +1,2 @@
-api_key: deepseek
-model: deepseek-chat
+api_key: deepseek_api_key
+model: null

@@ -28,6 +28,6 @@ settings:
 visibility:
   request_path:
     id: request_path
-    pages: "/group/*/stream\r\n/group/*/about"
     negate: false
     context_mapping: {  }
+    pages: "/group/*/stream\r\n/group/*/about"

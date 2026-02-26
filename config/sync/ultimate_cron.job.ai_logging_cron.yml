@@ -1,14 +1,14 @@
-uuid: dd236ab3-1ffc-4db0-b039-f5e3fb6b8d9d
+uuid: e9e97c08-7991-4222-bb34-ebc367db9325
 langcode: en
 status: true
 dependencies:
   module:
-    - ai_usage_limits
+    - ai_logging
 title: 'Default cron handler'
-id: ai_usage_limits_cron
+id: ai_logging_cron
 weight: 0
-module: ai_usage_limits
-callback: ai_usage_limits_cron
+module: ai_logging
+callback: ai_logging_cron
 scheduler:
   id: simple
 launcher:

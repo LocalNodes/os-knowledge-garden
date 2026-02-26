@@ -1,0 +1,142 @@
+diff --git a/modules/ai_assistant_api/src/AiAssistantApiRunner.php b/modules/ai_assistant_api/src/AiAssistantApiRunner.php
+index 4a5a73a3..cc9770e6 100644
+--- a/modules/ai_assistant_api/src/AiAssistantApiRunner.php
++++ b/modules/ai_assistant_api/src/AiAssistantApiRunner.php
+@@ -42,7 +42,7 @@ class AiAssistantApiRunner {
+    *
+    * @var \Drupal\ai_assistant_api\Data\UserMessage|null
+    */
+-  protected UserMessage|NULL $userMessage;
++  protected UserMessage|NULL $userMessage = NULL;
+ 
+   /**
+    * If it should be a streaming result.
+@@ -588,9 +588,12 @@ class AiAssistantApiRunner {
+       return $history;
+     }
+     // Otherwise just return the last message.
+-    return [
+-      ['role' => 'user', 'message' => $this->userMessage->getMessage()],
+-    ];
++    if ($this->userMessage) {
++      return [
++        ['role' => 'user', 'message' => $this->userMessage->getMessage()],
++      ];
++    }
++    return [];
+   }
+ 
+   /**
+diff --git a/modules/ai_assistant_api/src/Service/AgentRunner.php b/modules/ai_assistant_api/src/Service/AgentRunner.php
+index 61482feb..05184690 100644
+--- a/modules/ai_assistant_api/src/Service/AgentRunner.php
++++ b/modules/ai_assistant_api/src/Service/AgentRunner.php
+@@ -70,20 +70,10 @@ class AgentRunner {
+    */
+   public function runAsAgent(string $assistant_id, array $chat_history, array $defaults, string $job_id, bool $verbose_mode = FALSE, array $context = []): ChatOutput {
+     $this->jobId = $job_id;
+-    $logger = \Drupal::logger('agent_runner_debug');
+-    $logger->notice('runAsAgent called: job_id=@job_id, verbose=@verbose, history_count=@count', [
+-      '@job_id' => $job_id,
+-      '@verbose' => $verbose_mode ? 'true' : 'false',
+-      '@count' => count($chat_history),
+-    ]);
+     /** @var \Drupal\ai_agents\PluginInterfaces\ConfigAiAgentInterface $agent */
+     $agent = $this->aiAgentPluginManager->createInstance($assistant_id);
+     // Load the agent from temp store if it exists.
+     if ($agent_data = $this->tempStore->get('ai_assistant_threads')->get($job_id)) {
+-      $logger->notice('Loaded agent from tempstore for job_id=@job_id, keys=@keys', [
+-        '@job_id' => $job_id,
+-        '@keys' => implode(',', array_keys($agent_data)),
+-      ]);
+       $agent->fromArray($agent_data);
+       // Re-enable looping for continuation requests so the agent can
+       // execute pending tools and complete the tool cycle. The first
+@@ -93,7 +83,6 @@ class AgentRunner {
+       $agent->setLooped(TRUE);
+     }
+     else {
+-      $logger->notice('No tempstore data for job_id=@job_id, creating fresh agent', ['@job_id' => $job_id]);
+       // Remove the last message from the chat history.
+       $new_messages = [];
+       foreach ($chat_history as $message) {
+@@ -119,25 +108,16 @@ class AgentRunner {
+       // Clean up tempstore on failure to prevent stale agent data from
+       // poisoning subsequent requests with the same job_id.
+       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
+-      $logger->error('determineSolvability failed for job_id=@job_id, cleaned up tempstore: @error', [
+-        '@job_id' => $job_id,
+-        '@error' => substr($e->getMessage(), 0, 200),
+-      ]);
+       throw $e;
+     }
+ 
+-    $logger->notice('After determineSolvability: finished=@finished', [
+-      '@finished' => $agent->isFinished() ? 'true' : 'false',
+-    ]);
+     // If the agent is still running, we store it for the next run.
+     if (!$agent->isFinished()) {
+       $this->tempStore->get('ai_assistant_threads')->set($job_id, $agent->toArray());
+-      $logger->notice('Agent NOT finished, saved to tempstore');
+     }
+     else {
+       // Cleanup when finished.
+       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
+-      $logger->notice('Agent FINISHED, cleaned up tempstore');
+     }
+     // When verbose mode is off and the agent didn't finish (hit max_loops),
+     // return a clean error instead of a message with pending tools that
+@@ -160,11 +140,6 @@ class AgentRunner {
+     if ($history = $agent->getChatHistory()) {
+       // Get the last message from the history.
+       $message = end($history);
+-      $logger->notice('Last history message: role=@role, has_tools=@tools, text_len=@len', [
+-        '@role' => $message->getRole(),
+-        '@tools' => !empty($message->getTools()) ? 'YES(' . count($message->getTools()) . ')' : 'no',
+-        '@len' => strlen($message->getText()),
+-      ]);
+     }
+     return new ChatOutput(
+       $message,
+diff --git a/modules/ai_chatbot/js/deepchat-init.js b/modules/ai_chatbot/js/deepchat-init.js
+index ec3381d6..77cbd91b 100644
+--- a/modules/ai_chatbot/js/deepchat-init.js
++++ b/modules/ai_chatbot/js/deepchat-init.js
+@@ -293,6 +293,7 @@
+         assistant_id: drupalSettings.ai_deepchat.assistant_id,
+         show_copy_icon: drupalSettings.ai_deepchat.show_copy_icon,
+         structured_results: drupalSettings.ai_deepchat.structured_results,
++        verbose_mode: drupalSettings.ai_deepchat.verbose_mode,
+         messages: [
+           {
+             role: 'user',
+diff --git a/modules/ai_chatbot/src/Controller/DeepChatApi.php b/modules/ai_chatbot/src/Controller/DeepChatApi.php
+index 79fdb835..502490dd 100644
+--- a/modules/ai_chatbot/src/Controller/DeepChatApi.php
++++ b/modules/ai_chatbot/src/Controller/DeepChatApi.php
+@@ -200,13 +200,6 @@ class DeepChatApi extends ControllerBase {
+ 
+       // Process the user's message.
+       try {
+-        \Drupal::logger('deepchat_debug')->notice('Processing message: @msg, verbose=@verbose, thread=@thread, stream=@stream, keys=@keys', [
+-          '@msg' => substr($latestUserMessage->getMessage(), 0, 50),
+-          '@verbose' => isset($data['verbose_mode']) && $data['verbose_mode'] ? 'true' : 'false',
+-          '@thread' => $data['thread_id'] ?? 'none',
+-          '@stream' => isset($data['stream']) ? ($data['stream'] ? 'yes' : 'no') : 'not_set',
+-          '@keys' => implode(',', array_keys($data)),
+-        ]);
+         $response = $this->aiAssistantClient->process();
+ 
+         // Handle the response, which could be a ChatMessage or Stream.
+@@ -306,11 +299,6 @@ class DeepChatApi extends ControllerBase {
+     // response should never have pending tools for the browser to handle.
+     $should_continue = $this->aiAssistantClient->getVerboseMode()
+       && !empty($normalizedResponse->getTools());
+-    \Drupal::logger('deepchat_debug')->notice('createResponse: has_tools=@tools, should_continue=@continue, text_len=@len', [
+-      '@tools' => $normalizedResponse->getTools() ? count($normalizedResponse->getTools()) : 0,
+-      '@continue' => $should_continue ? 'true' : 'false',
+-      '@len' => strlen($assistantResponseText),
+-    ]);
+     // Default to JSON response.
+     return new JsonResponse([
+       'html' => $assistantResponseText,

@@ -1,0 +1,101 @@
+diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
+index aed8da1..65896af 100644
+--- a/src/Plugin/AiProvider/GeminiProvider.php
++++ b/src/Plugin/AiProvider/GeminiProvider.php
+@@ -12,6 +12,7 @@ use Drupal\ai\OperationType\Chat\ChatInput;
+ use Drupal\ai\OperationType\Chat\ChatInterface;
+ use Drupal\ai\OperationType\Chat\ChatMessage;
+ use Drupal\ai\OperationType\Chat\ChatOutput;
++use Drupal\ai\OperationType\Chat\Tools\ToolsFunctionOutput;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsInput;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsInterface;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsOutput;
+@@ -180,6 +181,7 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     // @todo We need to add other operation types here later.
+     return [
+       'chat',
++      'chat_with_tools',
+       'embeddings',
+       'text_to_image',
+       'speech_to_text',
+@@ -265,11 +267,6 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     if ($input instanceof ChatInput) {
+       $chat_input = [];
+ 
+-      if ($this->systemMessage) {
+-        $role = Role::from('model');
+-        $chat_input[] = Content::parse($this->systemMessage, $role);
+-      }
+-
+       /** @var \Drupal\ai\OperationType\Chat\ChatMessage $message */
+       foreach ($input->getMessages() as $message) {
+         if ($message->getRole() == 'system') {
+@@ -277,6 +274,11 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+         }
+ 
+         if ($message->getRole() == 'assistant') {
++          $message->setRole('model');
++        }
++
++        // Map tool results to user role for Gemini compatibility.
++        if ($message->getRole() == 'tool') {
+           $message->setRole('user');
+         }
+ 
+@@ -320,6 +322,15 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     $response = $this->client->generativeModel($model_id)
+       ->withGenerationConfig($config);
+ 
++    // Handle system prompt from ChatInput (used by ai_agents entity wrapper).
++    if ($input instanceof ChatInput && $input->getSystemPrompt()) {
++      $response->withSystemInstruction(Content::parse($input->getSystemPrompt(), Role::from('model')));
++    }
++    elseif ($this->systemMessage) {
++      // Fallback to legacy setChatSystemRole if no ChatInput system prompt.
++      $response->withSystemInstruction($this->systemMessage);
++    }
++
+     // Handle chat tools if defined.
+     $chat_tools = $input->getChatTools();
+     if ($chat_tools !== NULL) {
+@@ -350,6 +361,7 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     else {
+       $response = $response->generateContent(...$chat_input);
+       $text = '';
++      $tool_outputs = [];
+ 
+       foreach ($response->parts() as $part) {
+         // Get text response part.
+@@ -357,13 +369,28 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+           $text .= $part->text;
+         }
+ 
+-        $functionResponse = $this->handleFunctionCall($part);
+-        if ($functionResponse) {
+-          $text .= $functionResponse;
++        // Return tool calls to the caller (ai_agents) instead of executing them
++        // internally. The agent execution loop handles tool execution and sends
++        // results back to the LLM for synthesis.
++        if ($part->functionCall !== NULL && $chat_tools !== NULL) {
++          $args = [];
++          if ($part->functionCall->args) {
++            foreach ($part->functionCall->args as $key => $value) {
++              $args[$key] = $value;
++            }
++          }
++          $tool_outputs[] = new ToolsFunctionOutput(
++            $chat_tools->getFunctionByName($part->functionCall->name),
++            'gemini_tool_' . uniqid(),
++            $args
++          );
+         }
+       }
+ 
+-      $message = new ChatMessage('', $text);
++      $message = new ChatMessage('model', $text);
++      if (!empty($tool_outputs)) {
++        $message->setTools($tool_outputs);
++      }
+     }
+     $chat_output = new ChatOutput($message, $response, []);
+     // We only set the token usage if its not streamed or in a fiber.

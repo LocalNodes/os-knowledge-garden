@@ -70,20 +70,10 @@ class AgentRunner {
    */
   public function runAsAgent(string $assistant_id, array $chat_history, array $defaults, string $job_id, bool $verbose_mode = FALSE, array $context = []): ChatOutput {
     $this->jobId = $job_id;
-    $logger = \Drupal::logger('agent_runner_debug');
-    $logger->notice('runAsAgent called: job_id=@job_id, verbose=@verbose, history_count=@count', [
-      '@job_id' => $job_id,
-      '@verbose' => $verbose_mode ? 'true' : 'false',
-      '@count' => count($chat_history),
-    ]);
     /** @var \Drupal\ai_agents\PluginInterfaces\ConfigAiAgentInterface $agent */
     $agent = $this->aiAgentPluginManager->createInstance($assistant_id);
     // Load the agent from temp store if it exists.
     if ($agent_data = $this->tempStore->get('ai_assistant_threads')->get($job_id)) {
-      $logger->notice('Loaded agent from tempstore for job_id=@job_id, keys=@keys', [
-        '@job_id' => $job_id,
-        '@keys' => implode(',', array_keys($agent_data)),
-      ]);
       $agent->fromArray($agent_data);
       // Re-enable looping for continuation requests so the agent can
       // execute pending tools and complete the tool cycle. The first
@@ -93,7 +83,6 @@ class AgentRunner {
       $agent->setLooped(TRUE);
     }
     else {
-      $logger->notice('No tempstore data for job_id=@job_id, creating fresh agent', ['@job_id' => $job_id]);
       // Remove the last message from the chat history.
       $new_messages = [];
       foreach ($chat_history as $message) {
@@ -119,25 +108,16 @@ class AgentRunner {
       // Clean up tempstore on failure to prevent stale agent data from
       // poisoning subsequent requests with the same job_id.
       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
-      $logger->error('determineSolvability failed for job_id=@job_id, cleaned up tempstore: @error', [
-        '@job_id' => $job_id,
-        '@error' => substr($e->getMessage(), 0, 200),
-      ]);
       throw $e;
     }
 
-    $logger->notice('After determineSolvability: finished=@finished', [
-      '@finished' => $agent->isFinished() ? 'true' : 'false',
-    ]);
     // If the agent is still running, we store it for the next run.
     if (!$agent->isFinished()) {
       $this->tempStore->get('ai_assistant_threads')->set($job_id, $agent->toArray());
-      $logger->notice('Agent NOT finished, saved to tempstore');
     }
     else {
       // Cleanup when finished.
       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
-      $logger->notice('Agent FINISHED, cleaned up tempstore');
     }
     // When verbose mode is off and the agent didn't finish (hit max_loops),
     // return a clean error instead of a message with pending tools that
@@ -160,11 +140,6 @@ class AgentRunner {
     if ($history = $agent->getChatHistory()) {
       // Get the last message from the history.
       $message = end($history);
-      $logger->notice('Last history message: role=@role, has_tools=@tools, text_len=@len', [
-        '@role' => $message->getRole(),
-        '@tools' => !empty($message->getTools()) ? 'YES(' . count($message->getTools()) . ')' : 'no',
-        '@len' => strlen($message->getText()),
-      ]);
     }
     return new ChatOutput(
       $message,
