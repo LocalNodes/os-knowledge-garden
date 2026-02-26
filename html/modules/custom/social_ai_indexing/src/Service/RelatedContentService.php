@@ -53,7 +53,7 @@ class RelatedContentService {
 
       $results = $query->execute();
 
-      return $this->formatResults($results->getResultItems());
+      return $this->formatResults($results->getResultItems(), (int) $entity->id());
     }
     catch (\Exception $e) {
       \Drupal::logger('social_ai_indexing')->warning(
@@ -75,7 +75,7 @@ class RelatedContentService {
     return substr($text, 0, 500);
   }
 
-  protected function formatResults(array $items): array {
+  protected function formatResults(array $items, int $excludeNodeId = 0): array {
     $results = [];
     
     foreach ($items as $item) {
@@ -113,6 +113,10 @@ class RelatedContentService {
             // URL generation failed
           }
         }
+      }
+
+      if ($entityId && $entityId === $excludeNodeId) {
+        continue;
       }
 
       $results[] = [

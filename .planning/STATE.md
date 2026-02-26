@@ -109,7 +109,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Fixed Milvus IN operator bug, granted anon chatbot access, committed. Related Content block untested in browser. Phase 6 Plan 03 (demo content install) not yet executed. Phase 5 needs assessment.
+Stopped at: Fixed Related Content block (missing hook_theme, self-referencing results). Recreated Milvus collection at 3072 dims for Gemini embeddings. All 23 vectors indexed. Block working in browser. Phase 6 Plan 03 and Phase 5 assessment still pending.
 Resume file: .planning/phases/06-create-demo-content-for-localnodes-xyz-based-on-social-demo-module/.continue-here.md
 
 ---

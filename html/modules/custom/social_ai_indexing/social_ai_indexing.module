@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * @file
+ * Primary module hooks for Social AI Indexing.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function social_ai_indexing_theme(): array {
+  return [
+    'social_ai_related_content' => [
+      'variables' => [
+        'items' => [],
+      ],
+    ],
+  ];
+}
