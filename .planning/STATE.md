@@ -128,7 +128,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 05-03 human-verify in progress. CommonMark blocker RESOLVED (stale APCu cache). Remaining: verify citations, links, AI distinction, /search/ai page, then complete phase.
+Stopped at: Phase 05-03 chatbot verified working (citations, both indexes, comment anchors). /search/ai page needs UX polish before phase completion.
 
 ---
 *State initialized: 2026-02-23*
