@@ -51,9 +51,18 @@ function social_ai_indexing_preprocess_block(array &$variables): void {
  */
 function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   // --- Group context injection (UI-02) ---
-  // Detect current Group from route context.
-  $group = \Drupal::service('social_group.current_group')->fromRunTimeContexts();
-  if ($group) {
+  // Detect current Group from route context using the group module's
+  // context provider (not Open Social's CurrentGroupService).
+  $group = NULL;
+  try {
+    $contexts = \Drupal::service('context.repository')
+      ->getRuntimeContexts(['@group.group_route_context:group']);
+    $group = $contexts['@group.group_route_context:group']->getContextData()->getValue();
+  }
+  catch (\Exception $e) {
+    // Not on a group route or context unavailable — community-wide mode.
+  }
+  if ($group instanceof \Drupal\group\Entity\GroupInterface) {
     // The connect key is a JSON-encoded string at this point.
     $connect_json = $variables['deepchat_settings']['connect'] ?? NULL;
     if (is_string($connect_json)) {
