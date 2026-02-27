@@ -137,7 +137,7 @@ class PermissionFilterService {
 
     // If a specific group scope is provided, filter by that group only.
     if ($scopeGroupId !== NULL) {
-      $query->addCondition('groups', $scopeGroupId);
+      $query->addCondition('groups', [$scopeGroupId], 'IN');
       return;
     }
 
