@@ -119,7 +119,7 @@ Plans:
 **Goal:** Topic pages show Related Topics and event pages show Related Events instead of a single mixed Related Content block
 **Requirements**: None (urgent insertion, no formal requirement IDs)
 **Depends on:** Phase 5
-**Plans:** 1 plan in 1 wave
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 05.1-01-PLAN.md -- Parameterize RelatedContentBlock with bundle config, replace single block placement with two bundle-specific placements (Wave 1)
