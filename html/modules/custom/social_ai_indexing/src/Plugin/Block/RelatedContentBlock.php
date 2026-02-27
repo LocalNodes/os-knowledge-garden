@@ -6,6 +6,7 @@ namespace Drupal\social_ai_indexing\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountProxyInterface;
@@ -59,6 +60,30 @@ class RelatedContentBlock extends BlockBase implements ContainerFactoryPluginInt
     $this->currentUser = $current_user;
   }
 
+  public function defaultConfiguration(): array {
+    return [
+      'bundle' => '',
+    ] + parent::defaultConfiguration();
+  }
+
+  public function blockForm($form, FormStateInterface $form_state): array {
+    $form['bundle'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Content type'),
+      '#options' => [
+        '' => $this->t('All'),
+        'topic' => $this->t('Topics'),
+        'event' => $this->t('Events'),
+      ],
+      '#default_value' => $this->configuration['bundle'],
+    ];
+    return $form;
+  }
+
+  public function blockSubmit($form, FormStateInterface $form_state): void {
+    $this->configuration['bundle'] = $form_state->getValue('bundle');
+  }
+
   public function build(): array {
     $node = $this->getContextValue('node');
 
@@ -70,7 +95,8 @@ class RelatedContentBlock extends BlockBase implements ContainerFactoryPluginInt
       return [];
     }
 
-    $nodes = $this->relatedService->findRelated($node, $this->currentUser);
+    $bundle = $this->configuration['bundle'] ?: NULL;
+    $nodes = $this->relatedService->findRelated($node, $this->currentUser, RelatedContentService::DEFAULT_LIMIT, $bundle);
 
     if (empty($nodes)) {
       return [];
@@ -79,6 +105,9 @@ class RelatedContentBlock extends BlockBase implements ContainerFactoryPluginInt
     $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
     $items = [];
     $cacheTags = ['node:' . $node->id()];
+    if ($bundle) {
+      $cacheTags[] = 'node_list:' . $bundle;
+    }
 
     foreach ($nodes as $relatedNode) {
       $items[] = $viewBuilder->view($relatedNode, 'small_teaser');

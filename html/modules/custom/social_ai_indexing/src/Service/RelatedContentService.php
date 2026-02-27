@@ -26,7 +26,7 @@ class RelatedContentService {
     $this->permissionFilter = $permission_filter;
   }
 
-  public function findRelated(EntityInterface $entity, AccountInterface $account, int $limit = self::DEFAULT_LIMIT): array {
+  public function findRelated(EntityInterface $entity, AccountInterface $account, int $limit = self::DEFAULT_LIMIT, ?string $bundle = NULL): array {
     if (!$entity instanceof NodeInterface) {
       return [];
     }
@@ -43,6 +43,10 @@ class RelatedContentService {
       $query->addCondition('search_api_id', $sourceId, '<>');
 
       $this->permissionFilter->applyPermissionFilters($query, $account);
+
+      if ($bundle) {
+        $query->addCondition('type', $bundle);
+      }
 
       $query->setFulltextFields(['rendered_item']);
 
