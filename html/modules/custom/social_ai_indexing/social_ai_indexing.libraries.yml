@@ -1,0 +1,10 @@
+ai-search:
+  version: 1.x
+  js:
+    js/ai-search.js: {}
+  css:
+    theme:
+      css/ai-search.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
