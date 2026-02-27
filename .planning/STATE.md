@@ -120,8 +120,8 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-1. **Change Topic Type field from checkboxes to single select and rename Content to Proposal** (content)
-   - `.planning/todos/pending/2026-02-27-change-topic-type-field-from-checkboxes-to-single-select-and-rename-content-to-proposal.md`
+1. **Change Topic Type field to single select and update taxonomy terms** (content)
+   - `.planning/todos/pending/2026-02-27-change-topic-type-field-to-single-select-and-update-taxonomy-terms.md`
 
 ### Blockers/Concerns
 
