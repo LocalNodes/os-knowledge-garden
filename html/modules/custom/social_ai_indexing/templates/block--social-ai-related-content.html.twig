@@ -1,0 +1,16 @@
+<section{{ attributes.addClass('card') }}>
+  {{ title_prefix }}
+  {% if label %}
+    <h2{{ title_attributes.addClass('card__title') }}>
+      {{ label }}
+      {% if subtitle %}
+        <div class="card__subtitle">
+          {{ subtitle }}
+        </div>
+      {% endif %}
+    </h2>
+  {% endif %}
+  {{ title_suffix }}
+
+  {{ content }}
+</section>

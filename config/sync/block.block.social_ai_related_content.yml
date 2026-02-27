@@ -1,0 +1,29 @@
+uuid: fec13634-800c-4ac3-be51-7fcbeb6fbad5
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - social_ai_indexing
+  theme:
+    - socialblue
+id: social_ai_related_content
+theme: socialblue
+region: complementary_bottom
+weight: 0
+provider: null
+plugin: social_ai_related_content
+settings:
+  id: social_ai_related_content
+  label: 'Related Topics'
+  label_display: visible
+  provider: social_ai_indexing
+visibility:
+  'entity_bundle:node':
+    id: 'entity_bundle:node'
+    negate: false
+    context_mapping:
+      node: '@node.node_route_context:node'
+    bundles:
+      topic: topic
+      event: event

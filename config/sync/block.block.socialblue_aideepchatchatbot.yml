@@ -14,7 +14,7 @@ provider: null
 plugin: ai_deepchat_block
 settings:
   id: ai_deepchat_block
-  label: 'AI DeepChat Chatbot'
+  label: 'LocalNodes Liaison'
   label_display: visible
   provider: ai_chatbot
   ai_assistant: group_assistant
@@ -28,8 +28,8 @@ settings:
   loading_message: ''
   stream: null
   toggle_state: remember
-  width: 100%
-  height: auto
+  width: ''
+  height: ''
   placement: bottom-right
   show_structured_results: false
   show_copy_icon: true

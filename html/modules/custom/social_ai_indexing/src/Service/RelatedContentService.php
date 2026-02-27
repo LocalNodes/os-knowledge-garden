@@ -77,70 +77,26 @@ class RelatedContentService {
 
   protected function formatResults(array $items, int $excludeNodeId = 0): array {
     $results = [];
-    
+    $nodeStorage = $this->entityTypeManager->getStorage('node');
+
     foreach ($items as $item) {
-      $fields = $item->getFields();
-      
-      $title = '';
-      if (isset($fields['citation_title'])) {
-        $vals = $fields['citation_title']->getValues();
-        $title = $this->extractString($vals[0] ?? '');
-      }
-
-      $url = '';
-      if (isset($fields['citation_url'])) {
-        $vals = $fields['citation_url']->getValues();
-        $url = $this->extractString($vals[0] ?? '');
-      }
-
-      // Parse entity ID from item ID
       $entityId = null;
       $itemId = $item->getId();
       if (preg_match('/entity:node\/(\d+):/', $itemId, $m)) {
         $entityId = (int) $m[1];
       }
 
-      // Generate URL if not in index
-      if (empty($url) && $entityId) {
-        $node = $this->entityTypeManager->getStorage('node')->load($entityId);
-        if ($node) {
-          try {
-            $url = $node->toUrl('canonical', ['absolute' => TRUE])->toString();
-            if (empty($title)) {
-              $title = $node->label();
-            }
-          } catch (\Exception $e) {
-            // URL generation failed
-          }
-        }
-      }
-
-      if ($entityId && $entityId === $excludeNodeId) {
+      if (!$entityId || $entityId === $excludeNodeId) {
         continue;
       }
 
-      $results[] = [
-        'id' => $entityId,
-        'title' => $title,
-        'url' => $url,
-        'score' => $item->getScore(),
-      ];
+      $node = $nodeStorage->load($entityId);
+      if ($node) {
+        $results[] = $node;
+      }
     }
 
     return $results;
-  }
-
-  protected function extractString(mixed $value): string {
-    if (is_string($value)) {
-      return $value;
-    }
-    if (is_object($value) && method_exists($value, '__toString')) {
-      return (string) $value;
-    }
-    if (is_object($value) && method_exists($value, 'getText')) {
-      return $value->getText();
-    }
-    return '';
   }
 
 }

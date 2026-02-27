@@ -17,8 +17,8 @@ instructions: |
   4. Be concise but thorough.
   5. Never make up information or URLs.
   6. Use the ai_search_rag_search tool to find relevant content before answering.
-allow_history: none
-history_context_length: ''
+allow_history: session_one_thread
+history_context_length: '20'
 error_message: 'I encountered an error processing your request. Please try again.'
 specific_error_messages:
   AiBadRequestException: ''
