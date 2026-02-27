@@ -18,6 +18,9 @@ function social_ai_indexing_theme(): array {
     'block__social_ai_related_content' => [
       'base hook' => 'block',
     ],
+    'social_ai_search_page' => [
+      'variables' => [],
+    ],
   ];
 }
 
@@ -29,4 +32,40 @@ function social_ai_indexing_preprocess_block(array &$variables): void {
     return;
   }
   $variables['subtitle'] = t('in the community');
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for ai_deepchat templates.
+ *
+ * Injects the current Group ID into DeepChat connect JSON so the RAG
+ * search pipeline can scope results to the current Group context.
+ *
+ * NOTE: We use hook_preprocess_ai_deepchat instead of hook_deepchat_settings
+ * because in DeepChatFormBlock::getDeepChatParameters(), hook_deepchat_settings
+ * fires at line 634 BEFORE the connect key is set (line 644). By preprocess
+ * time, connect exists as a JSON string in $variables['deepchat_settings'].
+ *
+ * IMPORTANT: Do NOT use early return in this function. Plan 05-03 extends
+ * this function to add messageStyles configuration that must run on ALL
+ * pages, not just Group pages.
+ */
+function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
+  // --- Group context injection (UI-02) ---
+  // Detect current Group from route context.
+  $group = \Drupal::service('social_group.current_group')->fromRunTimeContexts();
+  if ($group) {
+    // The connect key is a JSON-encoded string at this point.
+    $connect_json = $variables['deepchat_settings']['connect'] ?? NULL;
+    if (is_string($connect_json)) {
+      $connect = json_decode($connect_json, TRUE);
+      if (is_array($connect)) {
+        // Add group_id to the contexts sent with each chatbot message.
+        $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
+        $variables['deepchat_settings']['connect'] = json_encode($connect);
+      }
+    }
+  }
+
+  // --- Additional preprocess additions go below this line ---
+  // Plan 05-03 adds messageStyles configuration here for AI visual distinction.
 }
