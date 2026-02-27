@@ -16,8 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Content Indexing** - Index posts, comments, files with embeddings and Group metadata
 - [x] **Phase 3: Permission-Aware Retrieval** - Filter queries by user's Group access, defense-in-depth checks (completed 2026-02-25)
 - [x] **Phase 4: Q&A & Search** - Natural language questions, semantic search, citation linking (completed 2026-02-26)
-- [ ] **Phase 5: User Interface** - Chat interfaces for Group and community-wide queries
-- [ ] **Phase 7: Fix Integration Bugs** - Fix permission filter field mapping on social_comments, clean up dead code processors
+- [x] **Phase 5: User Interface** - Chat interfaces for Group and community-wide queries (completed 2026-02-27)
+- [x] **Phase 7: Fix Integration Bugs** - Dead code cleanup (completed 2026-02-27, scope reduced after investigation)
 - [ ] **Phase 8: Re-verify Indexing & Formalize Search Tracking** - Re-verify Phase 2, formally track SRCH-01/02/03, fix tech debt
 
 ## Phase Details
@@ -110,9 +110,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Build Group-scoped chat interface
-- [ ] 05-02: Build community-wide search interface
-- [ ] 05-03: Polish UX with citations and visual distinction
+- [x] 05-01: Build Group-scoped chat interface
+- [x] 05-02: Build community-wide search interface
+- [x] 05-03: Polish UX with citations and visual distinction
 
 ### Phase 05.1: Split Related Content block into Related Topics and Related Events (INSERTED)
 
@@ -124,22 +124,10 @@ Plans:
 Plans:
 - [ ] 05.1-01-PLAN.md -- Parameterize RelatedContentBlock with bundle config, replace single block placement with two bundle-specific placements (Wave 1)
 
-### Phase 7: Fix Integration Bugs
+### Phase 7: Fix Integration Bugs (RESOLVED)
 **Goal**: Permission filtering works correctly on all index types — broken integration connections and dead code are resolved
-**Depends on**: Phase 3
-**Requirements**: (none reassigned — fixes integration plumbing for PERM-01, PERM-03, PERM-04, IDX-05)
-**Gap Closure:** Closes integration and flow gaps from v1.0 audit
-**Success Criteria** (what must be TRUE):
-  1. PermissionFilterService applies correct field names on social_comments index (group_id, not groups)
-  2. Permission-filtered comment retrieval E2E flow works without error
-  3. ContentVisibility dead code processor on social_posts is cleaned up
-  4. GroupMetadata dead code on social_posts is cleaned up or documented
-**Plans**: TBD
-
-Plans:
-- [ ] 07-01: Fix PermissionFilterService field mapping for social_comments
-- [ ] 07-02: Clean up dead code processors (ContentVisibility, GroupMetadata on social_posts)
-- [ ] 07-03: Verify permission-filtered comment retrieval E2E
+**Resolution**: Investigation found PermissionFilterService field mapping was already correct (`group_id` used consistently). GroupMetadata is active, not dead code. Only actual dead code was `ContentVisibility` processor — deleted. Comment retrieval E2E already working.
+**Completed**: 2026-02-27
 
 ### Phase 8: Re-verify Indexing & Formalize Search Tracking
 **Goal**: All Phase 2 and Phase 4 requirements are verified against running system and formally tracked
@@ -170,8 +158,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Content Indexing | 5/7 | In Progress | 2026-02-24 |
 | 3. Permission-Aware Retrieval | 3/3 | Complete   | 2026-02-25 |
 | 4. Q&A & Search | 3/3 | Complete | 2026-02-26 |
-| 5. User Interface | 0/3 | Not started | - |
-| 7. Fix Integration Bugs | 0/3 | Not started | - |
+| 5. User Interface | 3/3 | Complete | 2026-02-27 |
+| 7. Fix Integration Bugs | - | Resolved | 2026-02-27 |
 | 8. Re-verify & Track | 0/4 | Not started | - |
 
 ### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
