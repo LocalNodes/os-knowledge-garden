@@ -1,0 +1,93 @@
+<?php
+
+/**
+ * @file
+ * Install and update functions for localnodes_demo module.
+ */
+
+use Drupal\taxonomy\Entity\Term;
+
+/**
+ * Change Topic Type field to single-select and update taxonomy terms.
+ *
+ * - Remove "Content" term
+ * - Add "Question" and "Resource" terms
+ * - Reassign any topics using "Content" to "Blog"
+ * - Trim multi-value topic type fields to single value
+ */
+function localnodes_demo_update_10001(&$sandbox) {
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+
+  // Find and delete the "Content" term, reassigning topics to "Blog".
+  $content_terms = $term_storage->loadByProperties([
+    'vid' => 'topic_types',
+    'name' => 'Content',
+  ]);
+
+  if ($content_terms) {
+    // Find the "Blog" term to use as replacement.
+    $blog_terms = $term_storage->loadByProperties([
+      'vid' => 'topic_types',
+      'name' => 'Blog',
+    ]);
+    $blog_term = reset($blog_terms);
+
+    foreach ($content_terms as $content_term) {
+      // Reassign any topics using "Content" to "Blog".
+      if ($blog_term) {
+        $node_storage = \Drupal::entityTypeManager()->getStorage('node');
+        $nids = $node_storage->getQuery()
+          ->accessCheck(FALSE)
+          ->condition('type', 'topic')
+          ->condition('field_topic_type', $content_term->id())
+          ->execute();
+
+        foreach ($node_storage->loadMultiple($nids) as $node) {
+          $node->set('field_topic_type', $blog_term->id());
+          $node->save();
+        }
+      }
+
+      $content_term->delete();
+    }
+  }
+
+  // Trim any multi-value field_topic_type to single value (keep first).
+  $node_storage = \Drupal::entityTypeManager()->getStorage('node');
+  $nids = $node_storage->getQuery()
+    ->accessCheck(FALSE)
+    ->condition('type', 'topic')
+    ->exists('field_topic_type')
+    ->execute();
+
+  foreach ($node_storage->loadMultiple($nids) as $node) {
+    $values = $node->get('field_topic_type')->getValue();
+    if (count($values) > 1) {
+      $node->set('field_topic_type', [$values[0]]);
+      $node->save();
+    }
+  }
+
+  // Add new taxonomy terms.
+  $new_terms = [
+    'Question' => 5,
+    'Resource' => 6,
+  ];
+
+  foreach ($new_terms as $name => $weight) {
+    $existing = $term_storage->loadByProperties([
+      'vid' => 'topic_types',
+      'name' => $name,
+    ]);
+
+    if (empty($existing)) {
+      Term::create([
+        'vid' => 'topic_types',
+        'name' => $name,
+        'weight' => $weight,
+      ])->save();
+    }
+  }
+
+  return t('Updated Topic Type field: removed "Content", added "Question" and "Resource" terms, migrated data.');
+}

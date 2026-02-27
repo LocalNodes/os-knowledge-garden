@@ -13,7 +13,7 @@ field_name: field_topic_type
 entity_type: node
 bundle: topic
 label: Type
-description: ''
+description: 'Choose the type that best describes your topic. Blog for long-form reflections, Dialog for proposals and structured conversations, News for announcements, Question for seeking help or advice, Resource for sharing tools and references.'
 required: true
 translatable: false
 default_value: {  }
