@@ -1,0 +1,153 @@
+/**
+ * @file
+ * Styles for AI search page, citation links, and AI content distinction.
+ */
+
+/* ==========================================================================
+   Search Page Layout
+   ========================================================================== */
+
+.ai-search-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.ai-search-description {
+  color: #757575;
+  margin-bottom: 20px;
+}
+
+.ai-search-form .input-group {
+  display: flex;
+}
+
+.ai-search-form .form-control {
+  flex: 1;
+}
+
+/* Loading state */
+.ai-search-loading {
+  color: #757575;
+  font-style: italic;
+  padding: 10px 0;
+}
+
+/* Result count */
+.ai-search-count {
+  color: #757575;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+/* No results */
+.ai-search-no-results {
+  color: #757575;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Search Results
+   ========================================================================== */
+
+.ai-search-result {
+  padding: 15px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.ai-search-result:last-child {
+  border-bottom: none;
+}
+
+.ai-search-result__title {
+  margin: 0 0 5px 0;
+  font-size: 1.1em;
+}
+
+.ai-search-result__title a {
+  color: #4a90d9;
+  text-decoration: none;
+}
+
+.ai-search-result__title a:hover {
+  text-decoration: underline;
+}
+
+.ai-search-result__snippet {
+  color: #555;
+  margin: 5px 0;
+  line-height: 1.5;
+}
+
+.ai-search-result__type {
+  display: inline-block;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+  background: #4a90d9;
+  border-radius: 3px;
+  padding: 2px 6px;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Citation Links in AI Chat Responses
+   ========================================================================== */
+
+/*
+ * NOTE: DeepChat is a Web Component with Shadow DOM. External CSS cannot
+ * target elements inside the shadow DOM (e.g., <a> tags within message
+ * bubbles). Citation links rendered by DeepChat's CommonMark output are
+ * already styled by DeepChat's internal CSS (blue, clickable).
+ *
+ * Visual distinction for AI messages (border, background) is handled via
+ * DeepChat's messageStyles API in hook_preprocess_ai_deepchat (see Task 2).
+ *
+ * The styles below target citation-like links OUTSIDE DeepChat (e.g.,
+ * the Related Content block, or any server-rendered AI content).
+ */
+.social-ai-related-content a {
+  color: #4a90d9;
+  text-decoration: none;
+  border-bottom: 1px dotted #4a90d9;
+  font-weight: 500;
+  transition: border-bottom-style 0.15s ease;
+}
+
+.social-ai-related-content a:hover {
+  border-bottom-style: solid;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   AI Content Visual Distinction
+   ========================================================================== */
+
+/* AI badge on search results */
+.ai-search-result::before {
+  content: 'AI';
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: #4a90d9;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-bottom: 5px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+/* Related content block AI indicator */
+.social-ai-related-content::before {
+  content: 'AI Suggestions';
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a90d9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
