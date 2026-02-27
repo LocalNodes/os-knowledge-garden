@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 6: Demo Content for LocalNodes.xyz
+**Current focus:** Phase 5: User Interface (filling gap)
 
 ## Current Position
 
-Phase: 6 of 6 (Demo Content) - In Progress
-Plan: 2 of 3 in current phase
-Status: Executing Phase 6 - Plan 02 Complete
-Last activity: 2026-02-25 — Completed 06-02: Demo Content YAML Files
+Phase: 5 of 6 (User Interface) - In Progress
+Plan: 1 of 3 in current phase
+Status: Executing Phase 5 - Plan 01 Complete
+Last activity: 2026-02-27 — Completed 05-01: Group Context Injection
 
-Progress: [███████████░] 94%
+Progress: [███████████░] 95%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 7 min
 - Total execution time: 2.4 hours
 
@@ -31,12 +31,12 @@ Progress: [███████████░] 94%
 | 2. Content Indexing | 7/7 | 35 min | 5 min |
 | 3. Permission-Aware Retrieval | 3/3 | 35 min | 12 min |
 | 4. Q&A & Search | 2/3 | 35 min | 18 min |
-| 5. User Interface | 0/3 | - | - |
+| 5. User Interface | 1/3 | 2 min | 2 min |
 | 6. Demo Content | 2/3 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (8 min), 06-02 (11 min), 06-01 (3 min), 01-03 (6 min), 01-01 (10 min)
-- Trend: Stable (~8 min avg)
+- Last 5 plans: 05-01 (2 min), 04-03 (8 min), 06-02 (11 min), 06-01 (3 min), 01-03 (6 min)
+- Trend: Stable (~6 min avg)
 
 | Phase 01-03 P03 | 6 min | 7 tasks | 4 files |
 | Phase 01-01 P01 | 10 min | 5 tasks | 5 files |
@@ -52,6 +52,7 @@ Progress: [███████████░] 94%
 | Phase 06-demo-content P01 | 3 min | 3 tasks | 14 files |
 | Phase 04-q-a-search P03 | 8 min | 3 tasks | 6 files |
 | Phase 06-demo-content P02 | 11 min | 2 tasks | 31 files |
+| Phase 05-user-interface P01 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Similarity threshold 0.7 to avoid returning unrelated content
 - [Phase 06-02]: Created 121 unique UUIDs with zero overlap against social_demo
 - [Phase 04-q-a-search]: Fixed MilvusProvider IN/NOT IN operator — was generating invalid filter syntax, causing zero results for authenticated users
+- [Phase 05-01]: Use hook_preprocess_ai_deepchat (not hook_deepchat_settings) because connect key is set after the settings hook fires
+- [Phase 05-01]: Read group_id from AI assistant runner context as fallback when no explicit query option set
 
 ### Roadmap Evolution
 
@@ -108,10 +111,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Fixed Related Content block (missing hook_theme, self-referencing results). Recreated Milvus collection at 3072 dims for Gemini embeddings. All 23 vectors indexed. Block working in browser. Phase 6 Plan 03 and Phase 5 assessment still pending.
-Resume file: .planning/phases/06-create-demo-content-for-localnodes-xyz-based-on-social-demo-module/.continue-here.md
+Last session: 2026-02-27
+Stopped at: Completed 05-01-PLAN.md (Group Context Injection). Phase 5 Plans 02 and 03 remain.
 
 ---
 *State initialized: 2026-02-23*
-*Last updated: 2026-02-26*
+*Last updated: 2026-02-27*

@@ -49,8 +49,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### User Interface
 
-- [ ] **UI-01**: Chat interface is available for natural language queries
-- [ ] **UI-02**: Chat interface is accessible within Group context for Group-scoped queries
+- [x] **UI-01**: Chat interface is available for natural language queries
+- [x] **UI-02**: Chat interface is accessible within Group context for Group-scoped queries
 - [ ] **UI-03**: Community-wide search interface is accessible outside Group context
 - [ ] **UI-04**: Source citations are clickable and navigate to original content
 - [ ] **UI-05**: Clear visual distinction between AI-generated content and user content
@@ -123,8 +123,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-02 | Phase 8 | Pending |
 | SRCH-03 | Phase 8 | Pending |
 | SRCH-04 | Phase 4 | Complete |
-| UI-01 | Phase 5 | Pending |
-| UI-02 | Phase 5 | Pending |
+| UI-01 | Phase 5 | Complete |
+| UI-02 | Phase 5 | Complete |
 | UI-03 | Phase 5 | Pending |
 | UI-04 | Phase 5 | Pending |
 | UI-05 | Phase 5 | Pending |
