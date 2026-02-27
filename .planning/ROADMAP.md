@@ -114,6 +114,16 @@ Plans:
 - [ ] 05-02: Build community-wide search interface
 - [ ] 05-03: Polish UX with citations and visual distinction
 
+### Phase 05.1: Split Related Content block into Related Topics and Related Events (INSERTED)
+
+**Goal:** Topic pages show Related Topics and event pages show Related Events instead of a single mixed Related Content block
+**Requirements**: None (urgent insertion, no formal requirement IDs)
+**Depends on:** Phase 5
+**Plans:** 1 plan in 1 wave
+
+Plans:
+- [ ] 05.1-01-PLAN.md -- Parameterize RelatedContentBlock with bundle config, replace single block placement with two bundle-specific placements (Wave 1)
+
 ### Phase 7: Fix Integration Bugs
 **Goal**: Permission filtering works correctly on all index types — broken integration connections and dead code are resolved
 **Depends on**: Phase 3
