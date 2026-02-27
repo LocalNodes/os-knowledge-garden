@@ -9,20 +9,20 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Infrastructure
 
-- [ ] **AI-01**: Drupal AI core module (ai) is installed and configured with Deepseek provider
-- [ ] **AI-02**: AI Agents module (ai_agents) is installed and provides agent framework
+- [x] **AI-01**: Drupal AI core module (ai) is installed and configured with Deepseek provider
+- [x] **AI-02**: AI Agents module (ai_agents) is installed and provides agent framework
 - [x] **AI-03**: Vector database (Milvus) is deployed and connected via ai_search module
 - [x] **AI-04**: Embedding generation pipeline is configured for content indexing
-- [ ] **AI-05**: Deepseek API integration is tested with fallback/retry logic for rate limits
+- [x] **AI-05**: Deepseek API integration is tested with fallback/retry logic for rate limits
 
 ### Content Indexing
 
-- [x] **IDX-01**: Open Social posts are automatically indexed with embeddings on create/update
-- [x] **IDX-02**: Comments are indexed with parent post context for retrieval
-- [x] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
-- [x] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
-- [x] **IDX-05**: Group ID metadata is attached to all indexed content
-- [x] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
+- [ ] **IDX-01**: Open Social posts are automatically indexed with embeddings on create/update
+- [ ] **IDX-02**: Comments are indexed with parent post context for retrieval
+- [ ] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
+- [ ] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
+- [ ] **IDX-05**: Group ID metadata is attached to all indexed content
+- [ ] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
 
 ### Permission-Aware Retrieval
 
@@ -98,17 +98,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AI-01 | Phase 1 | Pending |
-| AI-02 | Phase 1 | Pending |
+| AI-01 | Phase 1 | Complete |
+| AI-02 | Phase 1 | Complete |
 | AI-03 | Phase 1 | Complete |
 | AI-04 | Phase 1 | Complete |
-| AI-05 | Phase 1 | Pending |
-| IDX-01 | Phase 2 | Complete |
-| IDX-02 | Phase 2 | Complete |
-| IDX-03 | Phase 2 | Complete |
-| IDX-04 | Phase 2 | Complete |
-| IDX-05 | Phase 2 | Complete |
-| IDX-06 | Phase 2 | Complete |
+| AI-05 | Phase 1 | Complete |
+| IDX-01 | Phase 8 | Pending |
+| IDX-02 | Phase 8 | Pending |
+| IDX-03 | Phase 8 | Pending |
+| IDX-04 | Phase 8 | Pending |
+| IDX-05 | Phase 8 | Pending |
+| IDX-06 | Phase 8 | Pending |
 | PERM-01 | Phase 3 | Complete |
 | PERM-02 | Phase 3 | Complete |
 | PERM-03 | Phase 3 | Complete |
@@ -119,9 +119,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QA-03 | Phase 4 | Complete |
 | QA-04 | Phase 4 | Complete |
 | QA-05 | Phase 4 | Complete |
-| SRCH-01 | Phase 4 | Pending |
-| SRCH-02 | Phase 4 | Pending |
-| SRCH-03 | Phase 4 | Pending |
+| SRCH-01 | Phase 8 | Pending |
+| SRCH-02 | Phase 8 | Pending |
+| SRCH-03 | Phase 8 | Pending |
 | SRCH-04 | Phase 4 | Complete |
 | UI-01 | Phase 5 | Pending |
 | UI-02 | Phase 5 | Pending |
@@ -132,8 +132,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1 requirements: 30 total
 - Mapped to phases: 30
-- Unmapped: 0 ✓
+- Satisfied: 16/30
+- Pending: 14 (6 IDX + 3 SRCH + 5 UI)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-24 after completing AI-03*
+*Last updated: 2026-02-26 after gap closure phase creation*
