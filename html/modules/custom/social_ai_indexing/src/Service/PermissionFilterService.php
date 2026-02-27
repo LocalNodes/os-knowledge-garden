@@ -135,28 +135,17 @@ class PermissionFilterService {
       return;
     }
 
-    // If a specific group scope is provided, filter by that group only.
+    // If a specific group scope is provided, filter to that group.
+    // The 'groups' field cardinality is overridden to 1 (single-valued) in
+    // hook_entity_base_field_info_alter so Milvus stores it as a plain integer
+    // and uses simple equality instead of the buggy JSON_CONTAINS path.
     if ($scopeGroupId !== NULL) {
-      $query->addCondition('groups', [$scopeGroupId], 'IN');
+      $query->addCondition('groups', $scopeGroupId);
       return;
     }
 
-    // Check if this is a community-wide or group-scoped query.
-    if ($this->isCommunityWideQuery()) {
-      // Community-wide (authenticated): public + community content.
-      $query->addCondition('field_content_visibility', ['public', 'community'], 'IN');
-    }
-    else {
-      // Group-scoped: filter by user's accessible groups.
-      $group_ids = $this->getAccessibleGroupIds($account);
-      if (!empty($group_ids)) {
-        $query->addCondition('groups', $group_ids, 'IN');
-      }
-      else {
-        // No groups accessible: add impossible condition to return no results.
-        $query->addCondition('groups', -1);
-      }
-    }
+    // Community-wide (authenticated): public + community content.
+    $query->addCondition('field_content_visibility', ['public', 'community'], 'IN');
   }
 
   /**
