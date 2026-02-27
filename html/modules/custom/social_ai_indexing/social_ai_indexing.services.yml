@@ -5,7 +5,7 @@ services:
 
   social_ai_indexing.search_query_subscriber:
     class: Drupal\social_ai_indexing\EventSubscriber\SearchQuerySubscriber
-    arguments: ['@social_ai_indexing.permission_filter', '@current_user']
+    arguments: ['@social_ai_indexing.permission_filter', '@current_user', '@ai_assistant_api.runner']
     tags:
       - { name: event_subscriber }
 

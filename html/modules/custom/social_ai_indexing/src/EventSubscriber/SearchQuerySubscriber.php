@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\social_ai_indexing\EventSubscriber;
 
+use Drupal\ai_assistant_api\AiAssistantApiRunner;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\search_api\Event\QueryPreExecuteEvent;
 use Drupal\search_api\Event\SearchApiEvents;
@@ -34,6 +35,13 @@ class SearchQuerySubscriber implements EventSubscriberInterface {
   protected $currentUser;
 
   /**
+   * The AI assistant API runner.
+   *
+   * @var \Drupal\ai_assistant_api\AiAssistantApiRunner
+   */
+  protected AiAssistantApiRunner $aiAssistantRunner;
+
+  /**
    * AI search index IDs that require permission filtering.
    *
    * @var array
@@ -50,13 +58,17 @@ class SearchQuerySubscriber implements EventSubscriberInterface {
    *   The permission filter service.
    * @param \Drupal\Core\Session\AccountInterface $current_user
    *   The current user account.
+   * @param \Drupal\ai_assistant_api\AiAssistantApiRunner $ai_assistant_runner
+   *   The AI assistant API runner.
    */
   public function __construct(
     PermissionFilterService $permission_filter,
-    AccountInterface $current_user
+    AccountInterface $current_user,
+    AiAssistantApiRunner $ai_assistant_runner
   ) {
     $this->permissionFilter = $permission_filter;
     $this->currentUser = $current_user;
+    $this->aiAssistantRunner = $ai_assistant_runner;
   }
 
   /**
@@ -85,8 +97,16 @@ class SearchQuerySubscriber implements EventSubscriberInterface {
       return;
     }
 
-    // Get optional scope group ID from query options.
+    // Check for explicit scope from query options first.
     $scopeGroupId = $query->getOption('ai_search_scope_group_id');
+
+    // If no explicit scope, check AI assistant runner context for group_id.
+    if ($scopeGroupId === NULL) {
+      $context = $this->aiAssistantRunner->getContext();
+      if (!empty($context['group_id'])) {
+        $scopeGroupId = (int) $context['group_id'];
+      }
+    }
 
     try {
       $this->permissionFilter->applyPermissionFilters(
