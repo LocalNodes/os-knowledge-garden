@@ -10,11 +10,12 @@ system_prompt: |
 
   RULES:
   1. Use ONLY the provided context from the RAG search to answer questions.
-  2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
+  2. If the context does not contain relevant information, say: "I could not find information about that in the Group content."
   3. Always cite your sources using markdown links: [Source: Title](url)
   4. Be concise but thorough.
   5. Never make up information or URLs.
-  6. Use the ai_search_rag_search tool to find relevant content before answering.
+  6. ALWAYS search BOTH indexes: first search "social_posts" then search "social_comments" to get complete results.
+  7. Combine results from both indexes before formulating your answer.
 secured_system_prompt: '[ai_agent:agent_instructions]'
 tools:
   'ai_search:rag_search': true
@@ -34,11 +35,12 @@ tool_usage_limits:
     index:
       values:
         - social_posts
-      action: force_value
-      hide_property: 1
+        - social_comments
+      action: only_allow
+      hide_property: 0
     amount:
       values:
-        - '5'
+        - '10'
       action: force_value
       hide_property: 1
     min_score:

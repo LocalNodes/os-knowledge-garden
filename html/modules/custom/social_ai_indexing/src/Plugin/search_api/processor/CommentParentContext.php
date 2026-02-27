@@ -111,8 +111,16 @@ class CommentParentContext extends ProcessorPluginBase {
    * Get the title from a parent entity.
    */
   protected function getParentTitle(EntityInterface $entity): ?string {
-    if ($entity->getEntityTypeId() === 'node' && $entity->hasField('title')) {
-      return $entity->label();
+    // Nodes have a title via label().
+    $label = $entity->label();
+    if ($label) {
+      return $label;
+    }
+    // Posts use field_post as their main content — truncate for a title.
+    if ($entity->hasField('field_post') && !$entity->get('field_post')->isEmpty()) {
+      $text = strip_tags($entity->get('field_post')->value);
+      $text = trim($text);
+      return strlen($text) > 80 ? substr($text, 0, 77) . '...' : $text;
     }
     return NULL;
   }
@@ -121,12 +129,8 @@ class CommentParentContext extends ProcessorPluginBase {
    * Get a summary from a parent entity's body.
    */
   protected function getParentSummary(EntityInterface $entity): ?string {
-    if ($entity->getEntityTypeId() !== 'node') {
-      return NULL;
-    }
-
     $body_field = NULL;
-    foreach (['body', 'field_post_body', 'field_body'] as $field_name) {
+    foreach (['body', 'field_post_body', 'field_body', 'field_post'] as $field_name) {
       if ($entity->hasField($field_name) && !$entity->get($field_name)->isEmpty()) {
         $body_field = $entity->get($field_name);
         break;

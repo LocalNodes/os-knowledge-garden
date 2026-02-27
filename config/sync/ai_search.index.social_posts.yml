@@ -16,22 +16,18 @@ indexing_options:
     max: 0
   citation_title:
     field_name: citation_title
-    indexing_option: contextual_content
+    indexing_option: attributes
     max: 0
   citation_type:
     field_name: citation_type
-    indexing_option: contextual_content
+    indexing_option: attributes
     max: 0
   citation_url:
     field_name: citation_url
-    indexing_option: contextual_content
+    indexing_option: attributes
     max: 0
   field_content_visibility:
     field_name: field_content_visibility
-    indexing_option: attributes
-    max: 0
-  groups:
-    field_name: groups
     indexing_option: attributes
     max: 0
   status:
@@ -44,5 +40,9 @@ indexing_options:
     max: 0
   uid:
     field_name: uid
+    indexing_option: attributes
+    max: 0
+  group_id:
+    field_name: group_id
     indexing_option: attributes
     max: 0

@@ -75,13 +75,17 @@
         "patches": {
             "drupal/ai": {
                 "AiAssistantApiRunner: fix uninitialized userMessage null safety": "patches/ai-assistant-api-runner-null-safety.patch",
-                "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch"
+                "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch",
+                "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch"
             },
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch"
             },
             "drupal/ai_vdb_provider_milvus": {
                 "Fix IN/NOT IN filter expressions and array condition handling": "patches/milvus-provider-fix-filter-expressions.patch"
+            },
+            "drupal/ai_provider_deepseek": {
+                "Add chat_with_tools support via direct Guzzle API calls": "patches/deepseek-provider-chat-with-tools-support.patch"
             }
         }
     },

@@ -1,0 +1,181 @@
+diff --git a/definitions/api_defaults.yml b/definitions/api_defaults.yml
+index 970ec94..3e899e1 100644
+--- a/definitions/api_defaults.yml
++++ b/definitions/api_defaults.yml
+@@ -16,6 +16,7 @@ models:
+     context_length: 32768
+     capabilities:
+       - chat
++      - chat_with_tools
+   deepseek-coder:
+     name: DeepSeek Coder
+     description: Code generation and analysis model
+@@ -23,3 +24,4 @@ models:
+     context_length: 32768
+     capabilities:
+       - chat
++      - chat_with_tools
+diff --git a/src/Plugin/AiProvider/DeepseekProvider.php b/src/Plugin/AiProvider/DeepseekProvider.php
+index 14b1658..6e057d8 100644
+--- a/src/Plugin/AiProvider/DeepseekProvider.php
++++ b/src/Plugin/AiProvider/DeepseekProvider.php
+@@ -9,9 +9,11 @@ use Drupal\ai\OperationType\Chat\ChatInput;
+ use Drupal\ai\OperationType\Chat\ChatInterface;
+ use Drupal\ai\OperationType\Chat\ChatMessage;
+ use Drupal\ai\OperationType\Chat\ChatOutput;
++use Drupal\ai\OperationType\Chat\Tools\ToolsFunctionOutput;
+ use Drupal\Component\Serialization\Json;
+ use Drupal\Core\Config\ImmutableConfig;
+ use Drupal\Core\StringTranslation\TranslatableMarkup;
++use GuzzleHttp\Client;
+ use \DeepseekPhp\DeepseekClient;
+ use \DeepseekPhp\Enums\Models;
+ use Symfony\Component\Yaml\Yaml;
+@@ -67,7 +69,7 @@ class DeepSeekProvider extends AiProviderClientBase implements ChatInterface {
+    * {@inheritdoc}
+    */
+   public function getSupportedOperationTypes(): array {
+-    return ['chat'];
++    return ['chat', 'chat_with_tools'];
+   }
+ 
+   /**
+@@ -158,13 +160,133 @@ class DeepSeekProvider extends AiProviderClientBase implements ChatInterface {
+   }
+ 
+   public function chat(array|string|ChatInput $input, string $model_id, array $tags = []): ChatOutput {
+-    $this->loadClient();
++    // Ensure API key is loaded.
++    if (!$this->apiKey) {
++      $this->setAuthentication($this->loadApiKey());
++    }
++
++    // Build the messages array in OpenAI-compatible format.
++    $chat_input = [];
++
++    if ($input instanceof ChatInput) {
++      // Add system prompt if present.
++      if ($input->getSystemPrompt()) {
++        $chat_input[] = [
++          'role' => 'system',
++          'content' => $input->getSystemPrompt(),
++        ];
++      }
++
++      // Convert ChatMessage objects to API format.
++      foreach ($input->getMessages() as $message) {
++        $role = $message->getRole();
++
++        // Skip messages with empty or invalid roles - these can come from
++        // corrupted tempstore data or incomplete serialization cycles.
++        if (empty($role) || !in_array($role, ['system', 'user', 'assistant', 'tool'])) {
++          \Drupal::logger('deepseek_debug')->warning('Skipping message with invalid role: "@role"', ['@role' => $role]);
++          continue;
++        }
++
++        $content = $message->getText();
++        $new_message = [
++          'role' => $role,
++          'content' => $content,
++        ];
++
++        // If it's a tool response, include tool_call_id.
++        if ($message->getToolsId()) {
++          $new_message['tool_call_id'] = $message->getToolsId();
++        }
++
++        // If the message contains tool calls from a previous assistant
++        // response, include them so the API can match tool responses.
++        if ($message->getTools()) {
++          $new_message['tool_calls'] = $message->getRenderedTools();
++          // DeepSeek API (OpenAI-compatible) requires content to be null
++          // (not empty string) for assistant messages with tool_calls.
++          if ($role === 'assistant' && $content === '') {
++            $new_message['content'] = NULL;
++          }
++        }
++
++        $chat_input[] = $new_message;
++      }
++    }
++    elseif (is_string($input)) {
++      $chat_input[] = [
++        'role' => 'user',
++        'content' => $input,
++      ];
++    }
++    elseif (is_array($input)) {
++      $chat_input = $input;
++    }
++
++    // Build the request payload.
++    $payload = [
++      'model' => $model_id,
++      'messages' => $chat_input,
++    ];
++
++    // Add tool definitions if present (OpenAI-compatible format).
++    $has_tools = FALSE;
++    if ($input instanceof ChatInput && method_exists($input, 'getChatTools') && $input->getChatTools()) {
++      $payload['tools'] = $input->getChatTools()->renderToolsArray();
++      $has_tools = TRUE;
++    }
++
++    // Make the API request directly via Guzzle (the DeepSeek PHP client
++    // library does not support tools, but the DeepSeek API is
++    // OpenAI-compatible and fully supports function calling).
++    $guzzle = new Client([
++      'base_uri' => 'https://api.deepseek.com',
++      'timeout' => 120,
++      'headers' => [
++        'Authorization' => 'Bearer ' . $this->apiKey,
++        'Content-Type' => 'application/json',
++      ],
++    ]);
++
++    // Debug log the exact payload being sent to DeepSeek.
++    \Drupal::logger('deepseek_debug')->notice('Request payload: @body', [
++      '@body' => json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
++    ]);
+ 
+-    $response = $this->client->query($input)->withModel($model_id)->run();
+-    $data = Json::decode($response);
+-    $message = new ChatMessage($data['choices'][0]['message']['role'] ?? '', $data['choices'][0]['message']['content'] ?? '');
++    try {
++      $response = $guzzle->post('/chat/completions', [
++        'json' => $payload,
++      ]);
++      $data = Json::decode($response->getBody()->getContents());
++    }
++    catch (\Exception $e) {
++      \Drupal::logger('deepseek_debug')->error('DeepSeek API error. Payload was: @body', [
++        '@body' => json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
++      ]);
++      throw new AiResponseErrorException($e->getMessage());
++    }
++
++    $role = $data['choices'][0]['message']['role'] ?? 'assistant';
++    $content = $data['choices'][0]['message']['content'] ?? '';
++    $message = new ChatMessage($role, $content);
++
++    // Parse tool calls from the response if present.
++    if ($has_tools && !empty($data['choices'][0]['message']['tool_calls'])) {
++      $tools = [];
++      foreach ($data['choices'][0]['message']['tool_calls'] as $tool) {
++        $arguments = Json::decode($tool['function']['arguments']);
++        $tools[] = new ToolsFunctionOutput(
++          $input->getChatTools()->getFunctionByName($tool['function']['name']),
++          $tool['id'],
++          $arguments
++        );
++      }
++      if (!empty($tools)) {
++        $message->setTools($tools);
++      }
++    }
+ 
+-    return new ChatOutput($message, $response, []);
++    return new ChatOutput($message, $data, []);
+   }
+ 
+ }

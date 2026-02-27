@@ -42,14 +42,10 @@ field_settings:
     label: 'File Content'
     property_path: file_content
     type: text
-  groups:
-    label: 'Entity reference'
-    datasource_id: 'entity:node'
-    property_path: groups
+  group_id:
+    label: 'Group ID'
+    property_path: group_id
     type: integer
-    dependencies:
-      module:
-        - social_group
   rendered_item:
     label: 'Rendered content'
     property_path: rendered_item

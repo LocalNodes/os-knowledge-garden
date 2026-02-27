@@ -10,8 +10,8 @@ actions_enabled: {  }
 assistant_message: 'I am here to help you find information about Group content. What would you like to know?'
 error_message: 'I encountered an error while processing your request. Please try again.'
 specific_error_messages: {  }
-llm_provider: deepseek
-llm_model: deepseek-chat
+llm_provider: gemini
+llm_model: models/gemini-2.5-flash
 llm_configuration: {  }
 roles: {  }
 use_function_calling: false
