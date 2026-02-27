@@ -1,0 +1,54 @@
+<?php
+
+/**
+ * @file
+ * Module hooks for localnodes_demo.
+ */
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Hide URL alias and author information from non-admin users on
+ * Topic, Event, and Group forms.
+ */
+function localnodes_demo_form_alter(&$form, &$form_state, $form_id) {
+  $target_forms = [
+    'node_topic_form',
+    'node_topic_edit_form',
+    'node_event_form',
+    'node_event_edit_form',
+    'group_flexible_group_add_form',
+    'group_flexible_group_edit_form',
+  ];
+
+  if (!in_array($form_id, $target_forms)) {
+    return;
+  }
+
+  $current_user = \Drupal::currentUser();
+  if ($current_user->hasPermission('administer nodes') || in_array('administrator', $current_user->getRoles())) {
+    return;
+  }
+
+  // Hide URL alias on all target forms.
+  if (isset($form['path'])) {
+    $form['path']['#access'] = FALSE;
+  }
+
+  // Hide author information on Topic and Event forms only.
+  $node_forms = [
+    'node_topic_form',
+    'node_topic_edit_form',
+    'node_event_form',
+    'node_event_edit_form',
+  ];
+
+  if (in_array($form_id, $node_forms)) {
+    if (isset($form['uid'])) {
+      $form['uid']['#access'] = FALSE;
+    }
+    if (isset($form['created'])) {
+      $form['created']['#access'] = FALSE;
+    }
+  }
+}
