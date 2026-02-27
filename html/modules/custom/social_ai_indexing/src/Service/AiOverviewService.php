@@ -161,12 +161,14 @@ class AiOverviewService {
     }
 
     $systemPrompt = <<<'PROMPT'
-You are a search assistant for a community platform. Given search results and a user query, write a brief 2-4 sentence overview that answers the query based on the provided content.
+You are a search assistant for a community platform. Given search results and a user query, write a helpful overview that synthesizes the most relevant information.
 
 Rules:
 - Use ONLY information from the provided search results
 - Reference sources using numbered citations like [1], [2], etc. matching the source numbers
-- Write in a helpful, concise tone
+- Try to reference at least 3-4 different sources to give a well-rounded overview
+- Write 4-8 sentences across 1-2 paragraphs — enough to give the reader a solid understanding
+- Write in a helpful, informative tone
 - Use HTML formatting: <p> tags for paragraphs, <strong> for emphasis
 - If the search results are not relevant to the query, respond with exactly: NO_RELEVANT_CONTENT
 - Do NOT use markdown. Output HTML only.
@@ -267,16 +269,72 @@ PROMPT;
     if (empty($raw)) {
       $raw = $result['drupal_entity_type'] ?? '';
     }
+
+    $lower = strtolower($raw);
+
+    // For topic nodes (or results from indexes without citation_type),
+    // resolve the Topic Type taxonomy term at query time.
+    if (in_array($lower, ['topic', 'node'], TRUE)) {
+      $entity_id = $result['drupal_entity_id'] ?? NULL;
+      if ($entity_id) {
+        $resolved = $this->resolveNodeType((int) $entity_id);
+        if ($resolved) {
+          return $resolved;
+        }
+      }
+      // Fallback: 'node' without a topic type is a Post.
+      return $lower === 'node' ? 'Post' : 'Topic';
+    }
+
     $map = [
       'comment' => 'Comment',
       'post_comment' => 'Comment',
-      'node' => 'Post',
       'post' => 'Post',
-      'topic' => 'Topic',
       'event' => 'Event',
       'page' => 'Page',
     ];
-    return $map[strtolower($raw)] ?? ucfirst(str_replace('_', ' ', $raw));
+
+    return $map[$lower] ?? ucfirst(str_replace('_', ' ', $raw));
+  }
+
+  /**
+   * Resolve the Topic Type term name for a node.
+   *
+   * @param int $entity_id
+   *   The node ID.
+   *
+   * @return string|null
+   *   The topic type term name, or NULL if not a topic or no type set.
+   */
+  protected function resolveNodeType(int $entity_id): ?string {
+    try {
+      $node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
+      if (!$node) {
+        return NULL;
+      }
+      $bundle = $node->bundle();
+
+      // Events: return "Event" directly.
+      if ($bundle === 'event') {
+        return 'Event';
+      }
+
+      // Topics: resolve the Topic Type taxonomy term (Blog, News, Dialog, etc.).
+      if ($bundle === 'topic' && $node->hasField('field_topic_type') && !$node->get('field_topic_type')->isEmpty()) {
+        $term = $node->get('field_topic_type')->entity;
+        if ($term) {
+          return $term->label();
+        }
+        return 'Topic';
+      }
+
+      // Other bundles: capitalize the bundle name.
+      return ucfirst($bundle);
+    }
+    catch (\Exception $e) {
+      // Silently fail — fall back to generic type.
+    }
+    return NULL;
   }
 
   /**

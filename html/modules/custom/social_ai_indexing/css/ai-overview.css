@@ -7,10 +7,6 @@
    AI Overview Block
    ========================================================================== */
 
-[data-ai-overview] {
-  margin-bottom: 20px;
-}
-
 .ai-overview__content {
   background: #f8f9fa;
   border-left: 3px solid #4a90d9;
@@ -83,6 +79,18 @@
   font-size: 0.9em;
 }
 
+.ai-overview__inline-citation {
+  color: #4a90d9;
+  font-weight: 600;
+  font-size: 0.85em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ai-overview__inline-citation:hover {
+  text-decoration: underline;
+}
+
 .ai-overview__citation-link {
   color: #4a90d9;
   text-decoration: none;
@@ -138,8 +146,13 @@
 }
 
 @keyframes ai-overview-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ==========================================================================

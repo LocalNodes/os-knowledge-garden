@@ -85,7 +85,15 @@ class CitationMetadata extends ProcessorPluginBase {
     }
 
     // For other entity types, use the entity directly.
-    $this->addCitationFields($item, $entity, $entity->bundle() ?: $entity_type);
+    // For topic nodes, resolve the Topic Type taxonomy term name.
+    $type = $entity->bundle() ?: $entity_type;
+    if ($type === 'topic' && $entity->hasField('field_topic_type') && !$entity->get('field_topic_type')->isEmpty()) {
+      $term = $entity->get('field_topic_type')->entity;
+      if ($term) {
+        $type = $term->label();
+      }
+    }
+    $this->addCitationFields($item, $entity, $type);
   }
 
   /**

@@ -39,22 +39,58 @@
             return;
           }
 
+          // Build maps from citation number to source URL and title for inline linking.
+          var citationUrls = {};
+          var citationTitles = {};
+          if (data.citations) {
+            data.citations.forEach(function (cite, i) {
+              var num = i + 1;
+              if (cite.url) {
+                citationUrls[num] = Drupal.checkPlain(cite.url);
+              }
+              if (cite.title) {
+                citationTitles[num] = Drupal.checkPlain(cite.title);
+              }
+            });
+          }
+
+          // Replace inline [N] citations in the summary with links to sources.
+          var linkedSummary = data.summary.replace(/\[(\d+)\]/g, function (full, num) {
+            var n = parseInt(num, 10);
+            if (citationUrls[n]) {
+              var title = citationTitles[n] || Drupal.t('Source') + ' ' + n;
+              return '<a href="' + citationUrls[n] + '" class="ai-overview__inline-citation" title="' + title + '">[' + n + ']</a>';
+            }
+            return full;
+          });
+
           var html = '<div class="ai-overview__content">';
           html += '<div class="ai-overview__header">';
           html += '<span class="ai-overview__label">' + Drupal.t('AI Overview') + '</span>';
           html += '</div>';
-          html += '<div class="ai-overview__summary">' + data.summary + '</div>';
+          html += '<div class="ai-overview__summary">' + linkedSummary + '</div>';
 
           if (data.citations && data.citations.length > 0) {
+            // Only show sources actually referenced in the summary.
+            var citedNums = {};
+            var matches = data.summary.match(/\[(\d+)\]/g) || [];
+            matches.forEach(function (m) {
+              citedNums[parseInt(m.replace(/[\[\]]/g, ''), 10)] = true;
+            });
+
             html += '<div class="ai-overview__citations">';
             html += '<span class="ai-overview__citations-label">' + Drupal.t('Sources') + '</span>';
             html += '<ul class="ai-overview__citation-list">';
             data.citations.forEach(function (cite, i) {
+              var num = i + 1;
+              if (!citedNums[num]) {
+                return;
+              }
               var title = Drupal.checkPlain(cite.title);
               var url = Drupal.checkPlain(cite.url);
               var type = Drupal.checkPlain(cite.type || '');
               html += '<li class="ai-overview__citation">';
-              html += '<span class="ai-overview__citation-num">[' + (i + 1) + ']</span> ';
+              html += '<span class="ai-overview__citation-num">[' + num + ']</span> ';
               if (url) {
                 html += '<a href="' + url + '" class="ai-overview__citation-link">' + title + '</a>';
               } else {

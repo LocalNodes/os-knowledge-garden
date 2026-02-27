@@ -55,6 +55,7 @@ field_settings:
         - anonymous
       view_mode:
         'entity:node':
+          event: search_index
           post: search_index
           topic: search_index
   status:
@@ -94,6 +95,7 @@ datasource_settings:
     bundles:
       default: false
       selected:
+        - event
         - post
         - topic
     languages:
