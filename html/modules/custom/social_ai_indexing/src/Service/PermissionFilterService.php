@@ -136,11 +136,10 @@ class PermissionFilterService {
     }
 
     // If a specific group scope is provided, filter to that group.
-    // The 'groups' field cardinality is overridden to 1 (single-valued) in
-    // hook_entity_base_field_info_alter so Milvus stores it as a plain integer
-    // and uses simple equality instead of the buggy JSON_CONTAINS path.
+    // Uses group_id from the GroupMetadata processor (not the entity's computed
+    // 'groups' field) because processor fields reliably write to Milvus metadata.
     if ($scopeGroupId !== NULL) {
-      $query->addCondition('groups', $scopeGroupId);
+      $query->addCondition('group_id', $scopeGroupId);
       return;
     }
 

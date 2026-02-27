@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
 
 use Drupal\comment\CommentInterface;
-use Drupal\group\Entity\GroupContent;
+use Drupal\group\Entity\GroupRelationship;
 use Drupal\search_api\Datasource\DatasourceInterface;
 use Drupal\search_api\Item\ItemInterface;
 use Drupal\search_api\Processor\ProcessorPluginBase;
@@ -105,9 +105,12 @@ class GroupMetadata extends ProcessorPluginBase {
 
     try {
       $storage = \Drupal::entityTypeManager()->getStorage('group_content');
-      
+
+      // Filter by entity_id AND entity type plugin to avoid matching user
+      // memberships that happen to share the same numeric entity_id.
       $query = $storage->getQuery()
         ->condition('entity_id', $entity_id)
+        ->condition('type', '%group_node-%', 'LIKE')
         ->accessCheck(FALSE);
 
       $group_content_ids = $query->execute();
@@ -119,7 +122,7 @@ class GroupMetadata extends ProcessorPluginBase {
       $group_contents = $storage->loadMultiple($group_content_ids);
 
       foreach ($group_contents as $group_content) {
-        if ($group_content instanceof GroupContent) {
+        if ($group_content instanceof GroupRelationship) {
           $gid = $group_content->get('gid')->target_id;
           if ($gid) {
             $group_ids[] = (int) $gid;

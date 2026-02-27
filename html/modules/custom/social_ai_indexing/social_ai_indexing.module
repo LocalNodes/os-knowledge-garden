@@ -94,20 +94,6 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
  * Attaches AI search CSS globally for Related Content block citation
  * styling and AI content visual distinction badges.
  */
-/**
- * Implements hook_entity_base_field_info_alter().
- *
- * Overrides the 'groups' computed field cardinality from unlimited to 1.
- * Content only ever belongs to one group. Single cardinality makes the
- * Milvus VDB provider store it as a plain integer instead of a JSON array,
- * avoiding a bug in the provider's multi-valued condition handling.
- */
-function social_ai_indexing_entity_base_field_info_alter(&$fields, $entity_type) {
-  if ($entity_type->id() === 'node' && isset($fields['groups'])) {
-    $fields['groups']->setCardinality(1);
-  }
-}
-
 function social_ai_indexing_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'social_ai_indexing/ai-search';
 }
