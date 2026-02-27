@@ -13,8 +13,8 @@ dependencies:
     - node.type.page
   module:
     - image
-    - lazy
     - user
+third_party_settings: {  }
 _core:
   default_config_hash: PNDaVNU1Bk6mj64fF0LuSoPK98Av7cUkSBB50wmPgTE
 id: node.page.small_teaser
@@ -24,19 +24,17 @@ mode: small_teaser
 content:
   field_page_image:
     type: image
-    weight: 4
-    region: content
     label: hidden
     settings:
-      image_style: social_medium
       image_link: content
-    third_party_settings:
-      lazy:
-        lazy_image: 0
+      image_style: social_medium
+    third_party_settings: {  }
+    weight: 4
+    region: content
   links:
-    weight: 100
     settings: {  }
     third_party_settings: {  }
+    weight: 100
     region: content
 hidden:
   body: true

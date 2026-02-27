@@ -15,6 +15,12 @@ services:
       - '@social_ai_indexing.permission_filter'
       - '@entity_type.manager'
 
+  social_ai_indexing.ai_overview:
+    class: Drupal\social_ai_indexing\Service\AiOverviewService
+    arguments:
+      - '@social_ai_indexing.hybrid_search'
+      - '@ai.provider'
+
   social_ai_indexing.related_content:
     class: Drupal\social_ai_indexing\Service\RelatedContentService
     arguments:

@@ -18,8 +18,10 @@ function social_ai_indexing_theme(): array {
     'block__social_ai_related_content' => [
       'base hook' => 'block',
     ],
-    'social_ai_search_page' => [
-      'variables' => [],
+    'social_ai_overview' => [
+      'variables' => [
+        'query' => '',
+      ],
     ],
   ];
 }
@@ -45,9 +47,8 @@ function social_ai_indexing_preprocess_block(array &$variables): void {
  * fires at line 634 BEFORE the connect key is set (line 644). By preprocess
  * time, connect exists as a JSON string in $variables['deepchat_settings'].
  *
- * IMPORTANT: Do NOT use early return in this function. Plan 05-03 extends
- * this function to add messageStyles configuration that must run on ALL
- * pages, not just Group pages.
+ * IMPORTANT: Do NOT use early return in this function. The messageStyles
+ * configuration below must run on ALL pages, not just Group pages.
  */
 function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   // --- Group context injection (UI-02) ---
@@ -91,9 +92,8 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
 /**
  * Implements hook_page_attachments().
  *
- * Attaches AI search CSS globally for Related Content block citation
- * styling and AI content visual distinction badges.
+ * Attaches DeepChat link handler and Related Content citation styles globally.
  */
 function social_ai_indexing_page_attachments(array &$attachments) {
-  $attachments['#attached']['library'][] = 'social_ai_indexing/ai-search';
+  $attachments['#attached']['library'][] = 'social_ai_indexing/deepchat-links';
 }

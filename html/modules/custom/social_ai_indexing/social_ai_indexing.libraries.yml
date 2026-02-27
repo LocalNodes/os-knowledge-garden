@@ -1,10 +1,17 @@
-ai-search:
+ai-overview:
   version: 1.x
   js:
-    js/ai-search.js: {}
+    js/ai-overview.js: {}
   css:
     theme:
-      css/ai-search.css: {}
+      css/ai-overview.css: {}
   dependencies:
     - core/drupal
     - core/drupalSettings
+
+deepchat-links:
+  version: 1.x
+  js:
+    js/deepchat-links.js: {}
+  dependencies:
+    - core/drupal

@@ -1,23 +1,10 @@
-uuid: null
 langcode: en
 status: true
-dependencies:
-  module:
-    - ai_agents
-    - ai_search
+dependencies: {  }
 id: group_assistant
 label: 'Group Knowledge Assistant'
 description: 'Answers questions about Group content using RAG retrieval with citations to source content.'
-system_prompt: |
-  You are a helpful assistant that answers questions about Group content.
-
-  RULES:
-  1. Use ONLY the provided context from the RAG search to answer questions.
-  2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
-  3. Always cite your sources using markdown links: [Source: Title](url)
-  4. Be concise but thorough.
-  5. Never make up information or URLs.
-  6. Use the ai_search_rag_search tool to find relevant content before answering.
+system_prompt: "You are a helpful assistant that answers questions about Group content.\n\nRULES:\n1. Use ONLY the provided context from the RAG search to answer questions.\n2. If the context does not contain relevant information, say: \"I could not find information about that in the Group content.\"\n3. Always cite your sources using markdown links: [Source: Title](url)\n4. Be concise but thorough.\n5. Never make up information or URLs.\n6. ALWAYS search BOTH indexes: first search \"social_posts\" then search \"social_comments\" to get complete results.\n7. Combine results from both indexes before formulating your answer.\n"
 secured_system_prompt: '[ai_agent:agent_instructions]'
 tools:
   'ai_search:rag_search': true
@@ -26,37 +13,30 @@ tool_settings:
     return_directly: 0
     require_usage: 1
     description_override: ''
-    progress_message: 'Searching...'
+    progress_message: Searching...
     use_artifacts: 0
 orchestration_agent: false
-triage_agent: true
-max_loops: 3
+triage_agent: false
+max_loops: 20
 default_information_tools: ''
 tool_usage_limits:
   'ai_search:rag_search':
     index:
-      action: force_value
-      hide_property: 1
-      not_break: 0
       values:
         - social_posts
-    search_string:
-      action: ''
+        - social_comments
+      action: only_allow
       hide_property: 0
-      not_break: 0
-      values: ''
     amount:
-      action: force_value
-      hide_property: 1
-      not_break: 0
       values:
-        - '5'
-    min_score:
+        - '10'
       action: force_value
       hide_property: 1
-      not_break: 0
+    min_score:
       values:
         - '0.3'
+      action: force_value
+      hide_property: 1
 exclude_users_role: false
 masquerade_roles: {  }
 structured_output_enabled: false

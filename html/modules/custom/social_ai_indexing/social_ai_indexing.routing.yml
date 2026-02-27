@@ -1,16 +1,8 @@
-social_ai_indexing.hybrid_search:
-  path: '/api/ai/search'
+social_ai_indexing.ai_overview:
+  path: '/api/ai/overview'
   defaults:
-    _controller: '\Drupal\social_ai_indexing\Controller\HybridSearchController::search'
-    _title: 'Hybrid AI Search'
+    _controller: '\Drupal\social_ai_indexing\Controller\AiOverviewController::overview'
+    _title: 'AI Overview'
   methods: [GET]
-  requirements:
-    _permission: 'access content'
-
-social_ai_indexing.search_page:
-  path: '/search/ai'
-  defaults:
-    _controller: '\Drupal\social_ai_indexing\Controller\AiSearchPageController::page'
-    _title: 'AI Search'
   requirements:
     _permission: 'access content'

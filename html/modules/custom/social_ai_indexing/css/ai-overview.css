@@ -1,0 +1,171 @@
+/**
+ * @file
+ * Styles for the AI Overview block on search result pages.
+ */
+
+/* ==========================================================================
+   AI Overview Block
+   ========================================================================== */
+
+[data-ai-overview] {
+  margin-bottom: 20px;
+}
+
+.ai-overview__content {
+  background: #f8f9fa;
+  border-left: 3px solid #4a90d9;
+  border-radius: 4px;
+  padding: 16px 20px;
+}
+
+.ai-overview__header {
+  margin-bottom: 10px;
+}
+
+.ai-overview__label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #4a90d9;
+}
+
+.ai-overview__summary {
+  color: #333;
+  line-height: 1.6;
+  font-size: 0.95em;
+}
+
+.ai-overview__summary p {
+  margin: 0 0 8px 0;
+}
+
+.ai-overview__summary p:last-child {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Citations
+   ========================================================================== */
+
+.ai-overview__citations {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.ai-overview__citations-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #757575;
+  margin-bottom: 6px;
+}
+
+.ai-overview__citation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ai-overview__citation {
+  padding: 3px 0;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.ai-overview__citation-num {
+  color: #4a90d9;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.ai-overview__citation-link {
+  color: #4a90d9;
+  text-decoration: none;
+  border-bottom: 1px dotted #4a90d9;
+  transition: border-bottom-style 0.15s ease;
+}
+
+.ai-overview__citation-link:hover {
+  border-bottom-style: solid;
+}
+
+.ai-overview__citation-type {
+  display: inline-block;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #757575;
+  background: #e8e8e8;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ==========================================================================
+   Loading Skeleton
+   ========================================================================== */
+
+.ai-overview__loading {
+  background: #f8f9fa;
+  border-left: 3px solid #4a90d9;
+  border-radius: 4px;
+  padding: 16px 20px;
+}
+
+.ai-overview__loading-bar {
+  height: 12px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #efefef 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: ai-overview-shimmer 1.5s infinite;
+  border-radius: 3px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.ai-overview__loading-bar--short {
+  width: 60%;
+}
+
+.ai-overview__loading-bar--medium {
+  width: 80%;
+  margin-bottom: 0;
+}
+
+@keyframes ai-overview-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ==========================================================================
+   Related Content Citation Styles (preserved from ai-search.css)
+   ========================================================================== */
+
+.social-ai-related-content a {
+  color: #4a90d9;
+  text-decoration: none;
+  border-bottom: 1px dotted #4a90d9;
+  font-weight: 500;
+  transition: border-bottom-style 0.15s ease;
+}
+
+.social-ai-related-content a:hover {
+  border-bottom-style: solid;
+  text-decoration: none;
+}
+
+.social-ai-related-content::before {
+  content: 'AI Suggestions';
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a90d9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
