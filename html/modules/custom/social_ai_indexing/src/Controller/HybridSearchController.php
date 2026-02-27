@@ -145,8 +145,9 @@ class HybridSearchController extends ControllerBase {
       }
     }
 
-    // Extract content type.
-    $type = $this->extractStringValue($result['citation_type'][0] ?? $result['drupal_entity_type'] ?? '');
+    // Extract content type with human-friendly label.
+    $raw_type = $this->extractStringValue($result['citation_type'][0] ?? $result['drupal_entity_type'] ?? '');
+    $type = $this->humanizeType($raw_type, $result['source_index'] ?? '');
 
     // Extract snippet from rendered content.
     $snippet = '';
@@ -169,6 +170,47 @@ class HybridSearchController extends ControllerBase {
       'score' => $result['score'] ?? NULL,
       'source' => $result['source_index'] ?? NULL,
     ];
+  }
+
+  /**
+   * Map raw entity type/bundle to a human-friendly label.
+   *
+   * @param string $raw_type
+   *   The raw type from citation_type or drupal_entity_type.
+   * @param string $source_index
+   *   The source search index ID (e.g., 'social_posts', 'social_comments').
+   *
+   * @return string
+   *   A human-friendly type label.
+   */
+  protected function humanizeType(string $raw_type, string $source_index): string {
+    // Map known types to friendly labels.
+    $type_map = [
+      'comment' => 'Comment',
+      'post_comment' => 'Comment',
+      'node' => 'Post',
+      'post' => 'Post',
+      'topic' => 'Topic',
+      'event' => 'Event',
+      'page' => 'Page',
+      'book' => 'Book page',
+    ];
+
+    $lower = strtolower($raw_type);
+    if (isset($type_map[$lower])) {
+      return $type_map[$lower];
+    }
+
+    // Fall back to source index as a hint.
+    if (str_contains($source_index, 'comment')) {
+      return 'Comment';
+    }
+    if (str_contains($source_index, 'post')) {
+      return 'Post';
+    }
+
+    // Capitalize the raw type as last resort.
+    return ucfirst(str_replace('_', ' ', $raw_type));
   }
 
   /**

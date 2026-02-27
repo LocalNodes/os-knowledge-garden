@@ -125,20 +125,11 @@
    AI Content Visual Distinction
    ========================================================================== */
 
-/* AI badge on search results */
-.ai-search-result::before {
-  content: 'AI';
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  background: #4a90d9;
-  border-radius: 3px;
-  padding: 1px 5px;
-  margin-bottom: 5px;
-  letter-spacing: 0.5px;
-  vertical-align: middle;
-}
+/*
+ * No per-result AI badge — all results on /search/ai are AI-powered,
+ * so an "AI" badge on every result is redundant. The content type badge
+ * (.ai-search-result__type) provides the useful distinction instead.
+ */
 
 /* Related content block AI indicator */
 .social-ai-related-content::before {
