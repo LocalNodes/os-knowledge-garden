@@ -66,6 +66,25 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
     }
   }
 
-  // --- Additional preprocess additions go below this line ---
-  // Plan 05-03 adds messageStyles configuration here for AI visual distinction.
+  // --- AI visual distinction (UI-05) ---
+  // Add visual distinction for AI vs user messages via DeepChat messageStyles.
+  // messageStyles is a JSON string at preprocess time.
+  $message_styles_json = $variables['deepchat_settings']['messageStyles'] ?? '{}';
+  $message_styles = is_string($message_styles_json) ? json_decode($message_styles_json, TRUE) : [];
+  if (!is_array($message_styles)) {
+    $message_styles = [];
+  }
+  $message_styles['default']['ai']['bubble']['borderLeft'] = '3px solid #4a90d9';
+  $message_styles['default']['ai']['bubble']['backgroundColor'] = '#f8f9fa';
+  $variables['deepchat_settings']['messageStyles'] = json_encode($message_styles);
+}
+
+/**
+ * Implements hook_page_attachments().
+ *
+ * Attaches AI search CSS globally for Related Content block citation
+ * styling and AI content visual distinction badges.
+ */
+function social_ai_indexing_page_attachments(array &$attachments) {
+  $attachments['#attached']['library'][] = 'social_ai_indexing/ai-search';
 }
