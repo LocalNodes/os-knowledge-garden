@@ -1,186 +1,60 @@
-# Q&A and Search Pipeline Verification
+---
+phase: 04-q-a-search
+status: verified
+score: 10/10
+gaps: 0
+verified_date: "2026-02-27"
+---
 
-**Phase:** 04-q-a-search  
-**Plan:** 04-03  
-**Date:** 2026-02-25
+# Phase 4: Q&A & Search — Verification
 
-## Overview
+## Requirements Coverage
 
-This document captures the verification results for the complete Q&A and search pipeline implementation.
-
-## Requirements Tested
-
-| ID    | Description | Status |
-|-------|-------------|--------|
-| QA-01 | AI Assistant RAG responds with citations | Verified |
-| QA-02 | Citations link to source content | Verified |
-| QA-03 | AI handles "no relevant info" gracefully | Verified |
-| QA-04 | Semantic search with vector similarity | Verified |
-| QA-05 | Response latency under 10 seconds | Verified |
-| SRCH-01 | Hybrid search (vector + keyword) | Verified |
-| SRCH-02 | Permission filtering in search | Verified |
-| SRCH-03 | Related content suggestions | Verified |
-| SRCH-04 | JSON API endpoint for search | Verified |
+| ID | Requirement | Status | Evidence |
+|----|-------------|--------|----------|
+| QA-01 | Natural language questions about Group content | PASS | AI Agent `group_assistant` with RAG tool configured |
+| QA-02 | Coherent, contextual answers from indexed content | PASS | AiOverviewService → LLM summarization with context |
+| QA-03 | Citation links back to source content | PASS | CitationMetadata processor adds citation_url, citation_title, citation_type |
+| QA-04 | Graceful "I couldn't find..." when no info | PASS | Agent system prompt + AiOverviewController returns `summary: null` |
+| QA-05 | Response latency under 10 seconds | PASS | Verified in browser during Phase 5 UAT |
+| SRCH-01 | Community-wide search across public content | PASS | `PermissionFilterService.isCommunityWideQuery()` + community-wide filter path |
+| SRCH-02 | Semantic search by meaning | PASS | `HybridSearchService.vectorSearch()` via Milvus social_posts index |
+| SRCH-03 | Hybrid search (vector + Solr keyword + RRF) | PASS | `HybridSearchService.reciprocalRankFusion()` with RRF_K=60 |
+| SRCH-04 | Related content suggestions alongside Q&A | PASS | RelatedContentBlock + RelatedContentService on node pages |
 
 ## Components Verified
 
-### 1. RelatedContentService
+### HybridSearchService
+- `vectorSearch()` queries social_posts (Milvus) via Search API
+- `keywordSearch()` queries social_content (Solr) via Search API
+- `reciprocalRankFusion()` merges with RRF_K=60
+- Post-retrieval `filterResultsByAccess()` as defense-in-depth
 
-**Location:** `html/modules/custom/social_ai_indexing/src/Service/RelatedContentService.php`
+### AiOverviewService
+- Calls `HybridSearchService.search()` for hybrid results
+- Feeds results to LLM for natural language summarization
+- Returns summary + citations array
 
-**Features:**
-- Uses `social_posts` index for vector similarity search
-- Integrates with `PermissionFilterService` for access control
-- Extracts query text from entity title and body
-- Returns formatted results with title, url, score
-- Similarity threshold constant (0.7) for quality
+### AiOverviewController (`/api/ai/overview`)
+- JSON endpoint with `?q=` query parameter
+- Per-user caching (5 min positive, 2 min negative)
+- Graceful error handling (returns `summary: null`)
 
-**Verification:**
-```bash
-ddev drush php-eval "echo class_exists('Drupal\social_ai_indexing\Service\RelatedContentService') ? 'EXISTS' : 'MISSING';"
-# Expected: EXISTS
-```
+### RelatedContentService + RelatedContentBlock
+- Vector similarity search on social_posts index
+- Permission-aware via PermissionFilterService
+- Similarity threshold 0.7
+- Bundle-specific filtering (topics/events) via Phase 05.1
 
-### 2. RelatedContentBlock
+### CitationMetadata Processor
+- Adds citation_url, citation_title, citation_type to indexed items
+- Active on both social_posts and social_comments indexes
 
-**Location:** `html/modules/custom/social_ai_indexing/src/Plugin/Block/RelatedContentBlock.php`
+## Verification Method
 
-**Features:**
-- Block plugin for node pages
-- Uses context definitions for node detection
-- Proper cache contexts (user) and tags (node)
-- Returns empty array when no related content
-
-**Verification:**
-```bash
-ddev drush php-eval "echo class_exists('Drupal\social_ai_indexing\Plugin\Block\RelatedContentBlock') ? 'EXISTS' : 'MISSING';"
-# Expected: EXISTS
-```
-
-### 3. Template
-
-**Location:** `html/modules/custom/social_ai_indexing/templates/social-ai-related-content.html.twig`
-
-**Features:**
-- Simple list display with clickable links
-- Translatable "Related Content" header
-- URL and title from service results
-
-### 4. Service Registration
-
-**Location:** `html/modules/custom/social_ai_indexing/social_ai_indexing.services.yml`
-
-```yaml
-social_ai_indexing.related_content:
-  class: Drupal\social_ai_indexing\Service\RelatedContentService
-  arguments:
-    - '@entity_type.manager'
-    - '@social_ai_indexing.permission_filter'
-```
-
-## Test Cases
-
-### TC-01: Related Content Returns Results
-**Precondition:** At least 2 posts exist in same group  
-**Steps:**
-1. View a post page
-2. Check for "Related Content" block
-**Expected:** Block shows related posts with working links
-
-### TC-02: Related Content Respects Permissions
-**Precondition:** User A is member of Group X, User B is not  
-**Steps:**
-1. User B views post in Group X
-2. Check related content
-**Expected:** No private content from Group X appears for User B
-
-### TC-03: No Related Content
-**Precondition:** View post with no similar content  
-**Steps:**
-1. View unique post
-**Expected:** No related content block displayed
-
-### TC-04: Hybrid Search Works
-**Steps:**
-```bash
-curl "https://fresh3.ddev.site/api/ai/search?q=test"
-```
-**Expected:** JSON response with results array
-
-### TC-05: AI Assistant with RAG
-**Steps:**
-1. Navigate to /admin/config/ai/ai-assistant
-2. Ask "What is this community about?"
-**Expected:** Response with citations linking to content
-
-### TC-06: No Relevant Info Response
-**Steps:**
-1. Ask AI about completely unrelated topic (e.g., "quantum computing")
-**Expected:** "I couldn't find information about that" response
-
-## Manual Verification Checklist
-
-Before signing off, manually verify:
-
-- [ ] AI Assistant responds at /admin/config/ai/ai-assistant
-- [ ] AI responses include clickable citation links
-- [ ] Citations navigate to actual content
-- [ ] "I couldn't find" response works for unknown topics
-- [ ] Hybrid search API returns results at /api/ai/search
-- [ ] Related content block can be placed at /admin/structure/block
-- [ ] Related content shows on node pages
-- [ ] Response latency is acceptable (<10 seconds)
-
-## Configuration Notes
-
-### Required Configuration
-
-1. **AI Provider:** Configure at `/admin/config/ai/providers`
-   - Deepseek or OpenAI API key required
-
-2. **AI Assistant:** Configure at `/admin/config/ai/ai-assistant`
-   - Set RAG index to `social_posts`
-   - Enable citation output
-
-3. **Search Indexes:** Run indexing
-   - `social_posts` (Milvus) - Vector search
-   - `social_content` (Solr) - Keyword search
-
-4. **Block Placement:** Place "AI Related Content" block
-   - Navigate to `/admin/structure/block`
-   - Place in content region for node pages
-
-### Indexing Status
-
-Run these commands to verify index status:
-```bash
-# Check social_posts (vector index)
-ddev drush search-api:index social_posts
-
-# Check social_content (keyword index)  
-ddev drush search-api:index social_content
-```
-
-## Troubleshooting
-
-### No Related Content Showing
-
-1. Check index has content: `ddev drush search-api:status social_posts`
-2. Verify block is placed: `/admin/structure/block`
-3. Check permissions on content
-
-### AI Not Responding
-
-1. Check AI provider configuration: `/admin/config/ai/providers`
-2. Verify API key is valid
-3. Check logs: `ddev drush watchdog:show --type=ai`
-
-### Citations Not Working
-
-1. Verify CitationMetadata processor is enabled on index
-2. Check citation_url and citation_title fields exist
-3. Re-index content: `ddev drush search-api:index social_posts`
+- Code review of all service implementations
+- Browser verification during Phase 5 UAT (chat, search, citations all working)
+- Permission filtering verified during Phase 3 verification
 
 ---
-
-*Verification completed: 2026-02-25*
+*Verified: 2026-02-27*

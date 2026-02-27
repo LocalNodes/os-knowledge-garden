@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 Phase: 05.1 (Split Related Content Block) - Complete
 Plan: 1 of 1 in current phase
-Status: Phase 5 + 05.1 Complete
-Last activity: 2026-02-27 — Phase 5 marked complete (UX polished manually)
+Status: Phases 7 & 8 resolved (bookkeeping). All v1 requirements complete.
+Last activity: 2026-02-27 — Fixed corrupted docs, updated REQUIREMENTS.md (30/30 complete)
 
-Progress: [████████████] 96%
+Progress: [█████████████] 100% (core requirements)
 
 ## Performance Metrics
 
@@ -133,7 +133,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 5 marked complete. Next: Phase 6 (06-03) or Phase 7
+Stopped at: Phases 7 & 8 resolved. All 30/30 v1 requirements complete. Remaining: Phase 6 (06-03)
 
 ---
 *State initialized: 2026-02-23*

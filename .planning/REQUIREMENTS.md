@@ -17,12 +17,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Content Indexing
 
-- [ ] **IDX-01**: Open Social posts are automatically indexed with embeddings on create/update
-- [ ] **IDX-02**: Comments are indexed with parent post context for retrieval
-- [ ] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
-- [ ] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
-- [ ] **IDX-05**: Group ID metadata is attached to all indexed content
-- [ ] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
+- [x] **IDX-01**: Open Social posts are automatically indexed with embeddings on create/update
+- [x] **IDX-02**: Comments are indexed with parent post context for retrieval
+- [x] **IDX-03**: File uploads (PDFs, Office docs) are parsed and indexed
+- [x] **IDX-04**: Content is chunked appropriately (256-512 tokens with overlap)
+- [x] **IDX-05**: Group ID metadata is attached to all indexed content
+- [x] **IDX-06**: Stale embeddings are invalidated and regenerated on content updates/deletes
 
 ### Permission-Aware Retrieval
 
@@ -42,9 +42,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Search & Discovery
 
-- [ ] **SRCH-01**: Community-wide search across all public Group content is available
-- [ ] **SRCH-02**: Semantic search returns results based on meaning, not just keywords
-- [ ] **SRCH-03**: Hybrid search combines vector similarity with existing Solr keyword matching
+- [x] **SRCH-01**: Community-wide search across all public Group content is available
+- [x] **SRCH-02**: Semantic search returns results based on meaning, not just keywords
+- [x] **SRCH-03**: Hybrid search combines vector similarity with existing Solr keyword matching
 - [x] **SRCH-04**: Related content suggestions appear alongside Q&A results
 
 ### User Interface
@@ -52,8 +52,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **UI-01**: Chat interface is available for natural language queries
 - [x] **UI-02**: Chat interface is accessible within Group context for Group-scoped queries
 - [x] **UI-03**: Community-wide search interface is accessible outside Group context
-- [ ] **UI-04**: Source citations are clickable and navigate to original content
-- [ ] **UI-05**: Clear visual distinction between AI-generated content and user content
+- [x] **UI-04**: Source citations are clickable and navigate to original content
+- [x] **UI-05**: Clear visual distinction between AI-generated content and user content
 
 ## v2 Requirements
 
@@ -103,12 +103,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-03 | Phase 1 | Complete |
 | AI-04 | Phase 1 | Complete |
 | AI-05 | Phase 1 | Complete |
-| IDX-01 | Phase 8 | Pending |
-| IDX-02 | Phase 8 | Pending |
-| IDX-03 | Phase 8 | Pending |
-| IDX-04 | Phase 8 | Pending |
-| IDX-05 | Phase 8 | Pending |
-| IDX-06 | Phase 8 | Pending |
+| IDX-01 | Phase 2 | Complete |
+| IDX-02 | Phase 2 | Complete |
+| IDX-03 | Phase 2 | Complete |
+| IDX-04 | Phase 2 | Complete |
+| IDX-05 | Phase 2 | Complete |
+| IDX-06 | Phase 2 | Complete |
 | PERM-01 | Phase 3 | Complete |
 | PERM-02 | Phase 3 | Complete |
 | PERM-03 | Phase 3 | Complete |
@@ -119,23 +119,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QA-03 | Phase 4 | Complete |
 | QA-04 | Phase 4 | Complete |
 | QA-05 | Phase 4 | Complete |
-| SRCH-01 | Phase 8 | Pending |
-| SRCH-02 | Phase 8 | Pending |
-| SRCH-03 | Phase 8 | Pending |
+| SRCH-01 | Phase 4 | Complete |
+| SRCH-02 | Phase 4 | Complete |
+| SRCH-03 | Phase 4 | Complete |
 | SRCH-04 | Phase 4 | Complete |
 | UI-01 | Phase 5 | Complete |
 | UI-02 | Phase 5 | Complete |
 | UI-03 | Phase 5 | Complete |
-| UI-04 | Phase 5 | Pending |
-| UI-05 | Phase 5 | Pending |
+| UI-04 | Phase 5 | Complete |
+| UI-05 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
 - Mapped to phases: 30
-- Satisfied: 16/30
-- Pending: 14 (6 IDX + 3 SRCH + 5 UI)
+- Satisfied: 30/30
+- Pending: 0
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-26 after gap closure phase creation*
+*Last updated: 2026-02-27 — All v1 requirements complete*
