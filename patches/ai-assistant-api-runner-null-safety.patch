@@ -1,0 +1,29 @@
+diff --git a/modules/ai_assistant_api/src/AiAssistantApiRunner.php b/modules/ai_assistant_api/src/AiAssistantApiRunner.php
+index 4a5a73a3..cc9770e6 100644
+--- a/modules/ai_assistant_api/src/AiAssistantApiRunner.php
++++ b/modules/ai_assistant_api/src/AiAssistantApiRunner.php
+@@ -42,7 +42,7 @@ class AiAssistantApiRunner {
+    *
+    * @var \Drupal\ai_assistant_api\Data\UserMessage|null
+    */
+-  protected UserMessage|NULL $userMessage;
++  protected UserMessage|NULL $userMessage = NULL;
+ 
+   /**
+    * If it should be a streaming result.
+@@ -588,9 +588,12 @@ class AiAssistantApiRunner {
+       return $history;
+     }
+     // Otherwise just return the last message.
+-    return [
+-      ['role' => 'user', 'message' => $this->userMessage->getMessage()],
+-    ];
++    if ($this->userMessage) {
++      return [
++        ['role' => 'user', 'message' => $this->userMessage->getMessage()],
++      ];
++    }
++    return [];
+   }
+ 
+   /**

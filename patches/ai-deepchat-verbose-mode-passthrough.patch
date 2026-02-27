@@ -1,0 +1,12 @@
+diff --git a/modules/ai_chatbot/js/deepchat-init.js b/modules/ai_chatbot/js/deepchat-init.js
+index ec3381d6..77cbd91b 100644
+--- a/modules/ai_chatbot/js/deepchat-init.js
++++ b/modules/ai_chatbot/js/deepchat-init.js
+@@ -293,6 +293,7 @@
+         assistant_id: drupalSettings.ai_deepchat.assistant_id,
+         show_copy_icon: drupalSettings.ai_deepchat.show_copy_icon,
+         structured_results: drupalSettings.ai_deepchat.structured_results,
++        verbose_mode: drupalSettings.ai_deepchat.verbose_mode,
+         messages: [
+           {
+             role: 'user',

@@ -75,12 +75,6 @@ class AgentRunner {
     // Load the agent from temp store if it exists.
     if ($agent_data = $this->tempStore->get('ai_assistant_threads')->get($job_id)) {
       $agent->fromArray($agent_data);
-      // Re-enable looping for continuation requests so the agent can
-      // execute pending tools and complete the tool cycle. The first
-      // request disabled looping (verbose mode) to return early with
-      // tool_calls, but the continuation must be allowed to loop to
-      // actually execute those tools and get the final LLM response.
-      $agent->setLooped(TRUE);
     }
     else {
       // Remove the last message from the chat history.
@@ -100,17 +94,7 @@ class AgentRunner {
     }
     $event = new AiAssistantPassContextToAgentEvent($agent, $context);
     $this->eventDispatcher->dispatch($event, AiAssistantPassContextToAgentEvent::EVENT_NAME);
-
-    try {
-      $agent->determineSolvability();
-    }
-    catch (\Exception $e) {
-      // Clean up tempstore on failure to prevent stale agent data from
-      // poisoning subsequent requests with the same job_id.
-      $this->tempStore->get('ai_assistant_threads')->delete($job_id);
-      throw $e;
-    }
-
+    $agent->determineSolvability();
     // If the agent is still running, we store it for the next run.
     if (!$agent->isFinished()) {
       $this->tempStore->get('ai_assistant_threads')->set($job_id, $agent->toArray());
@@ -119,20 +103,8 @@ class AgentRunner {
       // Cleanup when finished.
       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
     }
-    // When verbose mode is off and the agent didn't finish (hit max_loops),
-    // return a clean error instead of a message with pending tools that
-    // would cause the browser to loop indefinitely.
-    if (!$agent->isFinished() && !$verbose_mode) {
-      $this->tempStore->get('ai_assistant_threads')->delete($job_id);
-      return new ChatOutput(
-        new ChatMessage('assistant', 'I was unable to complete my research within the allowed steps. Please try rephrasing your question.'),
-        ['Agent exceeded max_loops without finishing'],
-        [],
-      );
-    }
-
     // Job will always be solvable if we are here.
-    $response = $agent->solve() ?? '';
+    $response = $agent->solve();
 
     // Check if tools was used.
     $message = new ChatMessage('assistant', $response);

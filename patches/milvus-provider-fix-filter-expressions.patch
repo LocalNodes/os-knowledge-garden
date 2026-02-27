@@ -1,7 +1,22 @@
 diff --git a/src/Plugin/VdbProvider/MilvusProvider.php b/src/Plugin/VdbProvider/MilvusProvider.php
-index 718fce4..b6edf10 100644
+index 718fce4..bb953cc 100644
 --- a/src/Plugin/VdbProvider/MilvusProvider.php
 +++ b/src/Plugin/VdbProvider/MilvusProvider.php
+@@ -563,12 +563,12 @@ class MilvusProvider extends AiVdbProviderClientBase implements ContainerFactory
+         if ($condition->getOperator() === '=') {
+           $filters[] = 'JSON_CONTAINS_ALL(' . $fieldData->getFieldIdentifier() . ', [' . $normalizedValues . '])';
+         }
+-        if ($condition->getOperator() === 'IN') {
++        elseif ($condition->getOperator() === 'IN') {
+           $filters[] = 'JSON_CONTAINS_ANY(' . $fieldData->getFieldIdentifier() . ', [' . $normalizedValues . '])';
+         }
+         else {
+           $this->messenger->addWarning('The vector database @name does not support negative operator on multiple fields.', [
+-            '@name' => $this->getClient()->getPluginId(),
++            '@name' => $this->getPluginId(),
+           ]);
+         }
+       }
 @@ -577,7 +577,14 @@ class MilvusProvider extends AiVdbProviderClientBase implements ContainerFactory
          if ($operator === '=') {
            $operator = '==';

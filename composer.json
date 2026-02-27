@@ -73,14 +73,15 @@
             "drupal/core": "-p2"
         },
         "patches": {
-            "drupal/gemini_provider": {
-                "Add chat_with_tools support, fix response role and tool role mapping": "patches/gemini-provider-chat-with-tools-and-roles.patch"
-            },
             "drupal/ai": {
-                "Fix deepchat infinite loop, add agent max_loops guard, verbose mode, null safety": "patches/ai-deepchat-and-agent-fixes.patch"
+                "AiAssistantApiRunner: fix uninitialized userMessage null safety": "patches/ai-assistant-api-runner-null-safety.patch",
+                "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch"
+            },
+            "drupal/gemini_provider": {
+                "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch"
             },
             "drupal/ai_vdb_provider_milvus": {
-                "Fix IN/NOT IN operator handling for Milvus filter expressions": "patches/milvus-provider-fix-in-operator-filter.patch"
+                "Fix IN/NOT IN filter expressions and array condition handling": "patches/milvus-provider-fix-filter-expressions.patch"
             }
         }
     },

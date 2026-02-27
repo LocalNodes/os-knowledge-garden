@@ -294,15 +294,10 @@ class DeepChatApi extends ControllerBase {
       ]) . $assistantResponseText;
     }
 
-    // Only set should_continue when verbose mode is ON. When verbose mode
-    // is off, the agent completes the full tool cycle server-side, so the
-    // response should never have pending tools for the browser to handle.
-    $should_continue = $this->aiAssistantClient->getVerboseMode()
-      && !empty($normalizedResponse->getTools());
     // Default to JSON response.
     return new JsonResponse([
       'html' => $assistantResponseText,
-      'should_continue' => $should_continue,
+      'should_continue' => !empty($normalizedResponse->getTools()),
     ]);
   }
 
