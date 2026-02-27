@@ -33,7 +33,17 @@ function social_ai_indexing_preprocess_block(array &$variables): void {
   if (($variables['elements']['#plugin_id'] ?? '') !== 'social_ai_related_content') {
     return;
   }
-  $variables['subtitle'] = t('in the community');
+  $bundle = $variables['elements']['#configuration']['bundle'] ?? '';
+  switch ($bundle) {
+    case 'topic':
+      $variables['subtitle'] = t('in the community');
+      break;
+    case 'event':
+      $variables['subtitle'] = t('happening soon');
+      break;
+    default:
+      $variables['subtitle'] = t('in the community');
+  }
 }
 
 /**
