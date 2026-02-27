@@ -10,7 +10,7 @@ Phase 5 delivers user-facing interfaces for the AI Knowledge Garden. The key fin
 
 The primary work is: (1) making the chatbot Group-context-aware by passing the current Group ID through DeepChat's `additionalBodyProps` so the RAG search scopes to that Group, (2) creating a community-wide search page that consumes the existing `/api/ai/search` endpoint with a proper UI, and (3) ensuring citations are clickable links and AI content is visually distinguishable from user content.
 
-**Primary recommendation:** Use the existing `ai_deepchat_block` and `hook_deepchat_settings` alter hook to inject Group context into the chatbot API requests. Build the community search as a new Drupal page route with a simple JS-driven search form that calls the existing hybrid search endpoint. Style citations and AI distinction using CSS within the socialblue theme.
+**Primary recommendation:** Use the existing `ai_deepchat_block` and `hook_preprocess_ai_deepchat` template preprocess hook to inject Group context into the chatbot API requests (NOTE: `hook_deepchat_settings` cannot modify `connect` — see Pitfall 1). Build the community search as a new Drupal page route with a simple JS-driven search form that calls the existing hybrid search endpoint. Style citations and AI distinction using CSS for server-rendered content and DeepChat's `messageStyles` API for chat UI (Shadow DOM prevents external CSS from reaching chat message content).
 
 <phase_requirements>
 ## Phase Requirements
@@ -18,7 +18,7 @@ The primary work is: (1) making the chatbot Group-context-aware by passing the c
 | ID | Description | Research Support |
 |----|-------------|-----------------|
 | UI-01 | Chat interface is available for natural language queries | DeepChat block already placed (`socialblue_aideepchatchatbot`), uses `group_assistant` AI assistant with RAG tool. Block is functional now. |
-| UI-02 | Chat interface is accessible within Group context for Group-scoped queries | `hook_deepchat_settings` can inject Group ID into `additionalBodyProps.contexts`. `PermissionFilterService::applyPermissionFilters()` already accepts `$scopeGroupId`. Need to pass Group ID from route to chatbot API and through to RAG search. |
+| UI-02 | Chat interface is accessible within Group context for Group-scoped queries | `hook_preprocess_ai_deepchat` injects Group ID into `connect` JSON's `additionalBodyProps.contexts` (NOTE: `hook_deepchat_settings` fires before `connect` is set and cannot be used — see Pitfall 1). `PermissionFilterService::applyPermissionFilters()` already accepts `$scopeGroupId`. Need to pass Group ID from route to chatbot API and through to RAG search. |
 | UI-03 | Community-wide search interface is accessible outside Group context | Existing `/api/ai/search` endpoint provides hybrid search results as JSON. Need a page at `/search/ai` or similar with a form that calls this endpoint via AJAX. Open Social already has `/search/content` for keyword search. |
 | UI-04 | Source citations are clickable and navigate to original content | RAG responses already include markdown links (`[Source: Title](url)`) from the `group_assistant` system prompt. DeepChat renders HTML via CommonMark. Citations need CSS styling for visibility. |
 | UI-05 | Clear visual distinction between AI-generated content and user-created content | DeepChat's `messageStyles` supports different styling for `ai` vs `user` roles. Related Content block already uses a distinct template. Need CSS for AI badge/indicator. |
@@ -47,7 +47,7 @@ The primary work is: (1) making the chatbot Group-context-aware by passing the c
 |------------|-----------|----------|
 | DeepChat block | Custom chat UI from scratch | DeepChat already integrated, tested, and styled; no benefit to rebuilding |
 | AJAX search form | Views-based search page | Views doesn't support hybrid (vector + keyword) search; custom form needed |
-| `hook_deepchat_settings` | Custom block extending DeepChatFormBlock | Hook is the supported API; extending block adds maintenance burden |
+| `hook_preprocess_ai_deepchat` | Custom block extending DeepChatFormBlock | Preprocess hook is reliable for modifying connect/messageStyles; extending block adds maintenance burden. NOTE: `hook_deepchat_settings` fires before connect is set and cannot modify it. |
 
 **Installation:**
 No new packages needed. All dependencies are already installed.
@@ -57,7 +57,7 @@ No new packages needed. All dependencies are already installed.
 ### Recommended Project Structure
 ```
 html/modules/custom/social_ai_indexing/
-├── social_ai_indexing.module          # hook_deepchat_settings, hook_theme (EXTEND)
+├── social_ai_indexing.module          # hook_preprocess_ai_deepchat, hook_theme, hook_page_attachments (EXTEND)
 ├── social_ai_indexing.routing.yml     # Add search page route (EXTEND)
 ├── social_ai_indexing.libraries.yml   # NEW: JS/CSS for search page
 ├── src/
@@ -78,23 +78,25 @@ html/modules/custom/social_ai_indexing/
     └── ai-search.js                    # NEW: AJAX search form handler
 ```
 
-### Pattern 1: Group Context Injection via hook_deepchat_settings
-**What:** Use `hook_deepchat_settings()` to inject the current Group ID into the DeepChat `connect.additionalBodyProps.contexts` so the backend knows to scope RAG search to that Group.
+### Pattern 1: Group Context Injection via hook_preprocess_ai_deepchat
+**What:** Use `hook_preprocess_ai_deepchat()` to inject the current Group ID into the DeepChat `connect` JSON string so the backend knows to scope RAG search to that Group.
 **When to use:** When the chatbot block is rendered on a Group page.
+**Why not hook_deepchat_settings:** That hook fires BEFORE `connect` is set in getDeepChatParameters() (see Pitfall 1). The connect key is overwritten after the hook returns.
 **Example:**
 ```php
-// Source: ai_chatbot/ai_chatbot.api.php hook documentation + codebase analysis
+// Source: Codebase analysis of DeepChatFormBlock::getDeepChatParameters() lines 634-673
 /**
- * Implements hook_deepchat_settings().
+ * Implements hook_preprocess_HOOK() for ai_deepchat templates.
  */
-function social_ai_indexing_deepchat_settings(array &$deepchat_settings) {
-  // Detect current Group from route context.
+function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   $group = \Drupal::service('social_group.current_group')->fromRunTimeContexts();
   if ($group) {
-    // Inject group_id into the API request body.
-    $connect = json_decode($deepchat_settings['connect'] ?? '{}', TRUE);
-    $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
-    $deepchat_settings['connect'] = json_encode($connect);
+    // connect is a JSON string at preprocess time.
+    $connect = json_decode($variables['deepchat_settings']['connect'] ?? '{}', TRUE);
+    if (is_array($connect)) {
+      $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
+      $variables['deepchat_settings']['connect'] = json_encode($connect);
+    }
   }
 }
 ```
@@ -128,38 +130,36 @@ class AiSearchPageController extends ControllerBase {
 }
 ```
 
-### Pattern 4: Citation Styling via CSS
-**What:** AI responses rendered by DeepChat already contain markdown links converted to `<a>` tags. Style these citation links distinctively.
-**When to use:** Citations in AI chat responses and search results.
+### Pattern 4: Citation Styling
+**What:** AI responses rendered by DeepChat contain markdown links converted to `<a>` tags inside Shadow DOM. External CSS CANNOT target these. Use DeepChat's built-in link styling for chat citations. For server-rendered AI content (Related Content block), use external CSS.
+**When to use:** Citations in Related Content block and search results (NOT DeepChat chat — Shadow DOM blocks external CSS).
 **Example:**
 ```css
-/* Style citation links in AI responses */
-.ai-deepchat .message-bubble a[href*="/node/"],
-.ai-deepchat .message-bubble a[href*="/group/"] {
+/* Style citation links in Related Content block (server-rendered, NOT Shadow DOM) */
+.social-ai-related-content a {
   color: #4a90d9;
   text-decoration: none;
   border-bottom: 1px dashed #4a90d9;
   font-weight: 500;
 }
 
-.ai-deepchat .message-bubble a[href*="/node/"]:hover {
+.social-ai-related-content a:hover {
   border-bottom-style: solid;
 }
 ```
 
 ### Pattern 5: AI Content Visual Distinction
-**What:** Use DeepChat's `messageStyles` and `avatars` configuration to make AI messages visually distinct from user messages.
+**What:** Use DeepChat's `messageStyles` configuration to make AI messages visually distinct from user messages.
 **When to use:** For UI-05 requirement.
-**Example via hook_deepchat_settings:**
+**Example via hook_preprocess_ai_deepchat (same function as Pattern 1):**
 ```php
-// Add AI badge/icon and distinct styling
-function social_ai_indexing_deepchat_settings(array &$deepchat_settings) {
-  // The ai_deepchat_block already sets bot_image and bot_name,
-  // but we can enhance the visual distinction.
-  $message_styles = json_decode($deepchat_settings['messageStyles'] ?? '{}', TRUE);
-  $message_styles['default']['ai']['bubble']['borderLeft'] = '3px solid #4a90d9';
-  $deepchat_settings['messageStyles'] = json_encode($message_styles);
-}
+// In social_ai_indexing_preprocess_ai_deepchat(), after group_id injection:
+// messageStyles is a JSON string at preprocess time.
+$message_styles = json_decode($variables['deepchat_settings']['messageStyles'] ?? '{}', TRUE);
+if (!is_array($message_styles)) { $message_styles = []; }
+$message_styles['default']['ai']['bubble']['borderLeft'] = '3px solid #4a90d9';
+$message_styles['default']['ai']['bubble']['backgroundColor'] = '#f8f9fa';
+$variables['deepchat_settings']['messageStyles'] = json_encode($message_styles);
 ```
 
 ### Anti-Patterns to Avoid
@@ -182,11 +182,12 @@ function social_ai_indexing_deepchat_settings(array &$deepchat_settings) {
 
 ## Common Pitfalls
 
-### Pitfall 1: DeepChat connect property is JSON-encoded string
-**What goes wrong:** The `connect` attribute on the `<deep-chat>` element is a JSON string, not an object. In `hook_deepchat_settings`, `$deepchat_settings['connect']` is already JSON-encoded by `DeepChatFormBlock::getDeepChatParameters()`.
-**Why it happens:** The block's `build()` method calls `Json::encode()` on all array values before setting them as element attributes.
-**How to avoid:** In `hook_deepchat_settings`, decode the JSON string, modify, and re-encode. Check the actual data type before manipulating.
-**Warning signs:** Chatbot sends requests without the group_id context.
+### Pitfall 1: hook_deepchat_settings CANNOT modify connect — use hook_preprocess_ai_deepchat
+**What goes wrong:** The `connect` key does not exist when `hook_deepchat_settings` fires. The hook is invoked at line 634 of `getDeepChatParameters()`, but `$deepchat['connect']` is set at line 644 AFTER the hook returns. Any value set on `connect` during the hook is immediately overwritten.
+**Why it happens:** `getDeepChatParameters()` builds style, avatar, class, errorMessages, etc. first, fires the hook, then sets `connect` and `id`, then JSON-encodes all array values (line 669-673).
+**How to avoid:** Use `hook_preprocess_ai_deepchat(&$variables)` instead. By preprocess time, `$variables['deepchat_settings']['connect']` is a JSON-encoded string. Use `json_decode()`, modify, `json_encode()` back. The same applies to `messageStyles` — it is also a JSON string at preprocess time.
+**Warning signs:** Chatbot sends requests without the group_id context. The hook function runs but has no effect.
+**Verified:** 2026-02-26, DeepChatFormBlock.php lines 634, 644, 669-673.
 
 ### Pitfall 2: Group Context Not Available on All Pages
 **What goes wrong:** `social_group.current_group->fromRunTimeContexts()` returns NULL when not on a Group page (e.g., homepage, user profile, content page not in a Group).
@@ -214,20 +215,23 @@ function social_ai_indexing_deepchat_settings(array &$deepchat_settings) {
 
 ## Code Examples
 
-### Example 1: hook_deepchat_settings for Group Context
+### Example 1: hook_preprocess_ai_deepchat for Group Context
 ```php
-// Source: Codebase analysis of DeepChatFormBlock::getDeepChatParameters() and ai_chatbot.api.php
-function social_ai_indexing_deepchat_settings(array &$deepchat_settings) {
+// Source: Codebase analysis of DeepChatFormBlock::getDeepChatParameters() lines 634-673
+// NOTE: Cannot use hook_deepchat_settings because connect is not set when that hook fires.
+function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   // Get current Group from route context.
   $group = \Drupal::service('social_group.current_group')->fromRunTimeContexts();
 
   if ($group) {
-    // Decode the connect JSON string.
-    $connect = json_decode($deepchat_settings['connect'], TRUE);
-    if (is_array($connect)) {
-      // Add group_id to the contexts sent with each message.
-      $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
-      $deepchat_settings['connect'] = json_encode($connect);
+    // connect is a JSON-encoded string at preprocess time.
+    $connect_json = $variables['deepchat_settings']['connect'] ?? NULL;
+    if (is_string($connect_json)) {
+      $connect = json_decode($connect_json, TRUE);
+      if (is_array($connect)) {
+        $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
+        $variables['deepchat_settings']['connect'] = json_encode($connect);
+      }
     }
   }
 }
@@ -309,8 +313,7 @@ social_ai_indexing.search_page:
 
 ### Example 5: AI Visual Distinction CSS
 ```css
-/* AI-generated content indicator */
-.ai-deepchat .message-bubble[data-role="ai"]::before,
+/* AI-generated content indicator (for server-rendered content, NOT Shadow DOM) */
 .ai-search-result::before {
   content: 'AI';
   display: inline-block;
@@ -325,15 +328,19 @@ social_ai_indexing.search_page:
   letter-spacing: 0.5px;
 }
 
-/* Citation links in AI responses */
-.deepchat-element a {
+/* Citation links in Related Content block (server-rendered, external CSS works) */
+.social-ai-related-content a {
   color: #4a90d9;
   text-decoration: underline;
   text-decoration-style: dotted;
 }
-.deepchat-element a:hover {
+.social-ai-related-content a:hover {
   text-decoration-style: solid;
 }
+
+/* NOTE: DeepChat uses Shadow DOM — external CSS cannot style links inside
+   message bubbles. Use DeepChat's messageStyles API for AI message distinction
+   (see Pattern 5 / Example 1). DeepChat already renders links as blue/clickable. */
 ```
 
 ## State of the Art
