@@ -8,7 +8,6 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
-use Drupal\search_api\IndexInterface;
 
 class RelatedContentService {
 
@@ -44,20 +43,27 @@ class RelatedContentService {
 
       $this->permissionFilter->applyPermissionFilters($query, $account);
 
-      if ($bundle) {
-        $query->addCondition('type', $bundle);
-      }
-
       $query->setFulltextFields(['rendered_item']);
 
       $queryText = $this->extractQueryText($entity);
       $query->keys($queryText);
 
-      $query->range(0, $limit);
+      // Request extra results when filtering by bundle, since the AI Search
+      // backend (Milvus) doesn't support filtering on the 'type' field.
+      // We filter by bundle in PHP after loading nodes instead.
+      $queryLimit = $bundle ? $limit * 3 : $limit;
+      $query->range(0, $queryLimit);
 
       $results = $query->execute();
 
-      return $this->formatResults($results->getResultItems(), (int) $entity->id());
+      $nodes = $this->formatResults($results->getResultItems(), (int) $entity->id());
+
+      // Filter by bundle in PHP since the VDB backend lacks a 'type' column.
+      if ($bundle) {
+        $nodes = array_values(array_filter($nodes, fn(NodeInterface $node) => $node->bundle() === $bundle));
+      }
+
+      return array_slice($nodes, 0, $limit);
     }
     catch (\Exception $e) {
       \Drupal::logger('social_ai_indexing')->warning(
