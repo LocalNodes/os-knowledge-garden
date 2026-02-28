@@ -1,0 +1,7 @@
+name: 'Boulder Demo Content'
+type: module
+description: 'Provides Boulder/Front Range regen community demo content for a second LocalNodes.xyz instance, showcasing Ethereum localism and watershed restoration themes.'
+core_version_requirement: ^9 || ^10
+package: LocalNodes
+dependencies:
+  - social_demo:social_demo
