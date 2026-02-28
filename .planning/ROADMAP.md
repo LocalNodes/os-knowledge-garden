@@ -151,15 +151,18 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 ### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
 
-**Goal:** LocalNodes.xyz platform is populated with bioregionalism-themed demo content showcasing all AI features built in phases 1-5
+**Goal:** LocalNodes.xyz platform is populated with bioregionalism-themed demo content showcasing all AI features built in phases 1-5, with two distinct bioregional nodes (Cascadia + Boulder) simulating the LocalNodes network
 **Depends on:** Phase 5
 **Requirements:** DEMO-SCAFFOLDING, DEMO-CONTENT, DEMO-INSTALL
-**Plans:** 3 plans in 3 waves
+**Plans:** 6 plans in 3 waves
 
 Plans:
 - [x] 06-01-PLAN.md -- Create localnodes_demo module scaffolding with 11 DemoContent plugins (Wave 1)
 - [x] 06-02-PLAN.md -- Create 11 YAML content files with bioregionalism-themed entities and AI coverage annotations (Wave 2)
 - [ ] 06-03-PLAN.md -- Remove social_demo content, install localnodes_demo content, and verify in UI (Wave 3)
+- [ ] 06-04-PLAN.md -- Create boulder_demo module scaffolding with 11 DemoContent plugins (Wave 1)
+- [ ] 06-05-PLAN.md -- Create 11 YAML content files with Boulder/Front Range regen community content showcasing Research and Question topic types (Wave 2)
+- [ ] 06-06-PLAN.md -- Install boulder_demo content and verify entities, topic types, and permissions in UI (Wave 3)
 
 ---
 *Roadmap created: 2026-02-23*
