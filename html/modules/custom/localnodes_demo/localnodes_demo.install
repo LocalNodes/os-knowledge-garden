@@ -11,7 +11,7 @@ use Drupal\taxonomy\Entity\Term;
  * Change Topic Type field to single-select and update taxonomy terms.
  *
  * - Remove "Content" term
- * - Add "Question" and "Resource" terms
+ * - Add "Question" and "Research" terms
  * - Reassign any topics using "Content" to "Blog"
  * - Trim multi-value topic type fields to single value
  */
@@ -71,7 +71,7 @@ function localnodes_demo_update_10001(&$sandbox) {
   // Add new taxonomy terms.
   $new_terms = [
     'Question' => 5,
-    'Resource' => 6,
+    'Research' => 6,
   ];
 
   foreach ($new_terms as $name => $weight) {
@@ -89,5 +89,23 @@ function localnodes_demo_update_10001(&$sandbox) {
     }
   }
 
-  return t('Updated Topic Type field: removed "Content", added "Question" and "Resource" terms, migrated data.');
+  return t('Updated Topic Type field: removed "Content", added "Question" and "Research" terms, migrated data.');
+}
+
+/**
+ * Rename "Resource" topic type to "Research".
+ */
+function localnodes_demo_update_10002(&$sandbox) {
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  $resource_terms = $term_storage->loadByProperties([
+    'vid' => 'topic_types',
+    'name' => 'Resource',
+  ]);
+
+  foreach ($resource_terms as $term) {
+    $term->setName('Research');
+    $term->save();
+  }
+
+  return t('Renamed "Resource" topic type to "Research".');
 }
