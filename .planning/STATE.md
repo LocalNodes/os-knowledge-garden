@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:58:54.521Z"
+last_updated: "2026-02-28T10:11:10.453Z"
 progress:
   total_phases: 9
-  completed_phases: 5
-  total_plans: 23
-  completed_plans: 21
+  completed_phases: 6
+  total_plans: 26
+  completed_plans: 23
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 5: User Interface (filling gap)
+**Current focus:** Phase 6: Demo Content (Boulder instance)
 
 ## Current Position
 
-Phase: 05.1 (Split Related Content Block) - Complete
-Plan: 1 of 1 in current phase
-Status: Phases 7 & 8 resolved (bookkeeping). All v1 requirements complete.
-Last activity: 2026-02-27 — Fixed corrupted docs, updated REQUIREMENTS.md (30/30 complete)
+Phase: 06 (Create Demo Content) - In Progress
+Plan: 4 of 6 complete in current phase
+Status: Boulder demo module scaffolding complete. Plans 06-05 and 06-06 remaining.
+Last activity: 2026-02-28 — Created boulder_demo module with 11 DemoContent plugins
 
-Progress: [█████████████] 100% (core requirements)
+Progress: [██████████████████████░░] 88% (23/26 plans)
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Progress: [█████████████] 100% (core requirements)
 | 3. Permission-Aware Retrieval | 3/3 | 35 min | 12 min |
 | 4. Q&A & Search | 2/3 | 35 min | 18 min |
 | 5. User Interface | 3/3 | 4 min | 2 min |
-| 6. Demo Content | 2/3 | 14 min | 7 min |
+| 6. Demo Content | 3/6 | 16 min | 5 min |
 
 **Recent Trend:**
 - Last 5 plans: 05.1-01 (1 min), 05-02 (2 min), 05-01 (2 min), 04-03 (8 min), 06-02 (11 min)
@@ -68,6 +68,7 @@ Progress: [█████████████] 100% (core requirements)
 | Phase 05-user-interface P01 | 2 min | 2 tasks | 3 files |
 | Phase 05-user-interface PP02 | 2 min | 2 tasks | 6 files |
 | Phase 05.1-split-related-content P01 | 1 min | 2 tasks | 5 files |
+| Phase 06 P04 | 2 min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,7 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Empty CSS placeholder created for Plan 05-03 to avoid Drupal asset warnings
 - [Phase 05.1-01]: Used single parameterized block plugin rather than two separate block classes
 - [Phase 05.1-01]: Events subtitle "happening soon" vs topics subtitle "in the community" for contextual relevance
+- [Phase 06]: Followed localnodes_demo pattern exactly for boulder_demo -- thin subclasses, no services.yml
 
 ### Roadmap Evolution
 
@@ -132,9 +134,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Phases 7 & 8 resolved. All 30/30 v1 requirements complete. Remaining: Phase 6 (06-03)
+Last session: 2026-02-28
+Stopped at: Completed 06-04-PLAN.md (Boulder demo module scaffolding). Remaining: 06-05, 06-06
 
 ---
 *State initialized: 2026-02-23*
-*Last updated: 2026-02-27*
+*Last updated: 2026-02-28*
