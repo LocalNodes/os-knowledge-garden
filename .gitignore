@@ -34,3 +34,4 @@ private/
 
 # DDEV service volumes (binary runtime data)
 .ddev/milvus/volumes/
+.ddev/qdrant/

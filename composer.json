@@ -21,7 +21,8 @@
         "drupal/ai_provider_openai": "^1.2",
         "drupal/search_api": "^1.40",
         "drupal/gemini_provider": "1.x-dev",
-        "league/commonmark": "^2.8"
+        "league/commonmark": "^2.8",
+        "drupal/ai_vdb_provider_qdrant": "1.0.x-dev"
     },
     "repositories": [
         {
@@ -89,6 +90,9 @@
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
+            },
+            "drupal/ai_vdb_provider_qdrant": {
+                "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"
             }
         }
     },

@@ -1,0 +1,25 @@
+services:
+  qdrant:
+    container_name: ddev-${DDEV_SITENAME}-qdrant
+    image: qdrant/qdrant:v1.13.2
+    restart: unless-stopped
+    volumes:
+      - ./qdrant/storage:/qdrant/storage
+    expose:
+      - "6333"
+      - "6334"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      - VIRTUAL_HOST=${DDEV_SITENAME}.ddev.site
+      - HTTP_EXPOSE=6333:6333
+      - HTTPS_EXPOSE=6334:6333
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    profiles:
+      - qdrant

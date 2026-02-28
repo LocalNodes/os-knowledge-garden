@@ -1,0 +1,19 @@
+diff --git a/src/QdrantClient.php b/src/QdrantClient.php
+index ecf10ac..8035d35 100644
+--- a/src/QdrantClient.php
++++ b/src/QdrantClient.php
+@@ -240,13 +240,8 @@ class QdrantClient {
+       return;
+     }
+ 
+-    // Convert drupal entity IDs to point IDs.
+-    $point_ids = array_map(function ($id) {
+-      return md5($id);
+-    }, $ids);
+-
+     $payload = [
+-      'points' => $point_ids,
++      'points' => array_values($ids),
+     ];
+ 
+     try {
