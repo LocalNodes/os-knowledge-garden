@@ -86,6 +86,9 @@
             },
             "drupal/ai_provider_deepseek": {
                 "Add chat_with_tools support via direct Guzzle API calls": "patches/deepseek-provider-chat-with-tools-support.patch"
+            },
+            "goalgorilla/open_social": {
+                "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
             }
         }
     },
