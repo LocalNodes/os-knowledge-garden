@@ -1,0 +1,210 @@
+---
+# 8 events for Boulder regen community
+# AI Coverage: Events in Governance Circle group exercise permission-filtered retrieval
+# AI Coverage: Public events exercise community-wide search
+# AI Coverage: Past events exercise historical content retrieval
+
+# Event 1: Front Range Bioregional Assembly (future +30 day, community, Watershed Hub)
+e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1:
+  uuid: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
+  title: Front Range Bioregional Assembly
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Join us for the first Front Range Bioregional Assembly, bringing together stewards, builders, and organizers from across Boulder County and the greater South Platte watershed. This is where delegates from every working group come together to share reports, make collective decisions, and strengthen the bonds that hold our bioregional network together.</p>
+
+    <p>This year's assembly will focus on three themes: Front Range watershed health indicators from our community science monitoring, the proposal for a quadratic funding round for local public goods, and polycentric governance in practice -- bridging DAO tools with consensus-based facilitation. Each group will present their seasonal stewardship report.</p>
+
+    <p>Whether you have been building beaver dam analogs on Caribou Ranch, running mutual credit experiments, growing food forests in Longmont, or hacking at RegenHub, the Assembly is your chance to see how all these threads weave together into a coherent bioregional practice. Come learn, contribute, and celebrate the living systems of the Front Range.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 1750 13th Street
+  field_event_date: +30 day|09:00
+  field_event_date_end: +30 day|18:00
+  image: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
+  image_alt: Front Range mountain landscape
+  field_event_location: Boulder Creek Event Center
+  field_content_visibility: community
+  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Event 2: Beaver Dam Analog Build Day at Caribou Ranch (future +14 day, public, no group)
+e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2:
+  uuid: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
+  title: Beaver Dam Analog Build Day at Caribou Ranch
+  type: event
+  langcode: en
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  body: >
+    <p>Come get your hands muddy! Join us at Caribou Ranch Open Space for a hands-on beaver dam analog (BDA) build day. BDAs are simple, low-tech structures -- posts driven into the streambed with woven willow branches -- that mimic the function of natural beaver dams. They slow water, raise water tables, and help degraded streams rebuild their braided channels and floodplain connectivity.</p>
+
+    <p>This is low-tech process-based restoration (LTPBR) in action. No engineering degree required -- just a willingness to stand in a cold stream and weave branches. Rowan will lead the installation, explaining the science behind beaver mimicry structures and how they transform stream complexity over time. We will build 3-5 structures on a tributary that has been incised from decades of channel straightening.</p>
+
+    <p>Bring waterproof boots, warm layers, work gloves, and lunch. Tools and materials provided. All skill levels welcome -- this is how we learn to restore the Front Range one stream reach at a time.</p>
+  field_event_address:
+    country_code: US
+    locality: Nederland
+    postal_code: 80466
+    address_line1: Highway 72
+  field_event_date: +14 day|09:00
+  field_event_date_end: +14 day|15:00
+  image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
+  image_alt: Stream restoration site
+  field_event_location: Caribou Ranch Open Space
+  field_content_visibility: public
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+
+# Event 3: RegenHub Open House & Community Potluck (future +21 day, public, RegenHub)
+e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3:
+  uuid: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
+  title: "RegenHub Open House & Community Potluck"
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>Come see what RegenHub Boulder is all about! This open house is your chance to tour our co-working space, meet the people building tools and tending land in our community, and share a meal together. RegenHub is where the regen tech builders meet the watershed stewards -- where hackathons happen down the hall from seed-sorting sessions.</p>
+
+    <p>We will have short lightning talks from community members about their current projects, plus a potluck dinner featuring food from Front Range farms and gardens. Bring a dish to share if you can. This is the social glue that holds our community together -- come for the food, stay for the connections.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 1310 College Avenue
+  field_event_date: +21 day|17:00
+  field_event_date_end: +21 day|21:00
+  image: a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f
+  image_alt: Community gathering space
+  field_event_location: RegenHub Boulder
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ddee4455-6677-4889-90aa-122334455667
+
+# Event 4: Monthly Governance Circle (past -14 day, community, Governance Circle)
+# AI Coverage: Past event in closed group exercises permission filtering for historical content
+e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4:
+  uuid: e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4
+  title: Monthly Governance Circle
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Our regular monthly governance circle where council members discuss current proposals, review stewardship reports, and practice hybrid consensus-DAO decision making. This month's agenda includes the Q2 treasury allocation, the proposal for a Front Range quadratic funding round, and a discussion about expanding the governance circle to include youth representatives from Next Gen Front Range.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 900 Baseline Road
+  field_event_date: -14 day|18:00
+  field_event_date_end: -14 day|21:00
+  image:
+  image_alt:
+  field_event_location: Online via Zoom
+  field_content_visibility: community
+  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
+  group: eeff5566-7788-4990-0aa1-233445566778
+
+# Event 5: Seed Swap & High-Altitude Growing Workshop (future +7 day, community, Food Commons)
+e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5:
+  uuid: e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5
+  title: "Seed Swap & High-Altitude Growing Workshop"
+  type: event
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  body: >
+    <p>Bring your saved seeds, plant starts, and growing tips to share with fellow Front Range growers. This is our spring seed swap where we strengthen the genetic diversity of our regional food systems by exchanging locally adapted varieties that thrive at 5,400 feet in our semi-arid climate.</p>
+
+    <p>Lucia will lead a workshop on high-altitude permaculture techniques -- including water harvesting, wind protection, and season extension strategies for the Front Range's short growing season. We will have tables organized by plant family and a special section for heirloom Colorado varieties. Even if you do not have seeds to bring, come learn and take home something to grow. Food sovereignty starts in the seed.</p>
+  field_event_address:
+    country_code: US
+    locality: Longmont
+    postal_code: 80501
+    address_line1: 640 Main Street
+  field_event_date: +7 day|10:00
+  field_event_date_end: +7 day|13:00
+  image: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
+  image_alt: Seed swap and garden plants
+  field_event_location: Longmont Farmstead
+  field_content_visibility: community
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ccdd3344-5566-4778-8990-011223344556
+
+# Event 6: Quadratic Funding Workshop (future +45 day, community, Regen Tech)
+e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6:
+  uuid: e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6
+  title: "Quadratic Funding Workshop: How to Run a Local QF Round"
+  type: event
+  langcode: en
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  body: >
+    <p>Learn how quadratic funding works and how to run a local QF round for Front Range public goods. QF is a democratic funding mechanism where many small contributions are amplified by a matching pool -- meaning projects that matter to the most people get the most funding, regardless of how wealthy individual donors are. Think of it as Gitcoin-style funding rounds but for your bioregion.</p>
+
+    <p>Devon will walk through the mechanics of QF, share case studies from successful rounds in other communities, and lead a hands-on exercise designing a pilot round for Boulder. We will discuss what kinds of projects to include (watershed restoration, food commons, community infrastructure, mutual aid), how to structure the matching pool, and how to use the Schelling Point App for transparent voting.</p>
+
+    <p>This workshop is for anyone curious about Ethereum localism in practice -- no crypto background needed. We will focus on the coordination mechanism, not the technology stack. Public goods funding is about community priorities, not protocol complexity.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80309
+    address_line1: 1125 18th Street
+  field_event_date: +45 day|13:00
+  field_event_date_end: +45 day|17:00
+  image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
+  image_alt: Workshop space
+  field_event_location: CU Boulder ATLAS Center
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: bbcc2233-4455-4667-7889-900112233445
+
+# Event 7: Summer Solstice Gathering at Boulder Creek (future +60 day, public, no group)
+e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7:
+  uuid: e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7
+  title: Summer Solstice Gathering at Boulder Creek
+  type: event
+  langcode: en
+  uid: 44556677-8899-400a-abb0-cddeeff01223
+  body: >
+    <p>Gather with your community to celebrate the summer solstice and honor the waters that sustain the Front Range. This is a time for storytelling, song, shared food, and renewing our commitment to the land and water of this bioregion.</p>
+
+    <p>Talia Redhawk will open the gathering with an acknowledgment of the Arapaho and Cheyenne peoples whose territory includes the Front Range and whose relationship to these waters stretches back thousands of years. We will hold community sharing circles along Boulder Creek, followed by a potluck feast featuring food grown within our bioregion. Bring something to share -- food, a story, a song, or simply your presence.</p>
+
+    <p>This gathering is open to everyone. Come celebrate the longest day of the year where the mountains meet the plains, where the Continental Divide sends water on its 2,000-mile journey to the Gulf.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 3rd and Arapahoe
+  field_event_date: +60 day|16:00
+  field_event_date_end: +60 day|21:00
+  image: b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90
+  image_alt: Boulder Creek landscape
+  field_event_location: Eben G. Fine Park
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+
+# Event 8: Community Science Data Jam (past -30 day, community, Watershed Hub)
+e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
+  uuid: e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8
+  title: Community Science Data Jam
+  type: event
+  langcode: en
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  body: >
+    <p>Watershed monitors, data scientists, and community members gathered for a full-day data jam to analyze the latest water quality data from our monitoring stations along Boulder Creek and South Platte tributaries. Zara Okafor led this session, combining CU Boulder research methods with community science data collected by volunteer monitors throughout the season.</p>
+
+    <p>Key findings: dissolved oxygen levels have improved significantly in reaches where beaver dam analogs were installed two years ago. Turbidity data shows that BDA sites are capturing sediment and rebuilding floodplain soils. The community science dashboard has been updated with all new data -- check the Watershed Hub group files for access.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80303
+    address_line1: 4001 Discovery Drive
+  field_event_date: -30 day|09:00
+  field_event_date_end: -30 day|17:00
+  image:
+  image_alt:
+  field_event_location: CU Boulder Environmental Center
+  field_content_visibility: community
+  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+  group: aabb1122-3344-4556-6778-899001122334

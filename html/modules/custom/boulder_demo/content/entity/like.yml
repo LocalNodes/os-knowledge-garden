@@ -1,0 +1,99 @@
+---
+# 9 likes for Boulder regen community
+# Spread across popular topics and posts to create engagement signals
+
+# Likes on "Welcome to Boulder Node" topic (3 likes - popular)
+l1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1l001:
+  uuid: l1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1l001
+  type: like
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+l2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2l002:
+  uuid: l2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2l002
+  type: like
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+l3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3l003:
+  uuid: l3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3l003
+  type: like
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on "Ethereum Localism" topic
+l4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4l004:
+  uuid: l4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4l004
+  type: like
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  entity_id: t2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on "BDA Research" topic
+l5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5l005:
+  uuid: l5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5l005
+  type: like
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  entity_id: t5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a50005
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Likes on posts (4 likes)
+# Like on welcome post (Post 1)
+l6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6l006:
+  uuid: l6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6l006
+  type: like
+  uid: 55667788-9900-4aab-bcc0-ddeeff012334
+  entity_id: p1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on watershed data post (Post 2)
+l7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7l007:
+  uuid: l7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7l007
+  type: like
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  entity_id: p2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on Cascadia cross-node post (Post 4)
+l8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8l008:
+  uuid: l8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8l008
+  type: like
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  entity_id: p4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on youth ambassador post (Post 18)
+l9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9l009:
+  uuid: l9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9l009
+  type: like
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  entity_id: p18c8d8e8-f8a8-4b8c-d8e8-f8a8b8c80018
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost

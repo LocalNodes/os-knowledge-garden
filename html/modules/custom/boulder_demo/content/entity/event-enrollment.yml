@@ -1,0 +1,93 @@
+---
+# 10 event enrollments for Boulder regen community
+# Distributed across future events: 3+2+2+2+1
+
+# Enrollments for Front Range Bioregional Assembly (+30 day) -- 3 enrollments
+en1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1e001:
+  uuid: en1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1e001
+  title: mira_watershed @ Front Range Bioregional Assembly
+  langcode: en
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  field_event: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
+  field_enrollment_status: 1
+  field_account: aa11bb22-cc33-4dd4-ee55-ff6677889900
+en2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2e002:
+  uuid: en2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2e002
+  title: kai_regentech @ Front Range Bioregional Assembly
+  langcode: en
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  field_event: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
+  field_enrollment_status: 1
+  field_account: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+en3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3e003:
+  uuid: en3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3e003
+  title: devon_currencies @ Front Range Bioregional Assembly
+  langcode: en
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  field_event: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
+  field_enrollment_status: 1
+  field_account: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+
+# Enrollments for BDA Build Day (+14 day) -- 2 enrollments
+en4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4e004:
+  uuid: en4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4e004
+  title: finn_youth @ Beaver Dam Analog Build Day at Caribou Ranch
+  langcode: en
+  uid: 55667788-9900-4aab-bcc0-ddeeff012334
+  field_event: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
+  field_enrollment_status: 1
+  field_account: 55667788-9900-4aab-bcc0-ddeeff012334
+en5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5e005:
+  uuid: en5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5e005
+  title: zara_datascience @ Beaver Dam Analog Build Day at Caribou Ranch
+  langcode: en
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  field_event: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
+  field_enrollment_status: 1
+  field_account: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+
+# Enrollments for Seed Swap (+7 day) -- 2 enrollments
+en6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6e006:
+  uuid: en6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6e006
+  title: talia_indigenous @ Seed Swap and High-Altitude Growing Workshop
+  langcode: en
+  uid: 44556677-8899-400a-abb0-cddeeff01223
+  field_event: e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5
+  field_enrollment_status: 1
+  field_account: 44556677-8899-400a-abb0-cddeeff01223
+en7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7e007:
+  uuid: en7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7e007
+  title: rowan_beaver @ Seed Swap and High-Altitude Growing Workshop
+  langcode: en
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  field_event: e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5
+  field_enrollment_status: 1
+  field_account: 11223344-5566-4778-8990-aabbccddeef0
+
+# Enrollments for QF Workshop (+45 day) -- 2 enrollments
+en8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8e008:
+  uuid: en8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8e008
+  title: sage_governance @ Quadratic Funding Workshop
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  field_event: e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6
+  field_enrollment_status: 1
+  field_account: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+en9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9e009:
+  uuid: en9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9e009
+  title: marco_solar @ Quadratic Funding Workshop
+  langcode: en
+  uid: 33445566-7788-4990-0aab-bccddeeff012
+  field_event: e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6
+  field_enrollment_status: 1
+  field_account: 33445566-7788-4990-0aab-bccddeeff012
+
+# Enrollment for RegenHub Open House (+21 day) -- 1 enrollment
+en10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0e010:
+  uuid: en10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0e010
+  title: lucia_foodcommons @ RegenHub Open House and Community Potluck
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  field_event: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
+  field_enrollment_status: 1
+  field_account: cc33dd44-ee55-4ff6-6778-89900aa11bb2

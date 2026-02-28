@@ -1,0 +1,213 @@
+---
+# 18 social posts for Boulder regen community
+# AI Coverage: Posts with visibility 3 in groups exercise group-scoped retrieval
+# AI Coverage: Posts with visibility 0 (direct messages) exercise recipient-only filtering
+# AI Coverage: Cross-group posts exercise community-wide search
+# AI Coverage: Cross-node references to Cascadia create network effect simulation
+
+# Post 1: Welcome post (community, no group) -- boulder_admin
+p1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001:
+  uuid: p1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  langcode: en
+  type: post
+  uid: 66778899-00aa-4bbc-cdd0-eeff01223344
+  field_visibility: 1
+  created: -30 day|09:00
+  field_post: >
+    Welcome to the Boulder LocalNodes instance! This is our shared digital commons for regenerative organizing across the Front Range. Join a group, introduce yourself, and start connecting with fellow builders, stewards, and organizers. Where mountains meet the mesh, community meets coordination.
+
+# Post 2: Group-scoped resource sharing in Watershed Hub (group visibility)
+p2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002:
+  uuid: p2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002
+  langcode: en
+  type: post
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  field_visibility: 3
+  created: -28 day|14:30
+  group: aabb1122-3344-4556-6778-899001122334
+  field_post: >
+    Just uploaded the latest water quality data from our 23 monitoring stations along Boulder Creek and South St. Vrain. Dissolved oxygen levels are looking great in the BDA reaches -- up 30% from baseline. Check the group files for the full dataset and Zara's analysis dashboard.
+
+# Post 3: Group-scoped resource sharing in Regen Tech (group visibility)
+p3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a30003:
+  uuid: p3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a30003
+  langcode: en
+  type: post
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  field_visibility: 3
+  created: -26 day|10:00
+  group: bbcc2233-4455-4667-7889-900112233445
+  field_post: >
+    Found a great technical writeup on running Gitcoin-style QF rounds at the community level. The key insight: smaller matching pools actually work better for local rounds because they concentrate impact. Sharing in the group files for anyone working on the QF proposal.
+
+# Post 4: Cross-group community update (community, no group) -- CROSS-NODE REFERENCE
+p4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004:
+  uuid: p4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  langcode: en
+  type: post
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  field_visibility: 1
+  created: -25 day|11:15
+  field_post: >
+    Just learned about Cascadia's community land trust model from the network -- could we adapt something similar for Front Range housing? Their commons-based approach to holding land for community benefit is exactly what Boulder needs as housing prices keep pushing out the people who actually steward this place. Anyone interested in exploring a Front Range land trust?
+
+# Post 5: Cross-group community update (community, no group) -- CROSS-NODE REFERENCE
+p5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a50005:
+  uuid: p5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a50005
+  langcode: en
+  type: post
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  field_visibility: 1
+  created: -24 day|16:45
+  field_post: >
+    The Cascadia node's watershed monitoring protocols are excellent -- we are adapting them for Boulder Creek. Their dissolved oxygen sampling methodology is more rigorous than what we have been using, and their volunteer training guide is really well done. This is cosmo-local coordination in action: knowledge shared freely between bioregional nodes, adapted for local conditions.
+
+# Post 6: Direct message (recipient only)
+p6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60006:
+  uuid: p6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60006
+  langcode: en
+  type: post
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  field_visibility: 0
+  recipient: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  created: -22 day|08:30
+  field_post: >
+    Hi Mira, I scouted the upper tributary at Caribou Ranch yesterday for the next BDA build day. Found three perfect installation sites where the channel is incised about 4 feet. We will need about 200 willow branches and 30 posts. Can the Watershed Collective supply materials, or should I coordinate with Boulder County Open Space?
+
+# Post 7: Direct message about QF proposal
+p7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a70007:
+  uuid: p7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a70007
+  langcode: en
+  type: post
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  field_visibility: 0
+  recipient: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  created: -20 day|13:30
+  field_post: >
+    Sage, can we discuss the QF matching pool allocation before the next governance circle? I want to make sure the treasury proposal is solid. Also curious about your thoughts on using snapshot voting alongside the consensus process -- would that be too much process, or does it strengthen accountability?
+
+# Post 8: Direct message about food forest
+p8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a80008:
+  uuid: p8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a80008
+  langcode: en
+  type: post
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  field_visibility: 0
+  recipient: 44556677-8899-400a-abb0-cddeeff01223
+  created: -18 day|09:45
+  field_post: >
+    Talia, I would love your input on the food forest design I am working on for the Longmont site. I want to include native plants that have traditional significance -- chokecherry, wild plum, serviceberry. Would you be willing to share knowledge about Arapaho relationships with these plants? I want to honor that history in the design.
+
+# Post 9: Event-related post about BDA build day (public)
+p9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a90009:
+  uuid: p9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a90009
+  langcode: en
+  type: post
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  field_visibility: 2
+  created: -17 day|15:00
+  field_post: >
+    The BDA Build Day at Caribou Ranch is filling up! We have 18 volunteers signed up so far. Bring waterproof boots, work gloves, and lunch -- we will be standing in cold water weaving willow branches into beaver mimicry structures. This is low-tech process-based restoration at its finest. No engineering degree required, just a love of streams.
+
+# Post 10: Event-related post about seed swap (community)
+p10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a00010:
+  uuid: p10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a00010
+  langcode: en
+  type: post
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  field_visibility: 1
+  created: -15 day|11:20
+  field_post: >
+    Reminder: Seed Swap and High-Altitude Growing Workshop next week at Longmont Farmstead! I am bringing heirloom Colorado tomato starts, high-altitude bean varieties, and some experimental quinoa seed adapted to 5,400 feet. What are you bringing? Food sovereignty on the Front Range starts with seeds that know this place.
+
+# Post 11: Question / mutual aid post (community)
+p11b1c1d1-e1f1-4a1b-c1d1-e1f1a1b10011:
+  uuid: p11b1c1d1-e1f1-4a1b-c1d1-e1f1a1b10011
+  langcode: en
+  type: post
+  uid: 55667788-9900-4aab-bcc0-ddeeff012334
+  field_visibility: 1
+  created: -14 day|09:00
+  field_post: >
+    Does anyone have experience with community science monitoring equipment? Next Gen Front Range wants to start a youth watershed monitoring program on Bear Creek, but we need affordable dissolved oxygen meters and turbidity tubes. Any recommendations? Or better yet, does anyone have equipment they could lend or share?
+
+# Post 12: Question / mutual aid post (community)
+p12c2d2e2-f2a2-4b2c-d2e2-f2a2b2c20012:
+  uuid: p12c2d2e2-f2a2-4b2c-d2e2-f2a2b2c20012
+  langcode: en
+  type: post
+  uid: 33445566-7788-4990-0aab-bccddeeff012
+  field_visibility: 1
+  created: -12 day|16:00
+  field_post: >
+    Looking for folks interested in a cooperative solar installation at RegenHub. Colorado gives us 300 days of sunshine and we are not using it! The Front Range Solar Coop could coordinate the install. If we pair it with Devon's community currency pilot, members could pay for their share in mutual credit. Anyone interested?
+
+# Post 13: Photo post with image (community)
+p13d3e3f3-a3b3-4c3d-e3f3-a3b3c3d30013:
+  uuid: p13d3e3f3-a3b3-4c3d-e3f3-a3b3c3d30013
+  langcode: en
+  type: photo
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  field_visibility: 1
+  created: -10 day|08:45
+  field_post: >
+    Sunrise over Boulder Creek this morning from the BDA monitoring site above Nederland. You can see the beaver dam analog structure in the middle distance -- already creating a beautiful pool-riffle sequence. Two years ago this was an incised, degraded channel. Now it is coming back to life. This is what low-tech restoration looks like.
+  field_post_image: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
+
+# Post 14: Photo post with image (community)
+p14e4f4a4-b4c4-4d4e-f4a4-b4c4d4e40014:
+  uuid: p14e4f4a4-b4c4-4d4e-f4a4-b4c4d4e40014
+  langcode: en
+  type: photo
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  field_visibility: 1
+  created: -8 day|14:15
+  field_post: >
+    The food forest at the Longmont site is waking up after winter! Chokecherry and serviceberry are leafing out, the garlic is 6 inches tall, and the first asparagus spears are poking through. At 5,400 feet with 18 inches of rain, every green shoot feels like a small miracle. Permaculture on the Front Range requires patience, observation, and really good water harvesting.
+  field_post_image: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
+
+# Post 15: Group-only post in Governance Circle
+p15f5a5b5-c5d5-4e5f-a5b5-c5d5e5f50015:
+  uuid: p15f5a5b5-c5d5-4e5f-a5b5-c5d5e5f50015
+  langcode: en
+  type: post
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  field_visibility: 3
+  created: -7 day|10:00
+  group: eeff5566-7788-4990-0aa1-233445566778
+  field_post: >
+    Circle members: please review the treasury allocation proposal before our next meeting. The key decision point is the QF matching pool size -- $3,000 vs $1,500. I have also drafted a proposal for adding a youth observer seat on the governance circle. Finn from Next Gen Front Range has been doing excellent cross-group work and their generation deserves representation in our decision-making.
+
+# Post 16: Group-only post in Food Commons
+p16a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60016:
+  uuid: p16a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60016
+  langcode: en
+  type: post
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  field_visibility: 3
+  created: -5 day|15:30
+  group: ccdd3344-5566-4778-8990-011223344556
+  field_post: >
+    Food Commons members: the community garden plot assignments for the Longmont site are open for the season. If you want to grow food on shared land, fill out the application in our group files. Priority goes to growers who will contribute to the food rescue network. Talia has suggested we dedicate a section to native food plants -- I think that is a beautiful idea.
+
+# Post 17: Public engagement post -- CROSS-NODE REFERENCE
+p17b7c7d7-e7f7-4a7b-c7d7-e7f7a7b70017:
+  uuid: p17b7c7d7-e7f7-4a7b-c7d7-e7f7a7b70017
+  langcode: en
+  type: post
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  field_visibility: 2
+  created: -3 day|10:00
+  field_post: >
+    RegenHub Open House next week! Come see where Boulder's regen community gathers -- from ETHBoulder hackathons to community potlucks to seed-sorting sessions. This is what the cosmo-local network looks like at the node level: a physical space where technology serves place and people actually know each other's names. Bring food to share!
+
+# Post 18: Public engagement post
+p18c8d8e8-f8a8-4b8c-d8e8-f8a8b8c80018:
+  uuid: p18c8d8e8-f8a8-4b8c-d8e8-f8a8b8c80018
+  langcode: en
+  type: post
+  uid: 55667788-9900-4aab-bcc0-ddeeff012334
+  field_visibility: 2
+  created: -1 day|14:00
+  field_post: >
+    Next Gen Front Range is launching a youth watershed ambassador program for the Front Range! If you know young people aged 16-25 who care about streams, soil, and building new coordination systems, send them our way. We train them in watershed monitoring, regen tech basics, and community organizing. The future of bioregionalism is intergenerational -- and it is being built right here on the Front Range.

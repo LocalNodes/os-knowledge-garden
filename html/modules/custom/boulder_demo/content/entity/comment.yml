@@ -1,0 +1,190 @@
+---
+# 14 comments for Boulder regen community
+# AI Coverage: Comments exercise parent-context retrieval (CommentParentContext processor)
+# AI Coverage: Threaded replies test context chain
+# AI Coverage: Comments across different entity types test comment indexing completeness
+
+# --- Comments on "Welcome to Boulder Node" topic (3 comments, 1 threaded) ---
+c1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1c001:
+  uuid: c1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1c001
+  uid: 55667788-9900-4aab-bcc0-ddeeff012334
+  type: comment
+  langcode: en
+  body: >
+    This is exactly the kind of platform our community needs! As a young organizer bridging regen tech and watershed work, I have been looking for a space where both worlds can connect. Excited to see the Boulder node come alive. Mountains meet the mesh indeed.
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  field_name: field_topic_comments
+  created: -29 day|10:30
+
+c2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2c002:
+  uuid: c2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2c002
+  uid: 44556677-8899-400a-abb0-cddeeff01223
+  type: comment
+  langcode: en
+  body: >
+    Thank you for this introduction. I want to emphasize that any platform for bioregional organizing on the Front Range must acknowledge that this is Arapaho and Cheyenne territory. The waters of Boulder Creek have been tended by indigenous peoples long before the city existed. I look forward to contributing that perspective here.
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  field_name: field_topic_comments
+  created: -28 day|14:00
+
+# Threaded reply to Talia's comment
+c3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3c003:
+  uuid: c3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3c003
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  type: comment
+  langcode: en
+  parent: c2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2c002
+  body: >
+    Absolutely, Talia. RegenHub has been working to center indigenous voices in our programming. We would love to have you lead a session on Arapaho water relationships at the next community gathering. The regen tech builders need to hear this perspective -- good coordination tools must be grounded in right relationship with the land and its original stewards.
+  entity_id: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  entity_type: node
+  field_name: field_topic_comments
+  created: -27 day|09:15
+
+# --- Comments on "Proposal: QF Round" topic (3 comments, threaded discussion) ---
+c4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4c004:
+  uuid: c4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4c004
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  type: comment
+  langcode: en
+  body: >
+    This is a strong proposal, Devon. From the tech side, I can help build the smart contract infrastructure for the matching pool. We should use a simple QF implementation rather than the full Gitcoin stack -- something we can explain to everyone in the community, not just the developers. Credibly neutral means transparent and understandable.
+  entity_id: t4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  entity_type: node
+  field_name: field_topic_comments
+  created: -16 day|11:00
+
+# Threaded reply to Kai's comment
+c5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5c005:
+  uuid: c5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5c005
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  type: comment
+  langcode: en
+  parent: c4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4c004
+  body: >
+    I would love to see watershed restoration projects eligible in the QF round. We need monitoring equipment, BDA materials, and native plant stock. Having the community vote on which restoration projects get funding would be powerful -- it connects the tech coordination layer directly to the land work. That is the whole point of Ethereum localism.
+  entity_id: t4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  entity_type: node
+  field_name: field_topic_comments
+  created: -15 day|14:30
+
+c6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6c006:
+  uuid: c6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6c006
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  type: comment
+  langcode: en
+  parent: c5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5c005
+  body: >
+    From the governance perspective, I support allocating treasury funds to the matching pool. But let us make sure the QF round includes clear categories so community members can direct their contributions meaningfully. And we should run a practice round first with a small pool before committing the full $3,000.
+  entity_id: t4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  entity_type: node
+  field_name: field_topic_comments
+  created: -14 day|08:45
+
+# --- Comments on events (3 comments on different events) ---
+# Comment on BDA Build Day event
+c7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7c007:
+  uuid: c7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7c007
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  type: comment
+  langcode: en
+  body: >
+    I will bring the portable water quality monitoring kits from CU so we can do baseline measurements before and after the BDA installation. It would be great data for our community science dashboard. Also a perfect opportunity to train new volunteer monitors on the equipment.
+  entity_id: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
+  entity_type: node
+  field_name: field_event_comments
+  created: -10 day|09:00
+
+# Comment on Solstice Gathering event
+c8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8c008:
+  uuid: c8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8c008
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  type: comment
+  langcode: en
+  body: >
+    I will handle the logistics for the potluck -- tables, plates, utensils from RegenHub's event kit. Can we also set up a community currency exchange table? It would be a natural way to introduce the mutual credit pilot to people who come to the gathering. Exchange hours of labor for food contributions, that kind of thing.
+  entity_id: e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7
+  entity_type: node
+  field_name: field_event_comments
+  created: -5 day|12:30
+
+# Comment on Community Science Data Jam event
+c9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9c009:
+  uuid: c9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9c009
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  type: comment
+  langcode: en
+  body: >
+    The BDA monitoring data from the data jam is really encouraging. The 18-inch water table rise at our Caribou Ranch sites is even better than what the literature predicted for first-year installations. I think the Front Range's snowmelt hydrology might actually be advantageous for BDA performance. Writing up the full analysis for a Research topic on the platform.
+  entity_id: e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8
+  entity_type: node
+  field_name: field_event_comments
+  created: -3 day|16:00
+
+# --- Comments on posts (5 comments across different post types) ---
+# Comment on the monitoring equipment question post (Post 11)
+c10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0c010:
+  uuid: c10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0c010
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  type: post_comment
+  langcode: en
+  body: >
+    Finn, CU Boulder Env Studies has monitoring kits that we can lend for the youth program. I have portable DO meters and turbidity tubes that are designed for volunteer use. Come to the lab and I will train you on them -- then you can train the youth ambassadors. Community science grows by sharing equipment and knowledge.
+  entity_id: p11b1c1d1-e1f1-4a1b-c1d1-e1f1a1b10011
+  entity_type: post
+  field_name: field_post_comments
+  created: -13 day|11:00
+
+# Comment on the solar coop post (Post 12)
+c11b1c1d1-e1f1-4a1b-c1d1-e1f1a1b1c011:
+  uuid: c11b1c1d1-e1f1-4a1b-c1d1-e1f1a1b1c011
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  type: post_comment
+  langcode: en
+  body: >
+    Marco, pairing the solar coop with community currency is a brilliant idea. Members could pay for their solar shares in mutual credit hours -- gardening, childcare, tech support, whatever they contribute to the community. This is exactly the kind of integration that makes Ethereum localism real rather than theoretical.
+  entity_id: p12c2d2e2-f2a2-4b2c-d2e2-f2a2b2c20012
+  entity_type: post
+  field_name: field_post_comments
+  created: -11 day|09:30
+
+# Comment on the BDA sunrise photo post (Post 13)
+c12c2d2e2-f2a2-4b2c-d2e2-f2a2b2c2c012:
+  uuid: c12c2d2e2-f2a2-4b2c-d2e2-f2a2b2c2c012
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  type: post_comment
+  langcode: en
+  body: >
+    That pool-riffle sequence is beautiful, Rowan. Two years from degraded channel to this -- BDAs are incredible. I showed this photo to the Boulder Watershed Collective board and they want to expand our partnership for next season. More funding, more sites, more community volunteers. The streams are responding.
+  entity_id: p13d3e3f3-a3b3-4c3d-e3f3-a3b3c3d30013
+  entity_type: post
+  field_name: field_post_comments
+  created: -9 day|10:00
+
+# Comment on the youth ambassador post (Post 18)
+c13d3e3f3-a3b3-4c3d-e3f3-a3b3c3d3c013:
+  uuid: c13d3e3f3-a3b3-4c3d-e3f3-a3b3c3d3c013
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  type: post_comment
+  langcode: en
+  body: >
+    This is wonderful, Finn. The governance circle has been discussing how to include youth voices in our decision-making. Could we connect the ambassador program with the circle as an observer pathway? Your generation brings energy and perspective that we need.
+  entity_id: p18c8d8e8-f8a8-4b8c-d8e8-f8a8b8c80018
+  entity_type: post
+  field_name: field_post_comments
+  created: -1 day|16:30
+
+# Comment on the Cascadia land trust cross-node post (Post 4)
+c14e4f4a4-b4c4-4d4e-f4a4-b4c4d4e4c014:
+  uuid: c14e4f4a4-b4c4-4d4e-f4a4-b4c4d4e4c014
+  uid: 33445566-7788-4990-0aab-bccddeeff012
+  type: post_comment
+  langcode: en
+  body: >
+    Devon, a Front Range land trust would be amazing. If we combined it with community-owned solar installations on trust properties, the land could generate clean energy for the community while being held in common. The cooperative finance model is ready -- we just need the land governance structure. Let us talk to the Cascadia folks and learn from their experience.
+  entity_id: p4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  entity_type: post
+  field_name: field_post_comments
+  created: -24 day|15:00
