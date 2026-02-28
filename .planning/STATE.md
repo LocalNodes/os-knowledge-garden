@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T10:11:10.453Z"
+last_updated: "2026-02-28T10:36:24.000Z"
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 6: Demo Content (Boulder instance)
+**Current focus:** Phase 6: Demo Content (Boulder instance) -- COMPLETE
 
 ## Current Position
 
-Phase: 06 (Create Demo Content) - In Progress
-Plan: 5 of 6 complete in current phase
-Status: Boulder demo content YAML files created. Plan 06-06 remaining.
-Last activity: 2026-02-28 — Created 11 Boulder demo content YAML files with 119 entities
+Phase: 06 (Create Demo Content) - Complete
+Plan: 6 of 6 complete in current phase
+Status: Boulder demo content installed and verified. Phase 06 complete.
+Last activity: 2026-02-28 — Installed 119 Boulder demo entities and verified integrity
 
-Progress: [███████████████████████░] 92% (24/26 plans)
+Progress: [████████████████████████] 96% (25/26 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: 7 min
-- Total execution time: 2.6 hours
+- Total execution time: 2.7 hours
 
 **By Phase:**
 
@@ -45,11 +45,11 @@ Progress: [███████████████████████
 | 3. Permission-Aware Retrieval | 3/3 | 35 min | 12 min |
 | 4. Q&A & Search | 2/3 | 35 min | 18 min |
 | 5. User Interface | 3/3 | 4 min | 2 min |
-| 6. Demo Content | 4/6 | 28 min | 7 min |
+| 6. Demo Content | 6/6 | 36 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-05 (12 min), 06-04 (2 min), 05.1-01 (1 min), 05-02 (2 min), 05-01 (2 min)
-- Trend: Stable (~4 min avg)
+- Last 5 plans: 06-06 (8 min), 06-05 (12 min), 06-04 (2 min), 05.1-01 (1 min), 05-02 (2 min)
+- Trend: Stable (~5 min avg)
 
 | Phase 01-03 P03 | 6 min | 7 tasks | 4 files |
 | Phase 01-01 P01 | 10 min | 5 tasks | 5 files |
@@ -70,6 +70,7 @@ Progress: [███████████████████████
 | Phase 05.1-split-related-content P01 | 1 min | 2 tasks | 5 files |
 | Phase 06 P04 | 2 min | 3 tasks | 14 files |
 | Phase 06 P05 | 12 min | 2 tasks | 28 files |
+| Phase 06 P06 | 8 min | 2 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Recent decisions affecting current work:
 - [Phase 06-05]: Mapped social_demo named photos to Boulder personas since plan source filenames did not exist
 - [Phase 06-05]: Created 119 unique UUIDs with zero overlap against social_demo and localnodes_demo
 - [Phase 06-05]: Research and Question topic types use exact string names per prepareTopicType() method
+- [Phase 06-06]: Ran localnodes content removal twice -- first sdr pass left events, second pass cleaned all duplicates
+- [Phase 06-06]: Ran localnodes_demo update_10002 to rename Resource to Research before boulder content install
 
 ### Roadmap Evolution
 
@@ -139,7 +142,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 06-05-PLAN.md (Boulder demo content YAML files). Remaining: 06-06
+Stopped at: Completed 06-06-PLAN.md (Boulder demo content install and verification). Phase 06 complete.
 
 ---
 *State initialized: 2026-02-23*
