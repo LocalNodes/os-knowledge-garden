@@ -8,6 +8,86 @@
 use Drupal\taxonomy\Entity\Term;
 
 /**
+ * Implements hook_install().
+ *
+ * On fresh installs, update topic type taxonomy terms:
+ * remove "Content", add "Question" and "Research".
+ */
+function localnodes_demo_install() {
+  _localnodes_demo_update_topic_types();
+}
+
+/**
+ * Helper: update topic type terms (shared by install and update hooks).
+ */
+function _localnodes_demo_update_topic_types() {
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+
+  // Delete "Content" term, reassigning any topics to "Blog".
+  $content_terms = $term_storage->loadByProperties([
+    'vid' => 'topic_types',
+    'name' => 'Content',
+  ]);
+
+  if ($content_terms) {
+    $blog_terms = $term_storage->loadByProperties([
+      'vid' => 'topic_types',
+      'name' => 'Blog',
+    ]);
+    $blog_term = reset($blog_terms);
+
+    foreach ($content_terms as $content_term) {
+      if ($blog_term) {
+        $node_storage = \Drupal::entityTypeManager()->getStorage('node');
+        $nids = $node_storage->getQuery()
+          ->accessCheck(FALSE)
+          ->condition('type', 'topic')
+          ->condition('field_topic_type', $content_term->id())
+          ->execute();
+
+        foreach ($node_storage->loadMultiple($nids) as $node) {
+          $node->set('field_topic_type', $blog_term->id());
+          $node->save();
+        }
+      }
+
+      $content_term->delete();
+    }
+  }
+
+  // Rename "Resource" to "Research" if it exists.
+  $resource_terms = $term_storage->loadByProperties([
+    'vid' => 'topic_types',
+    'name' => 'Resource',
+  ]);
+  foreach ($resource_terms as $term) {
+    $term->setName('Research');
+    $term->save();
+  }
+
+  // Add new terms if they don't exist.
+  $new_terms = [
+    'Question' => 5,
+    'Research' => 6,
+  ];
+
+  foreach ($new_terms as $name => $weight) {
+    $existing = $term_storage->loadByProperties([
+      'vid' => 'topic_types',
+      'name' => $name,
+    ]);
+
+    if (empty($existing)) {
+      Term::create([
+        'vid' => 'topic_types',
+        'name' => $name,
+        'weight' => $weight,
+      ])->save();
+    }
+  }
+}
+
+/**
  * Change Topic Type field to single-select and update taxonomy terms.
  *
  * - Remove "Content" term
