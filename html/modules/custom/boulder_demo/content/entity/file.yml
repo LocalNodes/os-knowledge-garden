@@ -1,0 +1,395 @@
+---
+# Profile photos for 12 Boulder user personas (copied from social_demo and renamed)
+# AI Coverage: Profile images enable visual user identity in demo content
+
+# Mira Solano profile photo
+10a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c:
+  uuid: 10a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c
+  langcode: en
+  path: content/files/mira_solano.jpg
+  uri: public://mira_solano.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Kai Nakamura profile photo
+20b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d:
+  uuid: 20b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  langcode: en
+  path: content/files/kai_nakamura.jpg
+  uri: public://kai_nakamura.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Lucia Trujillo profile photo
+30c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e:
+  uuid: 30c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+  langcode: en
+  path: content/files/lucia_trujillo.jpg
+  uri: public://lucia_trujillo.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Devon Hartley profile photo
+40d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f:
+  uuid: 40d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  langcode: en
+  path: content/files/devon_hartley.jpg
+  uri: public://devon_hartley.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Sage Clearwater profile photo
+50e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80:
+  uuid: 50e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  langcode: en
+  path: content/files/sage_clearwater.jpg
+  uri: public://sage_clearwater.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Zara Okafor profile photo
+60f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091:
+  uuid: 60f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091
+  langcode: en
+  path: content/files/zara_okafor.jpg
+  uri: public://zara_okafor.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Rowan Blackwood profile photo
+70a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102:
+  uuid: 70a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102
+  langcode: en
+  path: content/files/rowan_blackwood.jpg
+  uri: public://rowan_blackwood.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Jess Park profile photo
+80b8c9d0-e1f2-4a3b-4c5d-6e7f80910213:
+  uuid: 80b8c9d0-e1f2-4a3b-4c5d-6e7f80910213
+  langcode: en
+  path: content/files/jess_park.jpg
+  uri: public://jess_park.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Marco Rivera profile photo
+90c9d0e1-f2a3-4b4c-5d6e-7f8091021324:
+  uuid: 90c9d0e1-f2a3-4b4c-5d6e-7f8091021324
+  langcode: en
+  path: content/files/marco_rivera.jpg
+  uri: public://marco_rivera.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Talia Redhawk profile photo
+a0d0e1f2-a3b4-4c5d-6e7f-809102132435:
+  uuid: a0d0e1f2-a3b4-4c5d-6e7f-809102132435
+  langcode: en
+  path: content/files/talia_redhawk.jpg
+  uri: public://talia_redhawk.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Finn O'Brien profile photo
+b0e1f2a3-b4c5-4d6e-7f80-910213243546:
+  uuid: b0e1f2a3-b4c5-4d6e-7f80-910213243546
+  langcode: en
+  path: content/files/finn_obrien.jpg
+  uri: public://finn_obrien.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Boulder Admin profile photo
+c0f2a3b4-c5d6-4e7f-8091-021324354657:
+  uuid: c0f2a3b4-c5d6-4e7f-8091-021324354657
+  langcode: en
+  path: content/files/boulder_admin.jpg
+  uri: public://boulder_admin.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Content/landscape images for group headers and topic images (copied from social_demo numbered images)
+d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c:
+  uuid: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
+  langcode: en
+  path: content/files/01.jpg
+  uri: public://01.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d:
+  uuid: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
+  langcode: en
+  path: content/files/02.jpg
+  uri: public://02.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e:
+  uuid: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
+  langcode: en
+  path: content/files/03.jpg
+  uri: public://03.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f:
+  uuid: a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f
+  langcode: en
+  path: content/files/04.jpg
+  uri: public://04.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90:
+  uuid: b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90
+  langcode: en
+  path: content/files/05.jpg
+  uri: public://05.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423

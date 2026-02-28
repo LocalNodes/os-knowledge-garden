@@ -1,0 +1,135 @@
+---
+# 5 groups for Boulder regen community
+# AI Coverage: Users in multiple groups exercise cross-group retrieval
+# AI Coverage: Boulder Governance Circle with 'added' join method exercises group-only permission filtering
+# AI Coverage: Varied group sizes (5-8 members) exercise different retrieval scopes
+
+# Front Range Watershed Hub - Main coordination hub for watershed stewardship
+aabb1122-3344-4556-6778-899001122334:
+  uuid: aabb1122-3344-4556-6778-899001122334
+  langcode: en
+  image: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
+  image_alt: Front Range mountain landscape
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  created: -90 day|10:00
+  label: Front Range Watershed Hub
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>Central coordination space for watershed stewardship across the Front Range. Members share monitoring data from Boulder Creek and South Platte tributaries, coordinate beaver dam analog installations, organize native planting days, and connect community science efforts with The Watershed Center and Boulder Watershed Collective. The hub where land-based and tech-based regeneration meet.</p>
+  members:
+    - aa11bb22-cc33-4dd4-ee55-ff6677889900
+    - 11223344-5566-4778-8990-aabbccddeef0
+    - ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+    - 44556677-8899-400a-abb0-cddeeff01223
+    - 55667788-9900-4aab-bcc0-ddeeff012334
+    - ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+    - 66778899-00aa-4bbc-cdd0-eeff01223344
+    - 22334455-6677-4889-90aa-bbccddeeff01
+
+# Boulder Regen Tech Collective - Ethereum localism and coordination tools
+bbcc2233-4455-4667-7889-900112233445:
+  uuid: bbcc2233-4455-4667-7889-900112233445
+  langcode: en
+  image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
+  image_alt: Community tech workspace
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  created: -85 day|14:00
+  label: Boulder Regen Tech Collective
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>Where Ethereum localism meets the Front Range. This group explores how web3 coordination tools -- quadratic funding, community currencies, mutual credit, and DAO governance -- can serve place-based regenerative communities. Born from the ETHBoulder and GFEL gatherings, members build open-source tools, run local public goods funding rounds, and practice regen tech that serves life rather than extracting from it.</p>
+  members:
+    - bb22cc33-dd44-4ee5-5ff6-677889900aa1
+    - dd44ee55-ff66-4778-8990-0aa11bb22cc3
+    - 55667788-9900-4aab-bcc0-ddeeff012334
+    - 33445566-7788-4990-0aab-bccddeeff012
+    - ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+    - 22334455-6677-4889-90aa-bbccddeeff01
+    - 66778899-00aa-4bbc-cdd0-eeff01223344
+
+# Front Range Food Commons - Regenerative agriculture and food sovereignty
+ccdd3344-5566-4778-8990-011223344556:
+  uuid: ccdd3344-5566-4778-8990-011223344556
+  langcode: en
+  image: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
+  image_alt: Community garden at high altitude
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  created: -80 day|09:00
+  label: Front Range Food Commons
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>Connecting regenerative agriculture practitioners, food rescue volunteers, urban farmers, and permaculture designers across the Front Range. Share growing knowledge adapted to Colorado's high-altitude semi-arid climate, coordinate seed swaps, organize farm-to-table events, and build the food sovereignty infrastructure our bioregion needs.</p>
+  members:
+    - cc33dd44-ee55-4ff6-6778-89900aa11bb2
+    - 44556677-8899-400a-abb0-cddeeff01223
+    - 22334455-6677-4889-90aa-bbccddeeff01
+    - 33445566-7788-4990-0aab-bccddeeff012
+    - 55667788-9900-4aab-bcc0-ddeeff012334
+    - 11223344-5566-4778-8990-aabbccddeef0
+
+# RegenHub Boulder - Physical community workspace and social glue
+ddee4455-6677-4889-90aa-122334455667:
+  uuid: ddee4455-6677-4889-90aa-122334455667
+  langcode: en
+  image: a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f
+  image_alt: Co-working space and community gathering
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  created: -75 day|11:30
+  label: RegenHub Boulder
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>The physical anchor of Boulder's regenerative community. RegenHub is a co-working space, event venue, and community commons where regenerators, builders, and organizers gather. This group coordinates events, welcomes newcomers, shares resources, and maintains the social fabric that holds our community together.</p>
+  members:
+    - 22334455-6677-4889-90aa-bbccddeeff01
+    - bb22cc33-dd44-4ee5-5ff6-677889900aa1
+    - aa11bb22-cc33-4dd4-ee55-ff6677889900
+    - cc33dd44-ee55-4ff6-6778-89900aa11bb2
+    - 55667788-9900-4aab-bcc0-ddeeff012334
+    - dd44ee55-ff66-4778-8990-0aa11bb22cc3
+    - ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+    - 66778899-00aa-4bbc-cdd0-eeff01223344
+
+# Boulder Governance Circle - Polycentric governance (CLOSED)
+# AI Coverage: This closed group exercises group-only permission filtering
+eeff5566-7788-4990-0aa1-233445566778:
+  uuid: eeff5566-7788-4990-0aa1-233445566778
+  langcode: en
+  image: b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90
+  image_alt: Governance circle meeting space
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  created: -70 day|08:00
+  label: Boulder Governance Circle
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: added
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>The deliberative body for the Boulder node's polycentric governance. Council members are nominated to participate in decisions about treasury allocation, cross-group coordination, and network-level policies. This is a closed group -- members are added by invitation to ensure accountability to the communities they represent.</p>
+  members:
+    - ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+    - aa11bb22-cc33-4dd4-ee55-ff6677889900
+    - bb22cc33-dd44-4ee5-5ff6-677889900aa1
+    - dd44ee55-ff66-4778-8990-0aa11bb22cc3
+    - 66778899-00aa-4bbc-cdd0-eeff01223344

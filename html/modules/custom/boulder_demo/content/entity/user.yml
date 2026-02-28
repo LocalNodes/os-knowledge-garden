@@ -1,0 +1,305 @@
+---
+# 12 user personas for Boulder regen community
+# AI Coverage: Users in multiple groups exercise cross-group retrieval
+# AI Coverage: Varied expertise/interest tags exercise profile-based semantic search
+# AI Coverage: America/Denver timezone distinguishes from Cascadia's America/Los_Angeles
+
+# Mira Solano - Watershed Restoration Lead
+aa11bb22-cc33-4dd4-ee55-ff6677889900:
+  uuid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  created: -55 day|09:30
+  name: mira_watershed
+  mail: mira.solano@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 10a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c
+  image_alt: Mira Solano
+  first_name: Mira
+  last_name: Solano
+  organization: Boulder Watershed Collective
+  function: Watershed Restoration Lead
+  phone_number: ""
+  expertise:
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+    - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+  interests:
+    - c9d0e1f2-a3b4-4c5d-6e7f-809102132435
+    - e1f2a3b4-c5d6-4e7f-8091-021324354657
+  address: 1830 Pearl Street, Boulder, CO
+  self_introduction: >
+    I lead riparian restoration projects along Boulder Creek and its tributaries through the Boulder Watershed Collective. Our work centers on beaver dam analogs and native planting to rebuild the braided stream channels that once defined the Front Range. Every drop of water that falls here starts a 2,000-mile journey from the Continental Divide to the Gulf of Mexico -- understanding that journey is understanding our bioregion.
+
+# Kai Nakamura - Regen Tech Builder
+bb22cc33-dd44-4ee5-5ff6-677889900aa1:
+  uuid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  created: -52 day|14:15
+  name: kai_regentech
+  mail: kai.nakamura@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 20b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  image_alt: Kai Nakamura
+  first_name: Kai
+  last_name: Nakamura
+  organization: OpenCivics Labs
+  function: Regen Tech Builder
+  phone_number: ""
+  expertise:
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  interests:
+    - b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324
+    - f2a3b4c5-d6e7-4f80-9102-132435465768
+  address: 2040 14th Street, Boulder, CO
+  self_introduction: >
+    I build open-source coordination tools for bioregional communities at OpenCivics Labs. My work grows from the ETHBoulder and GFEL gatherings where I first saw how Ethereum can serve as credibly-neutral infrastructure for cosmo-local coordination. Regen tech means technology in service of place, not extraction from it -- hippies with laptops building the infrastructure of belonging.
+
+# Lucia Trujillo - Permaculture Designer & Food Rescue
+cc33dd44-ee55-4ff6-6778-89900aa11bb2:
+  uuid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  created: -48 day|11:00
+  name: lucia_foodcommons
+  mail: lucia.trujillo@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 30c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+  image_alt: Lucia Trujillo
+  first_name: Lucia
+  last_name: Trujillo
+  organization: Front Range Food Collective
+  function: Permaculture Designer
+  phone_number: ""
+  expertise:
+    - f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102
+    - a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213
+  interests:
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+    - e1f2a3b4-c5d6-4e7f-8091-021324354657
+  address: 640 Main Street, Longmont, CO
+  self_introduction: >
+    Third-generation Colorado grower designing regenerative food systems for the Front Range's unique conditions -- 5,400 feet elevation, 300 days of sun, and precious little rainfall. Through the Front Range Food Collective, we connect permaculture practitioners, food rescue volunteers, and urban farmers to build the food sovereignty infrastructure our bioregion needs. Every seed swap strengthens our resilience.
+
+# Devon Hartley - Community Currency Designer
+dd44ee55-ff66-4778-8990-0aa11bb22cc3:
+  uuid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  created: -45 day|16:30
+  name: devon_currencies
+  mail: devon.hartley@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 40d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  image_alt: Devon Hartley
+  first_name: Devon
+  last_name: Hartley
+  organization: Boulder Mutual Credit Lab
+  function: Community Currency Designer
+  phone_number: ""
+  expertise:
+    - e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  interests:
+    - b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  address: 1750 13th Street, Boulder, CO
+  self_introduction: >
+    I design mutual credit systems and community currencies at the Boulder Mutual Credit Lab. Inspired by GFEL workshops on commitment pooling and the Ethereum localism movement, I am working to pilot a Boulder community currency that keeps value circulating locally. Quadratic funding for Front Range public goods is my current passion project -- a way to democratically fund what our community actually needs.
+
+# Sage Clearwater - Governance Facilitator
+ee55ff66-7788-4990-0aa1-1bb22cc33dd4:
+  uuid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  created: -60 day|08:00
+  name: sage_governance
+  mail: sage.clearwater@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 50e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  image_alt: Sage Clearwater
+  first_name: Sage
+  last_name: Clearwater
+  organization: Cosmo-Local Council
+  function: Governance Facilitator
+  phone_number: ""
+  expertise:
+    - b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  interests:
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+    - e1f2a3b4-c5d6-4e7f-8091-021324354657
+  address: 900 Baseline Road, Boulder, CO
+  self_introduction: >
+    I facilitate the Boulder Governance Circle, bridging traditional consensus processes with DAO governance to practice polycentric decision-making that serves both people and place. My background in restorative justice and on-chain treasury management gives me a hybrid perspective -- governance should grow from the ground up, like a cottonwood along Boulder Creek, while leveraging the coordination tools that Ethereum localism offers.
+
+# Zara Okafor - Community Data Scientist
+ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
+  uuid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  created: -42 day|13:45
+  name: zara_datascience
+  mail: zara.okafor@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 60f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091
+  image_alt: Zara Okafor
+  first_name: Zara
+  last_name: Okafor
+  organization: CU Boulder Env Studies
+  function: Community Data Scientist
+  phone_number: ""
+  expertise:
+    - c9d0e1f2-a3b4-4c5d-6e7f-809102132435
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  interests:
+    - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+    - f2a3b4c5-d6e7-4f80-9102-132435465768
+  address: 4001 Discovery Drive, Boulder, CO
+  self_introduction: >
+    I am a CU Boulder grad student bridging academic research with community science for Front Range watershed monitoring. My capstone project analyzes water quality data from volunteer monitoring programs along Boulder Creek and South Platte tributaries. Data sovereignty matters -- the communities generating this data should govern how it is used. I am here to share findings and learn from the practitioners doing the real work.
+
+# Rowan Blackwood - Restoration Ecologist
+11223344-5566-4778-8990-aabbccddeef0:
+  uuid: 11223344-5566-4778-8990-aabbccddeef0
+  created: -50 day|15:00
+  name: rowan_beaver
+  mail: rowan.blackwood@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 70a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102
+  image_alt: Rowan Blackwood
+  first_name: Rowan
+  last_name: Blackwood
+  organization: Front Range Rewilding
+  function: Restoration Ecologist
+  phone_number: ""
+  expertise:
+    - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  interests:
+    - c9d0e1f2-a3b4-4c5d-6e7f-809102132435
+    - e1f2a3b4-c5d6-4e7f-8091-021324354657
+  address: 195 N Highway 119, Nederland, CO
+  self_introduction: >
+    I build beaver dam analogs and practice low-tech process-based restoration in Front Range streams through Front Range Rewilding. BDAs are simple structures -- posts and woven branches mimicking natural beaver dams -- that raise water tables, restore braided channels, and bring life back to degraded streams. My hands are usually muddy and my boots are always wet. Come to a build day and see what stream restoration feels like.
+
+# Jess Park - Community Organizer
+22334455-6677-4889-90aa-bbccddeeff01:
+  uuid: 22334455-6677-4889-90aa-bbccddeeff01
+  created: -38 day|10:20
+  name: jess_regenhub
+  mail: jess.park@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 80b8c9d0-e1f2-4a3b-4c5d-6e7f80910213
+  image_alt: Jess Park
+  first_name: Jess
+  last_name: Park
+  organization: RegenHub Boulder
+  function: Community Organizer
+  phone_number: ""
+  expertise:
+    - f2a3b4c5-d6e7-4f80-9102-132435465768
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  interests:
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+    - a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213
+  address: 1310 College Avenue, Boulder, CO
+  self_introduction: >
+    I steward RegenHub Boulder, our community's physical co-working space, event venue, and gathering place. From ETHBoulder hackathons to community potlucks, RegenHub is where regenerators, builders, and organizers come together. My job is the social glue -- making sure the people doing the tech work meet the people doing the land work. That is where the real magic of Boulder's regen community happens.
+
+# Marco Rivera - Cooperative Energy Coordinator
+33445566-7788-4990-0aab-bccddeeff012:
+  uuid: 33445566-7788-4990-0aab-bccddeeff012
+  created: -35 day|12:00
+  name: marco_solar
+  mail: marco.rivera@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: 90c9d0e1-f2a3-4b4c-5d6e-7f8091021324
+  image_alt: Marco Rivera
+  first_name: Marco
+  last_name: Rivera
+  organization: Front Range Solar Coop
+  function: Cooperative Energy Coordinator
+  phone_number: ""
+  expertise:
+    - d0e1f2a3-b4c5-4d6e-7f80-910213243546
+    - e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091
+  interests:
+    - f2a3b4c5-d6e7-4f80-9102-132435465768
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  address: 501 Main Street, Louisville, CO
+  self_introduction: >
+    I coordinate community-owned solar installations across the Front Range through the Front Range Solar Coop. Colorado gives us 300 days of sunshine -- that is a public good waiting to be harnessed cooperatively. Our model ensures that the benefits of clean energy stay within our communities. I am excited about pairing solar cooperatives with community currencies so neighbors can trade energy credits locally.
+
+# Talia Redhawk - Indigenous Water Protector
+44556677-8899-400a-abb0-cddeeff01223:
+  uuid: 44556677-8899-400a-abb0-cddeeff01223
+  created: -40 day|09:00
+  name: talia_indigenous
+  mail: talia.redhawk@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: a0d0e1f2-a3b4-4c5d-6e7f-809102132435
+  image_alt: Talia Redhawk
+  first_name: Talia
+  last_name: Redhawk
+  organization: Arapaho Water Relations
+  function: Indigenous Water Protector
+  phone_number: ""
+  expertise:
+    - e1f2a3b4-c5d6-4e7f-8091-021324354657
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  interests:
+    - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+    - f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102
+  address: 2950 Baseline Road, Boulder, CO
+  self_introduction: >
+    I work with Arapaho Water Relations to honor the relationship between the Arapaho and Cheyenne peoples and the waters of the Front Range. These streams and rivers have been tended for thousands of years before Boulder existed as a city. True watershed restoration must center indigenous water rights and traditional ecological knowledge. I am here to ensure that the regenerative community remembers whose land and whose water we are stewards of.
+
+# Finn O'Brien - Youth Regen Organizer
+55667788-9900-4aab-bcc0-ddeeff012334:
+  uuid: 55667788-9900-4aab-bcc0-ddeeff012334
+  created: -30 day|13:45
+  name: finn_youth
+  mail: finn.obrien@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  image: b0e1f2a3-b4c5-4d6e-7f80-910213243546
+  image_alt: Finn O'Brien
+  first_name: Finn
+  last_name: O'Brien
+  organization: Next Gen Front Range
+  function: Youth Regen Organizer
+  phone_number: ""
+  expertise:
+    - f2a3b4c5-d6e7-4f80-9102-132435465768
+  interests:
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+    - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+    - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
+  address: 1001 Arapahoe Avenue, Boulder, CO
+  self_introduction: >
+    I organize with Next Gen Front Range, connecting young people across the Front Range who care about regeneration, climate justice, and building new systems. I attended my first ETHBoulder last year and realized that regen tech and watershed restoration are two sides of the same coin. Now I am bridging the gap -- bringing youth energy to both build days on the creek and hackathons at RegenHub.
+
+# Boulder Admin - Site Manager
+66778899-00aa-4bbc-cdd0-eeff01223344:
+  uuid: 66778899-00aa-4bbc-cdd0-eeff01223344
+  created: -60 day|06:00
+  name: boulder_admin
+  mail: admin@boulder.localnodes.example
+  timezone: America/Denver
+  status: 1
+  roles:
+    - sitemanager
+  image: c0f2a3b4-c5d6-4e7f-8091-021324354657
+  image_alt: Boulder Admin
+  first_name: Boulder
+  last_name: Admin
+  organization: LocalNodes Platform
+  function: Site Manager
+  phone_number: ""
+  expertise:
+    - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+  interests:
+    - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+  address: 1777 Broadway, Boulder, CO
+  self_introduction: >
+    This is the official site manager account for the Boulder LocalNodes instance. If you need help using the platform, have questions about groups, or want to get more involved in our community, reach out here or contact any of our group stewards. Welcome to the Boulder node!
