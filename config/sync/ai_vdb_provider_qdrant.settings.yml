@@ -1,0 +1,4 @@
+host: qdrant
+port: 6333
+_core:
+  default_config_hash: yMdP5NMLh5s-ixwgp6NLYTT5_1F5rDp6lyk9W8CZbo4

@@ -1,0 +1,22 @@
+diff --git a/src/Plugin/VdbProvider/QdrantProvider.php b/src/Plugin/VdbProvider/QdrantProvider.php
+index c7bf01b..7bc1396 100644
+--- a/src/Plugin/VdbProvider/QdrantProvider.php
++++ b/src/Plugin/VdbProvider/QdrantProvider.php
+@@ -302,7 +302,7 @@ class QdrantProvider extends AiVdbProviderClientBase implements ContainerFactory
+   public function querySearch(
+     string $collection_name,
+     array $output_fields,
+-    string $filters = '',
++    string|array $filters = '',
+     int $limit = 10,
+     int $offset = 0,
+     string $database = 'default',
+@@ -333,7 +333,7 @@ class QdrantProvider extends AiVdbProviderClientBase implements ContainerFactory
+     array $vector_input,
+     array $output_fields,
+     QueryInterface $query,
+-    string $filters = '',
++    string|array $filters = '',
+     int $limit = 10,
+     int $offset = 0,
+     string $database = 'default',

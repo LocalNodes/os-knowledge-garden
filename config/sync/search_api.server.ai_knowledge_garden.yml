@@ -4,14 +4,14 @@ status: true
 dependencies:
   module:
     - ai_search
-    - ai_vdb_provider_milvus
+    - ai_vdb_provider_qdrant
 id: ai_knowledge_garden
 name: 'AI Knowledge Garden'
 description: 'Vector database server for AI-powered knowledge retrieval'
 backend: search_api_ai_search
 backend_config:
   chat_model: gemini__models/gemini-2.5-flash
-  database: milvus
+  database: qdrant
   database_settings:
     database_name: default
     collection: knowledge_garden

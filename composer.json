@@ -92,7 +92,8 @@
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
             },
             "drupal/ai_vdb_provider_qdrant": {
-                "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"
+                "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch",
+                "Fix filters type hint: accept array from prepareFilters in vectorSearch/querySearch": "patches/qdrant-provider-fix-filters-type-hint.patch"
             }
         }
     },
