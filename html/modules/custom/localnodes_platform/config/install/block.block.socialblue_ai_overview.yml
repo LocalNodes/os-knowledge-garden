@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_ai_indexing
+  theme:
+    - socialblue
+id: socialblue_ai_overview
+theme: socialblue
+region: complementary_top
+weight: -10
+provider: null
+plugin: social_ai_overview
+settings:
+  id: social_ai_overview
+  label: 'AI Overview'
+  label_display: '0'
+  provider: social_ai_indexing
+visibility:
+  request_path:
+    id: request_path
+    negate: false
+    pages: '/search/all/*'
