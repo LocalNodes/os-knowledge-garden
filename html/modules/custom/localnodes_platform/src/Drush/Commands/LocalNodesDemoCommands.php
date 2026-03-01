@@ -2,6 +2,7 @@
 
 namespace Drupal\localnodes_platform\Drush\Commands;
 
+use Drupal\user\Entity\User;
 use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
 
@@ -28,6 +29,17 @@ class LocalNodesDemoCommands extends DrushCommands {
       return;
     }
 
+    // Run as admin to ensure permissions for content creation.
+    \Drupal::currentUser()->setAccount(User::load(1));
+
+    // Map module to its plugin ID prefix. Each demo module registers plugins
+    // with a unique prefix (e.g., boulder_topic, boulder_event).
+    $prefix_map = [
+      'localnodes_demo' => 'localnodes_',
+      'boulder_demo' => 'boulder_',
+    ];
+    $prefix = $prefix_map[$module];
+
     $content_types = [
       'file' => 'files',
       'user' => 'users',
@@ -45,11 +57,15 @@ class LocalNodesDemoCommands extends DrushCommands {
     $manager = \Drupal::service('plugin.manager.demo_content');
 
     foreach ($content_types as $type => $description) {
-      $plugins = $manager->createInstances([$type]);
-      foreach ($plugins as $plugin) {
+      $plugin_id = $prefix . $type;
+      try {
+        $plugin = $manager->createInstance($plugin_id);
         $plugin->createContent();
         $count = $plugin->count();
         $this->logger()->success("Created $count $description");
+      }
+      catch (\Exception $e) {
+        $this->logger()->warning("Skipped $description: plugin '$plugin_id' not found");
       }
     }
 

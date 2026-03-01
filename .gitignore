@@ -33,7 +33,7 @@ private/
 .claude/
 
 # DDEV environment (contains API keys)
-/.ddev/.env
+.ddev/.env
 
 # DDEV service volumes (binary runtime data)
 .ddev/milvus/volumes/
