@@ -4,13 +4,20 @@
 FROM php:8.3-cli AS builder
 
 # Install system dependencies needed for composer install
+# Must include libs for gd/gmp since composer validates platform requirements
 RUN apt-get update && apt-get install -y \
     git \
     patch \
     unzip \
     zip \
     libzip-dev \
-    && docker-php-ext-install zip \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libwebp-dev \
+    libgmp-dev \
+    && docker-php-ext-configure gd --with-webp --with-jpeg --with-freetype \
+    && docker-php-ext-install -j$(nproc) zip gd gmp \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
