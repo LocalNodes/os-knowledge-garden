@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 9: Deploy to Coolify -- Plan 02 complete, deployments building
+**Current focus:** Phase 9: Deploy to Coolify — PIVOTING to clean docker-compose in main repo
 
 ## Current Position
 
 Phase: 09 (Deploy Demo Instances to Coolify)
-Plan: 2 of 3 complete in current phase
-Status: Both Coolify apps created, configured, and deployments triggered
-Last activity: 2026-03-01 — Created cascadia + boulder Coolify apps, set env vars, triggered deployments
+Plan: Pivoting — old plans (09-01, 09-02) obsolete, new approach designed
+Status: Design approved for CI artifact strategy (ghcr.io/localnodes/os-knowledge-garden)
+Last activity: 2026-03-01 — Approved clean docker-compose design, needs implementation plan
 
 Progress: [█████████████████████████] 100% (26/26 plans)
 
@@ -150,7 +150,8 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 09-02-PLAN.md. Deployments building on Coolify. Plan 09-03 (verification) remains — wait for builds to finish then verify.
+Stopped at: Pivoted Phase 09 to clean docker-compose approach. Design approved (docs/plans/2026-03-01-clean-docker-compose-deploy-design.md). Next: create implementation plan from design, then execute.
+Resume file: .planning/phases/09-deploy-demo-instances-to-coolify-cascadia-localnodes-xyz-boulder-localnodes-xyz/.continue-here.md
 
 ---
 *State initialized: 2026-02-23*

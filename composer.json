@@ -13,15 +13,20 @@
         "drupal/ai": "dev-1.3.x",
         "drupal/ai_agents": "dev-1.3.x",
         "drupal/key": "^1.19",
-        "drupal/ai_provider_deepseek": "dev-1.x",
-        "drupal/ai_provider_ollama": "dev-1.2.x",
         "drupal/ai_usage_limits": "dev-1.0.x",
         "drupal/ai_file_to_text": "^1.0",
-        "drupal/ai_provider_openai": "^1.2",
         "drupal/search_api": "^1.40",
         "drupal/gemini_provider": "1.x-dev",
         "league/commonmark": "^2.8",
-        "drupal/ai_vdb_provider_qdrant": "1.0.x-dev"
+        "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
+        "drupal/siwe_login": "^1.0",
+        "drupal/safe_smart_accounts": "^1.0",
+        "drupal/group_treasury": "^1.0",
+        "kornrunner/keccak": "^1.0",
+        "simplito/elliptic-php": "^1.0"
+    },
+    "replace": {
+        "web3p/web3.php": "*"
     },
     "repositories": [
         {
@@ -81,7 +86,7 @@
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch"
             },
-"drupal/ai_provider_deepseek": {
+            "drupal/ai_provider_deepseek": {
                 "Add chat_with_tools support via direct Guzzle API calls": "patches/deepseek-provider-chat-with-tools-support.patch"
             },
             "goalgorilla/open_social": {
@@ -90,6 +95,9 @@
             "drupal/ai_vdb_provider_qdrant": {
                 "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch",
                 "Fix filters type hint: accept array from prepareFilters in vectorSearch/querySearch": "patches/qdrant-provider-fix-filters-type-hint.patch"
+            },
+            "drupal/siwe_login": {
+                "Remove web3p/web3.php dependency (conflicts with psr/http-message ^2.0 from league/oauth2-server)": "patches/siwe-login-remove-web3php-dependency.patch"
             }
         }
     },
