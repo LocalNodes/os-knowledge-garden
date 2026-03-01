@@ -61,7 +61,7 @@ function _localnodes_platform_configure_ai_defaults() {
     ],
     'text_to_image' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-pro-image-preview',
+      'model_id' => 'models/gemini-3.1-flash-image-preview',
     ],
   ]);
   $ai_config->set('default_vdb_provider', 'qdrant');
