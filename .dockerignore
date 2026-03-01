@@ -1,0 +1,13 @@
+.git
+.ddev
+.planning
+.claude
+docs/
+private/
+html/sites/default/files/
+*.sql
+*.sql.gz
+.DS_Store
+node_modules/
+.env
+.env.*
