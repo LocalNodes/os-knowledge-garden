@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-DRUSH="/var/www/html/vendor/bin/drush -r /var/www/html/html"
+SITE_URI="${SERVICE_URL_OPENSOCIAL:-http://localhost}"
+DRUSH="/var/www/html/vendor/bin/drush -r /var/www/html/html --uri=$SITE_URI"
 
 # --- Generate settings.php if needed ---
 SETTINGS_FILE="/var/www/html/html/sites/default/settings.php"
@@ -192,21 +193,15 @@ else
   $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
 
-  # Re-index if Solr is empty (handles redeploys where Solr core was recreated)
-  SOLR_DOCS=$(curl -sf "http://${SOLR_HOST:-solr}:${SOLR_PORT:-8983}/solr/drupal/select?q=*:*&rows=0&wt=json" 2>/dev/null \
-    | grep -o '"numFound":[0-9]*' | grep -o '[0-9]*' || echo "0")
-  if [ "$SOLR_DOCS" = "0" ]; then
-    echo "Solr index empty — re-indexing content..."
-    $DRUSH search-api:reset-tracker || true
-    $DRUSH search-api:index || true
-    echo "Running cron for vector indexing..."
-    $DRUSH cron || true
-    sleep 5
-    $DRUSH cron || true
-  else
-    echo "Solr index has $SOLR_DOCS docs — skipping re-index."
-    $DRUSH cron || true
-  fi
+  # Always re-index to ensure URLs use correct base (--uri flag).
+  # Without this, CLI-indexed content gets http://default/node/X URLs.
+  echo "Re-indexing content with correct base URL ($SITE_URI)..."
+  $DRUSH search-api:reset-tracker || true
+  $DRUSH search-api:index || true
+  echo "Running cron for vector indexing..."
+  $DRUSH cron || true
+  sleep 5
+  $DRUSH cron || true
 
   echo "=== EXISTING INSTALL READY ==="
 fi
