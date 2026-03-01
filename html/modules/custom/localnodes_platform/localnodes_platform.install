@@ -8,17 +8,82 @@
 /**
  * Implements hook_install().
  *
- * Applies environment variable overrides to config installed by config/install.
+ * Sets default AI provider config and applies environment variable overrides.
+ * Dependencies (ai, gemini_provider, ai_vdb_provider_qdrant, etc.) install
+ * their own empty/default configs first. This function fills in the values
+ * our stack requires (Gemini models, Qdrant connection, Solr connection).
  */
 function localnodes_platform_install() {
+  _localnodes_platform_configure_ai_defaults();
   _localnodes_platform_apply_env_overrides();
+}
+
+/**
+ * Configures AI provider defaults.
+ *
+ * Sets Gemini as the default provider for all AI operations, configures
+ * the Gemini API key reference, and sets Qdrant as the default VDB with
+ * DDEV-compatible connection defaults.
+ */
+function _localnodes_platform_configure_ai_defaults() {
+  $config_factory = \Drupal::configFactory();
+
+  // AI settings: set Gemini as default provider for all operations.
+  $ai_config = $config_factory->getEditable('ai.settings');
+  $ai_config->set('default_providers', [
+    'chat' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'chat_with_complex_json' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'chat_with_image_vision' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'chat_with_structured_response' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'chat_with_tools' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'embeddings' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-embedding-001',
+    ],
+    'speech_to_text' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-2.5-flash',
+    ],
+    'text_to_image' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-pro-image-preview',
+    ],
+  ]);
+  $ai_config->set('default_vdb_provider', 'qdrant');
+  $ai_config->save(TRUE);
+
+  // Gemini provider: point to Key module's env-based key.
+  $gemini_config = $config_factory->getEditable('gemini_provider.settings');
+  $gemini_config->set('api_key', 'gemini_api_key');
+  $gemini_config->save(TRUE);
+
+  // Qdrant: set DDEV defaults.
+  $qdrant_config = $config_factory->getEditable('ai_vdb_provider_qdrant.settings');
+  $qdrant_config->set('host', 'qdrant');
+  $qdrant_config->set('port', 6333);
+  $qdrant_config->save(TRUE);
 }
 
 /**
  * Applies environment variable overrides to configuration.
  *
- * Config/install YAMLs ship with DDEV defaults. This function reads env
- * vars and overrides values for Coolify or other deployment targets.
+ * Reads env vars and overrides DDEV defaults for Coolify or other
+ * deployment targets.
  */
 function _localnodes_platform_apply_env_overrides() {
   $config_factory = \Drupal::configFactory();
