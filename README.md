@@ -1,40 +1,69 @@
-This is a composer based installer for the [Open Social distribution](https://www.drupal.org/project/social).
+# OS Knowledge Garden
 
-# Prerequisites
+A knowledge management platform built on [Open Social](https://www.drupal.org/project/social) with AI-powered search, embeddings, and related content discovery. Uses Gemini for LLM operations and Qdrant for vector storage.
 
-1. [Composer](https://getcomposer.org/download/)
+## Quick Start
 
-It's just composer, isn't it awesome? :)
+Prerequisites: [DDEV](https://ddev.readthedocs.io/en/stable/users/install/ddev-installation/) and a [Gemini API key](https://aistudio.google.com/apikey) (free tier works).
 
-## Installation of Open Social
-
+```bash
+git clone https://github.com/LocalNodes/os-knowledge-garden.git
+cd os-knowledge-garden
+git checkout feature/localnodes-install-profile
+ddev start
+scripts/install.sh --demo=boulder
 ```
-composer create-project goalgorilla/social_template:dev-master DIRECTORY --no-interaction
+
+The install script will:
+1. Prompt for your Gemini API key
+2. Install composer dependencies and apply patches
+3. Install Drupal with the Open Social profile
+4. Enable the LocalNodes Platform module (AI stack + config)
+5. Optionally install demo content
+6. Index all content (Solr + Qdrant vector embeddings)
+
+Login: `admin` / `admin`
+
+## Demo Content
+
+```bash
+scripts/install.sh --demo=boulder    # Boulder community demo
+scripts/install.sh --demo=cascadia   # Cascadia community demo
+scripts/install.sh --demo=all        # Both
+scripts/install.sh                   # No demo content
 ```
 
-Composer will create a new directory called DIRECTORY.
-The installed folders will contain all Drupal related files in the `html`
-directory and any third-party dependencies in the composer `vendor` directory.
-Drupal core will be installed to `html/core`. Inside you will find the
-html directory with the entire code base of the [Open Social distribution](https://www.drupal.org/project/social).
-Install your Open Social site like any other Drupal website using the `install.php` script or `drush`.
+## Architecture
 
-## Learn more about Composer for Drupal
+- **Search**: Hybrid search combining Solr (keyword/BM25) and Qdrant (vector similarity)
+- **Embeddings**: Gemini `gemini-embedding-001` (3072 dims) via average-pool chunking strategy
+- **Chat**: Gemini `gemini-3-flash-preview` for AI assistant and RAG
+- **VDB**: Qdrant v1.13.2 running as a DDEV container
+- **Related Content**: Vector similarity blocks on topic and event pages
 
-Checkout this [presentation](https://docs.google.com/presentation/d/1gxcxT6o47xVrfsZ7ZSQKjBRT-gfE54A1Z9kjvvGHwCo/edit#slide=id.p) from @ModsUnraveled.
+## Environment Variables
 
-## Issues
+Set in `.ddev/.env` (created automatically by the install script):
 
-### Install issues for Open Social
-[documentation](https://www.drupal.org/docs/8/distributions/open-social/installing-and-updating)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `SOLR_HOST` | No | Override Solr hostname (default: `solr`) |
+| `QDRANT_HOST` | No | Override Qdrant hostname (default: `qdrant`) |
+| `QDRANT_PORT` | No | Override Qdrant port (default: `6333`) |
 
-### Installing outside of HTML folder
-[See this issue for more information](https://www.drupal.org/project/social/issues/2792543#comment-11591981)
+See `.ddev/.env.example` for the full list.
 
-### Open Social issues & Support
-For any issues with the platform we kindly ask you to use the [drupal.org](https://www.drupal.org/project/issues/social) issue queue.
-This way we can centralise all the information and make the feedback available 
-for other users for documentation purposes. Next to giving people the credit they deserve.
+## Re-indexing
 
-### **Slack**
-If you have a quick question, we are also available on Slack. Visit https://www.drupal.org/slack to see how you can join Drupal Slack. After that you can find us in the #opensocial channel. We try to keep an eye on this channel but it may take a bit of time to get to you. For bug reports or longer questions, please use the Issue queue on Drupal.org so others can find the answers too.
+If AI search indexes are incomplete (e.g., due to API rate limits):
+
+```bash
+ddev drush search-api:reset-tracker social_posts
+ddev drush search-api:index social_posts
+ddev drush search-api:index social_comments
+```
+
+## License
+
+GPL-2.0+
