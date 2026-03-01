@@ -137,7 +137,7 @@ class PermissionFilterService {
 
     // If a specific group scope is provided, filter to that group.
     // Uses group_id from the GroupMetadata processor (not the entity's computed
-    // 'groups' field) because processor fields reliably write to Milvus metadata.
+    // 'groups' field) because processor fields reliably write to VDB metadata.
     if ($scopeGroupId !== NULL) {
       $query->addCondition('group_id', $scopeGroupId);
       return;

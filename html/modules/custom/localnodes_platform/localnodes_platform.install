@@ -1,0 +1,135 @@
+<?php
+
+/**
+ * @file
+ * Install and update functions for the LocalNodes Platform module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * Sets default AI provider config and applies environment variable overrides.
+ * Dependencies (ai, gemini_provider, ai_vdb_provider_qdrant, etc.) install
+ * their own empty/default configs first. This function fills in the values
+ * our stack requires (Gemini models, Qdrant connection, Solr connection).
+ */
+function localnodes_platform_install() {
+  _localnodes_platform_configure_ai_defaults();
+  _localnodes_platform_apply_env_overrides();
+}
+
+/**
+ * Configures AI provider defaults.
+ *
+ * Sets Gemini as the default provider for all AI operations, configures
+ * the Gemini API key reference, and sets Qdrant as the default VDB with
+ * DDEV-compatible connection defaults.
+ */
+function _localnodes_platform_configure_ai_defaults() {
+  $config_factory = \Drupal::configFactory();
+
+  // AI settings: set Gemini as default provider for all operations.
+  $ai_config = $config_factory->getEditable('ai.settings');
+  $ai_config->set('default_providers', [
+    'chat' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'chat_with_complex_json' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'chat_with_image_vision' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'chat_with_structured_response' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'chat_with_tools' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'embeddings' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-embedding-001',
+    ],
+    'speech_to_text' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3-flash-preview',
+    ],
+    'text_to_image' => [
+      'provider_id' => 'gemini',
+      'model_id' => 'models/gemini-3.1-flash-image-preview',
+    ],
+  ]);
+  $ai_config->set('default_vdb_provider', 'qdrant');
+  $ai_config->save(TRUE);
+
+  // Gemini provider: point to Key module's env-based key.
+  $gemini_config = $config_factory->getEditable('gemini_provider.settings');
+  $gemini_config->set('api_key', 'gemini_api_key');
+  $gemini_config->save(TRUE);
+
+  // Qdrant: set DDEV defaults.
+  $qdrant_config = $config_factory->getEditable('ai_vdb_provider_qdrant.settings');
+  $qdrant_config->set('host', 'qdrant');
+  $qdrant_config->set('port', 6333);
+  $qdrant_config->save(TRUE);
+}
+
+/**
+ * Applies environment variable overrides to configuration.
+ *
+ * Reads env vars and overrides DDEV defaults for Coolify or other
+ * deployment targets.
+ */
+function _localnodes_platform_apply_env_overrides() {
+  $config_factory = \Drupal::configFactory();
+
+  // Solr server overrides.
+  $solr_overrides = [
+    'SOLR_HOST' => 'backend_config.connector_config.host',
+    'SOLR_PORT' => 'backend_config.connector_config.port',
+    'SOLR_CORE' => 'backend_config.connector_config.core',
+    'SOLR_USER' => 'backend_config.connector_config.username',
+    'SOLR_PASS' => 'backend_config.connector_config.password',
+  ];
+
+  $solr_config = $config_factory->getEditable('search_api.server.social_solr');
+  $solr_changed = FALSE;
+  foreach ($solr_overrides as $env_var => $config_key) {
+    $value = getenv($env_var);
+    if ($value !== FALSE) {
+      if ($env_var === 'SOLR_PORT') {
+        $value = (int) $value;
+      }
+      $solr_config->set($config_key, $value);
+      $solr_changed = TRUE;
+    }
+  }
+  if ($solr_changed) {
+    $solr_config->save(TRUE);
+  }
+
+  // Qdrant overrides.
+  $qdrant_config = $config_factory->getEditable('ai_vdb_provider_qdrant.settings');
+  $qdrant_changed = FALSE;
+
+  $qdrant_host = getenv('QDRANT_HOST');
+  if ($qdrant_host !== FALSE) {
+    $qdrant_config->set('host', $qdrant_host);
+    $qdrant_changed = TRUE;
+  }
+
+  $qdrant_port = getenv('QDRANT_PORT');
+  if ($qdrant_port !== FALSE) {
+    $qdrant_config->set('port', (int) $qdrant_port);
+    $qdrant_changed = TRUE;
+  }
+
+  if ($qdrant_changed) {
+    $qdrant_config->save(TRUE);
+  }
+}

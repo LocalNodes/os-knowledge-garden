@@ -11,10 +11,10 @@ use Drupal\search_api\Query\QueryInterface;
 use Drupal\search_api\Query\ResultSetInterface;
 
 /**
- * Service for hybrid search combining Milvus semantic and Solr keyword search.
+ * Service for hybrid search combining VDB semantic and Solr keyword search.
  *
  * Uses Reciprocal Rank Fusion (RRF) to merge results from vector similarity
- * search (Milvus) and keyword matching (Solr), with permission-aware filtering.
+ * search (Qdrant) and keyword matching (Solr), with permission-aware filtering.
  */
 class HybridSearchService {
 
@@ -73,7 +73,7 @@ class HybridSearchService {
     // Fetch 2x results from each source for better RRF merging.
     $fetch_limit = $limit * 2;
 
-    // 1. Semantic search via Milvus (social_posts index).
+    // 1. Semantic search via VDB (social_posts index).
     $vectorResults = $this->vectorSearch($query, $account, $fetch_limit);
 
     // 2. Keyword search via Solr (social_content index).
@@ -90,7 +90,7 @@ class HybridSearchService {
   }
 
   /**
-   * Perform vector similarity search via Milvus.
+   * Perform vector similarity search via VDB.
    *
    * @param string $query
    *   The search query string.
@@ -186,7 +186,7 @@ class HybridSearchService {
    * RRF formula: score(d) = Σ 1/(k + rank(d))
    *
    * This rank-based fusion avoids score normalization issues between
-   * different search systems (Milvus cosine similarity vs Solr BM25).
+   * different search systems (VDB cosine similarity vs Solr BM25).
    *
    * @param array $vectorResults
    *   Results from vector/semantic search.

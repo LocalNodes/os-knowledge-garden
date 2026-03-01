@@ -12,7 +12,7 @@ use Drupal\Core\Session\AccountInterface;
 /**
  * Generates AI overview summaries for search queries using RAG.
  *
- * Orchestrates hybrid search (Milvus + Solr) with LLM summarization
+ * Orchestrates hybrid search (VDB + Solr) with LLM summarization
  * to produce a brief overview with inline citations.
  */
 class AiOverviewService {

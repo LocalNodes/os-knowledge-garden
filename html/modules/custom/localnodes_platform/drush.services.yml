@@ -1,0 +1,5 @@
+services:
+  localnodes_platform.drush.commands:
+    class: Drupal\localnodes_platform\Drush\Commands\LocalNodesDemoCommands
+    tags:
+      - { name: drush.command }

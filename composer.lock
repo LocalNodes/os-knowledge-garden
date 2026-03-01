@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f8aad98e071c94c21213be96661de96d",
+    "content-hash": "4ae4bd3575baaf88da37bb62c7182a79",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -2340,77 +2340,6 @@
             "homepage": "https://www.drupal.org/project/ai_usage_limits",
             "support": {
                 "source": "https://git.drupalcode.org/project/ai_usage_limits"
-            }
-        },
-        {
-            "name": "drupal/ai_vdb_provider_milvus",
-            "version": "dev-1.1.x",
-            "source": {
-                "type": "git",
-                "url": "https://git.drupalcode.org/project/ai_vdb_provider_milvus.git",
-                "reference": "440188bf29d5004e7a8239bf9024008f13e0bbb3"
-            },
-            "require": {
-                "drupal/ai": "^1.2",
-                "drupal/ai-ai_search": "^1.2",
-                "drupal/core": "^10.2 || ^11",
-                "drupal/key": "^1.18"
-            },
-            "require-dev": {
-                "drupal/search_api": "^1.35"
-            },
-            "type": "drupal-module",
-            "extra": {
-                "branch-alias": {
-                    "dev-1.1.x": "1.1.x-dev"
-                },
-                "drupal": {
-                    "version": "1.1.0-beta2+2-dev",
-                    "datestamp": "1764257162",
-                    "security-coverage": {
-                        "status": "not-covered",
-                        "message": "Dev releases are not covered by Drupal security advisories."
-                    }
-                }
-            },
-            "notification-url": "https://packages.drupal.org/8/downloads",
-            "license": [
-                "GPL-2.0-or-later"
-            ],
-            "authors": [
-                {
-                    "name": "gxleano",
-                    "homepage": "https://www.drupal.org/user/3591999"
-                },
-                {
-                    "name": "kevinquillen",
-                    "homepage": "https://www.drupal.org/user/317279"
-                },
-                {
-                    "name": "marcus_johansson",
-                    "homepage": "https://www.drupal.org/user/385947"
-                },
-                {
-                    "name": "scott_euser",
-                    "homepage": "https://www.drupal.org/user/3267594"
-                },
-                {
-                    "name": "seogow",
-                    "homepage": "https://www.drupal.org/user/3065779"
-                },
-                {
-                    "name": "wouters_f",
-                    "homepage": "https://www.drupal.org/user/721548"
-                },
-                {
-                    "name": "yautja_cetanu",
-                    "homepage": "https://www.drupal.org/user/626050"
-                }
-            ],
-            "description": "Milvus VDB provider implementation for the AI module for Drupal",
-            "homepage": "https://www.drupal.org/project/ai_vdb_provider_milvus",
-            "support": {
-                "source": "https://git.drupalcode.org/project/ai_vdb_provider_milvus"
             }
         },
         {
@@ -16389,7 +16318,6 @@
         "drupal/ai_provider_deepseek": 20,
         "drupal/ai_provider_ollama": 20,
         "drupal/ai_usage_limits": 20,
-        "drupal/ai_vdb_provider_milvus": 20,
         "drupal/ai_vdb_provider_qdrant": 20,
         "drupal/gemini_provider": 20
     },
