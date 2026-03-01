@@ -32,6 +32,9 @@ vendor/
 private/
 .claude/
 
+# DDEV environment (contains API keys)
+/.ddev/.env
+
 # DDEV service volumes (binary runtime data)
 .ddev/milvus/volumes/
 .ddev/qdrant/
