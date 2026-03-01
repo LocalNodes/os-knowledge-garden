@@ -27,5 +27,5 @@ default_providers:
   text_to_image:
     provider_id: gemini
     model_id: models/gemini-3-pro-image-preview
-default_vdb_provider: milvus
+default_vdb_provider: qdrant
 request_timeout: 60

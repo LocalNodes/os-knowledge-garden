@@ -149,8 +149,8 @@ try {
     
     if ($backend) {
       $backend_id = $backend->getPluginId();
-      // Check if it's a vector-capable backend (milvus, ai_search, etc.)
-      if (str_contains($backend_id, 'milvus') || str_contains($backend_id, 'ai_search') || str_contains($backend_id, 'search_api_ai')) {
+      // Check if it's a vector-capable backend (qdrant, ai_search, etc.)
+      if (str_contains($backend_id, 'qdrant') || str_contains($backend_id, 'ai_search') || str_contains($backend_id, 'search_api_ai')) {
         log_result('QA-04', 'Vector search backend configured', 'PASS', "Backend: $backend_id");
       } else {
         log_result('QA-04', 'Backend check', 'SKIP', "Backend $backend_id may support vectors");
@@ -325,7 +325,7 @@ print "\nTesting index content...\n";
 try {
   $index_storage = \Drupal::entityTypeManager()->getStorage('search_api_index');
   
-  // Check social_posts (Milvus/Vector)
+  // Check social_posts (VDB/Vector)
   $social_posts = $index_storage->load('social_posts');
   if ($social_posts) {
     $query = $social_posts->query();
