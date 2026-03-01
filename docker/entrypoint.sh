@@ -72,15 +72,28 @@ echo "Waiting for Qdrant..."
 while ! bash -c "echo > /dev/tcp/${QDRANT_HOST:-qdrant}/${QDRANT_PORT:-6333}" 2>/dev/null; do sleep 1; done
 echo "Qdrant is available."
 
-# --- Qdrant dimension check ---
-# If an existing collection has wrong dimensions (1536 from old model vs 3072 from current),
-# delete it so it gets recreated with correct dimensions during indexing.
-QDRANT_COLLECTION_INFO=$(curl -sf "http://${QDRANT_HOST:-qdrant}:${QDRANT_PORT:-6333}/collections/knowledge_garden" 2>/dev/null || true)
+# --- Qdrant collection setup ---
+# Ensure knowledge_garden collection exists with correct dimensions (3072 for gemini-embedding-001).
+# The Qdrant provider defaults to 1536 dims, so we must manage this ourselves.
+QDRANT_URL="http://${QDRANT_HOST:-qdrant}:${QDRANT_PORT:-6333}"
+QDRANT_COLLECTION_INFO=$(curl -sf "$QDRANT_URL/collections/knowledge_garden" 2>/dev/null || true)
+
 if echo "$QDRANT_COLLECTION_INFO" | grep -q '"size":1536'; then
-  echo "WARNING: Qdrant collection 'knowledge_garden' has wrong dimensions (1536 vs expected 3072). Deleting for recreation..."
-  curl -sf -X DELETE "http://${QDRANT_HOST:-qdrant}:${QDRANT_PORT:-6333}/collections/knowledge_garden" || true
-  echo "Collection deleted. It will be recreated with correct dimensions during indexing."
+  echo "WARNING: Qdrant collection has wrong dimensions (1536 vs 3072). Recreating..."
+  curl -sf -X DELETE "$QDRANT_URL/collections/knowledge_garden" || true
+  QDRANT_COLLECTION_INFO=""
 fi
+
+if [ -z "$QDRANT_COLLECTION_INFO" ] || ! echo "$QDRANT_COLLECTION_INFO" | grep -q '"size":3072'; then
+  echo "Creating Qdrant collection with 3072 dimensions..."
+  curl -sf -X PUT "$QDRANT_URL/collections/knowledge_garden" \
+    -H 'Content-Type: application/json' \
+    -d '{"vectors":{"size":3072,"distance":"Cosine"}}' || true
+fi
+
+# --- Ensure file permissions on mounted volumes ---
+chown -R www-data:www-data /var/www/html/html/sites/default/files 2>/dev/null || true
+chown -R www-data:www-data /var/www/private 2>/dev/null || true
 
 # --- Detect install state ---
 # Use drush bootstrap check instead of raw MySQL query (more reliable, avoids spurious reinstall on DB connection issues)
@@ -179,8 +192,21 @@ else
   $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
 
-  # Run cron
-  $DRUSH cron || true
+  # Re-index if Solr is empty (handles redeploys where Solr core was recreated)
+  SOLR_DOCS=$(curl -sf "http://${SOLR_HOST:-solr}:${SOLR_PORT:-8983}/solr/drupal/select?q=*:*&rows=0&wt=json" 2>/dev/null \
+    | grep -o '"numFound":[0-9]*' | grep -o '[0-9]*' || echo "0")
+  if [ "$SOLR_DOCS" = "0" ]; then
+    echo "Solr index empty — re-indexing content..."
+    $DRUSH search-api:reset-tracker || true
+    $DRUSH search-api:index || true
+    echo "Running cron for vector indexing..."
+    $DRUSH cron || true
+    sleep 5
+    $DRUSH cron || true
+  else
+    echo "Solr index has $SOLR_DOCS docs — skipping re-index."
+    $DRUSH cron || true
+  fi
 
   echo "=== EXISTING INSTALL READY ==="
 fi

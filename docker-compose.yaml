@@ -65,8 +65,9 @@ services:
     command: |
       bash -c "
         sleep 2 &&
-        rm -rf /var/solr/data/drupal &&
-        solr-precreate drupal /opt/solr/server/solr/configsets/drupal &&
+        if [ ! -d /var/solr/data/drupal ]; then
+          solr-precreate drupal /opt/solr/server/solr/configsets/drupal;
+        fi &&
         exec solr -f
       "
     healthcheck:
