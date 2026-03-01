@@ -2,7 +2,6 @@
 
 namespace Drupal\localnodes_platform\Drush\Commands;
 
-use Drupal\search_api\Entity\Index;
 use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
 
@@ -54,14 +53,8 @@ class LocalNodesDemoCommands extends DrushCommands {
       }
     }
 
-    // Re-index search.
-    $this->logger()->notice('Re-indexing search...');
-    $indexes = Index::loadMultiple();
-    foreach ($indexes as $index) {
-      $index->reindex();
-    }
-
     $this->logger()->success("Demo content from $module installed successfully.");
+    $this->logger()->notice('Run "drush search-api:reset-tracker && drush search-api:index" to index content.');
   }
 
 }
