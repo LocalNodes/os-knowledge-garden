@@ -31,7 +31,7 @@ specific_error_messages:
   AiSetupFailureException: ''
   AiRequestErrorException: ''
 llm_provider: gemini
-llm_model: models/gemini-2.5-flash
+llm_model: models/gemini-3-flash-preview
 llm_configuration:
   stopSequences: ''
   maxOutputTokens: 1024

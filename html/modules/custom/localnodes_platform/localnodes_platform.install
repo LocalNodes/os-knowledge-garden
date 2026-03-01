@@ -33,23 +33,23 @@ function _localnodes_platform_configure_ai_defaults() {
   $ai_config->set('default_providers', [
     'chat' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'chat_with_complex_json' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'chat_with_image_vision' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'chat_with_structured_response' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'chat_with_tools' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'embeddings' => [
       'provider_id' => 'gemini',
@@ -57,7 +57,7 @@ function _localnodes_platform_configure_ai_defaults() {
     ],
     'speech_to_text' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-2.5-flash',
+      'model_id' => 'models/gemini-3-flash-preview',
     ],
     'text_to_image' => [
       'provider_id' => 'gemini',
