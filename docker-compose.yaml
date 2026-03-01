@@ -1,6 +1,7 @@
 services:
   opensocial:
     image: ghcr.io/localnodes/os-knowledge-garden:latest
+    pull_policy: always
     environment:
       DB_HOST: mariadb
       DB_PORT: 3306
