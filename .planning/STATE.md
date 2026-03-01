@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 9: Deploy to Coolify -- Plan 01 complete
+**Current focus:** Phase 9: Deploy to Coolify -- Plan 02 complete, deployments building
 
 ## Current Position
 
 Phase: 09 (Deploy Demo Instances to Coolify)
-Plan: 1 of 3 complete in current phase
-Status: Deploy repo updated with full AI knowledge garden stack on localnodes branch
-Last activity: 2026-03-01 — Synced fresh3 codebase to open-social-coolify deploy repo and pushed localnodes branch
+Plan: 2 of 3 complete in current phase
+Status: Both Coolify apps created, configured, and deployments triggered
+Last activity: 2026-03-01 — Created cascadia + boulder Coolify apps, set env vars, triggered deployments
 
 Progress: [█████████████████████████] 100% (26/26 plans)
 
@@ -126,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 09-01]: Solr configset name opensearch -> drupal to match DDEV naming convention
 - [Phase 09-01]: SIWE domain extraction strips protocol prefix from SERVICE_FQDN_OPENSOCIAL
 - [Phase 09-01]: Qdrant healthcheck uses bash TCP probe since image lacks curl
+- [Phase 09-02]: Used create_public instead of create_github (Coolify API bug with create_github returning HTML)
+- [Phase 09-02]: Cascadia UUID: sw08occo8so0g4okkw0w8goc, Boulder UUID: lwkkk4s00wokowc4c8o8k0sg
 
 ### Roadmap Evolution
 
@@ -148,7 +150,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 09-01-PLAN.md (Deploy repo update with full AI knowledge garden stack on localnodes branch)
+Stopped at: Completed 09-02-PLAN.md. Deployments building on Coolify. Plan 09-03 (verification) remains — wait for builds to finish then verify.
 
 ---
 *State initialized: 2026-02-23*

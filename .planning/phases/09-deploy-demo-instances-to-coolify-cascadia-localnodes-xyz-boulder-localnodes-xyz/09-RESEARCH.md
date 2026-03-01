@@ -418,6 +418,10 @@ gh api -X POST "https://your-coolify-instance/api/v1/applications" \
 | Manual domain/SSL config | Coolify auto Let's Encrypt via `SERVICE_FQDN_` | Coolify v4 beta.411+ | Zero SSL management effort |
 | Single demo instance | Two instances with env-driven differentiation | This phase | Same codebase, different content |
 
+**Important architectural note:**
+- Web3/SIWE modules (siwe_login, safe_smart_accounts, group_treasury, social_group_treasury) MUST be kept in the deployment. The LocalNodes vision encompasses both "agentic x federated bioregional knowledge commons AND web2.5 onchain bioregional financing facilities." Group treasuries are a step toward governance proposals and Zodiac/DAO snapshot voting. See: https://omniharmonic.substack.com/p/the-infrastructure-of-belonging
+- The SIWE expected domain config must be set dynamically per instance using `SERVICE_FQDN_OPENSOCIAL` env var.
+
 **Deprecated/outdated:**
 - Solr 8.11 in deploy repo: Should be upgraded to Solr 9 to match DDEV config and current search_api_solr expectations
 - The existing `open-social-coolify` deploy repo on `test-composer-2` branch has no AI modules -- it's a vanilla Open Social that needs significant updating
