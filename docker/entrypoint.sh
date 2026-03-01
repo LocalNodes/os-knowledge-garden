@@ -110,9 +110,40 @@ if [ "$INSTALLED" = false ]; then
   echo "Enabling demo module: $DEMO_MODULE..."
   $DRUSH en "$DEMO_MODULE" -y
 
-  # Load demo content
-  echo "Loading demo content..."
-  $DRUSH social-demo:add file user group topic event event_enrollment comment post like
+  # Load demo content using the correct plugin IDs for the demo module.
+  # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
+  # with a module-specific prefix (e.g., localnodes_user, boulder_user).
+  # The base social_demo uses unprefixed IDs (user, group, etc.).
+  echo "Loading demo content for $DEMO_MODULE..."
+  case "$DEMO_MODULE" in
+    localnodes_demo)
+      PLUGIN_PREFIX="localnodes"
+      ;;
+    boulder_demo)
+      PLUGIN_PREFIX="boulder"
+      ;;
+    *)
+      # Default: use social_demo's unprefixed plugin IDs
+      PLUGIN_PREFIX=""
+      ;;
+  esac
+
+  if [ -n "$PLUGIN_PREFIX" ]; then
+    $DRUSH social-demo:add \
+      ${PLUGIN_PREFIX}_file \
+      ${PLUGIN_PREFIX}_user_terms \
+      ${PLUGIN_PREFIX}_event_type \
+      ${PLUGIN_PREFIX}_user \
+      ${PLUGIN_PREFIX}_group \
+      ${PLUGIN_PREFIX}_topic \
+      ${PLUGIN_PREFIX}_event \
+      ${PLUGIN_PREFIX}_event_enrollment \
+      ${PLUGIN_PREFIX}_comment \
+      ${PLUGIN_PREFIX}_post \
+      ${PLUGIN_PREFIX}_like
+  else
+    $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+  fi
 
   # Index Solr
   echo "Indexing content in Solr..."
