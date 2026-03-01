@@ -111,15 +111,13 @@ COPY --from=builder /app/html /var/www/html/html
 # Copy custom modules (project code, not installed via composer)
 COPY html/modules/custom/ /var/www/html/html/modules/custom/
 
-# Create private files directory
-RUN mkdir -p /var/www/private
-
-# Set ownership for writable directories
-RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
-    && chown -R www-data:www-data /var/www/private
-
-# Ensure sites/default directory exists with correct permissions
+# Create writable directories (files dir not in source, created at build time)
 RUN mkdir -p /var/www/html/html/sites/default/files \
+    && mkdir -p /var/www/private
+
+# Set ownership and permissions for writable directories
+RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
+    && chown -R www-data:www-data /var/www/private \
     && chmod 755 /var/www/html/html/sites/default
 
 # Copy and configure entrypoint
