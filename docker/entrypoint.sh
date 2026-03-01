@@ -12,7 +12,7 @@ if ! grep -q "Added by entrypoint" "$SETTINGS_FILE" 2>/dev/null; then
   chmod 644 "$SETTINGS_FILE"
 
   cat >> "$SETTINGS_FILE" << 'SETTINGS_EOF'
-<?php
+
 // Added by entrypoint
 $databases['default']['default'] = [
   'database' => getenv('DB_NAME') ?: 'opensocial',

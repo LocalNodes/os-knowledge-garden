@@ -60,6 +60,7 @@ services:
       - solr-data:/var/solr
     environment:
       SOLR_HEAP: 512m
+      SOLR_MODULES: analysis-extras
     command: |
       bash -c "
         sleep 2 &&
@@ -68,7 +69,7 @@ services:
         exec solr -f
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/drupal/admin/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
