@@ -78,6 +78,13 @@ Deferred to future release. Tracked but not in current roadmap.
 - **ADV-03**: OCR for scanned documents and images
 - **ADV-04**: Table extraction from PDFs and spreadsheets
 
+### Deployment
+
+- [x] **DEPLOY-REPO**: Docker and CI infrastructure files exist in the main repo (Dockerfile, docker-compose.yml, entrypoint.sh, GitHub Actions workflow) and CI successfully builds + pushes image to GHCR
+- [ ] **DEPLOY-CASCADIA**: Cascadia demo instance (cascadia.localnodes.xyz) is deployed on Coolify with Cascadia bioregionalism content, accessible via HTTPS
+- [ ] **DEPLOY-BOULDER**: Boulder demo instance (boulder.localnodes.xyz) is deployed on Coolify with Boulder/Front Range regen content, accessible via HTTPS
+- [ ] **DEPLOY-VERIFY**: Both instances verified operational — correct demo content, AI chatbot functional, Solr search working, SSL valid, all containers healthy
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
@@ -128,14 +135,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-03 | Phase 5 | Complete |
 | UI-04 | Phase 5 | Complete |
 | UI-05 | Phase 5 | Complete |
+| DEPLOY-REPO | Phase 9 | Planned |
+| DEPLOY-CASCADIA | Phase 9 | Planned |
+| DEPLOY-BOULDER | Phase 9 | Planned |
+| DEPLOY-VERIFY | Phase 9 | Planned |
 
 **Coverage:**
-- v1 requirements: 30 total
-- Mapped to phases: 30
-- Satisfied: 30/30
-- Pending: 0
+- v1 requirements: 30 total (complete)
+- Deployment requirements: 4 total (planned)
+- Mapped to phases: 34
+- Satisfied: 30/34
+- Pending: 4 (DEPLOY-*)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-27 — All v1 requirements complete*
+*Last updated: 2026-03-01 — Added DEPLOY-* requirements for Phase 9*

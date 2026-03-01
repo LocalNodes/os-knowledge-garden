@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T06:23:38.000Z"
+last_updated: "2026-03-01T09:16:31.283Z"
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 26
-  completed_plans: 26
+  total_phases: 10
+  completed_phases: 6
+  total_plans: 29
+  completed_plans: 27
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 9: Deploy to Coolify — PIVOTING to clean docker-compose in main repo
+**Current focus:** Phase 9: Deploy to Coolify — CI artifact strategy via docker-compose in main repo
 
 ## Current Position
 
 Phase: 09 (Deploy Demo Instances to Coolify)
-Plan: Pivoting — old plans (09-01, 09-02) obsolete, new approach designed
-Status: Design approved for CI artifact strategy (ghcr.io/localnodes/os-knowledge-garden)
-Last activity: 2026-03-01 — Approved clean docker-compose design, needs implementation plan
+Plan: 02 (next — push to GitHub, create Coolify apps, trigger deployments)
+Status: Plan 09-01 complete — Docker/CI infrastructure created and approved
+Last activity: 2026-03-01 — Completed 09-01 (Docker/CI infrastructure), ready for 09-02
 
-Progress: [█████████████████████████] 100% (26/26 plans)
+Progress: [████████████████████████░] 96% (27/28 plans)
 
 ## Performance Metrics
 
@@ -71,7 +71,7 @@ Progress: [███████████████████████
 | Phase 06 P04 | 2 min | 3 tasks | 14 files |
 | Phase 06 P05 | 12 min | 2 tasks | 28 files |
 | Phase 06 P06 | 8 min | 2 tasks | 0 files |
-| Phase 09 P01 | 4 min | 3 tasks | 6946 files |
+| Phase 09 P01 | 4 min | 3 tasks | 188 files |
 
 ## Accumulated Context
 
@@ -128,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 09-01]: Qdrant healthcheck uses bash TCP probe since image lacks curl
 - [Phase 09-02]: Used create_public instead of create_github (Coolify API bug with create_github returning HTML)
 - [Phase 09-02]: Cascadia UUID: sw08occo8so0g4okkw0w8goc, Boulder UUID: lwkkk4s00wokowc4c8o8k0sg
+- [Phase 09]: Multi-stage Docker build: php:8.3-cli builder for composer install with patches, php:8.3-apache runtime for lean production image
+- [Phase 09]: Single Docker image for both instances; DEMO_MODULE env var selects content module at runtime
 
 ### Roadmap Evolution
 
@@ -150,8 +152,8 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Pivoted Phase 09 to clean docker-compose approach. Design approved (docs/plans/2026-03-01-clean-docker-compose-deploy-design.md). Next: create implementation plan from design, then execute.
-Resume file: .planning/phases/09-deploy-demo-instances-to-coolify-cascadia-localnodes-xyz-boulder-localnodes-xyz/.continue-here.md
+Stopped at: Completed 09-01-PLAN.md — Docker/CI infrastructure created and approved. Next: 09-02 (push to GitHub, create Coolify apps, trigger deployments).
+Resume file: .planning/phases/09-deploy-demo-instances-to-coolify-cascadia-localnodes-xyz-boulder-localnodes-xyz/09-02-PLAN.md
 
 ---
 *State initialized: 2026-02-23*

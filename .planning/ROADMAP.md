@@ -148,6 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 5. User Interface | 3/3 | Complete | 2026-02-27 |
 | 7. Fix Integration Bugs | - | Resolved | 2026-02-27 |
 | 8. Re-verify & Track | - | Resolved | 2026-02-27 |
+| 9. Deploy to Coolify | 1/3 | In Progress | - |
 
 ### Phase 6: Create demo content for LocalNodes.xyz based on social_demo module
 
@@ -172,9 +173,9 @@ Plans:
 **Plans:** 3 plans in 3 waves
 
 Plans:
-- [ ] 09-01-PLAN.md -- Update open-social-coolify deploy repo with fresh3 codebase, Qdrant service, Solr 9, and LocalNodes entrypoint (Wave 1)
-- [ ] 09-02-PLAN.md -- Create Cascadia and Boulder Coolify applications, configure env vars, and trigger deployments (Wave 2, depends on 09-01)
-- [ ] 09-03-PLAN.md -- Verify deployment completion, domain accessibility, demo content, and AI features (Wave 3, depends on 09-02)
+- [x] 09-01-PLAN.md -- Create Docker/CI infrastructure: multi-stage Dockerfile, Solr Dockerfile, entrypoint.sh, solr-config, docker-compose.yml, .dockerignore, GitHub Actions workflow (Wave 1)
+- [ ] 09-02-PLAN.md -- Push to GitHub, delete old Coolify apps, create Cascadia + Boulder apps with env vars, trigger deployments (Wave 2, depends on 09-01)
+- [ ] 09-03-PLAN.md -- Verify both instances: domain access, SSL, correct demo content, AI chatbot, container health (Wave 3, depends on 09-02)
 
 ---
 *Roadmap created: 2026-02-23*
