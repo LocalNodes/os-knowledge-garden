@@ -49,10 +49,14 @@ class RelatedContentService {
       $query->keys($queryText);
 
       // Request extra results when filtering by bundle, since the AI Search
-      // backend (Milvus) doesn't support filtering on the 'type' field.
+      // backend doesn't support filtering on the 'type' field.
       // We filter by bundle in PHP after loading nodes instead.
-      $queryLimit = $bundle ? $limit * 3 : $limit;
+      // Also account for chunked embeddings: each node may produce multiple
+      // vectors, so request more to get enough unique entities after dedup.
+      $queryLimit = $bundle ? $limit * 5 : $limit * 3;
       $query->range(0, $queryLimit);
+      // The VDB backend reads the 'limit' option, not range().
+      $query->setOption('limit', $queryLimit);
 
       $results = $query->execute();
 
