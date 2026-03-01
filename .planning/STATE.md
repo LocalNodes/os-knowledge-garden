@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T10:36:24.000Z"
+last_updated: "2026-03-01T06:23:38.000Z"
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 6: Demo Content (Boulder instance) -- COMPLETE
+**Current focus:** Phase 9: Deploy to Coolify -- Plan 01 complete
 
 ## Current Position
 
-Phase: 06 (Create Demo Content) - Complete
-Plan: 6 of 6 complete in current phase
-Status: Boulder demo content installed and verified. Phase 06 complete.
-Last activity: 2026-02-28 — Installed 119 Boulder demo entities and verified integrity
+Phase: 09 (Deploy Demo Instances to Coolify)
+Plan: 1 of 3 complete in current phase
+Status: Deploy repo updated with full AI knowledge garden stack on localnodes branch
+Last activity: 2026-03-01 — Synced fresh3 codebase to open-social-coolify deploy repo and pushed localnodes branch
 
-Progress: [████████████████████████] 96% (25/26 plans)
+Progress: [█████████████████████████] 100% (26/26 plans)
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [███████████████████████
 | Phase 06 P04 | 2 min | 3 tasks | 14 files |
 | Phase 06 P05 | 12 min | 2 tasks | 28 files |
 | Phase 06 P06 | 8 min | 2 tasks | 0 files |
+| Phase 09 P01 | 4 min | 3 tasks | 6946 files |
 
 ## Accumulated Context
 
@@ -121,11 +122,16 @@ Recent decisions affecting current work:
 - [Phase 06-05]: Research and Question topic types use exact string names per prepareTopicType() method
 - [Phase 06-06]: Ran localnodes content removal twice -- first sdr pass left events, second pass cleaned all duplicates
 - [Phase 06-06]: Ran localnodes_demo update_10002 to rename Resource to Research before boulder content install
+- [Phase 09-01]: Vendor-committed strategy for deploy repo -- rsync pre-built code with patches applied rather than composer install at build time
+- [Phase 09-01]: Solr configset name opensearch -> drupal to match DDEV naming convention
+- [Phase 09-01]: SIWE domain extraction strips protocol prefix from SERVICE_FQDN_OPENSOCIAL
+- [Phase 09-01]: Qdrant healthcheck uses bash TCP probe since image lacks curl
 
 ### Roadmap Evolution
 
 - Phase 6 added: Create demo content for LocalNodes.xyz based on social_demo module
 - Phase 05.1 inserted after Phase 5: Split Related Content block into Related Topics and Related Events (URGENT)
+- Phase 9 added: Deploy demo instances to Coolify (cascadia.localnodes.xyz, boulder.localnodes.xyz)
 
 ### Pending Todos
 
@@ -141,9 +147,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Completed 06-06-PLAN.md (Boulder demo content install and verification). Phase 06 complete.
+Last session: 2026-03-01
+Stopped at: Completed 09-01-PLAN.md (Deploy repo update with full AI knowledge garden stack on localnodes branch)
 
 ---
 *State initialized: 2026-02-23*
-*Last updated: 2026-02-28*
+*Last updated: 2026-03-01*

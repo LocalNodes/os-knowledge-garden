@@ -164,5 +164,17 @@ Plans:
 - [ ] 06-05-PLAN.md -- Create 11 YAML content files with Boulder/Front Range regen community content showcasing Research and Question topic types (Wave 2)
 - [ ] 06-06-PLAN.md -- Install boulder_demo content and verify entities, topic types, and permissions in UI (Wave 3)
 
+### Phase 9: Deploy demo instances to Coolify (cascadia.localnodes.xyz, boulder.localnodes.xyz)
+
+**Goal:** Two live demo instances are deployed and accessible -- cascadia.localnodes.xyz with Cascadia bioregionalism content and boulder.localnodes.xyz with Boulder/Front Range regen content, each running the full AI knowledge garden stack (Solr + Qdrant + Gemini)
+**Requirements**: DEPLOY-REPO, DEPLOY-CASCADIA, DEPLOY-BOULDER, DEPLOY-VERIFY
+**Depends on:** Phase 6
+**Plans:** 3 plans in 3 waves
+
+Plans:
+- [ ] 09-01-PLAN.md -- Update open-social-coolify deploy repo with fresh3 codebase, Qdrant service, Solr 9, and LocalNodes entrypoint (Wave 1)
+- [ ] 09-02-PLAN.md -- Create Cascadia and Boulder Coolify applications, configure env vars, and trigger deployments (Wave 2, depends on 09-01)
+- [ ] 09-03-PLAN.md -- Verify deployment completion, domain accessibility, demo content, and AI features (Wave 3, depends on 09-02)
+
 ---
 *Roadmap created: 2026-02-23*
