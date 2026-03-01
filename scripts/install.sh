@@ -62,7 +62,6 @@ ensure_gemini_key() {
     fi
   else
     cat > "$ENV_FILE" <<ENVEOF
-COMPOSE_PROFILES=qdrant
 GEMINI_API_KEY=${GEMINI_KEY}
 ENVEOF
   fi
