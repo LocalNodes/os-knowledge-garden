@@ -1,0 +1,21 @@
+name: 'LocalNodes Platform'
+type: module
+description: 'Configures the complete AI knowledge garden stack: Solr, Qdrant, Gemini provider, search indexes, chatbot, and related content blocks.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  # AI core
+  - ai:ai
+  - ai_agents:ai_agents
+  - ai:ai_chatbot
+  - ai:ai_search
+  - ai:ai_assistant_api
+  - ai_file_to_text:ai_file_to_text
+  - ai_vdb_provider_qdrant:ai_vdb_provider_qdrant
+  - gemini_provider:gemini_provider
+  - key:key
+  # Search
+  - search_api:search_api
+  - search_api_solr:search_api_solr
+  # Custom AI indexing
+  - social_ai_indexing:social_ai_indexing
