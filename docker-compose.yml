@@ -1,0 +1,93 @@
+services:
+  opensocial:
+    image: ghcr.io/localnodes/os-knowledge-garden:latest
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-opensocial}
+      DB_USER: ${DB_USER:-opensocial}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      DRUPAL_HASH_SALT: ${DRUPAL_HASH_SALT:-generate-random}
+      DRUPAL_TRUSTED_HOST_PATTERNS: ${DRUPAL_TRUSTED_HOST_PATTERNS:-}
+      DRUPAL_REVERSE_PROXY: "true"
+      SOLR_HOST: solr
+      SOLR_PORT: 8983
+      SOLR_PATH: /solr
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DEMO_MODULE: ${DEMO_MODULE:-localnodes_demo}
+      DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
+      DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
+      DRUPAL_ADMIN_PASS: ${DRUPAL_ADMIN_PASS:-admin}
+      SERVICE_FQDN_OPENSOCIAL: ${SERVICE_FQDN_OPENSOCIAL:-}
+    volumes:
+      - opensocial-files:/var/www/html/html/sites/default/files
+      - opensocial-private:/var/www/private
+    depends_on:
+      mariadb: { condition: service_healthy }
+      solr: { condition: service_healthy }
+      qdrant: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/core/install.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-opensocial}
+      MYSQL_USER: ${DB_USER:-opensocial}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-changeme}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER:-opensocial}", "-p${DB_PASSWORD:-changeme}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  solr:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.solr
+    volumes:
+      - solr-data:/var/solr
+    environment:
+      SOLR_HEAP: 512m
+    command: |
+      bash -c "
+        sleep 2 &&
+        rm -rf /var/solr/data/drupal &&
+        solr-precreate drupal /opt/solr/server/solr/configsets/drupal &&
+        exec solr -f
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  opensocial-files:
+  opensocial-private:
+  mariadb-data:
+  solr-data:
+  qdrant-data:
