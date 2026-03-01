@@ -211,6 +211,11 @@ else
   echo "=== EXISTING INSTALL READY ==="
 fi
 
+# Ensure chatbot API permissions are granted
+# (config/sync permissions aren't applied without drush cim)
+$DRUSH role:perm:add anonymous 'access deepchat api' 2>/dev/null || true
+$DRUSH role:perm:add authenticated 'access deepchat api' 2>/dev/null || true
+
 # Clear caches
 $DRUSH cr
 

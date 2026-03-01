@@ -32,6 +32,7 @@ permissions:
   - 'access comments'
   - 'access content'
   - 'access content search'
+  - 'access deepchat api'
   - 'access group search'
   - 'cancel account'
   - 'change own username'
