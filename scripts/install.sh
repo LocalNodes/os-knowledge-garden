@@ -121,11 +121,13 @@ esac
 echo ">>> Rebuilding caches..."
 ddev drush cr
 
-# Clear stale vectors from Qdrant (handles repeated installs cleanly).
-echo ">>> Clearing Qdrant collection..."
-ddev exec curl -s -X POST http://qdrant:6333/collections/knowledge_garden/points/delete \
+# Recreate Qdrant collection with correct vector dimensions (3072 for gemini-embedding-001).
+# The Qdrant provider defaults to 1536 dims, so we must pre-create the collection.
+echo ">>> Recreating Qdrant collection (3072 dims)..."
+ddev exec curl -s -X DELETE http://qdrant:6333/collections/knowledge_garden > /dev/null 2>&1 || true
+ddev exec curl -s -X PUT http://qdrant:6333/collections/knowledge_garden \
   -H 'Content-Type: application/json' \
-  -d '{"filter":{"must":[{"key":"index_id","match":{"value":"social_posts"}}]}}' > /dev/null 2>&1 || true
+  -d '{"vectors":{"size":3072,"distance":"Cosine"}}' > /dev/null 2>&1
 
 echo ">>> Indexing search content..."
 ddev drush search-api:reset-tracker
