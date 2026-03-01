@@ -1,0 +1,48 @@
+index_id: social_posts
+control_field_max_length: false
+exclude_chunk_from_metadata: false
+indexing_options:
+  title:
+    field_name: title
+    indexing_option: main_content
+    max: 0
+  rendered_item:
+    field_name: rendered_item
+    indexing_option: main_content
+    max: 0
+  file_content:
+    field_name: file_content
+    indexing_option: main_content
+    max: 0
+  citation_title:
+    field_name: citation_title
+    indexing_option: attributes
+    max: 0
+  citation_type:
+    field_name: citation_type
+    indexing_option: attributes
+    max: 0
+  citation_url:
+    field_name: citation_url
+    indexing_option: attributes
+    max: 0
+  field_content_visibility:
+    field_name: field_content_visibility
+    indexing_option: attributes
+    max: 0
+  status:
+    field_name: status
+    indexing_option: attributes
+    max: 0
+  type:
+    field_name: type
+    indexing_option: attributes
+    max: 0
+  uid:
+    field_name: uid
+    indexing_option: attributes
+    max: 0
+  group_id:
+    field_name: group_id
+    indexing_option: attributes
+    max: 0

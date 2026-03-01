@@ -1,0 +1,96 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - search_api.server.ai_knowledge_garden
+  module:
+    - comment
+    - search_api_solr
+    - social_ai_indexing
+id: social_comments
+name: 'Social Comments'
+description: 'Vector index for Open Social comments with parent context'
+read_only: false
+field_settings:
+  citation_title:
+    label: 'Citation Title'
+    property_path: citation_title
+    type: string
+  citation_type:
+    label: 'Citation Type'
+    property_path: citation_type
+    type: string
+  citation_url:
+    label: 'Citation URL'
+    property_path: citation_url
+    type: string
+  group_id:
+    label: 'Group ID'
+    property_path: group_id
+    type: integer
+  parent_post_summary:
+    label: 'Parent Post Summary'
+    property_path: parent_post_summary
+    type: text
+  parent_post_title:
+    label: 'Parent Post Title'
+    property_path: parent_post_title
+    type: string
+  rendered_item:
+    label: 'Comment body'
+    property_path: rendered_item
+    type: text
+    configuration:
+      roles:
+        - anonymous
+      view_mode:
+        'entity:comment':
+          comment: default
+          post_comment: default
+  subject:
+    label: Subject
+    datasource_id: 'entity:comment'
+    property_path: subject
+    type: string
+    dependencies:
+      module:
+        - comment
+datasource_settings:
+  'entity:comment':
+    bundles:
+      default: true
+      selected: {  }
+    languages:
+      default: true
+      selected: {  }
+processor_settings:
+  add_url: {  }
+  aggregated_field: {  }
+  auto_aggregated_fulltext_field: {  }
+  citation_metadata:
+    weights:
+      add_properties: 0
+  comment_parent_context:
+    weights:
+      add_properties: 0
+    enabled: true
+  custom_value: {  }
+  entity_type: {  }
+  group_metadata:
+    weights:
+      add_properties: 5
+    enabled: true
+  language_with_fallback: {  }
+  rendered_item:
+    roles:
+      - anonymous
+  solr_date_range: {  }
+tracker_settings:
+  default:
+    indexing_order: fifo
+options:
+  cron_limit: 50
+  delete_on_fail: true
+  index_directly: true
+  track_changes_in_references: true
+server: ai_knowledge_garden

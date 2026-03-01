@@ -1,0 +1,29 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - ai_search
+    - ai_vdb_provider_qdrant
+id: ai_knowledge_garden
+name: 'AI Knowledge Garden'
+description: 'Vector database server for AI-powered knowledge retrieval'
+backend: search_api_ai_search
+backend_config:
+  chat_model: gemini__models/gemini-2.5-flash
+  database: qdrant
+  database_settings:
+    database_name: default
+    collection: knowledge_garden
+    metric: cosine_similarity
+  embeddings_engine: gemini__models/gemini-embedding-001
+  embeddings_engine_configuration:
+    set_dimensions: false
+    dimensions: 3072
+  embedding_strategy: average_pool
+  embedding_strategy_configuration:
+    chunk_size: '384'
+    chunk_min_overlap: '50'
+    contextual_content_max_percentage: '30'
+    skip_moderation: true
+  embedding_strategy_details: ''
+  include_raw_embedding_vector: true
