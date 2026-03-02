@@ -226,6 +226,11 @@ fi
 $DRUSH role:perm:add anonymous 'access deepchat api' 2>/dev/null || true
 $DRUSH role:perm:add authenticated 'access deepchat api' 2>/dev/null || true
 
+# Ensure file permissions after install/content loading
+# (Demo content creates files owned by root; Apache/PHP needs www-data)
+chown -R www-data:www-data /var/www/html/html/sites/default/files 2>/dev/null || true
+chown -R www-data:www-data /var/www/private 2>/dev/null || true
+
 # Clear caches
 $DRUSH cr
 
