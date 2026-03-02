@@ -81,9 +81,9 @@ Deferred to future release. Tracked but not in current roadmap.
 ### Deployment
 
 - [x] **DEPLOY-REPO**: Docker and CI infrastructure files exist in the main repo (Dockerfile, docker-compose.yml, entrypoint.sh, GitHub Actions workflow) and CI successfully builds + pushes image to GHCR
-- [ ] **DEPLOY-CASCADIA**: Cascadia demo instance (cascadia.localnodes.xyz) is deployed on Coolify with Cascadia bioregionalism content, accessible via HTTPS
-- [ ] **DEPLOY-BOULDER**: Boulder demo instance (boulder.localnodes.xyz) is deployed on Coolify with Boulder/Front Range regen content, accessible via HTTPS
-- [ ] **DEPLOY-VERIFY**: Both instances verified operational — correct demo content, AI chatbot functional, Solr search working, SSL valid, all containers healthy
+- [x] **DEPLOY-CASCADIA**: Cascadia demo instance (cascadia.localnodes.xyz) is deployed on Coolify with Cascadia bioregionalism content, accessible via HTTPS
+- [x] **DEPLOY-BOULDER**: Boulder demo instance (boulder.localnodes.xyz) is deployed on Coolify with Boulder/Front Range regen content, accessible via HTTPS
+- [x] **DEPLOY-VERIFY**: Both instances verified operational — correct demo content, AI chatbot functional, Solr search working, SSL valid, all containers healthy
 
 ### Config Management
 
@@ -144,10 +144,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-03 | Phase 5 | Complete |
 | UI-04 | Phase 5 | Complete |
 | UI-05 | Phase 5 | Complete |
-| DEPLOY-REPO | Phase 9 | Planned |
-| DEPLOY-CASCADIA | Phase 9 | Planned |
-| DEPLOY-BOULDER | Phase 9 | Planned |
-| DEPLOY-VERIFY | Phase 9 | Planned |
+| DEPLOY-REPO | Phase 9 | Complete |
+| DEPLOY-CASCADIA | Phase 9 | Complete |
+| DEPLOY-BOULDER | Phase 9 | Complete |
+| DEPLOY-VERIFY | Phase 9 | Complete |
 | CFG-01 | Phase 10 | Complete |
 | CFG-02 | Phase 10 | Complete |
 | CFG-03 | Phase 10 | Complete |
@@ -157,13 +157,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 30 total (complete)
-- Deployment requirements: 4 total (1 complete, 3 planned)
+- Deployment requirements: 4 total (complete)
 - Config management requirements: 6 total (complete)
 - Mapped to phases: 40
-- Satisfied: 36/40
-- Pending: 4 (DEPLOY-CASCADIA, DEPLOY-BOULDER, DEPLOY-VERIFY)
+- Satisfied: 40/40
+- Pending: 0
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-03-02 — CFG-* requirements marked complete (Phase 10)*
+*Last updated: 2026-03-02 — All 40/40 requirements satisfied, milestone v1.0 passed*
