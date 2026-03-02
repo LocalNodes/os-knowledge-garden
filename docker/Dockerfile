@@ -111,6 +111,9 @@ COPY --from=builder /app/html /var/www/html/html
 # Copy custom modules (project code, not installed via composer)
 COPY html/modules/custom/ /var/www/html/html/modules/custom/
 
+# Copy config sync directory (for drush deploy / drush cim)
+COPY config/ /var/www/html/config/
+
 # Create writable directories (files dir not in source, created at build time)
 RUN mkdir -p /var/www/html/html/sites/default/files \
     && mkdir -p /var/www/private
