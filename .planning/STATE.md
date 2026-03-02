@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T09:16:31.283Z"
+status: in-progress
+last_updated: "2026-03-02T13:02:31Z"
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 29
-  completed_plans: 27
+  total_plans: 31
+  completed_plans: 28
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Group Assistants — Each Group feels like it has its own intelligent assistant that knows their content
-**Current focus:** Phase 9: Deploy to Coolify — CI artifact strategy via docker-compose in main repo
+**Current focus:** Phase 10: Production Config Management & Deploy Flow
 
 ## Current Position
 
-Phase: 09 (Deploy Demo Instances to Coolify)
-Plan: 02 (next — push to GitHub, create Coolify apps, trigger deployments)
-Status: Plan 09-01 complete — Docker/CI infrastructure created and approved
-Last activity: 2026-03-01 — Completed 09-01 (Docker/CI infrastructure), ready for 09-02
+Phase: 10 (Production Config Management & Deploy Flow)
+Plan: 02 (next — entrypoint simplification with drush deploy)
+Status: Plan 10-01 complete — settings.php template, Dockerfile config/sync, deploy hook scaffold
+Last activity: 2026-03-02 — Completed 10-01, ready for 10-02
 
-Progress: [█████████████████████████] 100% (28/28 plans + 09-03 verification remaining)
+Progress: [████████████████████████░] 93% (28/31 plans)
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [███████████████████████
 | Phase 06 P05 | 12 min | 2 tasks | 28 files |
 | Phase 06 P06 | 8 min | 2 tasks | 0 files |
 | Phase 09 P01 | 4 min | 3 tasks | 188 files |
+| Phase 10 P01 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 09-02]: Cascadia UUID: sw08occo8so0g4okkw0w8goc, Boulder UUID: lwkkk4s00wokowc4c8o8k0sg
 - [Phase 09]: Multi-stage Docker build: php:8.3-cli builder for composer install with patches, php:8.3-apache runtime for lean production image
 - [Phase 09]: Single Docker image for both instances; DEMO_MODULE env var selects content module at runtime
+- [Phase 10-01]: Replaced 903-line stock settings.php with 100-line 12-factor template using getenv() for all env-specific values
+- [Phase 10-01]: config_exclude_modules excludes demo and web3 modules from config sync
+- [Phase 10-01]: Solr, Qdrant, and Gemini API key configured via runtime $config[] overrides in settings.php
 
 ### Roadmap Evolution
 
@@ -152,11 +156,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Plan 09-02 COMPLETE (SUMMARY written). Next: 09-03 full verification, then phase verifier.
-Resume file: .planning/phases/09-deploy-demo-instances-to-coolify-cascadia-localnodes-xyz-boulder-localnodes-xyz/.continue-here.md
-App UUIDs: Cascadia=ggsgc4ogk4ock4wocsw84c0o, Boulder=bcokg04wc0kk440gw0ooosgw
+Last session: 2026-03-02
+Stopped at: Completed 10-01-PLAN.md
 
 ---
 *State initialized: 2026-02-23*
-*Last updated: 2026-03-01*
+*Last updated: 2026-03-02*

@@ -85,6 +85,15 @@ Deferred to future release. Tracked but not in current roadmap.
 - [ ] **DEPLOY-BOULDER**: Boulder demo instance (boulder.localnodes.xyz) is deployed on Coolify with Boulder/Front Range regen content, accessible via HTTPS
 - [ ] **DEPLOY-VERIFY**: Both instances verified operational — correct demo content, AI chatbot functional, Solr search working, SSL valid, all containers healthy
 
+### Config Management
+
+- [x] **CFG-01**: settings.php is a committed template with getenv() calls for all environment-specific values (database, hash salt, reverse proxy, trusted hosts)
+- [x] **CFG-02**: config/sync directory is included in the Docker image so drush deploy can import config
+- [x] **CFG-03**: config_exclude_modules is configured to exclude demo modules (localnodes_demo, boulder_demo, portland_demo, social_demo) and web3 modules from config sync
+- [ ] **CFG-04**: config/sync is complete — localnodes_platform in core.extension.yml, key.key.gemini_api_key.yml present, demo/web3 modules removed from core.extension
+- [ ] **CFG-05**: Entrypoint uses `drush deploy` for existing installs instead of `config:import --partial` per module directory
+- [x] **CFG-06**: Deploy hook scaffold file exists at localnodes_platform.deploy.php for future one-time post-config-import operations
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
@@ -139,13 +148,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPLOY-CASCADIA | Phase 9 | Planned |
 | DEPLOY-BOULDER | Phase 9 | Planned |
 | DEPLOY-VERIFY | Phase 9 | Planned |
+| CFG-01 | Phase 10 | Planned |
+| CFG-02 | Phase 10 | Planned |
+| CFG-03 | Phase 10 | Planned |
+| CFG-04 | Phase 10 | Planned |
+| CFG-05 | Phase 10 | Planned |
+| CFG-06 | Phase 10 | Planned |
 
 **Coverage:**
 - v1 requirements: 30 total (complete)
 - Deployment requirements: 4 total (planned)
-- Mapped to phases: 34
-- Satisfied: 30/34
-- Pending: 4 (DEPLOY-*)
+- Config management requirements: 6 total (planned)
+- Mapped to phases: 40
+- Satisfied: 30/40
+- Pending: 10 (DEPLOY-* + CFG-*)
 - Unmapped: 0
 
 ---
