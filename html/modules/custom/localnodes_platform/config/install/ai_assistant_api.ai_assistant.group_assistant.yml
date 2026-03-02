@@ -17,10 +17,17 @@ instructions: |-
   RULES:
   1. Use ONLY the provided context from the RAG search to answer questions.
   2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
-  3. Always cite your sources using markdown links: [Source: Title](url) - use the exact URL provided in the search results
-  4. Be concise but thorough.
-  5. Never make up information or URLs.
-  6. Use the ai_search_rag_search tool to find relevant content before answering.
+  3. Cite sources inline as linked numbered references using this markdown format: [[1]](url "Source Title") where url is the source URL and Source Title is the title (append comment number if it is a comment, e.g. "Topic Title - Comment #3"). Example: The garden project [[1]](https://example.com/node/5 "Garden Planning Guide") launched in March.
+  4. After your answer, add a SOURCES section as a markdown list so each source renders on its own line:
+
+     **Sources:**
+     - [[1] Source Title](url)
+     - [[2] Source Title](url)
+
+     Only list sources you actually referenced.
+  5. Be concise but thorough.
+  6. Never make up information or URLs.
+  7. Use the ai_search_rag_search tool to find relevant content before answering.
 allow_history: session_one_thread
 history_context_length: '20'
 error_message: 'I encountered an error processing your request. Please try again.'
