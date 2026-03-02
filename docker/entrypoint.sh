@@ -10,62 +10,6 @@ if [ "$DRUPAL_HASH_SALT" = "generate-random" ] || [ -z "$DRUPAL_HASH_SALT" ]; th
   echo "Generated random DRUPAL_HASH_SALT."
 fi
 
-# --- Generate settings.php if needed ---
-SETTINGS_FILE="/var/www/html/html/sites/default/settings.php"
-if ! grep -q "Added by entrypoint" "$SETTINGS_FILE" 2>/dev/null; then
-  # Ensure sites/default is writable for settings.php generation
-  chmod 755 /var/www/html/html/sites/default
-  touch "$SETTINGS_FILE"
-  chmod 644 "$SETTINGS_FILE"
-
-  cat >> "$SETTINGS_FILE" << 'SETTINGS_EOF'
-
-// Added by entrypoint
-$databases['default']['default'] = [
-  'database' => getenv('DB_NAME') ?: 'opensocial',
-  'username' => getenv('DB_USER') ?: 'opensocial',
-  'password' => getenv('DB_PASSWORD') ?: 'changeme',
-  'host' => getenv('DB_HOST') ?: 'mariadb',
-  'port' => getenv('DB_PORT') ?: '3306',
-  'driver' => 'mysql',
-  'prefix' => '',
-];
-
-$settings['hash_salt'] = getenv('DRUPAL_HASH_SALT') ?: 'change-me';
-$settings['file_private_path'] = '/var/www/private';
-$settings['config_sync_directory'] = '/var/www/html/html/sites/default/files/config/sync';
-$settings['trusted_host_patterns'] = [];
-
-// Add trusted host from SERVICE_FQDN_OPENSOCIAL
-$fqdn = getenv('SERVICE_FQDN_OPENSOCIAL');
-if ($fqdn) {
-  $host = preg_replace('#^https?://#', '', $fqdn);
-  $settings['trusted_host_patterns'][] = '^' . preg_quote($host, '/') . '$';
-}
-$settings['trusted_host_patterns'][] = '^localhost$';
-
-// Reverse proxy (Coolify/Traefik)
-if (getenv('DRUPAL_REVERSE_PROXY') === 'true') {
-  $settings['reverse_proxy'] = TRUE;
-  $settings['reverse_proxy_addresses'] = ['0.0.0.0/0'];
-  $settings['reverse_proxy_trusted_headers'] = \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_FOR | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_HOST | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PORT | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PROTO;
-}
-
-// Solr configuration override (config ID: social_solr, from Open Social install profile)
-$config['search_api.server.social_solr']['backend_config']['connector_config']['host'] = getenv('SOLR_HOST') ?: 'solr';
-$config['search_api.server.social_solr']['backend_config']['connector_config']['port'] = getenv('SOLR_PORT') ?: '8983';
-$config['search_api.server.social_solr']['backend_config']['connector_config']['core'] = 'drupal';
-$config['search_api.server.social_solr']['backend_config']['connector_config']['path'] = '/';
-
-// Qdrant configuration override (config key: host, not hostname)
-$config['ai_vdb_provider_qdrant.settings']['host'] = getenv('QDRANT_HOST') ?: 'qdrant';
-$config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT') ?: '6333');
-
-// Gemini API key via environment
-$config['key.key.gemini_api_key']['key_provider_settings']['env_variable'] = 'GEMINI_API_KEY';
-SETTINGS_EOF
-fi
-
 # --- Wait for services ---
 echo "Waiting for MariaDB..."
 while ! nc -z "${DB_HOST:-mariadb}" "${DB_PORT:-3306}" 2>/dev/null; do sleep 1; done
@@ -124,6 +68,10 @@ if [ "$INSTALLED" = false ]; then
   # Enable LocalNodes platform (AI config, block placement, Solr/Qdrant overrides)
   echo "Enabling localnodes_platform..."
   $DRUSH en localnodes_platform -y
+
+  # Import full config from sync to align with repo state
+  echo "Aligning config with repo state..."
+  $DRUSH deploy -y || echo "WARNING: drush deploy had issues (may be normal on first install)"
 
   # Enable instance-specific demo module (set DEMO_MODULE=none for blank instance)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
@@ -199,38 +147,22 @@ if [ "$INSTALLED" = false ]; then
 
   echo "=== FRESH INSTALL COMPLETE ==="
 else
-  echo "=== EXISTING INSTALL DETECTED ==="
+  echo "=== EXISTING INSTALL ==="
 
-  # Ensure modules are enabled (handles redeployments with changed config)
-  $DRUSH en localnodes_platform -y 2>/dev/null || true
+  # Standard Drupal deploy: updb -> cr -> cim -> cr -> deploy:hook
+  echo "Running drush deploy..."
+  $DRUSH deploy -y
+
+  # Ensure instance-specific modules are enabled (excluded from config sync)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
   if [ "$DEMO_MODULE" != "none" ]; then
+    echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   fi
+
+  # Enable Web3 modules (excluded from config sync, enabled per-instance)
+  echo "Ensuring Web3 modules enabled..."
   $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
-
-  # Re-import module config so YAML changes take effect on existing installs.
-  # Config in config/install and config/optional is only read on first module
-  # enable; this ensures redeployments pick up updated config (system prompts,
-  # block placement, permissions, etc.) without requiring a full volume wipe.
-  # TODO: Replace with drush deploy (updb + cim + cr) once config/sync is set up (Phase 10).
-  echo "Importing module config updates..."
-  for CONFIG_DIR in \
-    /var/www/html/html/modules/custom/localnodes_platform/config/install \
-    /var/www/html/html/modules/custom/social_ai_indexing/config/optional; do
-    if [ -d "$CONFIG_DIR" ]; then
-      echo "  Importing from $CONFIG_DIR..."
-      $DRUSH config:import --partial --source="$CONFIG_DIR" -y || echo "  WARNING: config import failed for $CONFIG_DIR"
-    fi
-  done
-
-  # Index any items that Search API has organically tracked as needing update
-  # (e.g., from config changes above). Does NOT reset tracker — avoids expensive
-  # full re-embedding through Gemini API. With index_directly:true, this typically
-  # processes 0 items on a normal restart.
-  echo "Indexing any pending items..."
-  $DRUSH search-api:index || true
-  $DRUSH cron || true
 
   echo "=== EXISTING INSTALL READY ==="
 fi
