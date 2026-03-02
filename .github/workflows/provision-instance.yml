@@ -33,6 +33,9 @@ jobs:
   provision:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Validate subdomain
         run: |
           SUBDOMAIN="${{ inputs.subdomain }}"
@@ -98,6 +101,10 @@ jobs:
           # Brief delay for app to be fully registered
           sleep 5
 
+          # New apps require docker_compose_raw before domains can be set.
+          # Base64-encode the compose file so Coolify can parse service names.
+          COMPOSE_B64=$(base64 -w 0 docker-compose.yaml)
+
           # Maps the subdomain to the opensocial service
           # Auto-generates SERVICE_FQDN_OPENSOCIAL + Traefik labels + SSL
           RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH "$COOLIFY_API/applications/$APP_UUID" \
@@ -105,6 +112,7 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -d "{
+              \"docker_compose_raw\": \"$COMPOSE_B64\",
               \"docker_compose_domains\": [{\"name\": \"opensocial\", \"domain\": \"https://$FQDN\"}]
             }")
 
