@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T13:07:44Z"
+last_updated: "2026-03-02T13:40:00Z"
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 10 (Production Config Management & Deploy Flow)
-Plan: 03 (next — deploy hook implementation and CI/CD integration)
-Status: Plan 10-02 complete — config/sync gaps fixed, entrypoint simplified with drush deploy
-Last activity: 2026-03-02 — Completed 10-02, ready for 10-03
+Plan: 03 (complete)
+Status: Phase 10 complete — all config management requirements satisfied, web3 modules corrected to core platform
+Last activity: 2026-03-02 — Completed 10-03, Phase 10 done
 
-Progress: [████████████████████████░] 94% (29/31 plans)
+Progress: [█████████████████████████] 97% (30/31 plans)
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [███████████████████████
 | Phase 09 P01 | 4 min | 3 tasks | 188 files |
 | Phase 10 P01 | 2 min | 2 tasks | 3 files |
 | Phase 10 P02 | 2 min | 2 tasks | 3 files |
+| Phase 10 P03 | 8 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase 10-02]: Use drush deploy instead of config:import --partial for existing installs -- standard Drupal workflow
 - [Phase 10-02]: Remove search-api:index and cron from existing-install path to avoid Gemini API costs on every restart
 - [Phase 10-02]: Add drush deploy to fresh install path after site:install to align active config with config/sync
+- [Phase 10-03]: Web3 modules (siwe_login, safe_smart_accounts, group_treasury, social_group_treasury) are core platform, not per-instance -- removed from config_exclude_modules
+- [Phase 10-03]: SIWE domain configured via settings.php $config[] override instead of entrypoint drush config:set
+- [Phase 10-03]: SKILL.md updated locally to reflect drush deploy workflow (gitignored, not committed)
 
 ### Roadmap Evolution
 
@@ -161,7 +165,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 10-02-PLAN.md
+Stopped at: Completed 10-03-PLAN.md — Phase 10 complete
 
 ---
 *State initialized: 2026-02-23*

@@ -89,7 +89,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 - [x] **CFG-01**: settings.php is a committed template with getenv() calls for all environment-specific values (database, hash salt, reverse proxy, trusted hosts)
 - [x] **CFG-02**: config/sync directory is included in the Docker image so drush deploy can import config
-- [x] **CFG-03**: config_exclude_modules is configured to exclude demo modules (localnodes_demo, boulder_demo, portland_demo, social_demo) and web3 modules from config sync
+- [x] **CFG-03**: config_exclude_modules is configured to exclude demo modules (localnodes_demo, boulder_demo, portland_demo, social_demo) from config sync; web3 modules are core platform and ship in config/sync
 - [x] **CFG-04**: config/sync is complete — localnodes_platform in core.extension.yml, key.key.gemini_api_key.yml present, demo/web3 modules removed from core.extension
 - [x] **CFG-05**: Entrypoint uses `drush deploy` for existing installs instead of `config:import --partial` per module directory
 - [x] **CFG-06**: Deploy hook scaffold file exists at localnodes_platform.deploy.php for future one-time post-config-import operations
@@ -148,22 +148,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPLOY-CASCADIA | Phase 9 | Planned |
 | DEPLOY-BOULDER | Phase 9 | Planned |
 | DEPLOY-VERIFY | Phase 9 | Planned |
-| CFG-01 | Phase 10 | Planned |
-| CFG-02 | Phase 10 | Planned |
-| CFG-03 | Phase 10 | Planned |
-| CFG-04 | Phase 10 | Planned |
-| CFG-05 | Phase 10 | Planned |
-| CFG-06 | Phase 10 | Planned |
+| CFG-01 | Phase 10 | Complete |
+| CFG-02 | Phase 10 | Complete |
+| CFG-03 | Phase 10 | Complete |
+| CFG-04 | Phase 10 | Complete |
+| CFG-05 | Phase 10 | Complete |
+| CFG-06 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total (complete)
-- Deployment requirements: 4 total (planned)
-- Config management requirements: 6 total (planned)
+- Deployment requirements: 4 total (1 complete, 3 planned)
+- Config management requirements: 6 total (complete)
 - Mapped to phases: 40
-- Satisfied: 30/40
-- Pending: 10 (DEPLOY-* + CFG-*)
+- Satisfied: 36/40
+- Pending: 4 (DEPLOY-CASCADIA, DEPLOY-BOULDER, DEPLOY-VERIFY)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-03-01 — Added DEPLOY-* requirements for Phase 9*
+*Last updated: 2026-03-02 — CFG-* requirements marked complete (Phase 10)*
