@@ -80,6 +80,7 @@
         "patches": {
             "drupal/ai": {
                 "AiAssistantApiRunner: fix uninitialized userMessage null safety": "patches/ai-assistant-api-runner-null-safety.patch",
+                "AgentRunner: handle null response from solve() on empty collections": "patches/ai-assistant-api-agent-runner-null-response.patch",
                 "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch",
                 "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch"
             },

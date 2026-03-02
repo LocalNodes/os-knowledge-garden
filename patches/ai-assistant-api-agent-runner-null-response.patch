@@ -1,0 +1,16 @@
+diff --git a/modules/ai_assistant_api/src/Service/AgentRunner.php b/modules/ai_assistant_api/src/Service/AgentRunner.php
+index 1234567..abcdefg 100644
+--- a/modules/ai_assistant_api/src/Service/AgentRunner.php
++++ b/modules/ai_assistant_api/src/Service/AgentRunner.php
+@@ -104,10 +104,11 @@ class AgentRunner {
+     }
+     // Job will always be solvable if we are here.
+     $response = $agent->solve();
++    $response = $response ?? '';
+
+     // Check if tools was used.
+     $message = new ChatMessage('assistant', $response);
+
+     if ($history = $agent->getChatHistory()) {
+       // Get the last message from the history.
+       $message = end($history);

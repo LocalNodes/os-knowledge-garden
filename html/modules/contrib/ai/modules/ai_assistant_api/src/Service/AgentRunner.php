@@ -105,6 +105,7 @@ class AgentRunner {
     }
     // Job will always be solvable if we are here.
     $response = $agent->solve();
+    $response = $response ?? '';
 
     // Check if tools was used.
     $message = new ChatMessage('assistant', $response);
