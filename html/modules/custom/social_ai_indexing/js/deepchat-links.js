@@ -6,7 +6,7 @@
  * The built-in linkTarget:"_blank" only applies to DeepChat's own
  * remarkable renderer (text property), not pre-converted HTML. This
  * adds a delegated click handler on the shadow root so citation links
- * in AI responses navigate correctly.
+ * in AI responses navigate in the same tab.
  */
 (function (Drupal) {
   'use strict';
@@ -29,7 +29,7 @@
           return;
         }
         e.preventDefault();
-        window.open(link.href, '_blank');
+        window.location.href = link.href;
       });
     });
   }
