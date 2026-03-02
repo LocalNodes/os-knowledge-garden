@@ -90,8 +90,8 @@ Deferred to future release. Tracked but not in current roadmap.
 - [x] **CFG-01**: settings.php is a committed template with getenv() calls for all environment-specific values (database, hash salt, reverse proxy, trusted hosts)
 - [x] **CFG-02**: config/sync directory is included in the Docker image so drush deploy can import config
 - [x] **CFG-03**: config_exclude_modules is configured to exclude demo modules (localnodes_demo, boulder_demo, portland_demo, social_demo) and web3 modules from config sync
-- [ ] **CFG-04**: config/sync is complete — localnodes_platform in core.extension.yml, key.key.gemini_api_key.yml present, demo/web3 modules removed from core.extension
-- [ ] **CFG-05**: Entrypoint uses `drush deploy` for existing installs instead of `config:import --partial` per module directory
+- [x] **CFG-04**: config/sync is complete — localnodes_platform in core.extension.yml, key.key.gemini_api_key.yml present, demo/web3 modules removed from core.extension
+- [x] **CFG-05**: Entrypoint uses `drush deploy` for existing installs instead of `config:import --partial` per module directory
 - [x] **CFG-06**: Deploy hook scaffold file exists at localnodes_platform.deploy.php for future one-time post-config-import operations
 
 ## Out of Scope

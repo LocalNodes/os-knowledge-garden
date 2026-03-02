@@ -189,7 +189,7 @@ Plans:
   4. config/sync is complete (localnodes_platform in core.extension, gemini key config present, demo modules removed)
   5. Entrypoint uses `drush deploy` for existing installs (no more config:import --partial)
   6. Deploy hook scaffold exists for future one-time operations
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md -- Template settings.php with getenv() + Dockerfile config/sync COPY + deploy hook scaffold (Wave 1)

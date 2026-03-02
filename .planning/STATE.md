@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T13:02:31Z"
+last_updated: "2026-03-02T13:07:44Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 10 (Production Config Management & Deploy Flow)
-Plan: 02 (next — entrypoint simplification with drush deploy)
-Status: Plan 10-01 complete — settings.php template, Dockerfile config/sync, deploy hook scaffold
-Last activity: 2026-03-02 — Completed 10-01, ready for 10-02
+Plan: 03 (next — deploy hook implementation and CI/CD integration)
+Status: Plan 10-02 complete — config/sync gaps fixed, entrypoint simplified with drush deploy
+Last activity: 2026-03-02 — Completed 10-02, ready for 10-03
 
-Progress: [████████████████████████░] 93% (28/31 plans)
+Progress: [████████████████████████░] 94% (29/31 plans)
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [███████████████████████
 | Phase 06 P06 | 8 min | 2 tasks | 0 files |
 | Phase 09 P01 | 4 min | 3 tasks | 188 files |
 | Phase 10 P01 | 2 min | 2 tasks | 3 files |
+| Phase 10 P02 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,9 @@ Recent decisions affecting current work:
 - [Phase 10-01]: Replaced 903-line stock settings.php with 100-line 12-factor template using getenv() for all env-specific values
 - [Phase 10-01]: config_exclude_modules excludes demo and web3 modules from config sync
 - [Phase 10-01]: Solr, Qdrant, and Gemini API key configured via runtime $config[] overrides in settings.php
+- [Phase 10-02]: Use drush deploy instead of config:import --partial for existing installs -- standard Drupal workflow
+- [Phase 10-02]: Remove search-api:index and cron from existing-install path to avoid Gemini API costs on every restart
+- [Phase 10-02]: Add drush deploy to fresh install path after site:install to align active config with config/sync
 
 ### Roadmap Evolution
 
@@ -157,7 +161,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 10-01-PLAN.md
+Stopped at: Completed 10-02-PLAN.md
 
 ---
 *State initialized: 2026-02-23*
