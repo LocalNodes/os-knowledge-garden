@@ -16,6 +16,25 @@
 function localnodes_platform_install() {
   _localnodes_platform_configure_ai_defaults();
   _localnodes_platform_apply_env_overrides();
+  _localnodes_platform_grant_chatbot_access();
+}
+
+/**
+ * Grants chatbot API access to anonymous and authenticated users.
+ *
+ * The 'access deepchat api' permission is required for the AI chatbot widget.
+ * We grant it here rather than in config/install because the role entities
+ * already exist from the Open Social install profile.
+ */
+function _localnodes_platform_grant_chatbot_access() {
+  $roles = ['anonymous', 'authenticated'];
+  foreach ($roles as $role_id) {
+    $role = \Drupal\user\Entity\Role::load($role_id);
+    if ($role && !$role->hasPermission('access deepchat api')) {
+      $role->grantPermission('access deepchat api');
+      $role->save();
+    }
+  }
 }
 
 /**

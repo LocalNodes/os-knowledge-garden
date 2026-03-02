@@ -45,14 +45,14 @@ if (getenv('DRUPAL_REVERSE_PROXY') === 'true') {
   $settings['reverse_proxy_trusted_headers'] = \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_FOR | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_HOST | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PORT | \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PROTO;
 }
 
-// Solr configuration override
-$config['search_api.server.solr']['backend_config']['connector_config']['host'] = getenv('SOLR_HOST') ?: 'solr';
-$config['search_api.server.solr']['backend_config']['connector_config']['port'] = getenv('SOLR_PORT') ?: '8983';
-$config['search_api.server.solr']['backend_config']['connector_config']['core'] = 'drupal';
-$config['search_api.server.solr']['backend_config']['connector_config']['path'] = '/';
+// Solr configuration override (config ID: social_solr, from Open Social install profile)
+$config['search_api.server.social_solr']['backend_config']['connector_config']['host'] = getenv('SOLR_HOST') ?: 'solr';
+$config['search_api.server.social_solr']['backend_config']['connector_config']['port'] = getenv('SOLR_PORT') ?: '8983';
+$config['search_api.server.social_solr']['backend_config']['connector_config']['core'] = 'drupal';
+$config['search_api.server.social_solr']['backend_config']['connector_config']['path'] = '/';
 
-// Qdrant configuration override
-$config['ai_vdb_provider_qdrant.settings']['hostname'] = getenv('QDRANT_HOST') ?: 'qdrant';
+// Qdrant configuration override (config key: host, not hostname)
+$config['ai_vdb_provider_qdrant.settings']['host'] = getenv('QDRANT_HOST') ?: 'qdrant';
 $config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT') ?: '6333');
 
 // Gemini API key via environment
@@ -230,11 +230,6 @@ else
 
   echo "=== EXISTING INSTALL READY ==="
 fi
-
-# Ensure chatbot API permissions are granted
-# (config/sync permissions aren't applied without drush cim)
-$DRUSH role:perm:add anonymous 'access deepchat api' 2>/dev/null || true
-$DRUSH role:perm:add authenticated 'access deepchat api' 2>/dev/null || true
 
 # Ensure file permissions after install/content loading
 # (Demo content creates files owned by root; Apache/PHP needs www-data)
