@@ -1,0 +1,28 @@
+---
+# 2 comments for Portland bioregional community
+
+# Comment on Welcome topic
+p0rt1010-0001-4001-a001-000000000001:
+  uuid: p0rt1010-0001-4001-a001-000000000001
+  uid: p0rt1004-0001-4001-a001-000000000002
+  type: comment
+  langcode: en
+  body: >
+    Excited to see the Portland node come alive! The Willamette Valley has so much potential for bioregional coordination. Looking forward to connecting watershed stewardship with all the incredible food sovereignty work happening across the city. The river connects us all.
+  entity_id: p0rt1006-0001-4001-a001-000000000001
+  entity_type: node
+  field_name: field_topic_comments
+  created: -29 day|10:30
+
+# Comment on Food Forest topic
+p0rt1010-0001-4001-a001-000000000002:
+  uuid: p0rt1010-0001-4001-a001-000000000002
+  uid: p0rt1004-0001-4001-a001-000000000004
+  type: comment
+  langcode: en
+  body: >
+    This food forest design is beautiful, Sage. I especially love the idea of community food forests as neighborhood commons. The Land Trust is looking at incorporating food forests into our new N Mississippi parcel. Could we talk about designing the edible landscape together? Community land plus community food equals real sovereignty.
+  entity_id: p0rt1006-0001-4001-a001-000000000003
+  entity_type: node
+  field_name: field_topic_comments
+  created: -18 day|14:00

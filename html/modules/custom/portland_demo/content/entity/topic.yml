@@ -1,0 +1,74 @@
+---
+# 3 topics for Portland bioregional community
+
+# Topic 1: Welcome to Portland Node (Blog, public, no group)
+p0rt1006-0001-4001-a001-000000000001:
+  uuid: p0rt1006-0001-4001-a001-000000000001
+  title: "Welcome to the Portland Node: Rain-Fed Resilience"
+  type: topic
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000001
+  body: >
+    <p><strong>Welcome to the Portland LocalNodes Instance</strong></p>
+
+    <p>The Portland node is a community platform for the people building regenerative systems across the Willamette Valley. We are watershed stewards monitoring the Willamette and its tributaries, urban farmers growing food sovereignty in every neighborhood, land trust organizers holding ground against displacement, and community builders weaving it all together. What unites us is a commitment to place-based regeneration rooted in the rain-fed landscapes of the Pacific Northwest.</p>
+
+    <p><strong>What Makes Portland's Node Unique</strong></p>
+
+    <p>Portland sits at the confluence of the Willamette and Columbia Rivers, in one of the most biodiverse temperate valleys on Earth. Our bioregion stretches from the Cascade snowpack to the valley floor, with 150 inches of annual rainfall in the Coast Range funneling through watersheds that sustain salmon, old-growth forest, and some of the richest agricultural soil in the world. This abundance is our foundation -- and our responsibility.</p>
+
+    <p><strong>How This Platform Works</strong></p>
+
+    <p>The Portland node is organized around working groups that reflect our community's priorities: the Willamette Watershed Network for ecological stewardship, and the Portland Food Commons for urban agriculture and food sovereignty. Within each group, members share knowledge through topics, coordinate through events, and stay connected through posts. Join the groups that align with your work and start connecting.</p>
+
+    <p><strong>Part of a Network</strong></p>
+
+    <p>The Portland node is one instance in the LocalNodes network. We are connected to other bioregional nodes including the Cascadia instance and the Boulder node on the Front Range. When you share knowledge here, it can benefit stewards in other bioregions -- and their insights can benefit us. This is cosmo-local coordination in practice: knowledge shared globally, action rooted locally. Welcome to the node.</p>
+  field_topic_type: Blog
+  image: p0rt1003-0001-4001-a001-000000000005
+  image_alt: Willamette Valley landscape
+  field_content_visibility: public
+
+# Topic 2: Willamette Salmon Habitat Restoration (Blog, community, Watershed Network)
+p0rt1006-0001-4001-a001-000000000002:
+  uuid: p0rt1006-0001-4001-a001-000000000002
+  title: "Willamette Salmon Habitat: Spring Restoration Update"
+  type: topic
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000002
+  body: >
+    <p>Hello Watershed Network members! Here is our spring update on salmon habitat restoration projects across the Willamette tributaries we are monitoring.</p>
+
+    <p><strong>Johnson Creek:</strong> The Willamette Watershed Alliance completed the first phase of our riparian restoration project. We planted 800 native willows, red osier dogwood, and Oregon ash along a quarter-mile stretch where bank erosion had eliminated shade cover. Early monitoring shows water temperatures dropping 2 degrees Fahrenheit in the restored reach -- critical for returning coho salmon.</p>
+
+    <p><strong>Fanno Creek:</strong> Working with the Tualatin Watershed Council, we removed two fish passage barriers that had blocked salmon migration for decades. The first returning coho were spotted above the former barrier sites within three months. Community science volunteers are monitoring spawning activity through the winter season.</p>
+
+    <p><strong>Community Science Dashboard:</strong> We have updated our monitoring dashboard with the latest dissolved oxygen, turbidity, temperature, and macroinvertebrate data from 15 volunteer monitoring stations across the Willamette tributaries. If you want to contribute monitoring data from your local stretch of creek, reach out to River for training on our protocols.</p>
+  field_topic_type: Blog
+  image: p0rt1003-0001-4001-a001-000000000005
+  image_alt: Willamette tributary restoration site
+  group: p0rt1005-0001-4001-a001-000000000001
+  field_content_visibility: community
+
+# Topic 3: Urban Food Forest Design for Portland (Blog, community, Food Commons)
+p0rt1006-0001-4001-a001-000000000003:
+  uuid: p0rt1006-0001-4001-a001-000000000003
+  title: "Urban Food Forest Design for Portland's Rain-Fed Climate"
+  type: topic
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000003
+  body: >
+    <p>Designing food forests in Portland means working with one of the best growing climates in North America -- if you embrace the rain. With mild winters, 37 inches of annual rainfall, and long cool springs, we can grow an incredible diversity of food with almost no irrigation.</p>
+
+    <p><strong>Rain as Asset:</strong> Unlike arid bioregions that must engineer water harvesting, Portland food forests can rely on natural rainfall for most of the year. Our design challenge is managing excess water in winter and retaining moisture through the dry summers of July and August. Deep mulch, swales, and shade-tolerant understory plantings are key.</p>
+
+    <p><strong>Pacific Northwest Guild:</strong> Our food forest guilds center on fruit and nut trees that thrive here -- apple, pear, plum, hazelnut, and walnut as canopy. Understory includes currants, gooseberries, blueberries (they love our acidic soil), and honeyberry. Ground layer is strawberry, comfrey, and native camas. This is abundance by design.</p>
+
+    <p><strong>Community Food Access:</strong> The Portland Food Commons operates four community food forests across the city, each designed as a neighborhood commons where anyone can harvest. We are proving that food sovereignty does not require private land ownership -- it requires community stewardship of shared abundance.</p>
+
+    <p>If you are interested in starting a food forest in your neighborhood, come to the Seed Swap workshop. We will do site assessment exercises and I can help you get started with a design suited to your specific microclimate.</p>
+  field_topic_type: Blog
+  image: p0rt1003-0001-4001-a001-000000000006
+  image_alt: Urban food forest in Portland
+  group: p0rt1005-0001-4001-a001-000000000002
+  field_content_visibility: community

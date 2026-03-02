@@ -1,0 +1,22 @@
+---
+# 2 event enrollments for Portland bioregional community
+
+# Enrollment for Willamette Watershed Assembly
+p0rt1008-0001-4001-a001-000000000001:
+  uuid: p0rt1008-0001-4001-a001-000000000001
+  title: sage_urbanfarm @ Willamette Watershed Assembly
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000003
+  field_event: p0rt1007-0001-4001-a001-000000000001
+  field_enrollment_status: 1
+  field_account: p0rt1004-0001-4001-a001-000000000003
+
+# Enrollment for Seed Swap & Rain Garden Workshop
+p0rt1008-0001-4001-a001-000000000002:
+  uuid: p0rt1008-0001-4001-a001-000000000002
+  title: luna_landtrust @ Seed Swap and Rain Garden Workshop
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000004
+  field_event: p0rt1007-0001-4001-a001-000000000002
+  field_enrollment_status: 1
+  field_account: p0rt1004-0001-4001-a001-000000000004

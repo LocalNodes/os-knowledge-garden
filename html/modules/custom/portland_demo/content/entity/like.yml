@@ -1,0 +1,35 @@
+---
+# 3 likes for Portland bioregional community
+
+# Like on Welcome topic
+p0rt1011-0001-4001-a001-000000000001:
+  uuid: p0rt1011-0001-4001-a001-000000000001
+  type: like
+  uid: p0rt1004-0001-4001-a001-000000000002
+  entity_id: p0rt1006-0001-4001-a001-000000000001
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on Salmon Habitat topic
+p0rt1011-0001-4001-a001-000000000002:
+  uuid: p0rt1011-0001-4001-a001-000000000002
+  type: like
+  uid: p0rt1004-0001-4001-a001-000000000003
+  entity_id: p0rt1006-0001-4001-a001-000000000002
+  entity_type: node
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+# Like on Land Trust post
+p0rt1011-0001-4001-a001-000000000003:
+  uuid: p0rt1011-0001-4001-a001-000000000003
+  type: like
+  uid: p0rt1004-0001-4001-a001-000000000002
+  entity_id: p0rt1009-0001-4001-a001-000000000004
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost

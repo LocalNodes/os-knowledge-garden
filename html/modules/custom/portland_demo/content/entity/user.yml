@@ -1,0 +1,103 @@
+---
+# 4 user personas for Portland bioregional community
+# America/Los_Angeles timezone
+
+# Portland Admin - Site Manager
+p0rt1004-0001-4001-a001-000000000001:
+  uuid: p0rt1004-0001-4001-a001-000000000001
+  created: -60 day|06:00
+  name: portland_admin
+  mail: admin@portland.localnodes.example
+  timezone: America/Los_Angeles
+  status: 1
+  roles:
+    - sitemanager
+  image: p0rt1003-0001-4001-a001-000000000004
+  image_alt: Portland Admin
+  first_name: Portland
+  last_name: Admin
+  organization: LocalNodes Platform
+  function: Site Manager
+  phone_number: ""
+  expertise:
+    - p0rt1001-0001-4001-a001-000000000006
+  interests:
+    - p0rt1001-0001-4001-a001-000000000002
+  address: 1022 SW Harvey Milk Street, Portland, OR
+  self_introduction: >
+    This is the official site manager account for the Portland LocalNodes instance. If you need help using the platform, have questions about groups, or want to get more involved in our community, reach out here. Welcome to the Portland node!
+
+# River Willamette - Watershed Steward
+p0rt1004-0001-4001-a001-000000000002:
+  uuid: p0rt1004-0001-4001-a001-000000000002
+  created: -55 day|09:30
+  name: river_watershed
+  mail: river.willamette@portland.localnodes.example
+  timezone: America/Los_Angeles
+  status: 1
+  image: p0rt1003-0001-4001-a001-000000000001
+  image_alt: River Willamette
+  first_name: River
+  last_name: Willamette
+  organization: Willamette Watershed Alliance
+  function: Watershed Steward
+  phone_number: ""
+  expertise:
+    - p0rt1001-0001-4001-a001-000000000002
+    - p0rt1001-0001-4001-a001-000000000006
+  interests:
+    - p0rt1001-0001-4001-a001-000000000001
+    - p0rt1001-0001-4001-a001-000000000004
+  address: 3415 SE Powell Boulevard, Portland, OR
+  self_introduction: >
+    I steward watershed restoration projects along the Willamette River and its tributaries through the Willamette Watershed Alliance. The Willamette Valley is one of the most biodiverse temperate valleys on Earth -- from the Cascade snowpack to the valley floor, every stream tells a story of connection. Our work centers on native riparian planting, salmon habitat restoration, and community science monitoring. The river is the backbone of our bioregion.
+
+# Sage Fernwood - Urban Farmer & Food Organizer
+p0rt1004-0001-4001-a001-000000000003:
+  uuid: p0rt1004-0001-4001-a001-000000000003
+  created: -50 day|11:00
+  name: sage_urbanfarm
+  mail: sage.fernwood@portland.localnodes.example
+  timezone: America/Los_Angeles
+  status: 1
+  image: p0rt1003-0001-4001-a001-000000000002
+  image_alt: Sage Fernwood
+  first_name: Sage
+  last_name: Fernwood
+  organization: Portland Food Commons
+  function: Urban Farmer
+  phone_number: ""
+  expertise:
+    - p0rt1001-0001-4001-a001-000000000001
+    - p0rt1001-0001-4001-a001-000000000004
+  interests:
+    - p0rt1001-0001-4001-a001-000000000003
+    - p0rt1001-0001-4001-a001-000000000005
+  address: 6400 SE Division Street, Portland, OR
+  self_introduction: >
+    I grow food and organize community around the Portland Food Commons -- a network of urban farms, community gardens, and food rescue operations across Portland. In a city where rain feeds the soil 9 months of the year, we have incredible growing potential. My work connects growers, eaters, and mutual aid networks to build food sovereignty from the ground up. Every garden is a commons.
+
+# Luna Raincrow - Community Land Trust Organizer
+p0rt1004-0001-4001-a001-000000000004:
+  uuid: p0rt1004-0001-4001-a001-000000000004
+  created: -45 day|14:00
+  name: luna_landtrust
+  mail: luna.raincrow@portland.localnodes.example
+  timezone: America/Los_Angeles
+  status: 1
+  image: p0rt1003-0001-4001-a001-000000000003
+  image_alt: Luna Raincrow
+  first_name: Luna
+  last_name: Raincrow
+  organization: Willamette Community Land Trust
+  function: Land Trust Organizer
+  phone_number: ""
+  expertise:
+    - p0rt1001-0001-4001-a001-000000000003
+    - p0rt1001-0001-4001-a001-000000000005
+  interests:
+    - p0rt1001-0001-4001-a001-000000000002
+    - p0rt1001-0001-4001-a001-000000000006
+  address: 4235 N Mississippi Avenue, Portland, OR
+  self_introduction: >
+    I organize with the Willamette Community Land Trust to hold land in common for community benefit -- affordable housing, urban farms, and gathering spaces that cannot be displaced by speculation. Portland's displacement crisis is a bioregional crisis. When we lose the people who steward this place, we lose the knowledge and relationships that make resilience possible. Land trusts are how we anchor community to place.

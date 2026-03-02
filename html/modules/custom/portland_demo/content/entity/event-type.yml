@@ -1,0 +1,10 @@
+---
+# Event type taxonomy terms for Portland bioregional community
+p0rt1002-0001-4001-a001-000000000001:
+  uuid: p0rt1002-0001-4001-a001-000000000001
+  name: Community Gathering
+  vid: event_types
+p0rt1002-0001-4001-a001-000000000002:
+  uuid: p0rt1002-0001-4001-a001-000000000002
+  name: Workshop
+  vid: event_types

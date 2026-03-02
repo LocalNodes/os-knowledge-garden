@@ -1,0 +1,7 @@
+name: 'Portland Demo Content'
+type: module
+description: 'Provides Portland bioregional community demo content for testing the LocalNodes provisioning pipeline.'
+core_version_requirement: ^9 || ^10
+package: LocalNodes
+dependencies:
+  - social_demo:social_demo

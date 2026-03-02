@@ -1,0 +1,26 @@
+---
+# Profile tag taxonomy terms for Portland bioregional community
+p0rt1001-0001-4001-a001-000000000001:
+  uuid: p0rt1001-0001-4001-a001-000000000001
+  name: Urban Farming
+  vid: profile_tag
+p0rt1001-0001-4001-a001-000000000002:
+  uuid: p0rt1001-0001-4001-a001-000000000002
+  name: Watershed Stewardship
+  vid: profile_tag
+p0rt1001-0001-4001-a001-000000000003:
+  uuid: p0rt1001-0001-4001-a001-000000000003
+  name: Community Land Trust
+  vid: profile_tag
+p0rt1001-0001-4001-a001-000000000004:
+  uuid: p0rt1001-0001-4001-a001-000000000004
+  name: Food Sovereignty
+  vid: profile_tag
+p0rt1001-0001-4001-a001-000000000005:
+  uuid: p0rt1001-0001-4001-a001-000000000005
+  name: Cooperative Economics
+  vid: profile_tag
+p0rt1001-0001-4001-a001-000000000006:
+  uuid: p0rt1001-0001-4001-a001-000000000006
+  name: Bioregional Mapping
+  vid: profile_tag

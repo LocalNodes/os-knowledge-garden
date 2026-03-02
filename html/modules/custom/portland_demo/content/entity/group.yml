@@ -1,0 +1,48 @@
+---
+# 2 groups for Portland bioregional community
+
+# Willamette Watershed Network
+p0rt1005-0001-4001-a001-000000000001:
+  uuid: p0rt1005-0001-4001-a001-000000000001
+  langcode: en
+  image: p0rt1003-0001-4001-a001-000000000005
+  image_alt: Willamette Valley watershed landscape
+  uid: p0rt1004-0001-4001-a001-000000000002
+  created: -90 day|10:00
+  label: Willamette Watershed Network
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>Central coordination space for watershed stewardship across the Willamette Valley. Members share monitoring data from the Willamette River and its tributaries, coordinate salmon habitat restoration, organize native riparian planting days, and connect community science efforts. From the Cascade headwaters to the Columbia confluence, this is where stewards of the Willamette gather.</p>
+  members:
+    - p0rt1004-0001-4001-a001-000000000001
+    - p0rt1004-0001-4001-a001-000000000002
+    - p0rt1004-0001-4001-a001-000000000003
+    - p0rt1004-0001-4001-a001-000000000004
+
+# Portland Food Commons
+p0rt1005-0001-4001-a001-000000000002:
+  uuid: p0rt1005-0001-4001-a001-000000000002
+  langcode: en
+  image: p0rt1003-0001-4001-a001-000000000006
+  image_alt: Urban garden in Portland
+  uid: p0rt1004-0001-4001-a001-000000000003
+  created: -85 day|14:00
+  label: Portland Food Commons
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>Connecting urban farmers, community gardeners, food rescue networks, and food sovereignty organizers across Portland. Share growing knowledge for the Pacific Northwest climate, coordinate seed swaps, organize farm-to-table events, and build the food commons infrastructure our bioregion needs. Rain-fed resilience starts in the garden.</p>
+  members:
+    - p0rt1004-0001-4001-a001-000000000001
+    - p0rt1004-0001-4001-a001-000000000002
+    - p0rt1004-0001-4001-a001-000000000003
+    - p0rt1004-0001-4001-a001-000000000004

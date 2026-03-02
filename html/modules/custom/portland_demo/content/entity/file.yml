@@ -1,0 +1,141 @@
+---
+# Profile photos for 4 Portland user personas + 2 landscape images
+# Copied from social_demo and renamed for Portland personas
+
+# River Willamette profile photo
+p0rt1003-0001-4001-a001-000000000001:
+  uuid: p0rt1003-0001-4001-a001-000000000001
+  langcode: en
+  path: content/files/river_willamette.jpg
+  uri: public://river_willamette.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Sage Fernwood profile photo
+p0rt1003-0001-4001-a001-000000000002:
+  uuid: p0rt1003-0001-4001-a001-000000000002
+  langcode: en
+  path: content/files/sage_fernwood.jpg
+  uri: public://sage_fernwood.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Luna Raincrow profile photo
+p0rt1003-0001-4001-a001-000000000003:
+  uuid: p0rt1003-0001-4001-a001-000000000003
+  langcode: en
+  path: content/files/luna_raincrow.jpg
+  uri: public://luna_raincrow.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Portland Admin profile photo
+p0rt1003-0001-4001-a001-000000000004:
+  uuid: p0rt1003-0001-4001-a001-000000000004
+  langcode: en
+  path: content/files/portland_admin.jpg
+  uri: public://portland_admin.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    teaser:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_medium:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+    profile_small:
+      x: 0
+      y: 0
+      width: 500
+      height: 500
+
+# Landscape images for group headers and topic images
+p0rt1003-0001-4001-a001-000000000005:
+  uuid: p0rt1003-0001-4001-a001-000000000005
+  langcode: en
+  path: content/files/01.jpg
+  uri: public://01.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423
+p0rt1003-0001-4001-a001-000000000006:
+  uuid: p0rt1003-0001-4001-a001-000000000006
+  langcode: en
+  path: content/files/02.jpg
+  uri: public://02.jpg
+  filemime: image/jpeg
+  status: 1
+  crops:
+    hero:
+      x: 0
+      y: 42
+      width: 961
+      height: 339
+    teaser:
+      x: 269
+      y: 0
+      width: 423
+      height: 423

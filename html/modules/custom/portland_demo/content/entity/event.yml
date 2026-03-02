@@ -1,0 +1,52 @@
+---
+# 2 events for Portland bioregional community
+
+# Event 1: Willamette Watershed Assembly (future +30 day, community, Watershed Network)
+p0rt1007-0001-4001-a001-000000000001:
+  uuid: p0rt1007-0001-4001-a001-000000000001
+  title: Willamette Watershed Assembly
+  type: event
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000002
+  body: >
+    <p>Join us for the Willamette Watershed Assembly, bringing together stewards, scientists, and organizers from across the Willamette Valley. This gathering is where we share monitoring data, celebrate restoration victories, coordinate upcoming projects, and strengthen the bonds that hold our watershed community together.</p>
+
+    <p>This season's assembly will focus on salmon habitat recovery progress on Johnson Creek and Fanno Creek, community science data analysis, and planning for the summer planting season. Each tributary monitoring team will present their seasonal report. Whether you have been planting willows along the creek or mapping spawning habitat, the Assembly is your chance to see how all these efforts connect across the watershed.</p>
+  field_event_address:
+    country_code: US
+    locality: Portland
+    postal_code: 97202
+    address_line1: 4507 SE Woodstock Boulevard
+  field_event_date: +30 day|09:00
+  field_event_date_end: +30 day|16:00
+  image: p0rt1003-0001-4001-a001-000000000005
+  image_alt: Willamette Valley landscape
+  field_event_location: Woodstock Community Center
+  field_content_visibility: community
+  field_event_type: p0rt1002-0001-4001-a001-000000000001
+  group: p0rt1005-0001-4001-a001-000000000001
+
+# Event 2: Seed Swap & Rain Garden Workshop (future +14 day, community, Food Commons)
+p0rt1007-0001-4001-a001-000000000002:
+  uuid: p0rt1007-0001-4001-a001-000000000002
+  title: "Seed Swap & Rain Garden Workshop"
+  type: event
+  langcode: en
+  uid: p0rt1004-0001-4001-a001-000000000003
+  body: >
+    <p>Bring your saved seeds, plant starts, and growing tips to share with fellow Portland growers. This is our spring seed swap where we strengthen the genetic diversity of our regional food systems by exchanging locally adapted varieties that thrive in Portland's rain-fed climate.</p>
+
+    <p>Sage will lead a workshop on designing rain gardens that double as food-producing spaces -- turning stormwater management into food sovereignty. We will cover Pacific Northwest guild design, soil building in our clay-heavy soils, and season extension for the dry summer months. Even if you do not have seeds to bring, come learn and take home something to grow.</p>
+  field_event_address:
+    country_code: US
+    locality: Portland
+    postal_code: 97214
+    address_line1: 3530 SE Division Street
+  field_event_date: +14 day|10:00
+  field_event_date_end: +14 day|14:00
+  image: p0rt1003-0001-4001-a001-000000000006
+  image_alt: Community seed swap
+  field_event_location: Division Street Community Garden
+  field_content_visibility: community
+  field_event_type: p0rt1002-0001-4001-a001-000000000002
+  group: p0rt1005-0001-4001-a001-000000000002

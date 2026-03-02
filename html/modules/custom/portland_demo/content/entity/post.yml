@@ -1,0 +1,48 @@
+---
+# 4 social posts for Portland bioregional community
+
+# Post 1: Welcome post (community, no group) -- portland_admin
+p0rt1009-0001-4001-a001-000000000001:
+  uuid: p0rt1009-0001-4001-a001-000000000001
+  langcode: en
+  type: post
+  uid: p0rt1004-0001-4001-a001-000000000001
+  field_visibility: 1
+  created: -30 day|09:00
+  field_post: >
+    Welcome to the Portland LocalNodes instance! This is our shared digital commons for regenerative organizing across the Willamette Valley. Join a group, introduce yourself, and start connecting with fellow stewards, growers, and organizers. Rain-fed resilience starts here.
+
+# Post 2: Group-scoped post in Watershed Network (group visibility)
+p0rt1009-0001-4001-a001-000000000002:
+  uuid: p0rt1009-0001-4001-a001-000000000002
+  langcode: en
+  type: post
+  uid: p0rt1004-0001-4001-a001-000000000002
+  field_visibility: 3
+  created: -25 day|14:30
+  group: p0rt1005-0001-4001-a001-000000000001
+  field_post: >
+    Just uploaded the latest water quality data from our 15 monitoring stations along the Willamette tributaries. Water temperatures are looking great in the restored riparian reaches -- shade cover is making a measurable difference for salmon. Check the group files for the full dataset.
+
+# Post 3: Group-scoped post in Food Commons (group visibility)
+p0rt1009-0001-4001-a001-000000000003:
+  uuid: p0rt1009-0001-4001-a001-000000000003
+  langcode: en
+  type: post
+  uid: p0rt1004-0001-4001-a001-000000000003
+  field_visibility: 3
+  created: -20 day|11:00
+  group: p0rt1005-0001-4001-a001-000000000002
+  field_post: >
+    The Division Street Community Garden food forest is exploding with spring growth! The rain has been generous this year and our hazelnut and apple trees are loaded with blossoms. This is what rain-fed food sovereignty looks like in Portland. Come see it at the Seed Swap next week.
+
+# Post 4: Community update (community, no group)
+p0rt1009-0001-4001-a001-000000000004:
+  uuid: p0rt1009-0001-4001-a001-000000000004
+  langcode: en
+  type: post
+  uid: p0rt1004-0001-4001-a001-000000000004
+  field_visibility: 1
+  created: -15 day|16:00
+  field_post: >
+    The Willamette Community Land Trust just secured a new parcel on N Mississippi for community use -- urban farm, gathering space, and affordable housing all on one site. This is how we hold ground against displacement. Land in community hands, stewarded for the commons. More details coming soon as we finalize the community design process.
