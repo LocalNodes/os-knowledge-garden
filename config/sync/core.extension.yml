@@ -77,7 +77,7 @@ module:
   language: 0
   like_and_dislike: 0
   link: 0
-  localnodes_demo: 0
+  localnodes_platform: 0
   mailer_transport: 0
   mentions: 0
   menu_link_content: 0
@@ -107,7 +107,6 @@ module:
   social_comment: 0
   social_comment_upload: 0
   social_core: 0
-  social_demo: 0
   social_editor: 0
   social_email_broadcast: 0
   social_emoji: 0
