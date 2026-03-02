@@ -24,7 +24,15 @@ An AI-powered knowledge garden built on Open Social, deployed as the LocalNodes 
 
 ### Active
 
-(None yet — define for v2.0 via `/gsd:new-milestone`)
+<!-- v2.0 LocalNodes-as-a-Service — defined 2026-03-02 -->
+
+- [ ] Modern web app replacing current landing page at localnodes.xyz
+- [ ] Self-service provisioning: community name, email, payment → automated instance creation
+- [ ] Stripe payment integration (billing from day one)
+- [ ] Real-time provisioning status/progress UI (~4 min wait)
+- [ ] Email notification when instance is ready with login credentials
+- [ ] New user auto-created on provisioned instance with organizer's email
+- [ ] Architecture supports future conversational onboarding, instance dashboard, branding customization
 
 ### Out of Scope
 
@@ -33,7 +41,23 @@ An AI-powered knowledge garden built on Open Social, deployed as the LocalNodes 
 - **Reputation/gamification** — Contribution tracking deferred
 - **Agent tool use (creating content)** — Requires robust agent framework; defer until Q&A validated
 - **Graph database (Neo4j)** — Module abandoned since 2017; not production-ready
-- **Group-scoped agent customization** — Per-group system prompts deferred to v2.0
+- **Group-scoped agent customization** — Per-group system prompts deferred
+- **Treasury/Web3 debugging** — Separate milestone; JS errors in Safe SDK deployment flow
+- **Conversational agent onboarding** — Future expansion; stubbed in v2.0 architecture
+- **Instance management dashboard** — Future; v2.0 covers provisioning only
+- **Branding/constitution customization** — Future; stub extensibility points in v2.0
+
+## Current Milestone: v2.0 LocalNodes-as-a-Service
+
+**Goal:** Self-service onboarding frontend where community organizers can provision their own bioregional knowledge garden with payment, replacing the current static landing page.
+
+**Target features:**
+- Modern web app at localnodes.xyz (replaces 2200-line index.html on Vercel)
+- Self-service provisioning flow: community name → subdomain, email → user creation, payment → deploy
+- Stripe billing integration from day one
+- Real-time status UI during ~4 min provisioning + email when ready
+- Thin backend bridging frontend to existing GitHub Actions `provision-instance.yml`
+- Extensible architecture for future conversational onboarding, dashboard, branding
 
 ## Context
 
@@ -73,4 +97,4 @@ Agentic x federated bioregional knowledge commons AND web2.5 onchain bioregional
 | Web3 modules as core platform | Group treasuries ship on all sites, not per-instance | ✓ Good |
 
 ---
-*Last updated: 2026-03-02 after v1.0 milestone*
+*Last updated: 2026-03-02 after v2.0 milestone started*
