@@ -136,6 +136,9 @@ if [ "$INSTALLED" = false ]; then
     boulder_demo)
       PLUGIN_PREFIX="boulder"
       ;;
+    portland_demo)
+      PLUGIN_PREFIX="portland"
+      ;;
     *)
       # Default: use social_demo's unprefixed plugin IDs
       PLUGIN_PREFIX=""

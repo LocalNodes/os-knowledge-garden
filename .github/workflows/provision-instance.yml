@@ -18,6 +18,7 @@ on:
         options:
           - localnodes_demo
           - boulder_demo
+          - portland_demo
         default: localnodes_demo
 
 env:
