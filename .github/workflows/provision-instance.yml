@@ -33,9 +33,6 @@ jobs:
   provision:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Validate subdomain
         run: |
           SUBDOMAIN="${{ inputs.subdomain }}"
@@ -62,7 +59,6 @@ jobs:
             -H "Accept: application/json")
 
           # Applications list is a plain array (no .data wrapper)
-          # docker_compose_domains is a JSON string containing domain info
           if echo "$APPS" | jq -e ".[] | select(.docker_compose_domains != null) | .docker_compose_domains" 2>/dev/null | grep -q "$FQDN"; then
             echo "::error::Subdomain '$SUBDOMAIN' is already in use."
             exit 1
@@ -72,6 +68,8 @@ jobs:
       - name: Create Coolify application
         id: create
         run: |
+          # Include docker_compose_domains at creation time so Coolify
+          # parses the compose file and sets up domain routing in one step.
           RESPONSE=$(curl -s -X POST "$COOLIFY_API/applications/public" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -84,7 +82,9 @@ jobs:
               \"git_repository\": \"$GIT_REPO\",
               \"git_branch\": \"$GIT_BRANCH\",
               \"build_pack\": \"dockercompose\",
-              \"ports_exposes\": \"80\"
+              \"ports_exposes\": \"80\",
+              \"docker_compose_location\": \"docker-compose.yaml\",
+              \"docker_compose_domains\": [{\"name\": \"opensocial\", \"domain\": \"https://$FQDN\"}]
             }")
 
           APP_UUID=$(echo "$RESPONSE" | jq -r '.uuid')
@@ -96,38 +96,11 @@ jobs:
           echo "APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
           echo "Created application $APP_UUID"
 
-      - name: Set domain routing
+      - name: Configure environment variables
         run: |
           # Brief delay for app to be fully registered
           sleep 5
 
-          # New apps require docker_compose_raw before domains can be set.
-          # Base64-encode the compose file so Coolify can parse service names.
-          COMPOSE_B64=$(base64 -w 0 docker-compose.yaml)
-
-          # Maps the subdomain to the opensocial service
-          # Auto-generates SERVICE_FQDN_OPENSOCIAL + Traefik labels + SSL
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH "$COOLIFY_API/applications/$APP_UUID" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d "{
-              \"docker_compose_raw\": \"$COMPOSE_B64\",
-              \"docker_compose_domains\": [{\"name\": \"opensocial\", \"domain\": \"https://$FQDN\"}]
-            }")
-
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-
-          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
-            echo "::error::Domain PATCH failed (HTTP $HTTP_CODE): $BODY"
-            exit 1
-          fi
-
-          echo "Domain set to https://$FQDN"
-
-      - name: Configure environment variables
-        run: |
           # PATCH /applications/{uuid}/envs updates by key (no need to find individual UUIDs)
           update_env() {
             local KEY="$1" VALUE="$2"
