@@ -17,6 +17,8 @@
         return;
       }
       chat.dataset.aiLinksEnabled = 'true';
+      // Use capture phase so this fires before DeepChat's own click handler
+      // which would otherwise open links in a new tab.
       chat.shadowRoot.addEventListener('click', function (e) {
         var link = e.target.closest('a');
         if (!link || !link.href) {
@@ -29,8 +31,26 @@
           return;
         }
         e.preventDefault();
+        e.stopImmediatePropagation();
         window.location.href = link.href;
-      });
+      }, true);
+      // Also strip target="_blank" that DeepChat may add to links after render.
+      new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          m.addedNodes.forEach(function (node) {
+            if (node.nodeType !== 1) {
+              return;
+            }
+            var links = node.querySelectorAll ? node.querySelectorAll('a[target="_blank"]') : [];
+            links.forEach(function (a) {
+              a.removeAttribute('target');
+            });
+            if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+              node.removeAttribute('target');
+            }
+          });
+        });
+      }).observe(chat.shadowRoot, { childList: true, subtree: true });
     });
   }
 
