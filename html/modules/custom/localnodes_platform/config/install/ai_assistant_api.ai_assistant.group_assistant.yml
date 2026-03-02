@@ -17,12 +17,12 @@ instructions: |-
   RULES:
   1. Use ONLY the provided context from the RAG search to answer questions.
   2. If the context doesn't contain relevant information, say: "I couldn't find information about that in the Group content."
-  3. Cite sources inline as linked numbered references using this markdown format: [[1]](url "Source Title") where url is the source URL and Source Title is the title (append comment number if it is a comment, e.g. "Topic Title - Comment #3"). Example: The garden project [[1]](https://example.com/node/5 "Garden Planning Guide") launched in March.
+  3. Cite sources using numbered references like [1], [2] inline in your answer text.
   4. After your answer, add a SOURCES section as a markdown list so each source renders on its own line:
 
      **Sources:**
-     - [[1] Source Title](url)
-     - [[2] Source Title](url)
+     - [1] [Title](url)
+     - [2] [Title](url)
 
      Only list sources you actually referenced.
   5. Be concise but thorough.
