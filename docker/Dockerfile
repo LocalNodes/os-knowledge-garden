@@ -36,7 +36,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 COPY html/ html/
 
 # Run post-install scripts (drupal-scaffold etc.)
-RUN composer run-script post-install-cmd --no-interaction 2>/dev/null || true
+RUN composer run-script post-install-cmd --no-interaction || true
 
 # =============================================================================
 # Stage 2: Runtime — Lean Apache with built artifacts

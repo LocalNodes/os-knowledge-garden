@@ -136,6 +136,7 @@ Recent decisions affecting current work:
 - Phase 6 added: Create demo content for LocalNodes.xyz based on social_demo module
 - Phase 05.1 inserted after Phase 5: Split Related Content block into Related Topics and Related Events (URGENT)
 - Phase 9 added: Deploy demo instances to Coolify (cascadia.localnodes.xyz, boulder.localnodes.xyz)
+- Phase 10 added: Production Config Management & Deploy Flow
 
 ### Pending Todos
 

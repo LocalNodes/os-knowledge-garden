@@ -177,5 +177,15 @@ Plans:
 - [ ] 09-02-PLAN.md -- Push to GitHub, delete old Coolify apps, create Cascadia + Boulder apps with env vars, trigger deployments (Wave 2, depends on 09-01)
 - [ ] 09-03-PLAN.md -- Verify both instances: domain access, SSL, correct demo content, AI chatbot, container health (Wave 3, depends on 09-02)
 
+### Phase 10: Production Config Management & Deploy Flow
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 9
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10 to break down)
+
 ---
 *Roadmap created: 2026-02-23*

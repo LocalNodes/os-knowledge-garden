@@ -9,5 +9,6 @@ html/sites/default/files/
 *.sql.gz
 .DS_Store
 node_modules/
+vendor/
 .env
 .env.*

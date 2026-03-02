@@ -4,6 +4,12 @@ set -e
 SITE_URI="${SERVICE_URL_OPENSOCIAL:-http://localhost}"
 DRUSH="/var/www/html/vendor/bin/drush -r /var/www/html/html --uri=$SITE_URI"
 
+# --- Auto-generate hash salt if using default sentinel value ---
+if [ "$DRUPAL_HASH_SALT" = "generate-random" ] || [ -z "$DRUPAL_HASH_SALT" ]; then
+  export DRUPAL_HASH_SALT=$(openssl rand -hex 32)
+  echo "Generated random DRUPAL_HASH_SALT."
+fi
+
 # --- Generate settings.php if needed ---
 SETTINGS_FILE="/var/www/html/html/sites/default/settings.php"
 if ! grep -q "Added by entrypoint" "$SETTINGS_FILE" 2>/dev/null; then
@@ -207,25 +213,23 @@ else
   # Config in config/install and config/optional is only read on first module
   # enable; this ensures redeployments pick up updated config (system prompts,
   # block placement, permissions, etc.) without requiring a full volume wipe.
+  # TODO: Replace with drush deploy (updb + cim + cr) once config/sync is set up (Phase 10).
   echo "Importing module config updates..."
   for CONFIG_DIR in \
     /var/www/html/html/modules/custom/localnodes_platform/config/install \
-    /var/www/html/html/modules/custom/localnodes_platform/config/optional \
-    /var/www/html/html/modules/custom/social_ai_indexing/config/install \
     /var/www/html/html/modules/custom/social_ai_indexing/config/optional; do
     if [ -d "$CONFIG_DIR" ]; then
-      $DRUSH config:import --partial --source="$CONFIG_DIR" -y 2>/dev/null || true
+      echo "  Importing from $CONFIG_DIR..."
+      $DRUSH config:import --partial --source="$CONFIG_DIR" -y || echo "  WARNING: config import failed for $CONFIG_DIR"
     fi
   done
 
-  # Always re-index to ensure URLs use correct base (--uri flag).
-  # Without this, CLI-indexed content gets http://default/node/X URLs.
-  echo "Re-indexing content with correct base URL ($SITE_URI)..."
-  $DRUSH search-api:reset-tracker || true
+  # Index any items that Search API has organically tracked as needing update
+  # (e.g., from config changes above). Does NOT reset tracker — avoids expensive
+  # full re-embedding through Gemini API. With index_directly:true, this typically
+  # processes 0 items on a normal restart.
+  echo "Indexing any pending items..."
   $DRUSH search-api:index || true
-  echo "Running cron for vector indexing..."
-  $DRUSH cron || true
-  sleep 5
   $DRUSH cron || true
 
   echo "=== EXISTING INSTALL READY ==="
