@@ -1,0 +1,222 @@
+name: Provision LocalNodes Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      subdomain:
+        description: 'Subdomain (e.g., "portland" → portland.localnodes.xyz)'
+        required: true
+        type: string
+      site_name:
+        description: 'Site display name (e.g., "Portland LocalNodes")'
+        required: true
+        type: string
+      demo_module:
+        description: 'Demo content module'
+        required: true
+        type: choice
+        options:
+          - localnodes_demo
+          - boulder_demo
+        default: localnodes_demo
+
+env:
+  COOLIFY_API: https://coolify.localnodes.xyz/api/v1
+  COOLIFY_PROJECT: n0sc0wcog8k4kkc48k0k0wo0
+  COOLIFY_SERVER: q4okokcg8occ88w00c4kg0sw
+  COOLIFY_ENV: production
+  GIT_REPO: https://github.com/LocalNodes/os-knowledge-garden
+  GIT_BRANCH: main
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate subdomain
+        run: |
+          SUBDOMAIN="${{ inputs.subdomain }}"
+          # Lowercase, alphanumeric + hyphens only, no leading/trailing hyphen
+          if ! echo "$SUBDOMAIN" | grep -qE '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'; then
+            echo "::error::Invalid subdomain '$SUBDOMAIN'. Use lowercase letters, numbers, and hyphens only."
+            exit 1
+          fi
+          # Reserved subdomains
+          for reserved in www api coolify mail smtp; do
+            if [ "$SUBDOMAIN" = "$reserved" ]; then
+              echo "::error::Subdomain '$SUBDOMAIN' is reserved."
+              exit 1
+            fi
+          done
+          echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
+          echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
+
+      - name: Check subdomain availability
+        run: |
+          # Query Coolify for existing apps with this domain
+          APPS=$(curl -sf "$COOLIFY_API/applications" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Accept: application/json")
+
+          if echo "$APPS" | jq -e ".data[] | select(.docker_compose_domains != null) | .docker_compose_domains" 2>/dev/null | grep -q "$FQDN"; then
+            echo "::error::Subdomain '$SUBDOMAIN' is already in use."
+            exit 1
+          fi
+          echo "✅ Subdomain $FQDN is available"
+
+      - name: Create Coolify application
+        id: create
+        run: |
+          RESPONSE=$(curl -sf -X POST "$COOLIFY_API/applications/public" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "{
+              \"name\": \"$SUBDOMAIN\",
+              \"project_uuid\": \"$COOLIFY_PROJECT\",
+              \"environment_name\": \"$COOLIFY_ENV\",
+              \"server_uuid\": \"$COOLIFY_SERVER\",
+              \"git_repository\": \"$GIT_REPO\",
+              \"git_branch\": \"$GIT_BRANCH\",
+              \"build_pack\": \"dockercompose\",
+              \"ports_exposes\": \"80\"
+            }")
+
+          APP_UUID=$(echo "$RESPONSE" | jq -r '.uuid')
+          if [ -z "$APP_UUID" ] || [ "$APP_UUID" = "null" ]; then
+            echo "::error::Failed to create app: $RESPONSE"
+            exit 1
+          fi
+
+          echo "APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
+          echo "✅ Created application $APP_UUID"
+
+      - name: Set domain routing
+        run: |
+          # This is the key step — maps the subdomain to the opensocial service
+          # and auto-generates SERVICE_FQDN_OPENSOCIAL + Traefik labels + SSL
+          RESPONSE=$(curl -sf -X PATCH "$COOLIFY_API/applications/$APP_UUID" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "{
+              \"docker_compose_domains\": [{\"name\": \"opensocial\", \"domain\": \"https://$FQDN\"}]
+            }")
+
+          echo "✅ Domain set to https://$FQDN"
+
+      - name: Configure environment variables
+        run: |
+          # List auto-created env vars and update them
+          ENV_VARS=$(curl -sf "$COOLIFY_API/applications/$APP_UUID/envs" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Accept: application/json")
+
+          # Helper: update an env var by key (finds UUID from listing, updates value)
+          update_env() {
+            local KEY="$1" VALUE="$2"
+            # Find the first env var with this key
+            local ENV_UUID=$(echo "$ENV_VARS" | jq -r "[.[] | select(.key == \"$KEY\")][0].uuid // empty")
+            if [ -n "$ENV_UUID" ]; then
+              curl -sf -X PATCH "$COOLIFY_API/applications/$APP_UUID/envs/$ENV_UUID" \
+                -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\"}" > /dev/null
+              echo "  Updated $KEY"
+            else
+              echo "  ⚠️  $KEY not found in auto-created vars, skipping"
+            fi
+          }
+
+          # Delete duplicate env vars (Coolify creates one per compose service)
+          delete_duplicates() {
+            local KEY="$1"
+            local UUIDS=$(echo "$ENV_VARS" | jq -r "[.[] | select(.key == \"$KEY\")][1:][].uuid")
+            for UUID in $UUIDS; do
+              curl -sf -X DELETE "$COOLIFY_API/applications/$APP_UUID/envs/$UUID" \
+                -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" > /dev/null
+            done
+          }
+
+          echo "Cleaning duplicate env vars..."
+          for KEY in $(echo "$ENV_VARS" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'); do
+            delete_duplicates "$KEY"
+          done
+
+          echo "Setting instance-specific values..."
+          update_env "DEMO_MODULE" "${{ inputs.demo_module }}"
+          update_env "DRUPAL_SITE_NAME" "${{ inputs.site_name }}"
+          update_env "DRUPAL_ADMIN_PASS" "localnodes2026"
+          update_env "GEMINI_API_KEY" "${{ secrets.GEMINI_API_KEY }}"
+
+          # Generate unique secrets for this instance
+          update_env "DB_PASSWORD" "$(openssl rand -hex 16)"
+          update_env "DB_ROOT_PASSWORD" "$(openssl rand -hex 16)"
+          update_env "DRUPAL_HASH_SALT" "$(openssl rand -hex 32)"
+
+          echo "✅ Environment configured"
+
+      - name: Deploy instance
+        run: |
+          RESPONSE=$(curl -sf -X POST "$COOLIFY_API/applications/$APP_UUID/deploy" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"force": true}')
+
+          DEPLOY_UUID=$(echo "$RESPONSE" | jq -r '.data.deployments[0].deployment_uuid // empty')
+          echo "DEPLOY_UUID=$DEPLOY_UUID" >> "$GITHUB_ENV"
+          echo "🚀 Deployment triggered: $DEPLOY_UUID"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to finish (build + container start)..."
+          for i in $(seq 1 30); do
+            sleep 10
+            STATUS=$(curl -sf "$COOLIFY_API/deployments/$DEPLOY_UUID" \
+              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+              -H "Accept: application/json" | jq -r '.data.status // "unknown"')
+
+            echo "  [$((i * 10))s] Status: $STATUS"
+            if [ "$STATUS" = "finished" ]; then
+              echo "✅ Deployment complete"
+              break
+            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
+              echo "::error::Deployment $STATUS"
+              exit 1
+            fi
+          done
+
+      - name: Wait for site to become healthy
+        run: |
+          echo "Waiting for Drupal install + healthcheck (up to 5 min)..."
+          for i in $(seq 1 30); do
+            sleep 10
+            HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' "https://$FQDN/user/login" 2>/dev/null || echo "000")
+            echo "  [$((i * 10))s] https://$FQDN → HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Site is live at https://$FQDN"
+              break
+            fi
+          done
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::Site not yet responding after 5 min — may still be installing"
+          fi
+
+      - name: Summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## 🌱 LocalNodes Instance Provisioned
+
+          | | |
+          |---|---|
+          | **URL** | https://$FQDN |
+          | **Site Name** | ${{ inputs.site_name }} |
+          | **Demo Content** | ${{ inputs.demo_module }} |
+          | **Coolify UUID** | \`$APP_UUID\` |
+          | **Admin Login** | admin / localnodes2026 |
+
+          ### Next Steps
+          - Visit https://$FQDN and verify the site
+          - Log in and customize content
+          - Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)
+          EOF
