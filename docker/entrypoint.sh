@@ -193,6 +193,21 @@ else
   $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
 
+  # Re-import module config so YAML changes take effect on existing installs.
+  # Config in config/install and config/optional is only read on first module
+  # enable; this ensures redeployments pick up updated config (system prompts,
+  # block placement, permissions, etc.) without requiring a full volume wipe.
+  echo "Importing module config updates..."
+  for CONFIG_DIR in \
+    /var/www/html/html/modules/custom/localnodes_platform/config/install \
+    /var/www/html/html/modules/custom/localnodes_platform/config/optional \
+    /var/www/html/html/modules/custom/social_ai_indexing/config/install \
+    /var/www/html/html/modules/custom/social_ai_indexing/config/optional; do
+    if [ -d "$CONFIG_DIR" ]; then
+      $DRUSH config:import --partial --source="$CONFIG_DIR" -y 2>/dev/null || true
+    fi
+  done
+
   # Always re-index to ensure URLs use correct base (--uri flag).
   # Without this, CLI-indexed content gets http://default/node/X URLs.
   echo "Re-indexing content with correct base URL ($SITE_URI)..."
