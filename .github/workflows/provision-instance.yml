@@ -12,13 +12,14 @@ on:
         required: true
         type: string
       demo_module:
-        description: 'Demo content module'
+        description: 'Demo content module (none = blank instance)'
         required: true
         type: choice
         options:
           - localnodes_demo
           - boulder_demo
           - portland_demo
+          - none
         default: localnodes_demo
 
 env:
@@ -98,10 +99,12 @@ jobs:
 
       - name: Configure environment variables
         run: |
-          # Brief delay for app to be fully registered
-          sleep 5
+          # Wait for Coolify to fully parse compose file and generate env vars.
+          # Coolify creates one env var per ${VAR:-default} reference in the compose
+          # file. This needs time to complete before we can deduplicate and update.
+          echo "Waiting for Coolify to parse compose file..."
+          sleep 15
 
-          # PATCH /applications/{uuid}/envs updates by key (no need to find individual UUIDs)
           update_env() {
             local KEY="$1" VALUE="$2"
             local HTTP_CODE
@@ -116,19 +119,34 @@ jobs:
             fi
           }
 
-          # Delete duplicate env vars (Coolify creates one per compose service)
-          ENV_VARS=$(curl -s "$COOLIFY_API/applications/$APP_UUID/envs" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            -H "Accept: application/json")
+          # Delete duplicate env vars (Coolify creates one per compose service
+          # that references the same ${VAR}, resulting in duplicates)
+          dedup_envs() {
+            local ENV_VARS
+            ENV_VARS=$(curl -s "$COOLIFY_API/applications/$APP_UUID/envs" \
+              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+              -H "Accept: application/json")
 
-          echo "Cleaning duplicate env vars..."
-          for KEY in $(echo "$ENV_VARS" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'); do
-            UUIDS=$(echo "$ENV_VARS" | jq -r "[.[] | select(.key == \"$KEY\")][1:][].uuid")
-            for UUID in $UUIDS; do
-              curl -s -X DELETE "$COOLIFY_API/applications/$APP_UUID/envs/$UUID" \
-                -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" > /dev/null
+            local DUPES
+            DUPES=$(echo "$ENV_VARS" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]')
+            if [ -z "$DUPES" ]; then
+              echo "  No duplicates found"
+              return
+            fi
+
+            for KEY in $DUPES; do
+              local UUIDS
+              UUIDS=$(echo "$ENV_VARS" | jq -r "[.[] | select(.key == \"$KEY\")][1:][].uuid")
+              for UUID in $UUIDS; do
+                curl -s -X DELETE "$COOLIFY_API/applications/$APP_UUID/envs/$UUID" \
+                  -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" > /dev/null
+                echo "  Deleted duplicate $KEY ($UUID)"
+              done
             done
-          done
+          }
+
+          echo "Cleaning duplicate env vars (pass 1)..."
+          dedup_envs
 
           echo "Setting instance-specific values..."
           update_env "DEMO_MODULE" "${{ inputs.demo_module }}"
@@ -140,6 +158,10 @@ jobs:
           update_env "DB_PASSWORD" "$(openssl rand -hex 16)"
           update_env "DB_ROOT_PASSWORD" "$(openssl rand -hex 16)"
           update_env "DRUPAL_HASH_SALT" "$(openssl rand -hex 32)"
+
+          # Second dedup pass — catches any stragglers from async compose parsing
+          echo "Cleaning duplicate env vars (pass 2)..."
+          dedup_envs
 
           echo "Environment configured"
 

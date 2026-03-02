@@ -119,47 +119,52 @@ if [ "$INSTALLED" = false ]; then
   echo "Enabling localnodes_platform..."
   $DRUSH en localnodes_platform -y
 
-  # Enable instance-specific demo module
+  # Enable instance-specific demo module (set DEMO_MODULE=none for blank instance)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
-  echo "Enabling demo module: $DEMO_MODULE..."
-  $DRUSH en "$DEMO_MODULE" -y
 
-  # Load demo content using the correct plugin IDs for the demo module.
-  # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
-  # with a module-specific prefix (e.g., localnodes_user, boulder_user).
-  # The base social_demo uses unprefixed IDs (user, group, etc.).
-  echo "Loading demo content for $DEMO_MODULE..."
-  case "$DEMO_MODULE" in
-    localnodes_demo)
-      PLUGIN_PREFIX="localnodes"
-      ;;
-    boulder_demo)
-      PLUGIN_PREFIX="boulder"
-      ;;
-    portland_demo)
-      PLUGIN_PREFIX="portland"
-      ;;
-    *)
-      # Default: use social_demo's unprefixed plugin IDs
-      PLUGIN_PREFIX=""
-      ;;
-  esac
+  if [ "$DEMO_MODULE" != "none" ]; then
+    echo "Enabling demo module: $DEMO_MODULE..."
+    $DRUSH en "$DEMO_MODULE" -y
 
-  if [ -n "$PLUGIN_PREFIX" ]; then
-    $DRUSH social-demo:add \
-      ${PLUGIN_PREFIX}_file \
-      ${PLUGIN_PREFIX}_user_terms \
-      ${PLUGIN_PREFIX}_event_type \
-      ${PLUGIN_PREFIX}_user \
-      ${PLUGIN_PREFIX}_group \
-      ${PLUGIN_PREFIX}_topic \
-      ${PLUGIN_PREFIX}_event \
-      ${PLUGIN_PREFIX}_event_enrollment \
-      ${PLUGIN_PREFIX}_comment \
-      ${PLUGIN_PREFIX}_post \
-      ${PLUGIN_PREFIX}_like
+    # Load demo content using the correct plugin IDs for the demo module.
+    # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
+    # with a module-specific prefix (e.g., localnodes_user, boulder_user).
+    # The base social_demo uses unprefixed IDs (user, group, etc.).
+    echo "Loading demo content for $DEMO_MODULE..."
+    case "$DEMO_MODULE" in
+      localnodes_demo)
+        PLUGIN_PREFIX="localnodes"
+        ;;
+      boulder_demo)
+        PLUGIN_PREFIX="boulder"
+        ;;
+      portland_demo)
+        PLUGIN_PREFIX="portland"
+        ;;
+      *)
+        # Default: use social_demo's unprefixed plugin IDs
+        PLUGIN_PREFIX=""
+        ;;
+    esac
+
+    if [ -n "$PLUGIN_PREFIX" ]; then
+      $DRUSH social-demo:add \
+        ${PLUGIN_PREFIX}_file \
+        ${PLUGIN_PREFIX}_user_terms \
+        ${PLUGIN_PREFIX}_event_type \
+        ${PLUGIN_PREFIX}_user \
+        ${PLUGIN_PREFIX}_group \
+        ${PLUGIN_PREFIX}_topic \
+        ${PLUGIN_PREFIX}_event \
+        ${PLUGIN_PREFIX}_event_enrollment \
+        ${PLUGIN_PREFIX}_comment \
+        ${PLUGIN_PREFIX}_post \
+        ${PLUGIN_PREFIX}_like
+    else
+      $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+    fi
   else
-    $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+    echo "DEMO_MODULE=none — skipping demo content"
   fi
 
   # Index Solr
@@ -193,7 +198,9 @@ else
   # Ensure modules are enabled (handles redeployments with changed config)
   $DRUSH en localnodes_platform -y 2>/dev/null || true
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
-  $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
+  if [ "$DEMO_MODULE" != "none" ]; then
+    $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
+  fi
   $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
 
   # Re-import module config so YAML changes take effect on existing installs.
