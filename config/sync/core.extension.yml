@@ -61,6 +61,7 @@ module:
   gnode: 0
   grequest: 0
   group: 0
+  group_treasury: 0
   group_core_comments: 0
   gvbo: 0
   hux: 0
@@ -97,10 +98,12 @@ module:
   redirect: 0
   responsive_table_filter: 0
   role_delegation: 0
+  safe_smart_accounts: 0
   search_api: 0
   search_api_solr: 0
   secret_file_system: 0
   select2: 0
+  siwe_login: 0
   social_activity: 0
   social_advanced_queue: 0
   social_ai_indexing: 0
@@ -118,6 +121,7 @@ module:
   social_footer: 0
   social_group_gvbo: 0
   social_group_invite: 0
+  social_group_treasury: 0
   social_like: 0
   social_mentions: 0
   social_node: 0

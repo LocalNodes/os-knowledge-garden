@@ -1,0 +1,13 @@
+langcode: en
+email_verification:
+  subject: "Verify your email address for [site:name]"
+  body: |-
+    [user:display-name],
+
+    Thank you for signing in with Ethereum at [site:name]. To complete your registration, please verify your email address by clicking this link or copying and pasting it into your browser:
+
+    [siwe:email-verification-url]
+
+    This link can only be used once and will expire after one day.
+
+    --  [site:name] team

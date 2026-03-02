@@ -133,18 +133,6 @@ if [ "$INSTALLED" = false ]; then
   sleep 5
   $DRUSH cron
 
-  # Enable Web3 modules
-  echo "Enabling Web3 modules..."
-  $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y || echo "Web3 module enable had warnings (non-fatal)"
-
-  # Configure SIWE domain
-  FQDN="${SERVICE_FQDN_OPENSOCIAL:-}"
-  if [ -n "$FQDN" ]; then
-    SIWE_DOMAIN=$(echo "$FQDN" | sed 's#^https\?://##')
-    echo "Setting SIWE expected domain to: $SIWE_DOMAIN"
-    $DRUSH config:set siwe_login.settings expected_domain "$SIWE_DOMAIN" -y || echo "SIWE domain config skipped"
-  fi
-
   echo "=== FRESH INSTALL COMPLETE ==="
 else
   echo "=== EXISTING INSTALL ==="
@@ -153,16 +141,12 @@ else
   echo "Running drush deploy..."
   $DRUSH deploy -y
 
-  # Ensure instance-specific modules are enabled (excluded from config sync)
+  # Ensure instance-specific demo module is enabled (excluded from config sync)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
   if [ "$DEMO_MODULE" != "none" ]; then
     echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   fi
-
-  # Enable Web3 modules (excluded from config sync, enabled per-instance)
-  echo "Ensuring Web3 modules enabled..."
-  $DRUSH en siwe_login safe_smart_accounts group_treasury social_group_treasury -y 2>/dev/null || true
 
   echo "=== EXISTING INSTALL READY ==="
 fi

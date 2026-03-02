@@ -1,0 +1,24 @@
+network:
+  sepolia:
+    name: "Sepolia Testnet"
+    chain_id: 11155111
+    rpc_url: "https://rpc.sepolia.org"
+    safe_service_url: "https://safe-transaction-sepolia.safe.global"
+    enabled: true
+  hardhat:
+    name: "Hardhat Local"
+    chain_id: 31337
+    rpc_url: "http://127.0.0.1:8545"
+    safe_service_url: "http://127.0.0.1:8000"
+    enabled: false
+    safe_singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552"
+    safe_proxy_factory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2"
+    compatibility_fallback_handler: "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4"
+api:
+  timeout: 30
+  retry_attempts: 3
+  cache_ttl: 300
+monitoring:
+  queue_interval: 60
+  batch_size: 50
+  max_retries: 5

@@ -37,17 +37,15 @@ $settings['update_free_access'] = FALSE;
 $settings['container_yamls'][] = $app_root . '/' . $site_path . '/services.yml';
 
 // ---------------------------------------------------------------------------
-// Exclude modules that differ per instance from config sync.
+// Exclude per-instance demo modules from config sync.
+// Web3 modules (siwe_login, safe_smart_accounts, group_treasury,
+// social_group_treasury) are core platform — managed via config sync.
 // ---------------------------------------------------------------------------
 $settings['config_exclude_modules'] = [
   'localnodes_demo',
   'boulder_demo',
   'portland_demo',
   'social_demo',
-  'siwe_login',
-  'safe_smart_accounts',
-  'group_treasury',
-  'social_group_treasury',
 ];
 
 // ---------------------------------------------------------------------------
@@ -68,6 +66,13 @@ $config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT')
 // Gemini API key via environment.
 // ---------------------------------------------------------------------------
 $config['key.key.gemini_api_key']['key_provider_settings']['env_variable'] = 'GEMINI_API_KEY';
+
+// ---------------------------------------------------------------------------
+// SIWE domain override (instance-specific, derived from FQDN).
+// ---------------------------------------------------------------------------
+if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {
+  $config['siwe_login.settings']['expected_domain'] = preg_replace('#^https?://#', '', $fqdn);
+}
 
 // ---------------------------------------------------------------------------
 // Reverse proxy support (Coolify/Traefik).

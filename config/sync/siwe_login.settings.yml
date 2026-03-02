@@ -1,0 +1,14 @@
+# Note: expected_domain is set automatically during installation
+# See siwe_login.install for details
+nonce_ttl: 300
+message_ttl: 600
+require_ens_or_username: false
+require_email_verification: false
+session_timeout: 86400
+ethereum_provider_url: "https://eth-mainnet.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>"
+web3onboard_enabled: false
+walletconnect_enabled: false
+walletconnect_project_id: ""
+injected_wallets_enabled: true
+app_name: ""
+onboard_theme: "system"

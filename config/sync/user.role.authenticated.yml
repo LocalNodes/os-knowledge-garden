@@ -16,6 +16,8 @@ dependencies:
     - filter
     - node
     - profile
+    - safe_smart_accounts
+    - siwe_login
     - social_group
     - social_like
     - social_post
@@ -34,18 +36,25 @@ permissions:
   - 'access content search'
   - 'access deepchat api'
   - 'access group search'
+  - 'create safe smart accounts'
+  - 'create safe transactions'
   - 'cancel account'
   - 'change own username'
+  - 'execute safe transactions'
+  - 'manage own safe smart accounts'
   - 'select account cancellation method'
   - 'select terms in expertise'
+  - 'sign safe transactions'
   - 'select terms in group_type'
   - 'select terms in interests'
   - 'select terms in profile_tag'
   - 'select terms in topic_types'
   - 'update own profile profile'
+  - 'use siwe authentication'
   - 'use text format basic_html'
   - 'use text format simple_text'
   - 'view like widget'
+  - 'view own safe smart accounts'
   - 'view node.event.field_content_visibility:public content'
   - 'view node.page.field_content_visibility:public content'
   - 'view node.topic.field_content_visibility:public content'
