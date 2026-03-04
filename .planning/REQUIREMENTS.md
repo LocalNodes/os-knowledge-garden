@@ -27,10 +27,10 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 ### Provisioning
 
-- [ ] **PROV-01**: Provisioning triggers automatically after successful Stripe payment via webhook
+- [x] **PROV-01**: Provisioning triggers automatically after successful Stripe payment via webhook
 - [ ] **PROV-02**: Admin user is created on the provisioned instance with the organizer's email
 - [ ] **PROV-03**: Unique password is auto-generated and organizer receives a one-time login link to set their own password
-- [ ] **PROV-04**: Provisioning is idempotent — retrying does not create duplicate instances
+- [x] **PROV-04**: Provisioning is idempotent — retrying does not create duplicate instances
 
 ### Status & Progress
 
@@ -104,10 +104,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-04 | Phase 13 | Complete |
 | PAY-01 | Phase 14 | Complete |
 | PAY-02 | Phase 14 | Complete |
-| PROV-01 | Phase 15 | Pending |
+| PROV-01 | Phase 15 | Complete |
 | PROV-02 | Phase 15 | Pending |
 | PROV-03 | Phase 15 | Pending |
-| PROV-04 | Phase 15 | Pending |
+| PROV-04 | Phase 15 | Complete |
 | STAT-01 | Phase 16 | Pending |
 | STAT-02 | Phase 16 | Pending |
 | STAT-03 | Phase 16 | Pending |

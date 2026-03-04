@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
-status: verifying
-stopped_at: Completed 14-02-PLAN.md (Phase 14 fully complete)
-last_updated: "2026-03-04T09:23:03.577Z"
-last_activity: 2026-03-04 — Completed 14-02 (checkpoint approved, end-to-end Stripe flow verified)
+status: executing
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-04T10:05:00Z"
+last_activity: 2026-03-04 — Completed 15-01 (provisioning pipeline server-side infrastructure)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Self-service onboarding where community organizers can provision their own bioregional knowledge garden without touching infrastructure
-**Current focus:** Phase 14 — Payment Integration (COMPLETE), ready for Phase 15
+**Current focus:** Phase 15 — Provisioning Pipeline (Plan 01 complete, Plan 02 next)
 
 ## Current Position
 
-Phase: 14 of 17 (Payment Integration) -- COMPLETE
-Plan: 2 of 2 (all plans complete)
-Status: Phase 14 complete. Stripe Checkout, webhook handler, success/cancel pages, receipt emails all verified.
-Last activity: 2026-03-04 — Completed 14-02 (checkpoint approved, end-to-end Stripe flow verified)
+Phase: 15 of 17 (Provisioning Pipeline)
+Plan: 1 of 2 (15-01 complete)
+Status: Plan 01 complete. Redis state tracking, GitHub dispatch, idempotency guard, status/callback endpoints all implemented with 18 new tests.
+Last activity: 2026-03-04 — Completed 15-01 (provisioning pipeline server-side infrastructure)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v2.0)
-- Average duration: ~11min
-- Total execution time: ~66min
+- Total plans completed: 7 (v2.0)
+- Average duration: ~10min
+- Total execution time: ~71min
 
 **By Phase:**
 
@@ -46,6 +46,7 @@ Progress: [██████████] 100%
 | 12 | 2 | ~27min | ~14min |
 | 13 | 2 | ~34min | ~17min |
 | 14 | 2 | ~5min | ~3min |
+| 15 | 1/2 | ~5min | ~5min |
 
 *Updated after each plan completion*
 
@@ -76,6 +77,10 @@ Progress: [██████████] 100%
 - readRawBody (not readBody) for webhook signature verification -- parsed JSON destroys Stripe signature
 - Pure function testing pattern for webhook logic: validateWebhookHeaders, parseWebhookEvent, handleCheckoutCompleted
 - Stripe Dashboard receipt emails enabled for both successful payments and refunds (PAY-02 verified)
+- triggerProvisioning extracted to server/utils/provisioning.ts with dependency injection (redis + dispatchFn) for testability
+- provision-handlers.ts holds pure handler functions for status and callback endpoints
+- Redis SETNX with 1-hour TTL for idempotency, 24-hour TTL for provisioning state hash
+- Provisioning state machine: triggered -> provisioning -> installing -> creating_user -> sending_email -> complete/failed
 
 ### Blockers/Concerns
 
@@ -89,8 +94,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T08:39:52.814Z
-Stopped at: Completed 14-02-PLAN.md (Phase 14 fully complete)
+Last session: 2026-03-04T10:05:00Z
+Stopped at: Completed 15-01-PLAN.md
 Resume file: None
 
 ---
