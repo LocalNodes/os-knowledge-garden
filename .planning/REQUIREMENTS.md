@@ -17,8 +17,8 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 - [ ] **ONBD-01**: User can enter community name, email, and password in a 3-field form
 - [ ] **ONBD-02**: User sees live subdomain preview (e.g., `mycommunity.localnodes.xyz`) as they type
-- [ ] **ONBD-03**: User sees real-time feedback that their chosen subdomain is available
-- [ ] **ONBD-04**: Community name is automatically slugified into a valid subdomain
+- [x] **ONBD-03**: User sees real-time feedback that their chosen subdomain is available
+- [x] **ONBD-04**: Community name is automatically slugified into a valid subdomain
 
 ### Payment
 
@@ -48,7 +48,7 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 - [ ] **ERR-01**: User sees clear error message if provisioning fails
 - [ ] **ERR-02**: User can retry provisioning after failure without being charged again
-- [ ] **ERR-03**: User sees validation errors for invalid or unavailable community names
+- [x] **ERR-03**: User sees validation errors for invalid or unavailable community names
 - [ ] **ERR-04**: System refunds payment if provisioning cannot complete after retries
 
 ## Future Requirements
@@ -100,8 +100,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAND-03 | Phase 12 | Complete |
 | ONBD-01 | Phase 13 | Pending |
 | ONBD-02 | Phase 13 | Pending |
-| ONBD-03 | Phase 13 | Pending |
-| ONBD-04 | Phase 13 | Pending |
+| ONBD-03 | Phase 13 | Complete |
+| ONBD-04 | Phase 13 | Complete |
 | PAY-01 | Phase 14 | Pending |
 | PAY-02 | Phase 14 | Pending |
 | PROV-01 | Phase 15 | Pending |
@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-02 | Phase 16 | Pending |
 | ERR-01 | Phase 17 | Pending |
 | ERR-02 | Phase 17 | Pending |
-| ERR-03 | Phase 13 | Pending |
+| ERR-03 | Phase 13 | Complete |
 | ERR-04 | Phase 17 | Pending |
 
 **Coverage:**
