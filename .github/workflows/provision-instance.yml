@@ -120,6 +120,7 @@ jobs:
           update_env() {
             local KEY="$1" VALUE="$2"
             local HTTP_CODE
+            # Try PATCH first (updates existing env var)
             HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X PATCH "$COOLIFY_API/applications/$APP_UUID/envs" \
               -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
               -H "Content-Type: application/json" \
@@ -127,7 +128,16 @@ jobs:
             if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
               echo "  Updated $KEY"
             else
-              echo "  Warning: $KEY update returned HTTP $HTTP_CODE"
+              # PATCH returns 404 for new vars — use POST to create
+              HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$COOLIFY_API/applications/$APP_UUID/envs" \
+                -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\", \"is_build_time\": false}")
+              if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+                echo "  Created $KEY"
+              else
+                echo "  Warning: $KEY create returned HTTP $HTTP_CODE"
+              fi
             fi
           }
 
