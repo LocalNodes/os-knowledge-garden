@@ -9,9 +9,9 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 ### Landing Page
 
-- [ ] **LAND-01**: User sees clear value proposition explaining what LocalNodes knowledge gardens are
-- [ ] **LAND-02**: User sees pricing information (single plan, single price) before starting onboarding
-- [ ] **LAND-03**: User can click "Get Started" CTA to begin the onboarding flow
+- [x] **LAND-01**: User sees clear value proposition explaining what LocalNodes knowledge gardens are
+- [x] **LAND-02**: User sees pricing information (single plan, single price) before starting onboarding
+- [x] **LAND-03**: User can click "Get Started" CTA to begin the onboarding flow
 
 ### Onboarding Flow
 
@@ -95,9 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAND-01 | Phase 12 | Pending |
-| LAND-02 | Phase 12 | Pending |
-| LAND-03 | Phase 12 | Pending |
+| LAND-01 | Phase 12 | Complete |
+| LAND-02 | Phase 12 | Complete |
+| LAND-03 | Phase 12 | Complete |
 | ONBD-01 | Phase 13 | Pending |
 | ONBD-02 | Phase 13 | Pending |
 | ONBD-03 | Phase 13 | Pending |

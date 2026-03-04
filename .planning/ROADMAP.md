@@ -28,7 +28,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v2.0 LocalNodes-as-a-Service
 
-- [ ] **Phase 12: Landing Page & Project Foundation** - Nuxt 4 app on Vercel replaces static landing page; value prop, pricing, CTA; email DNS warming
+- [x] **Phase 12: Landing Page & Project Foundation** - Nuxt 4 app on Vercel replaces static landing page; value prop, pricing, CTA; email DNS warming (completed 2026-03-04)
 - [ ] **Phase 13: Onboarding Form & Validation** - Community name/email/password form with live subdomain preview and real-time validation
 - [ ] **Phase 14: Payment Integration** - Stripe Checkout redirect for subscription billing with webhook handler
 - [ ] **Phase 15: Provisioning Pipeline** - Webhook-triggered GitHub Actions dispatch with user creation, Redis state tracking, and idempotency
@@ -46,11 +46,11 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. User sees a single pricing plan with clear monthly cost before entering the onboarding flow
   3. User can click a "Get Started" CTA that navigates to the onboarding form
   4. Resend email domain (DNS records for SPF/DKIM/DMARC) is configured and warming up
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 12-01-PLAN.md — Scaffold Nuxt 4 project and build complete landing page (hero, features, pricing, social proof, CTA)
-- [ ] 12-02-PLAN.md — Configure Resend email DNS records (SPF/DKIM/DMARC) in Cloudflare for domain warmup
+- [x] 12-01-PLAN.md — Scaffold Nuxt 4 project and build complete landing page (hero, features, pricing, social proof, CTA)
+- [x] 12-02-PLAN.md — Configure Resend email DNS records (SPF/DKIM/DMARC) in Cloudflare for domain warmup
 
 ### Phase 13: Onboarding Form & Validation
 **Goal**: Community organizers can describe their community and see their future subdomain, with instant feedback on availability
@@ -145,7 +145,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 8. Re-verify & Track | v1.0 | -- | Resolved | 2026-02-27 |
 | 9. Deploy to Coolify | v1.0 | 3/3 | Complete | 2026-03-01 |
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
-| 12. Landing Page & Project Foundation | v2.0 | 0/2 | Planned | - |
+| 12. Landing Page & Project Foundation | 2/2 | Complete   | 2026-03-04 | 2026-03-04 |
 | 13. Onboarding Form & Validation | v2.0 | 0/TBD | Not started | - |
 | 14. Payment Integration | v2.0 | 0/TBD | Not started | - |
 | 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
