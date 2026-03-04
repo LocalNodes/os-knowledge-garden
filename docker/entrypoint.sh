@@ -133,6 +133,60 @@ if [ "$INSTALLED" = false ]; then
   sleep 5
   $DRUSH cron
 
+  # --- Organizer account provisioning ---
+  # When ORGANIZER_EMAIL is set (automated provisioning), create the organizer's admin account,
+  # generate a one-time login link, send callbacks, and send the welcome email.
+  if [ -n "$ORGANIZER_EMAIL" ]; then
+    ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
+
+    # Callback helper
+    provision_callback() {
+      local STATUS="$1"
+      shift
+      if [ -n "$PROVISION_CALLBACK_URL" ] && [ -n "$STRIPE_SESSION_ID" ] && [ -n "$PROVISION_CALLBACK_SECRET" ]; then
+        curl -sf -X POST "$PROVISION_CALLBACK_URL/api/provision-callback" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $PROVISION_CALLBACK_SECRET" \
+          -d "{\"session_id\":\"$STRIPE_SESSION_ID\",\"status\":\"$STATUS\"$*}" \
+          || echo "Warning: $STATUS callback failed (non-fatal)"
+      fi
+    }
+
+    provision_callback "creating_user" ",\"site_url\":\"$SITE_URI\""
+
+    # Create user
+    PASSWORD=$(openssl rand -hex 16)
+    $DRUSH user:create "$ORGANIZER_USERNAME" --mail="$ORGANIZER_EMAIL" --password="$PASSWORD" 2>&1 || echo "Warning: user may already exist"
+    $DRUSH user:role:add sitemanager "$ORGANIZER_USERNAME" 2>&1 || echo "Warning: role may already be assigned"
+
+    # Generate one-time login URL
+    LOGIN_URL=$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)
+    echo "Login URL: $LOGIN_URL"
+
+    # Send welcome email via Resend
+    provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
+    if [ -n "$RESEND_API_KEY" ]; then
+      EMAIL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
+        -H "Authorization: Bearer $RESEND_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"from\": \"LocalNodes <hello@localnodes.xyz>\",
+          \"to\": [\"$ORGANIZER_EMAIL\"],
+          \"subject\": \"Your knowledge garden is ready!\",
+          \"html\": \"<h1>Welcome to LocalNodes!</h1><p>Your knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is ready.</p><p><a href='$LOGIN_URL'>Click here to set your password and log in</a></p><p>This login link is single-use. If it expires, request a new one from the login page.</p><p>Happy gardening!<br>The LocalNodes Team</p>\"
+        }")
+      EMAIL_CODE=$(echo "$EMAIL_RESPONSE" | tail -1)
+      if [ "$EMAIL_CODE" = "200" ]; then
+        echo "Welcome email sent to $ORGANIZER_EMAIL"
+      else
+        echo "WARNING: Welcome email failed (HTTP $EMAIL_CODE)"
+      fi
+    fi
+
+    provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
+    echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
+  fi
+
   echo "=== FRESH INSTALL COMPLETE ==="
 else
   echo "=== EXISTING INSTALL ==="
