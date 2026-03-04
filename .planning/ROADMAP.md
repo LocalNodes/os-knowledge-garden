@@ -62,11 +62,11 @@ Plans:
   3. User sees real-time feedback confirming their chosen subdomain is available (or unavailable)
   4. Community name is automatically slugified into a valid subdomain (lowercase, hyphens, no special chars)
   5. User sees clear validation errors when entering an invalid or already-taken community name
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01-PLAN.md — Install Valibot, configure Vitest, create slugify utility and check-subdomain server route with tests
+- [ ] 13-02-PLAN.md — Build onboarding form page with useSubdomain composable, SubdomainPreview component, and UForm validation
 
 ### Phase 14: Payment Integration
 **Goal**: Community organizers pay for their knowledge garden via Stripe before any infrastructure is provisioned
@@ -146,7 +146,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 9. Deploy to Coolify | v1.0 | 3/3 | Complete | 2026-03-01 |
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 12. Landing Page & Project Foundation | 2/2 | Complete   | 2026-03-04 | 2026-03-04 |
-| 13. Onboarding Form & Validation | v2.0 | 0/TBD | Not started | - |
+| 13. Onboarding Form & Validation | v2.0 | 0/2 | Planned | - |
 | 14. Payment Integration | v2.0 | 0/TBD | Not started | - |
 | 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
