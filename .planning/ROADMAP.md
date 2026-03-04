@@ -31,7 +31,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 12: Landing Page & Project Foundation** - Nuxt 4 app on Vercel replaces static landing page; value prop, pricing, CTA; email DNS warming (completed 2026-03-04)
 - [x] **Phase 13: Onboarding Form & Validation** - Community name/email form with live subdomain preview and real-time validation (completed 2026-03-04)
 - [x] **Phase 14: Payment Integration** - Stripe Checkout redirect for subscription billing with webhook handler (completed 2026-03-04)
-- [ ] **Phase 15: Provisioning Pipeline** - Webhook-triggered GitHub Actions dispatch with user creation, Redis state tracking, and idempotency
+- [x] **Phase 15: Provisioning Pipeline** - Webhook-triggered GitHub Actions dispatch with user creation, Redis state tracking, and idempotency (completed 2026-03-04)
 - [ ] **Phase 16: Status & Notification** - Polling-based progress UI during ~4 min provisioning wait, plus welcome email with one-time login link
 - [ ] **Phase 17: Error Handling & Hardening** - Failure display, retry without re-charging, automated refund on unrecoverable failure
 
@@ -91,11 +91,11 @@ Plans:
   2. Admin user is created on the provisioned Drupal instance with the organizer's email address
   3. A unique, secure password is auto-generated and organizer receives a one-time login link to set their own password
   4. Retrying provisioning for the same payment session does not create duplicate instances or duplicate users
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 15-01-PLAN.md — Nuxt server infrastructure: Redis state tracking, GitHub Actions dispatch, idempotency guard, status/callback endpoints with tests
-- [ ] 15-02-PLAN.md — Extend GitHub Actions workflow with user creation via SSH + drush, welcome email via Resend, and status callbacks
+- [x] 15-01-PLAN.md — Nuxt server infrastructure: Redis state tracking, GitHub Actions dispatch, idempotency guard, status/callback endpoints with tests
+- [x] 15-02-PLAN.md — Extend GitHub Actions workflow with user creation via Docker entrypoint + drush, welcome email via Resend SMTP, and status callbacks
 
 ### Phase 16: Status & Notification
 **Goal**: Community organizers stay informed during the ~4 minute provisioning wait and receive everything they need to start using their garden
@@ -148,7 +148,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 12. Landing Page & Project Foundation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 14. Payment Integration | v2.0 | 2/2 | Complete | 2026-03-04 |
-| 15. Provisioning Pipeline | 1/2 | In Progress|  | - |
+| 15. Provisioning Pipeline | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
 | 17. Error Handling & Hardening | v2.0 | 0/TBD | Not started | - |
 

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
 status: executing
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-03-04T10:05:00Z"
-last_activity: 2026-03-04 — Completed 15-01 (provisioning pipeline server-side infrastructure)
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-03-04T13:58:54Z"
+last_activity: 2026-03-04 — Completed Phase 15 (Provisioning Pipeline) — all plans done, E2E verified
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Self-service onboarding where community organizers can provision their own bioregional knowledge garden without touching infrastructure
-**Current focus:** Phase 15 — Provisioning Pipeline (Plan 01 complete, Plan 02 next)
+**Current focus:** Phase 15 complete — ready for Phase 16 (Status & Notification)
 
 ## Current Position
 
-Phase: 15 of 17 (Provisioning Pipeline)
-Plan: 1 of 2 (15-01 complete)
-Status: Plan 02 code complete, E2E checkpoint in progress — moving user creation from SSH to entrypoint (SSH blocked from GH Actions)
-Last activity: 2026-03-04 — Debugging provisioning E2E, discovered SSH blocked from GH runners
+Phase: 15 of 17 (Provisioning Pipeline) -- COMPLETE
+Plan: 2 of 2 (all plans complete)
+Status: Phase 15 complete. E2E provisioning pipeline verified. Ready for Phase 16.
+Last activity: 2026-03-04 — Completed Phase 15 (all plans done, E2E verified)
 
-Progress: [████████░░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (v2.0)
+- Total plans completed: 8 (v2.0)
 - Average duration: ~10min
-- Total execution time: ~71min
+- Total execution time: ~76min
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [████████░░] 88%
 | 12 | 2 | ~27min | ~14min |
 | 13 | 2 | ~34min | ~17min |
 | 14 | 2 | ~5min | ~3min |
-| 15 | 1/2 | ~5min | ~5min |
+| 15 | 2/2 | multi-session | ~5min |
 
 *Updated after each plan completion*
 
@@ -81,6 +81,10 @@ Progress: [████████░░] 88%
 - provision-handlers.ts holds pure handler functions for status and callback endpoints
 - Redis SETNX with 1-hour TTL for idempotency, 24-hour TTL for provisioning state hash
 - Provisioning state machine: triggered -> provisioning -> installing -> creating_user -> sending_email -> complete/failed
+- User creation moved from GitHub Actions SSH to Docker entrypoint (SSH port 22 blocked from GH runners)
+- Organizer details passed as Coolify env vars (ORGANIZER_EMAIL, ORGANIZER_NAME, RESEND_API_KEY, etc.)
+- Coolify API: PATCH only updates existing env vars, POST creates new ones. POST must NOT include is_build_time (causes 422)
+- Drupal outbound email switched from sendmail to Resend SMTP (smtp.resend.com:465), API key via settings.php $config override
 
 ### Blockers/Concerns
 
@@ -94,9 +98,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T12:45:00Z
-Stopped at: Plan 15-02 Task 2 (E2E checkpoint) — moving user creation from SSH to entrypoint
-Resume file: .planning/phases/15-provisioning-pipeline/.continue-here.md
+Last session: 2026-03-04T13:58:54Z
+Stopped at: Completed 15-02-PLAN.md — Phase 15 fully complete
+Resume file: N/A (phase complete)
 
 ---
 *State initialized: 2026-02-23*
