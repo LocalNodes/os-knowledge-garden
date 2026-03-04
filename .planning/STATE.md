@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 Phase: 15 of 17 (Provisioning Pipeline)
 Plan: 1 of 2 (15-01 complete)
-Status: Plan 01 complete. Redis state tracking, GitHub dispatch, idempotency guard, status/callback endpoints all implemented with 18 new tests.
-Last activity: 2026-03-04 — Completed 15-01 (provisioning pipeline server-side infrastructure)
+Status: Plan 02 code complete, E2E checkpoint in progress — moving user creation from SSH to entrypoint (SSH blocked from GH Actions)
+Last activity: 2026-03-04 — Debugging provisioning E2E, discovered SSH blocked from GH runners
 
 Progress: [████████░░] 88%
 
@@ -94,9 +94,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T10:05:00Z
-Stopped at: Completed 15-01-PLAN.md
-Resume file: None
+Last session: 2026-03-04T12:45:00Z
+Stopped at: Plan 15-02 Task 2 (E2E checkpoint) — moving user creation from SSH to entrypoint
+Resume file: .planning/phases/15-provisioning-pipeline/.continue-here.md
 
 ---
 *State initialized: 2026-02-23*
