@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
 status: completed
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-03-04T06:44:39.361Z"
+stopped_at: Completed quick-1 (self-host pricing card)
+last_updated: "2026-03-04T07:00:34.894Z"
 last_activity: 2026-03-04 — Completed 13-02 onboarding form UI (2-field form + subdomain preview)
 progress:
   total_phases: 6
@@ -67,6 +67,7 @@ Progress: [███░░░░░░░] 33%
 - Password field removed from onboarding form — 2 fields (community name + email). Password auto-generated server-side with one-time login link (Phase 15).
 - Valibot schema extracted to utils/ for independent testability without component mounting
 - autofocus on Community Name input to control initial focus
+- [Phase quick]: Self-Host card positioned left with neutral styling; Managed card right with highlight as recommended option
 
 ### Blockers/Concerns
 
@@ -74,8 +75,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T06:38:33.100Z
-Stopped at: Completed 13-02-PLAN.md
+Last session: 2026-03-04T07:00:31.585Z
+Stopped at: Completed quick-1 (self-host pricing card)
 Resume file: None
 
 ---
