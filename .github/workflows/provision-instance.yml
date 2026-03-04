@@ -278,12 +278,18 @@ jobs:
         if: env.HTTP_CODE == '200' && inputs.email != ''
         run: |
           # Add host key to known_hosts to avoid interactive prompt
-          ssh-keyscan -H localnodes.xyz >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H localnodes.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          # Find the opensocial container
-          CONTAINER=$(ssh root@localnodes.xyz "docker ps --filter 'name=${{ inputs.subdomain }}' --filter 'name=opensocial' --format '{{.Names}}' | head -1")
+          # Find the opensocial container (Coolify uses APP_UUID as compose project name)
+          echo "Looking for opensocial container (APP_UUID=$APP_UUID, subdomain=$SUBDOMAIN)..."
+          CONTAINER=$(ssh root@localnodes.xyz "docker ps --format '{{.Names}}' | grep opensocial | grep -E '${APP_UUID}|${SUBDOMAIN}' | head -1")
           if [ -z "$CONTAINER" ]; then
-            echo "::error::Could not find opensocial container for ${{ inputs.subdomain }}"
+            echo "Falling back to broader search..."
+            CONTAINER=$(ssh root@localnodes.xyz "docker ps --format '{{.Names}}' | grep opensocial" | tail -1)
+          fi
+          if [ -z "$CONTAINER" ]; then
+            echo "::error::Could not find opensocial container. All running containers:"
+            ssh root@localnodes.xyz "docker ps --format '{{.Names}}'" || true
             exit 1
           fi
           echo "Found container: $CONTAINER"
@@ -295,13 +301,13 @@ jobs:
 
           # Create user with community name + " Admin" as username
           USERNAME="${{ inputs.site_name }} Admin"
-          ssh root@localnodes.xyz "$DRUSH user:create \"$USERNAME\" --mail=\"${{ inputs.email }}\" --password=\"$PASSWORD\"" 2>&1 || echo "Warning: user may already exist"
+          ssh root@localnodes.xyz "$DRUSH user:create '$USERNAME' --mail='${{ inputs.email }}' --password='$PASSWORD'" 2>&1 || echo "Warning: user may already exist"
 
           # Assign sitemanager role
-          ssh root@localnodes.xyz "$DRUSH user:role:add sitemanager \"$USERNAME\"" 2>&1 || echo "Warning: role may already be assigned"
+          ssh root@localnodes.xyz "$DRUSH user:role:add sitemanager '$USERNAME'" 2>&1 || echo "Warning: role may already be assigned"
 
           # Generate one-time login URL
-          LOGIN_URL=$(ssh root@localnodes.xyz "$DRUSH uli --name=\"$USERNAME\" --uri=https://$FQDN" 2>/dev/null)
+          LOGIN_URL=$(ssh root@localnodes.xyz "$DRUSH uli --name='$USERNAME' --uri=https://$FQDN" 2>&1)
           echo "LOGIN_URL=$LOGIN_URL" >> "$GITHUB_ENV"
           echo "Login URL generated for ${{ inputs.email }}"
 
