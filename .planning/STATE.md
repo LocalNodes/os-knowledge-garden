@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 17 (Onboarding Form & Validation) -- COMPLETE
 Plan: 2 of 2 complete
 Status: Phase 13 complete, Phase 14 next
-Last activity: 2026-03-04 — Completed 13-02 onboarding form UI (2-field form + subdomain preview)
+Last activity: 2026-03-04 — Completed quick task 1: Add self-host card alongside managed pricing card on landing page
 
 Progress: [███░░░░░░░] 33%
 
@@ -72,6 +72,12 @@ Progress: [███░░░░░░░] 33%
 ### Blockers/Concerns
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Add self-host card alongside managed pricing card on landing page | 2026-03-04 | e0739db | [1-add-self-host-card-alongside-managed-pri](./quick/1-add-self-host-card-alongside-managed-pri/) |
 
 ## Session Continuity
 
