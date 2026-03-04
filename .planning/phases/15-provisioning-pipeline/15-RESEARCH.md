@@ -275,16 +275,17 @@ export async function triggerProvisioning(session: {
       # Generate secure password
       PASSWORD=$(openssl rand -hex 16)
 
-      # Create user with organizer's email
-      $DRUSH user:create "${{ inputs.email }}" \
+      # Create user with community name as username, organizer's email
+      USERNAME="${{ inputs.site_name }} Admin"
+      $DRUSH user:create "$USERNAME" \
         --mail="${{ inputs.email }}" \
         --password="$PASSWORD"
 
       # Assign sitemanager role (Open Social's admin role)
-      $DRUSH user:role:add sitemanager "${{ inputs.email }}"
+      $DRUSH user:role:add sitemanager "$USERNAME"
 
       # Generate one-time login URL
-      LOGIN_URL=$($DRUSH uli --name="${{ inputs.email }}" --uri=https://${{ env.FQDN }} 2>/dev/null)
+      LOGIN_URL=$($DRUSH uli --name="$USERNAME" --uri=https://${{ env.FQDN }} 2>/dev/null)
 
       echo "LOGIN_URL=$LOGIN_URL" >> "$GITHUB_ENV"
       echo "Organizer account created: ${{ inputs.email }}"
@@ -651,10 +652,10 @@ on:
 
 ## Open Questions
 
-1. **Drush username for organizer account**
-   - What we know: `drush user:create` requires a username. The organizer provides an email but no username.
-   - What's unclear: Should the username be the email address, or a generated slug from the community name?
-   - Recommendation: Use the email address as the username. Drupal allows email as username, and it's the most intuitive for the organizer. If Open Social enforces different username rules, fall back to a slug derived from the email (e.g., `user@example.com` becomes `user`).
+1. **Drush username for organizer account** — RESOLVED
+   - Username format: `[Community Name] Admin` (e.g., "Cascadia Admin")
+   - Email set separately via `--mail` flag
+   - Drupal allows spaces, periods, hyphens, apostrophes, underscores, and @ in usernames
 
 2. **Open Social admin role machine name**
    - What we know: Open Social has a role hierarchy. The standard Drupal `administrator` role may not exist; Open Social uses `sitemanager` as the top-level site admin role.

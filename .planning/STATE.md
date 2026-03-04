@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 - Pure function unit tests for server route logic instead of full integration tests
 - 13 reserved subdomains covering infrastructure and common admin paths
 - Password field removed from onboarding form — 2 fields (community name + email). Password auto-generated server-side with one-time login link (Phase 15).
+- Drupal username format: "[Community Name] Admin" (e.g., "Cascadia Admin") — email set separately via --mail flag
 - Valibot schema extracted to utils/ for independent testability without component mounting
 - autofocus on Community Name input to control initial focus
 - [Phase quick]: Self-Host card positioned left with neutral styling; Managed card right with highlight as recommended option
