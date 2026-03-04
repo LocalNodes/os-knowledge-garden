@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
 status: completed
 stopped_at: Completed quick-1 (self-host pricing card)
-last_updated: "2026-03-04T07:00:34.894Z"
-last_activity: 2026-03-04 — Completed 13-02 onboarding form UI (2-field form + subdomain preview)
+last_updated: "2026-03-04T07:47:58.611Z"
+last_activity: "2026-03-04 — Completed quick task 1: Add self-host card alongside managed pricing card on landing page"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 33
 ---
 
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Self-service onboarding where community organizers can provision their own bioregional knowledge garden without touching infrastructure
-**Current focus:** Phase 14 — Payment Integration (next)
+**Current focus:** Phase 14 — Payment Integration (in progress)
 
 ## Current Position
 
-Phase: 13 of 17 (Onboarding Form & Validation) -- COMPLETE
-Plan: 2 of 2 complete
-Status: Phase 13 complete, Phase 14 next
-Last activity: 2026-03-04 — Completed quick task 1: Add self-host card alongside managed pricing card on landing page
+Phase: 14 of 17 (Payment Integration) -- IN PROGRESS
+Plan: 1 of 2 complete
+Status: 14-01 complete, 14-02 next (webhook handler + success/cancel pages)
+Last activity: 2026-03-04 — Completed 14-01 Stripe Checkout integration
 
-Progress: [███░░░░░░░] 33%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v2.0)
-- Average duration: ~15min
-- Total execution time: ~61min
+- Total plans completed: 5 (v2.0)
+- Average duration: ~13min
+- Total execution time: ~64min
 
 **By Phase:**
 
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 33%
 |-------|-------|-------|----------|
 | 12 | 2 | ~27min | ~14min |
 | 13 | 2 | ~34min | ~17min |
+| 14 | 1/2 | ~3min | ~3min |
 
 *Updated after each plan completion*
 
@@ -68,6 +69,9 @@ Progress: [███░░░░░░░] 33%
 - Valibot schema extracted to utils/ for independent testability without component mounting
 - autofocus on Community Name input to control initial focus
 - [Phase quick]: Self-Host card positioned left with neutral styling; Managed card right with highlight as recommended option
+- Server-side Stripe SDK only (no @stripe/stripe-js) -- Checkout redirect mode handles all payment UI on Stripe's domain
+- Stripe metadata on both Checkout Session and subscription_data for webhook access in both checkout.session.completed and recurring events
+- useStripe() singleton pattern in server/utils/ with Nitro auto-import
 
 ### Blockers/Concerns
 
@@ -81,8 +85,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T07:00:31.585Z
-Stopped at: Completed quick-1 (self-host pricing card)
+Last session: 2026-03-04T07:46:30Z
+Stopped at: Completed 14-01-PLAN.md (Stripe Checkout integration)
 Resume file: None
 
 ---

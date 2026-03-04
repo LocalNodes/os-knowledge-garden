@@ -76,7 +76,7 @@ Plans:
   1. User is redirected to Stripe Checkout to complete a monthly subscription payment after submitting the onboarding form
   2. User receives a payment receipt email from Stripe after successful payment
   3. Stripe webhook handler receives and verifies `checkout.session.completed` events with signature validation
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 14-01-PLAN.md — Install Stripe SDK, create checkout session endpoint, and wire onboarding form to Stripe redirect
@@ -147,7 +147,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 12. Landing Page & Project Foundation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
-| 14. Payment Integration | v2.0 | 0/2 | Not started | - |
+| 14. Payment Integration | 1/2 | In Progress|  | - |
 | 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
 | 17. Error Handling & Hardening | v2.0 | 0/TBD | Not started | - |
