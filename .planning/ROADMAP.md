@@ -79,8 +79,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Install Stripe SDK, create checkout session endpoint, and wire onboarding form to Stripe redirect
-- [ ] 14-02-PLAN.md — Create webhook handler with signature verification, success/cancel pages, and verify receipt email config
+- [x] 14-01-PLAN.md — Install Stripe SDK, create checkout session endpoint, and wire onboarding form to Stripe redirect
+- [x] 14-02-PLAN.md — Create webhook handler with signature verification, success/cancel pages, and verify receipt email config
 
 ### Phase 15: Provisioning Pipeline
 **Goal**: Successful payment automatically triggers infrastructure provisioning that creates a working knowledge garden instance with the organizer's account
@@ -91,11 +91,11 @@ Plans:
   2. Admin user is created on the provisioned Drupal instance with the organizer's email address
   3. A unique, secure password is auto-generated and organizer receives a one-time login link to set their own password
   4. Retrying provisioning for the same payment session does not create duplicate instances or duplicate users
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
+- [ ] 15-01-PLAN.md — Nuxt server infrastructure: Redis state tracking, GitHub Actions dispatch, idempotency guard, status/callback endpoints with tests
+- [ ] 15-02-PLAN.md — Extend GitHub Actions workflow with user creation via SSH + drush, welcome email via Resend, and status callbacks
 
 ### Phase 16: Status & Notification
 **Goal**: Community organizers stay informed during the ~4 minute provisioning wait and receive everything they need to start using their garden
@@ -147,8 +147,8 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 12. Landing Page & Project Foundation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
-| 14. Payment Integration | 2/2 | Complete    | 2026-03-04 | - |
-| 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
+| 14. Payment Integration | v2.0 | 2/2 | Complete | 2026-03-04 |
+| 15. Provisioning Pipeline | v2.0 | 0/2 | Not started | - |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
 | 17. Error Handling & Hardening | v2.0 | 0/TBD | Not started | - |
 
