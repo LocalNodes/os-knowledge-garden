@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
-status: verifying
-stopped_at: Completed 15-02-PLAN.md — Phase 15 fully complete
-last_updated: "2026-03-04T14:07:00.842Z"
-last_activity: 2026-03-04 — Completed Phase 15 (all plans done, E2E verified)
+status: executing
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-04T14:30:33Z"
+last_activity: 2026-03-04 — Completed 16-01 (useProvisioningStatus composable)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 11
+  completed_plans: 9
+  percent: 82
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Self-service onboarding where community organizers can provision their own bioregional knowledge garden without touching infrastructure
-**Current focus:** Phase 15 complete — ready for Phase 16 (Status & Notification)
+**Current focus:** Phase 16 in progress — Status & Notification UI
 
 ## Current Position
 
-Phase: 15 of 17 (Provisioning Pipeline) -- COMPLETE
-Plan: 2 of 2 (all plans complete)
-Status: Phase 15 complete. E2E provisioning pipeline verified. Ready for Phase 16.
-Last activity: 2026-03-04 — Completed Phase 15 (all plans done, E2E verified)
+Phase: 16 of 17 (Status & Notification)
+Plan: 1 of 3 (16-01 complete, 16-02 and 16-03 remaining)
+Status: Phase 16 in progress. useProvisioningStatus composable complete. Ready for Plan 02 (UI components).
+Last activity: 2026-03-04 — Completed 16-01 (useProvisioningStatus composable)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [██████████] 100%
 | 13 | 2 | ~34min | ~17min |
 | 14 | 2 | ~5min | ~3min |
 | 15 | 2/2 | multi-session | ~5min |
+| 16 | 1/3 | ~3min | ~3min |
 
 *Updated after each plan completion*
 
@@ -85,6 +86,8 @@ Progress: [██████████] 100%
 - Organizer details passed as Coolify env vars (ORGANIZER_EMAIL, ORGANIZER_NAME, RESEND_API_KEY, etc.)
 - Coolify API: PATCH only updates existing env vars, POST creates new ones. POST must NOT include is_build_time (causes 422)
 - Drupal outbound email switched from sendmail to Resend SMTP (smtp.resend.com:465), API key via settings.php $config override
+- Pure helper extraction pattern: composables export testable pure functions (getStageIndex, formatTimeRemaining, etc.) for unit testing without Vue reactivity context
+- useCountdown returns `remaining` (not `count`) in @vueuse/core@14.2.1 — corrected from research
 
 ### Blockers/Concerns
 
@@ -98,9 +101,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T13:58:54Z
-Stopped at: Completed 15-02-PLAN.md — Phase 15 fully complete
-Resume file: N/A (phase complete)
+Last session: 2026-03-04T14:30:33Z
+Stopped at: Completed 16-01-PLAN.md
+Resume file: N/A (continue with 16-02)
 
 ---
 *State initialized: 2026-02-23*

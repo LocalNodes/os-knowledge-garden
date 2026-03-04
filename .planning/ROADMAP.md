@@ -110,7 +110,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — TDD composable: useProvisioningStatus with polling, stage mapping, and countdown timer
+- [x] 16-01-PLAN.md — TDD composable: useProvisioningStatus with polling, stage mapping, and countdown timer
 - [ ] 16-02-PLAN.md — Progress UI components (garden animation, stage indicator, success CTA) and enhanced welcome email
 
 ### Phase 17: Error Handling & Hardening
@@ -149,7 +149,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 14. Payment Integration | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 15. Provisioning Pipeline | v2.0 | Complete    | 2026-03-04 | 2026-03-04 |
-| 16. Status & Notification | v2.0 | 0/2 | Not started | - |
+| 16. Status & Notification | v2.0 | 1/2 | In progress | - |
 | 17. Error Handling & Hardening | v2.0 | 0/TBD | Not started | - |
 
 ---
