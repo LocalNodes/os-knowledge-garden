@@ -68,6 +68,13 @@ $config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT')
 $config['key.key.gemini_api_key']['key_provider_settings']['env_variable'] = 'GEMINI_API_KEY';
 
 // ---------------------------------------------------------------------------
+// Resend SMTP transport for outbound email.
+// ---------------------------------------------------------------------------
+if ($resend_key = getenv('RESEND_API_KEY')) {
+  $config['symfony_mailer.mailer_transport.smtp']['configuration']['pass'] = $resend_key;
+}
+
+// ---------------------------------------------------------------------------
 // SIWE domain override (instance-specific, derived from FQDN).
 // ---------------------------------------------------------------------------
 if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {

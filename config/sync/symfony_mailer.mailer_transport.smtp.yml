@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies: {}
+id: smtp
+label: 'Resend SMTP'
+plugin: smtp
+configuration:
+  user: resend
+  pass: placeholder
+  host: smtp.resend.com
+  port: 465
+  query:
+    verify_peer: true
+    local_domain: ''
+    restart_threshold: null
+    restart_threshold_sleep: null
+    ping_threshold: null
