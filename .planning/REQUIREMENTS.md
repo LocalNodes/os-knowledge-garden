@@ -95,35 +95,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAND-01 | — | Pending |
-| LAND-02 | — | Pending |
-| LAND-03 | — | Pending |
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| ONBD-04 | — | Pending |
-| PAY-01 | — | Pending |
-| PAY-02 | — | Pending |
-| PROV-01 | — | Pending |
-| PROV-02 | — | Pending |
-| PROV-03 | — | Pending |
-| PROV-04 | — | Pending |
-| STAT-01 | — | Pending |
-| STAT-02 | — | Pending |
-| STAT-03 | — | Pending |
-| STAT-04 | — | Pending |
-| NOTIF-01 | — | Pending |
-| NOTIF-02 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| ERR-04 | — | Pending |
+| LAND-01 | Phase 12 | Pending |
+| LAND-02 | Phase 12 | Pending |
+| LAND-03 | Phase 12 | Pending |
+| ONBD-01 | Phase 13 | Pending |
+| ONBD-02 | Phase 13 | Pending |
+| ONBD-03 | Phase 13 | Pending |
+| ONBD-04 | Phase 13 | Pending |
+| PAY-01 | Phase 14 | Pending |
+| PAY-02 | Phase 14 | Pending |
+| PROV-01 | Phase 15 | Pending |
+| PROV-02 | Phase 15 | Pending |
+| PROV-03 | Phase 15 | Pending |
+| PROV-04 | Phase 15 | Pending |
+| STAT-01 | Phase 16 | Pending |
+| STAT-02 | Phase 16 | Pending |
+| STAT-03 | Phase 16 | Pending |
+| STAT-04 | Phase 16 | Pending |
+| NOTIF-01 | Phase 16 | Pending |
+| NOTIF-02 | Phase 16 | Pending |
+| ERR-01 | Phase 17 | Pending |
+| ERR-02 | Phase 17 | Pending |
+| ERR-03 | Phase 13 | Pending |
+| ERR-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation*
