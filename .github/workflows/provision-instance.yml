@@ -21,6 +21,18 @@ on:
           - portland_demo
           - none
         default: localnodes_demo
+      email:
+        description: 'Organizer email address'
+        required: false
+        type: string
+      stripe_session_id:
+        description: 'Stripe Checkout Session ID for state tracking'
+        required: false
+        type: string
+      callback_url:
+        description: 'Base URL to POST status updates to (e.g., https://localnodes.xyz)'
+        required: false
+        type: string
 
 env:
   COOLIFY_API: https://coolify.localnodes.xyz/api/v1
@@ -182,6 +194,18 @@ jobs:
           echo "DEPLOY_UUID=$DEPLOY_UUID" >> "$GITHUB_ENV"
           echo "Deployment triggered: $DEPLOY_UUID"
 
+      - name: Notify status - provisioning
+        if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        run: |
+          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+            -d "{
+              \"session_id\": \"${{ inputs.stripe_session_id }}\",
+              \"status\": \"provisioning\",
+              \"site_url\": \"https://$FQDN\"
+            }" || echo "Warning: callback failed (non-fatal)"
+
       - name: Wait for deployment
         run: |
           echo "Waiting for deployment to finish (build + container start)..."
@@ -202,6 +226,18 @@ jobs:
             fi
           done
 
+      - name: Notify status - installing
+        if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        run: |
+          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+            -d "{
+              \"session_id\": \"${{ inputs.stripe_session_id }}\",
+              \"status\": \"installing\",
+              \"site_url\": \"https://$FQDN\"
+            }" || echo "Warning: callback failed (non-fatal)"
+
       - name: Wait for site to become healthy
         run: |
           echo "Waiting for Drupal install + healthcheck (up to 10 min)..."
@@ -215,9 +251,107 @@ jobs:
             fi
           done
 
+          echo "HTTP_CODE=$HTTP_CODE" >> "$GITHUB_ENV"
           if [ "$HTTP_CODE" != "200" ]; then
             echo "::warning::Site not yet responding after 10 min — may still be installing"
           fi
+
+      - name: Setup SSH
+        if: env.HTTP_CODE == '200' && inputs.email != ''
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Notify status - creating user
+        if: env.HTTP_CODE == '200' && inputs.email != '' && inputs.callback_url != '' && inputs.stripe_session_id != ''
+        run: |
+          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+            -d "{
+              \"session_id\": \"${{ inputs.stripe_session_id }}\",
+              \"status\": \"creating_user\",
+              \"site_url\": \"https://$FQDN\"
+            }" || echo "Warning: callback failed (non-fatal)"
+
+      - name: Create organizer admin account
+        if: env.HTTP_CODE == '200' && inputs.email != ''
+        run: |
+          # Add host key to known_hosts to avoid interactive prompt
+          ssh-keyscan -H localnodes.xyz >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Find the opensocial container
+          CONTAINER=$(ssh root@localnodes.xyz "docker ps --filter 'name=${{ inputs.subdomain }}' --filter 'name=opensocial' --format '{{.Names}}' | head -1")
+          if [ -z "$CONTAINER" ]; then
+            echo "::error::Could not find opensocial container for ${{ inputs.subdomain }}"
+            exit 1
+          fi
+          echo "Found container: $CONTAINER"
+
+          DRUSH="docker exec $CONTAINER /var/www/html/vendor/bin/drush -r /var/www/html/html --uri=https://$FQDN"
+
+          # Generate secure random password
+          PASSWORD=$(openssl rand -hex 16)
+
+          # Create user with community name + " Admin" as username
+          USERNAME="${{ inputs.site_name }} Admin"
+          ssh root@localnodes.xyz "$DRUSH user:create \"$USERNAME\" --mail=\"${{ inputs.email }}\" --password=\"$PASSWORD\"" 2>&1 || echo "Warning: user may already exist"
+
+          # Assign sitemanager role
+          ssh root@localnodes.xyz "$DRUSH user:role:add sitemanager \"$USERNAME\"" 2>&1 || echo "Warning: role may already be assigned"
+
+          # Generate one-time login URL
+          LOGIN_URL=$(ssh root@localnodes.xyz "$DRUSH uli --name=\"$USERNAME\" --uri=https://$FQDN" 2>/dev/null)
+          echo "LOGIN_URL=$LOGIN_URL" >> "$GITHUB_ENV"
+          echo "Login URL generated for ${{ inputs.email }}"
+
+      - name: Send welcome email
+        if: env.LOGIN_URL != '' && inputs.email != ''
+        run: |
+          # Notify status - sending email
+          if [ -n "${{ inputs.callback_url }}" ] && [ -n "${{ inputs.stripe_session_id }}" ]; then
+            curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+              -d "{
+                \"session_id\": \"${{ inputs.stripe_session_id }}\",
+                \"status\": \"sending_email\",
+                \"site_url\": \"https://$FQDN\",
+                \"login_url\": \"$LOGIN_URL\"
+              }" || echo "Warning: callback failed (non-fatal)"
+          fi
+
+          # Send welcome email via Resend API
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"from\": \"LocalNodes <hello@localnodes.xyz>\",
+              \"to\": [\"${{ inputs.email }}\"],
+              \"subject\": \"Your knowledge garden is ready!\",
+              \"html\": \"<h1>Welcome to LocalNodes!</h1><p>Your knowledge garden at <a href='https://$FQDN'>https://$FQDN</a> is ready.</p><p><a href='$LOGIN_URL'>Click here to set your password and log in</a></p><p>This login link is single-use and will expire after first use. If it expires, you can request a new one from the login page.</p><p>Happy gardening!<br>The LocalNodes Team</p>\"
+            }")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Welcome email sent to ${{ inputs.email }}"
+          else
+            echo "::warning::Welcome email failed (HTTP $HTTP_CODE): $BODY"
+          fi
+
+      - name: Notify status - complete
+        if: env.HTTP_CODE == '200' && inputs.callback_url != '' && inputs.stripe_session_id != ''
+        run: |
+          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+            -d "{
+              \"session_id\": \"${{ inputs.stripe_session_id }}\",
+              \"status\": \"complete\",
+              \"site_url\": \"https://$FQDN\",
+              \"login_url\": \"${LOGIN_URL:-}\"
+            }" || echo "Warning: callback failed (non-fatal)"
 
       - name: Summary
         run: |
@@ -231,9 +365,23 @@ jobs:
           | **Demo Content** | ${{ inputs.demo_module }} |
           | **Coolify UUID** | \`$APP_UUID\` |
           | **Admin Login** | admin / localnodes2026 |
+          | **Organizer Email** | ${{ inputs.email }} |
+          | **Login URL** | ${{ env.LOGIN_URL }} |
 
           ### Next Steps
           - Visit https://$FQDN and verify the site
           - Log in and customize content
           - Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)
           EOF
+
+      - name: Notify status - failed
+        if: failure() && inputs.callback_url != '' && inputs.stripe_session_id != ''
+        run: |
+          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
+            -d "{
+              \"session_id\": \"${{ inputs.stripe_session_id }}\",
+              \"status\": \"failed\",
+              \"error\": \"Provisioning workflow failed. Check GitHub Actions logs for details.\"
+            }" || echo "Warning: callback failed (non-fatal)"
