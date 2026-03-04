@@ -15,8 +15,8 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 ### Onboarding Flow
 
-- [ ] **ONBD-01**: User can enter community name, email, and password in a 3-field form
-- [ ] **ONBD-02**: User sees live subdomain preview (e.g., `mycommunity.localnodes.xyz`) as they type
+- [x] **ONBD-01**: User can enter community name and email in a 2-field form
+- [x] **ONBD-02**: User sees live subdomain preview (e.g., `mycommunity.localnodes.xyz`) as they type
 - [x] **ONBD-03**: User sees real-time feedback that their chosen subdomain is available
 - [x] **ONBD-04**: Community name is automatically slugified into a valid subdomain
 
@@ -29,7 +29,7 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 
 - [ ] **PROV-01**: Provisioning triggers automatically after successful Stripe payment via webhook
 - [ ] **PROV-02**: Admin user is created on the provisioned instance with the organizer's email
-- [ ] **PROV-03**: Unique password is generated for the organizer's admin account
+- [ ] **PROV-03**: Unique password is auto-generated and organizer receives a one-time login link to set their own password
 - [ ] **PROV-04**: Provisioning is idempotent — retrying does not create duplicate instances
 
 ### Status & Progress
@@ -37,12 +37,12 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 - [ ] **STAT-01**: User sees multi-step progress indicator with named stages during provisioning
 - [ ] **STAT-02**: User sees animated "garden growing" visualization during the ~4 minute wait
 - [ ] **STAT-03**: User sees estimated time remaining (~4 minutes)
-- [ ] **STAT-04**: User sees success page with site URL, login credentials, and "Visit Your Garden" CTA
+- [ ] **STAT-04**: User sees success page with site URL and "Visit Your Garden" CTA
 
 ### Notification
 
 - [ ] **NOTIF-01**: User receives welcome email when their instance is ready
-- [ ] **NOTIF-02**: Welcome email contains site URL, login credentials, and getting-started steps
+- [ ] **NOTIF-02**: Welcome email contains site URL, one-time login link, and getting-started steps
 
 ### Error Handling
 
@@ -82,7 +82,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Feature | Reason |
 |---------|--------|
 | Free trial / freemium tier | Infrastructure cost per instance is real (~$5/mo+). Charge from day one. |
-| OAuth/SSO sign-in | Email/password sufficient for community organizers. Adds dependency for marginal gain. |
+| OAuth/SSO sign-in | Email + one-time login link sufficient for community organizers. Adds dependency for marginal gain. |
 | Multi-region deployment | Single Coolify server sufficient. Scale when demand requires it. |
 | Team/org billing at signup | One organizer account per instance. Members invited via Open Social natively. |
 | In-app payment forms (Stripe Elements) | Stripe Checkout handles PCI, mobile, 3D Secure. Zero benefit to custom forms. |
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAND-01 | Phase 12 | Complete |
 | LAND-02 | Phase 12 | Complete |
 | LAND-03 | Phase 12 | Complete |
-| ONBD-01 | Phase 13 | Pending |
-| ONBD-02 | Phase 13 | Pending |
+| ONBD-01 | Phase 13 | Complete |
+| ONBD-02 | Phase 13 | Complete |
 | ONBD-03 | Phase 13 | Complete |
 | ONBD-04 | Phase 13 | Complete |
 | PAY-01 | Phase 14 | Pending |

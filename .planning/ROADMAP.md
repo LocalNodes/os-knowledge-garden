@@ -29,10 +29,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 ### v2.0 LocalNodes-as-a-Service
 
 - [x] **Phase 12: Landing Page & Project Foundation** - Nuxt 4 app on Vercel replaces static landing page; value prop, pricing, CTA; email DNS warming (completed 2026-03-04)
-- [ ] **Phase 13: Onboarding Form & Validation** - Community name/email/password form with live subdomain preview and real-time validation
+- [x] **Phase 13: Onboarding Form & Validation** - Community name/email form with live subdomain preview and real-time validation (completed 2026-03-04)
 - [ ] **Phase 14: Payment Integration** - Stripe Checkout redirect for subscription billing with webhook handler
 - [ ] **Phase 15: Provisioning Pipeline** - Webhook-triggered GitHub Actions dispatch with user creation, Redis state tracking, and idempotency
-- [ ] **Phase 16: Status & Notification** - Polling-based progress UI during ~4 min provisioning wait, plus welcome email with credentials
+- [ ] **Phase 16: Status & Notification** - Polling-based progress UI during ~4 min provisioning wait, plus welcome email with one-time login link
 - [ ] **Phase 17: Error Handling & Hardening** - Failure display, retry without re-charging, automated refund on unrecoverable failure
 
 ## Phase Details
@@ -57,16 +57,16 @@ Plans:
 **Depends on**: Phase 12
 **Requirements**: ONBD-01, ONBD-02, ONBD-03, ONBD-04, ERR-03
 **Success Criteria** (what must be TRUE):
-  1. User can fill out a form with community name, email address, and password
+  1. User can fill out a form with community name and email address
   2. User sees a live subdomain preview (e.g., `mycommunity.localnodes.xyz`) that updates as they type
   3. User sees real-time feedback confirming their chosen subdomain is available (or unavailable)
   4. Community name is automatically slugified into a valid subdomain (lowercase, hyphens, no special chars)
   5. User sees clear validation errors when entering an invalid or already-taken community name
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 13-01-PLAN.md — Install Valibot, configure Vitest, create slugify utility and check-subdomain server route with tests
-- [ ] 13-02-PLAN.md — Build onboarding form page with useSubdomain composable, SubdomainPreview component, and UForm validation
+- [x] 13-01-PLAN.md — Install Valibot, configure Vitest, create slugify utility and check-subdomain server route with tests
+- [x] 13-02-PLAN.md — Build onboarding form page with useSubdomain composable, SubdomainPreview component, and UForm validation
 
 ### Phase 14: Payment Integration
 **Goal**: Community organizers pay for their knowledge garden via Stripe before any infrastructure is provisioned
@@ -89,7 +89,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Provisioning triggers automatically after Stripe webhook confirms successful payment (no manual steps)
   2. Admin user is created on the provisioned Drupal instance with the organizer's email address
-  3. A unique, secure password is generated for the organizer's admin account
+  3. A unique, secure password is auto-generated and organizer receives a one-time login link to set their own password
   4. Retrying provisioning for the same payment session does not create duplicate instances or duplicate users
 **Plans**: TBD
 
@@ -105,8 +105,8 @@ Plans:
   1. User sees a multi-step progress indicator with named stages (e.g., "Building image", "Installing Drupal", "Creating your account")
   2. User sees an animated "garden growing" visualization that makes the ~4 minute wait feel intentional
   3. User sees estimated time remaining that counts down during provisioning
-  4. User sees a success page with their site URL, login credentials, and a "Visit Your Garden" button
-  5. User receives a welcome email containing their site URL, login credentials, and getting-started steps
+  4. User sees a success page with their site URL and a "Visit Your Garden" button
+  5. User receives a welcome email containing their site URL, one-time login link, and getting-started steps
 **Plans**: TBD
 
 Plans:
@@ -145,8 +145,8 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 8. Re-verify & Track | v1.0 | -- | Resolved | 2026-02-27 |
 | 9. Deploy to Coolify | v1.0 | 3/3 | Complete | 2026-03-01 |
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
-| 12. Landing Page & Project Foundation | 2/2 | Complete   | 2026-03-04 | 2026-03-04 |
-| 13. Onboarding Form & Validation | 1/2 | In Progress|  | - |
+| 12. Landing Page & Project Foundation | v2.0 | 2/2 | Complete | 2026-03-04 |
+| 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 14. Payment Integration | v2.0 | 0/TBD | Not started | - |
 | 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
