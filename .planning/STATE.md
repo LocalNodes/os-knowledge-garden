@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: LocalNodes-as-a-Service
-status: completed
-stopped_at: Completed quick-1 (self-host pricing card)
-last_updated: "2026-03-04T07:47:58.611Z"
-last_activity: "2026-03-04 — Completed quick task 1: Add self-host card alongside managed pricing card on landing page"
+status: checkpoint
+stopped_at: "14-02 Task 3 checkpoint: human-verify end-to-end Stripe payment flow"
+last_updated: "2026-03-04T07:52:39Z"
+last_activity: "2026-03-04 — Completed 14-02 Tasks 1-2 (webhook handler + success/cancel pages), awaiting human verification"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 14 of 17 (Payment Integration) -- IN PROGRESS
-Plan: 1 of 2 complete
-Status: 14-01 complete, 14-02 next (webhook handler + success/cancel pages)
-Last activity: 2026-03-04 — Completed 14-01 Stripe Checkout integration
+Phase: 14 of 17 (Payment Integration) -- CHECKPOINT
+Plan: 2 of 2 (14-02 Tasks 1-2 complete, Task 3 awaiting human verification)
+Status: 14-02 code complete, awaiting end-to-end Stripe payment flow verification
+Last activity: 2026-03-04 — Completed 14-02 webhook handler + success/cancel pages
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (v2.0)
-- Average duration: ~13min
-- Total execution time: ~64min
+- Total plans completed: 6 (v2.0)
+- Average duration: ~11min
+- Total execution time: ~66min
 
 **By Phase:**
 
@@ -45,7 +45,7 @@ Progress: [████████░░] 83%
 |-------|-------|-------|----------|
 | 12 | 2 | ~27min | ~14min |
 | 13 | 2 | ~34min | ~17min |
-| 14 | 1/2 | ~3min | ~3min |
+| 14 | 2/2 | ~5min | ~3min |
 
 *Updated after each plan completion*
 
@@ -72,6 +72,8 @@ Progress: [████████░░] 83%
 - Server-side Stripe SDK only (no @stripe/stripe-js) -- Checkout redirect mode handles all payment UI on Stripe's domain
 - Stripe metadata on both Checkout Session and subscription_data for webhook access in both checkout.session.completed and recurring events
 - useStripe() singleton pattern in server/utils/ with Nitro auto-import
+- readRawBody (not readBody) for webhook signature verification -- parsed JSON destroys Stripe signature
+- Pure function testing pattern for webhook logic: validateWebhookHeaders, parseWebhookEvent, handleCheckoutCompleted
 
 ### Blockers/Concerns
 
@@ -85,9 +87,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T07:46:30Z
-Stopped at: Completed 14-01-PLAN.md (Stripe Checkout integration)
-Resume file: None
+Last session: 2026-03-04T07:52:39Z
+Stopped at: 14-02 Task 3 checkpoint (human-verify end-to-end Stripe payment flow)
+Resume file: .planning/phases/14-payment-integration/14-02-PLAN.md
 
 ---
 *State initialized: 2026-02-23*

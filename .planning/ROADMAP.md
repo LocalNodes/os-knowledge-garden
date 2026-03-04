@@ -30,7 +30,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 12: Landing Page & Project Foundation** - Nuxt 4 app on Vercel replaces static landing page; value prop, pricing, CTA; email DNS warming (completed 2026-03-04)
 - [x] **Phase 13: Onboarding Form & Validation** - Community name/email form with live subdomain preview and real-time validation (completed 2026-03-04)
-- [ ] **Phase 14: Payment Integration** - Stripe Checkout redirect for subscription billing with webhook handler
+- [x] **Phase 14: Payment Integration** - Stripe Checkout redirect for subscription billing with webhook handler (completed 2026-03-04)
 - [ ] **Phase 15: Provisioning Pipeline** - Webhook-triggered GitHub Actions dispatch with user creation, Redis state tracking, and idempotency
 - [ ] **Phase 16: Status & Notification** - Polling-based progress UI during ~4 min provisioning wait, plus welcome email with one-time login link
 - [ ] **Phase 17: Error Handling & Hardening** - Failure display, retry without re-charging, automated refund on unrecoverable failure
@@ -76,7 +76,7 @@ Plans:
   1. User is redirected to Stripe Checkout to complete a monthly subscription payment after submitting the onboarding form
   2. User receives a payment receipt email from Stripe after successful payment
   3. Stripe webhook handler receives and verifies `checkout.session.completed` events with signature validation
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 14-01-PLAN.md — Install Stripe SDK, create checkout session endpoint, and wire onboarding form to Stripe redirect
@@ -147,7 +147,7 @@ Phases execute in numeric order: 12 -> 13 -> 14 -> 15 -> 16 -> 17
 | 10. Config Management | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 12. Landing Page & Project Foundation | v2.0 | 2/2 | Complete | 2026-03-04 |
 | 13. Onboarding Form & Validation | v2.0 | 2/2 | Complete | 2026-03-04 |
-| 14. Payment Integration | 1/2 | In Progress|  | - |
+| 14. Payment Integration | 2/2 | Complete   | 2026-03-04 | - |
 | 15. Provisioning Pipeline | v2.0 | 0/TBD | Not started | - |
 | 16. Status & Notification | v2.0 | 0/TBD | Not started | - |
 | 17. Error Handling & Hardening | v2.0 | 0/TBD | Not started | - |

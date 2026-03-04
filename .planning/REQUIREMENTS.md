@@ -23,7 +23,7 @@ Requirements for the self-service onboarding frontend. Each maps to roadmap phas
 ### Payment
 
 - [x] **PAY-01**: User is redirected to Stripe Checkout for monthly subscription payment
-- [ ] **PAY-02**: User receives payment receipt email from Stripe after successful payment
+- [x] **PAY-02**: User receives payment receipt email from Stripe after successful payment
 
 ### Provisioning
 
@@ -103,7 +103,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-03 | Phase 13 | Complete |
 | ONBD-04 | Phase 13 | Complete |
 | PAY-01 | Phase 14 | Complete |
-| PAY-02 | Phase 14 | Pending |
+| PAY-02 | Phase 14 | Complete |
 | PROV-01 | Phase 15 | Pending |
 | PROV-02 | Phase 15 | Pending |
 | PROV-03 | Phase 15 | Pending |
