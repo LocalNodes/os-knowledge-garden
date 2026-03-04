@@ -132,7 +132,7 @@ jobs:
               HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$COOLIFY_API/applications/$APP_UUID/envs" \
                 -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
                 -H "Content-Type: application/json" \
-                -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\", \"is_build_time\": false}")
+                -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\"}")
               if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
                 echo "  Created $KEY"
               else
