@@ -111,8 +111,10 @@ COPY --from=builder /app/html /var/www/html/html
 # Copy custom modules (project code, not installed via composer)
 COPY html/modules/custom/ /var/www/html/html/modules/custom/
 
-# Copy config sync directory (for drush deploy / drush cim)
-COPY config/ /var/www/html/config/
+# NOTE: config/sync is intentionally NOT copied. This is a distribution: config
+# ships in module config/install + the Open Social profile, applied on fresh
+# install. We do not run config:import (see docker/entrypoint.sh), so a synced
+# config directory would only be stale, misleading, and image bloat.
 
 # Create writable directories (files dir not in source, created at build time)
 RUN mkdir -p /var/www/html/html/sites/default/files \
