@@ -82,6 +82,16 @@ if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {
 }
 
 // ---------------------------------------------------------------------------
+// Web3 RPC endpoint override (optional, localnodes_web3).
+// Defaults to Pocket Network's keyless public portal (set in
+// localnodes_web3_install()). Override per-instance with a dedicated provider
+// (Alchemy/Infura/Grove/etc.) by setting ETHEREUM_PROVIDER_URL.
+// ---------------------------------------------------------------------------
+if ($eth_rpc = getenv('ETHEREUM_PROVIDER_URL')) {
+  $config['siwe_login.settings']['ethereum_provider_url'] = $eth_rpc;
+}
+
+// ---------------------------------------------------------------------------
 // Reverse proxy support (Coolify/Traefik).
 // ---------------------------------------------------------------------------
 if (getenv('DRUPAL_REVERSE_PROXY') === 'true') {

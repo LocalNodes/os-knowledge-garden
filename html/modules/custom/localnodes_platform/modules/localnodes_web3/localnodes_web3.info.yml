@@ -1,0 +1,10 @@
+name: 'LocalNodes Web3'
+type: module
+description: 'Optional Web3 stack: SIWE login, Safe smart accounts, and group treasuries. Enable per-instance (the Docker entrypoint enables it when WEB3_ENABLED=true).'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - siwe_login:siwe_login
+  - safe_smart_accounts:safe_smart_accounts
+  - group_treasury:group_treasury
+  - group_treasury:social_group_treasury

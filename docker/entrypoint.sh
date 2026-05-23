@@ -79,6 +79,13 @@ if [ "$INSTALLED" = false ]; then
   echo "Rebuilding caches..."
   $DRUSH cr
 
+  # Optional Web3 stack (SIWE login, Safe smart accounts, group treasuries).
+  # Off by default; set WEB3_ENABLED=true to enable on this instance.
+  if [ "${WEB3_ENABLED:-false}" = "true" ]; then
+    echo "Enabling localnodes_web3..."
+    $DRUSH en localnodes_web3 -y
+  fi
+
   # Enable instance-specific demo module (set DEMO_MODULE=none for blank instance)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
 
@@ -205,6 +212,12 @@ else
   echo "Running database updates..."
   $DRUSH updatedb -y
   $DRUSH cr
+
+  # Ensure optional Web3 stack matches WEB3_ENABLED on redeploy.
+  if [ "${WEB3_ENABLED:-false}" = "true" ]; then
+    echo "Ensuring localnodes_web3 enabled..."
+    $DRUSH en localnodes_web3 -y 2>/dev/null || true
+  fi
 
   # Ensure instance-specific demo module is enabled (excluded from config sync)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"

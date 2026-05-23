@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Install/uninstall hooks for the LocalNodes Web3 submodule.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * Points the Web3 RPC defaults at Pocket Network's free, keyless, decentralized
+ * public portal (https://docs.pocket.network/foundation/api-portal/) instead of
+ * the upstream Alchemy placeholder / rpc.sepolia.org defaults.
+ *
+ * These are only defaults — operators can override per-instance via the
+ * ETHEREUM_PROVIDER_URL env var ($config override in settings.php) or the
+ * module admin UIs. Idempotent.
+ */
+function localnodes_web3_install() {
+  _localnodes_web3_configure_rpc_defaults();
+}
+
+/**
+ * Sets decentralized (Pocket Network) RPC defaults for the Web3 stack.
+ */
+function _localnodes_web3_configure_rpc_defaults() {
+  $config_factory = \Drupal::configFactory();
+
+  // SIWE login: ENS resolution + nonce/verification need a mainnet RPC.
+  // Replace the upstream Alchemy placeholder with Pocket's keyless mainnet
+  // endpoint. Leave any real value an operator already set untouched.
+  $siwe = $config_factory->getEditable('siwe_login.settings');
+  $current = (string) $siwe->get('ethereum_provider_url');
+  if ($current === '' || str_contains($current, 'YOUR_ALCHEMY_KEY')) {
+    $siwe->set('ethereum_provider_url', 'https://eth.api.pocket.network')->save(TRUE);
+  }
+
+  // Safe smart accounts: keep Sepolia testnet as the default network (no real
+  // funds by default), but route its RPC through Pocket instead of the public
+  // rpc.sepolia.org default.
+  $safe = $config_factory->getEditable('safe_smart_accounts.settings');
+  $network = $safe->get('network');
+  if (is_array($network) && isset($network['sepolia'])) {
+    $network['sepolia']['rpc_url'] = 'https://eth-sepolia-testnet.api.pocket.network';
+    $safe->set('network', $network)->save(TRUE);
+  }
+}
