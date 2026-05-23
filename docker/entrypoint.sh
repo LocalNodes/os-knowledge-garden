@@ -69,9 +69,15 @@ if [ "$INSTALLED" = false ]; then
   echo "Enabling localnodes_platform..."
   $DRUSH en localnodes_platform -y
 
-  # Import full config from sync to align with repo state
-  echo "Aligning config with repo state..."
-  $DRUSH deploy -y || echo "WARNING: drush deploy had issues (may be normal on first install)"
+  # NOTE: We deliberately do NOT run `drush deploy`/`config:import` here.
+  # This is a distribution: all platform config lives in module config/install
+  # (applied by `drush en localnodes_platform` above) plus Open Social's profile.
+  # config/sync was exported from a different site instance, so its site UUID
+  # and per-entity UUIDs never match a fresh `site:install`, and cim aborts with
+  # "Site UUID ... does not match" + "Entities exist ... must be deleted".
+  # A cache rebuild is all that's needed after module enablement.
+  echo "Rebuilding caches..."
+  $DRUSH cr
 
   # Enable instance-specific demo module (set DEMO_MODULE=none for blank instance)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
@@ -191,9 +197,14 @@ if [ "$INSTALLED" = false ]; then
 else
   echo "=== EXISTING INSTALL ==="
 
-  # Standard Drupal deploy: updb -> cr -> cim -> cr -> deploy:hook
-  echo "Running drush deploy..."
-  $DRUSH deploy -y
+  # Apply pending DB updates and rebuild caches. We intentionally do NOT run
+  # `config:import` (i.e. not `drush deploy`): config/sync carries a foreign
+  # site UUID and per-entity UUIDs, so cim aborts on every instance — including
+  # boulder/portland if they were ever redeployed. Platform config ships in
+  # module config/install and updates via module install/update hooks instead.
+  echo "Running database updates..."
+  $DRUSH updatedb -y
+  $DRUSH cr
 
   # Ensure instance-specific demo module is enabled (excluded from config sync)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"

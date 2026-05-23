@@ -19,6 +19,53 @@ function localnodes_platform_install() {
   // by $config[] overrides in settings.php, which take effect at runtime without
   // writing to the database. No need to apply them here.
   _localnodes_platform_grant_chatbot_access();
+  _localnodes_platform_configure_mailer();
+}
+
+/**
+ * Configures Resend SMTP as the outbound mail transport.
+ *
+ * The Docker image has no sendmail binary, so Open Social's default `sendmail`
+ * transport silently drops all mail (password resets, notifications). We create
+ * an `smtp` transport pointed at Resend and make it the default.
+ *
+ * Done here (not in config/sync) because this is a distribution: every fresh
+ * install gets the transport deterministically, and the runtime API key is
+ * injected via the $config['symfony_mailer.mailer_transport.smtp'] override in
+ * settings.php from the RESEND_API_KEY env var (the `pass` below is a
+ * placeholder that is never used at runtime). Idempotent.
+ */
+function _localnodes_platform_configure_mailer() {
+  $storage = \Drupal::entityTypeManager()->getStorage('mailer_transport');
+
+  if (!$storage->load('smtp')) {
+    $storage->create([
+      'id' => 'smtp',
+      'label' => 'Resend SMTP',
+      'plugin' => 'smtp',
+      'configuration' => [
+        'user' => 'resend',
+        // Placeholder only — overridden at runtime from RESEND_API_KEY via
+        // settings.php. See html/sites/default/settings.php.
+        'pass' => 'placeholder',
+        'host' => 'smtp.resend.com',
+        'port' => 465,
+        'query' => [
+          'verify_peer' => TRUE,
+          'local_domain' => '',
+          'restart_threshold' => NULL,
+          'restart_threshold_sleep' => NULL,
+          'ping_threshold' => NULL,
+        ],
+      ],
+    ])->save();
+  }
+
+  // Make Resend SMTP the default transport.
+  \Drupal::configFactory()
+    ->getEditable('symfony_mailer.settings')
+    ->set('default_transport', 'smtp')
+    ->save(TRUE);
 }
 
 /**
