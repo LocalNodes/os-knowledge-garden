@@ -1,5 +1,5 @@
-# GSD preferences — os-knowledge-garden (localnodes seat)
-
+---
+version: 1
 git:
   main_branch: main
   merge_strategy: merge
@@ -19,3 +19,8 @@ github:
   # commits that cite each other (M012 precedent). Slices commit sequentially on the
   # milestone branch instead; the milestone draft PR to main is the one review point.
   slice_prs: false
+---
+
+# GSD preferences — os-knowledge-garden (localnodes seat)
+
+Preferences live in the YAML frontmatter above (gsd requires `---` fences; bare YAML is silently ignored — open-gsd/gsd-pi#2036).
