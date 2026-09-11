@@ -14,5 +14,8 @@ github:
   repo: LocalNodes/os-knowledge-garden
   labels: [gsd]
   auto_link_commits: true
-  # Slice PRs auto squash-merge into milestone/<mid> with NO review window — by design.
-  slice_prs: true
+  # slice_prs OFF: github-sync would SQUASH-merge each slice PR into milestone/<mid> and
+  # delete the branch (sync.ts:526, cli.ts:296, hardcoded) — that destroys the per-task
+  # commits that cite each other (M012 precedent). Slices commit sequentially on the
+  # milestone branch instead; the milestone draft PR to main is the one review point.
+  slice_prs: false
