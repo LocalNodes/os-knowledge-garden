@@ -8,6 +8,9 @@
 #   scripts/codex-review-gate.sh                 # review HEAD against origin/main
 #   scripts/codex-review-gate.sh --base origin/develop
 #   scripts/codex-review-gate.sh --uncommitted   # review the working tree instead
+#   scripts/codex-review-gate.sh --merge <pr>    # review the PR head vs its base, then merge it
+#                                                #   (the ONLY merge path on the seat; a bare
+#                                                #   `gh pr merge` is blocked by approvals.deny)
 #
 # Exit 0 = no P0/P1 findings (P2/P3 may remain: file them as issues, do not thrash).
 # Exit 1 = at least one P0/P1: fix, then run again. Exit 3 = could not review.
@@ -28,6 +31,7 @@ while [ $# -gt 0 ]; do
     --base) MODE=base; BASE="${2:-origin/main}"; shift ;;
     --base=*) MODE=base; BASE="${1#--base=}" ;;
     --uncommitted) MODE=uncommitted ;;
+    --merge) MODE=merge; PR="${2:?--merge needs a PR number}"; shift ;;
     -h|--help) sed -n 2,22p "$0"; exit 0 ;;
     *) echo "codex-review-gate: unknown argument $1" >&2; exit 3 ;;
   esac
@@ -40,6 +44,26 @@ if [ "${CODEX_GATE:-}" = "skip" ]; then
 fi
 command -v codex >/dev/null 2>&1 || { echo "codex-review-gate: codex CLI not found (npm i -g @openai/codex; codex login)" >&2; exit 3; }
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "codex-review-gate: not a git repo" >&2; exit 3; }
+
+if [ "$MODE" = "merge" ]; then
+  # Review the PR's head against its base in a throwaway worktree, then merge it. GitHub auth:
+  # the seat's App token (source ~/bin/gh-app-env.sh) unless GH_TOKEN is already set.
+  [ -n "${GH_TOKEN:-}" ] || { [ -f "$HOME/bin/gh-app-env.sh" ] && . "$HOME/bin/gh-app-env.sh"; }
+  INFO="$(gh pr view "$PR" --json headRefOid,baseRefName,state,isDraft 2>&1)" || { echo "codex-review-gate: gh pr view $PR failed: $INFO" >&2; exit 3; }
+  HEAD_SHA="$(printf '%s' "$INFO" | sed -n 's/.*"headRefOid":"\([0-9a-f]*\)".*/\1/p')"
+  PR_BASE="$(printf '%s' "$INFO" | sed -n 's/.*"baseRefName":"\([^"]*\)".*/\1/p')"
+  case "$INFO" in *'"state":"OPEN"'*) ;; *) echo "codex-review-gate: PR $PR is not open ($INFO)" >&2; exit 3 ;; esac
+  case "$INFO" in *'"isDraft":true'*) echo "codex-review-gate: PR $PR is a draft — gh pr ready $PR first" >&2; exit 3 ;; esac
+  git fetch -q origin "$PR_BASE" "pull/$PR/head" || { echo "codex-review-gate: fetch of PR $PR failed" >&2; exit 3; }
+  WT="$(mktemp -d -t codex-merge-XXXXXX)"
+  git worktree add -q --detach "$WT" "$HEAD_SHA" || { echo "codex-review-gate: worktree for $HEAD_SHA failed" >&2; exit 3; }
+  (cd "$WT" && "$0" --base "origin/$PR_BASE"); RC=$?
+  git worktree remove --force "$WT" 2>/dev/null
+  [ "$RC" -eq 0 ] || { echo "codex-review-gate: PR $PR NOT merged (review rc=$RC)" >&2; exit "$RC"; }
+  METHOD="${CODEX_GATE_MERGE_METHOD:-squash}"     # gsd milestone PRs may prefer =merge to keep slice commits
+  gh pr merge "$PR" "--$METHOD" --delete-branch && echo "codex-review-gate: merged PR $PR ($METHOD) after a clean review of $HEAD_SHA" >&2 || { echo "codex-review-gate: merge of PR $PR failed" >&2; exit 3; }
+  exit 0
+fi
 
 if [ "$MODE" = "base" ]; then
   git rev-parse --verify -q "$BASE" >/dev/null || { echo "codex-review-gate: base $BASE not found (git fetch origin?)" >&2; exit 3; }
