@@ -1,0 +1,52 @@
+{
+  "mcpServers": {
+    "gsd-workflow": {
+      "command": "/home/localnodes/.hermes/node/bin/node",
+      "args": [
+        "/home/localnodes/.local/lib/node_modules/@opengsd/gsd-pi/packages/mcp-server/dist/cli.js"
+      ],
+      "cwd": "/home/localnodes/projects/os-knowledge-garden",
+      "env": {
+        "GSD_CLI_PATH": "/home/localnodes/.local/bin/gsd",
+        "GSD_BIN_PATH": "/home/localnodes/.local/bin/gsd",
+        "GSD_WORKFLOW_EXECUTORS_MODULE": "/home/localnodes/.gsd/agent/extensions/gsd/tools/workflow-tool-executors.js",
+        "GSD_WORKFLOW_WRITE_GATE_MODULE": "/home/localnodes/.gsd/agent/extensions/gsd/bootstrap/write-gate.js",
+        "GSD_PERSIST_WRITE_GATE_STATE": "1",
+        "GSD_WORKFLOW_PROJECT_ROOT": "/home/localnodes/projects/os-knowledge-garden"
+      }
+    },
+    "gsd-browser": {
+      "command": "/home/localnodes/.hermes/node/bin/node",
+      "args": [
+        "/home/localnodes/.local/lib/node_modules/@opengsd/gsd-pi/node_modules/@opengsd/gsd-browser/bin/gsd-browser",
+        "mcp",
+        "--session",
+        "gsd-os-knowledge-garden-af173311",
+        "--identity-scope",
+        "project",
+        "--identity-key",
+        "gsd-os-knowledge-garden-af173311",
+        "--identity-project",
+        "gsd-os-knowledge-garden-af173311"
+      ],
+      "cwd": "/home/localnodes/projects/os-knowledge-garden"
+    },
+    "context7": {
+      "command": "/home/localnodes/.hermes/node/bin/npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "firecrawl": {
+      "command": "/home/localnodes/.hermes/node/bin/npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "env": {
+        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
+      }
+    }
+  }
+}
