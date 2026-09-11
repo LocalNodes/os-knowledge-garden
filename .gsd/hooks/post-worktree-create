@@ -1,0 +1,44 @@
+#!/bin/bash
+# gsd-pi git.worktree_post_create hook — give every milestone/slice worktree its own
+# clickable ddev site so agents (gsd-browser) can walk a direction before a human looks.
+#
+# Contract (preferences-reference.md "worktree_post_create"): env SOURCE_DIR, WORKTREE_DIR;
+# 30-SECOND TIMEOUT; failure is non-fatal. `ddev start` + composer take minutes, so this
+# script only CONFIGURES synchronously and kicks the start off in the background.
+# Preview URL lands in $WORKTREE_DIR/.gsd-preview-url when the site is up.
+set -euo pipefail
+: "${SOURCE_DIR:?}" "${WORKTREE_DIR:?}"
+cd "$WORKTREE_DIR"
+
+# Unique, DNS-safe ddev project name from the worktree dir (milestone/<mid>[/<sid>] → lnx-m001-s01).
+slug="$(basename "$WORKTREE_DIR" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//' | cut -c1-40)"
+name="lnx-${slug}"
+
+# .ddev/ is tracked; config.local.yaml is gitignored by ddev and is the per-worktree override:
+# unique name, no pinned host ports (they would collide with the main checkout).
+cat > .ddev/config.local.yaml <<EOF
+name: ${name}
+host_webserver_port: ""
+host_https_port: ""
+host_db_port: ""
+EOF
+
+# Untracked runtime files the main checkout has and a fresh worktree lacks.
+[ -e vendor ]     || [ ! -d "$SOURCE_DIR/vendor" ]     || ln -s "$SOURCE_DIR/vendor" vendor
+[ -e .ddev/.env ] || [ ! -f "$SOURCE_DIR/.ddev/.env" ] || cp "$SOURCE_DIR/.ddev/.env" .ddev/.env
+for f in html/sites/default/settings.local.php html/sites/default/settings.ddev.php; do
+  [ -e "$f" ] || [ ! -f "$SOURCE_DIR/$f" ] || cp "$SOURCE_DIR/$f" "$f"
+done
+# ponytail: shared files/ dir across worktrees (uploads collide but previews stay cheap);
+# switch to per-worktree copies if two directions ever fight over the same upload.
+[ -e html/sites/default/files ] || [ ! -d "$SOURCE_DIR/html/sites/default/files" ] || ln -s "$SOURCE_DIR/html/sites/default/files" html/sites/default/files
+
+rm -f .gsd-preview-url
+# Background start; DB seeded from the newest snapshot of the main checkout when one exists.
+snap="$(ls -t "$SOURCE_DIR"/.ddev/db_snapshots/*.gz 2>/dev/null | head -1 || true)"
+nohup bash -c "
+  ddev start -y >/tmp/ddev-${name}.log 2>&1 &&
+  { [ -z '${snap}' ] || ddev import-db --file='${snap}' >>/tmp/ddev-${name}.log 2>&1; } &&
+  ddev describe -j | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"raw\"][\"primary_url\"])' > .gsd-preview-url
+" >/dev/null 2>&1 &
+echo "post-worktree-create: ${name} configured; ddev starting in background (log /tmp/ddev-${name}.log)"
