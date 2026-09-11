@@ -2,6 +2,10 @@
 version: 1
 git:
   main_branch: main
+  # branch = milestone/<mid> in the project root (ddev keeps working). worktree (one
+  # checkout per milestone/slice, needed for slice_parallel + per-direction previews)
+  # waits on git.worktree_post_create for Drupal (settings.local.php, files/, vendor/).
+  isolation: branch
   merge_strategy: merge
   # Milestone publication: pushes milestone/<mid> and opens ONE draft PR to main.
   # That PR is the ONLY review gate (scripts/codex-review-gate.sh). auto_push is
