@@ -1,6 +1,8 @@
 type: drupal10
 docroot: html
 php_version: "8.3"
+# ext-gmp: required by simplito/elliptic-php (drupal/siwe_login); the production Dockerfile installs it too.
+webimage_extra_packages: [php8.3-gmp]
 webserver_type: nginx-fpm
 xdebug_enabled: false
 additional_hostnames: []
