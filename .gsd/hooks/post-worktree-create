@@ -22,6 +22,20 @@ host_webserver_port: ""
 host_https_port: ""
 host_db_port: ""
 EOF
+# Previews publish ONLY the web service through the shared ddev router. qdrant/solr stay
+# container-internal: every project sharing one router would otherwise fight over the same
+# HTTP_EXPOSE host ports (6343/8993 belong to the main checkout for debugging).
+cat > .ddev/docker-compose.zz-preview-ports.yaml <<EOF
+services:
+  qdrant:
+    environment:
+      HTTP_EXPOSE: ""
+      HTTPS_EXPOSE: ""
+  solr:
+    environment:
+      HTTP_EXPOSE: ""
+      HTTPS_EXPOSE: ""
+EOF
 
 # Untracked runtime files the main checkout has and a fresh worktree lacks.
 [ -e vendor ]     || [ ! -d "$SOURCE_DIR/vendor" ]     || ln -s "$SOURCE_DIR/vendor" vendor
@@ -38,6 +52,7 @@ rm -f .gsd-preview-url
 snap="$(ls -t "$SOURCE_DIR"/.ddev/db_snapshots/*.gz 2>/dev/null | head -1 || true)"
 nohup bash -c "
   ddev start -y >/tmp/ddev-${name}.log 2>&1 &&
+  ddev composer install --no-interaction >>/tmp/ddev-${name}.log 2>&1 &&
   { [ -z '${snap}' ] || ddev import-db --file='${snap}' >>/tmp/ddev-${name}.log 2>&1; } &&
   ddev describe -j | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"raw\"][\"primary_url\"])' > .gsd-preview-url
 " >/dev/null 2>&1 &
