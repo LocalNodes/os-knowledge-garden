@@ -98,4 +98,9 @@ if [ $((P0 + P1)) -gt 0 ]; then
   exit 1
 fi
 echo "codex-review-gate: clean (no P1) on $LABEL" >&2
+# Post-clean: refresh the tree-sitter knowledge graph (graphify update = 0 tokens; NEVER bare
+# `graphify .`, that needs a metered LLM key). Artifacts land in graphify-out/ (git-excluded).
+if command -v graphify >/dev/null 2>&1 && [ "$MODE" = base ]; then
+  graphify update . >/dev/null 2>&1 && echo "codex-review-gate: graphify update . refreshed graphify-out/" >&2 || echo "codex-review-gate: graphify update . failed (non-blocking)" >&2
+fi
 exit 0
