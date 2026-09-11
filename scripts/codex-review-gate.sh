@@ -60,8 +60,9 @@ if [ "$MODE" = "merge" ]; then
   (cd "$WT" && "$0" --base "origin/$PR_BASE"); RC=$?
   git worktree remove --force "$WT" 2>/dev/null
   [ "$RC" -eq 0 ] || { echo "codex-review-gate: PR $PR NOT merged (review rc=$RC)" >&2; exit "$RC"; }
-  METHOD="${CODEX_GATE_MERGE_METHOD:-squash}"     # gsd milestone PRs may prefer =merge to keep slice commits
-  gh pr merge "$PR" "--$METHOD" --delete-branch && echo "codex-review-gate: merged PR $PR ($METHOD) after a clean review of $HEAD_SHA" >&2 || { echo "codex-review-gate: merge of PR $PR failed" >&2; exit 3; }
+  METHOD="${CODEX_GATE_MERGE_METHOD:-merge}"      # merge commits by default: agent commits cite each other; squash only for scratch
+  # --match-head-commit: if anything landed on the PR during the review, GitHub refuses the merge instead of merging unreviewed code.
+  gh pr merge "$PR" "--$METHOD" --delete-branch --match-head-commit "$HEAD_SHA" && echo "codex-review-gate: merged PR $PR ($METHOD) after a clean review of $HEAD_SHA" >&2 || { echo "codex-review-gate: merge of PR $PR failed" >&2; exit 3; }
   exit 0
 fi
 
