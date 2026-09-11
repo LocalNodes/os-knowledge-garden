@@ -23,6 +23,10 @@
 #   git config core.hooksPath .githooks
 # Skip once with CODEX_GATE=skip git push ... (say why in the PR).
 set -uo pipefail
+# Trusted copy of this script. The --merge path re-invokes the gate inside a throwaway
+# worktree of the PR head; it must run THIS file, never the PR's own copy (a PR could
+# otherwise edit the gate to pass itself). Codex gate P1, round 2.
+SELF="$(readlink -f "$0")"
 
 BASE="origin/main"
 MODE="base"
@@ -57,7 +61,7 @@ if [ "$MODE" = "merge" ]; then
   git fetch -q origin "$PR_BASE" "pull/$PR/head" || { echo "codex-review-gate: fetch of PR $PR failed" >&2; exit 3; }
   WT="$(mktemp -d -t codex-merge-XXXXXX)"
   git worktree add -q --detach "$WT" "$HEAD_SHA" || { echo "codex-review-gate: worktree for $HEAD_SHA failed" >&2; exit 3; }
-  (cd "$WT" && "$0" --base "origin/$PR_BASE"); RC=$?
+  (cd "$WT" && "$SELF" --base "origin/$PR_BASE"); RC=$?
   git worktree remove --force "$WT" 2>/dev/null
   [ "$RC" -eq 0 ] || { echo "codex-review-gate: PR $PR NOT merged (review rc=$RC)" >&2; exit "$RC"; }
   METHOD="${CODEX_GATE_MERGE_METHOD:-merge}"      # merge commits by default: agent commits cite each other; squash only for scratch
