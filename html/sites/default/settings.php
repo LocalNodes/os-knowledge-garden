@@ -120,16 +120,8 @@ $settings['trusted_host_patterns'][] = '^localhost$';
 if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev.php')) {
   include __DIR__ . '/settings.ddev.php';
 }
-$databases['default']['default'] = array (
-  'database' => 'db',
-  'username' => 'db',
-  'password' => 'db',
-  'prefix' => '',
-  'host' => 'db',
-  'port' => 3306,
-  'isolation_level' => 'READ COMMITTED',
-  'driver' => 'mysql',
-  'namespace' => 'Drupal\\mysql\\Driver\\Database\\mysql',
-  'autoload' => 'core/modules/mysql/src/Driver/Database/mysql/',
-);
-$settings['hash_salt'] = 'tS61VNSfGvVLAzhrsRAxB6U6GVWSDh1jNatd50Cr4buhenTmVP8UjEKS6s-mf2soR1lLp8sdWQ';
+
+// Local, untracked overrides (DB credentials, hash_salt, per-machine values). Never commit.
+if (file_exists(__DIR__ . '/settings.local.php')) {
+  include __DIR__ . '/settings.local.php';
+}

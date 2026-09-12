@@ -104,3 +104,4 @@ tmp/
 .gsd/DISCUSSION-MANIFEST.json
 .gsd/milestones/**/*-CONTINUE.md
 .gsd/milestones/**/continue.md
+html/sites/default/settings.local.php
