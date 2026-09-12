@@ -5,6 +5,8 @@
  * Install/uninstall hooks for the LocalNodes Web3 submodule.
  */
 
+use Drupal\block\Entity\Block;
+
 /**
  * Implements hook_install().
  *
@@ -15,9 +17,14 @@
  * These are only defaults — operators can override per-instance via the
  * ETHEREUM_PROVIDER_URL env var ($config override in settings.php) or the
  * module admin UIs. Idempotent.
+ *
+ * Also swaps the socialblue header's Sign-in slot to be role-aware: the SIWE
+ * Login Block (config/optional) serves anonymous visitors and the User account
+ * menu moves to authenticated users.
  */
 function localnodes_web3_install() {
   _localnodes_web3_configure_rpc_defaults();
+  _localnodes_web3_swap_header_account_menu();
 }
 
 /**
@@ -44,4 +51,27 @@ function _localnodes_web3_configure_rpc_defaults() {
     $network['sepolia']['rpc_url'] = 'https://eth-sepolia-testnet.api.pocket.network';
     $safe->set('network', $network)->save(TRUE);
   }
+}
+
+/**
+ * Moves the User account menu to authenticated users only.
+ *
+ * The SIWE Login Block (config/optional) takes the anonymous slot; the
+ * pre-existing socialblue_account_menu (owned by social_core optional
+ * config) flips from anonymous to authenticated. Uses the Block entity API
+ * so the save invalidates block cache tags. Idempotent; no-ops if the block
+ * does not exist (exotic install orders, non-socialblue).
+ */
+function _localnodes_web3_swap_header_account_menu() {
+  $block = Block::load('socialblue_account_menu');
+  if ($block === NULL) {
+    return;
+  }
+  $block->setVisibilityConfig('user_role', [
+    'id' => 'user_role',
+    'roles' => ['authenticated' => 'authenticated'],
+    'negate' => FALSE,
+    'context_mapping' => ['user' => '@user.current_user_context:current_user'],
+  ]);
+  $block->save();
 }
