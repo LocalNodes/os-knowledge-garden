@@ -67,3 +67,7 @@ ddev drush search-api:index social_comments
 ## License
 
 GPL-2.0+
+
+## Seat
+
+Automated changes on this repo are made by `localnodes-agent[bot]`; see scripts/codex-review-gate.sh.
