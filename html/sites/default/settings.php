@@ -120,3 +120,8 @@ $settings['trusted_host_patterns'][] = '^localhost$';
 if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev.php')) {
   include __DIR__ . '/settings.ddev.php';
 }
+
+// Local, untracked overrides (DB credentials, hash_salt, per-machine values). Never commit.
+if (file_exists(__DIR__ . '/settings.local.php')) {
+  include __DIR__ . '/settings.local.php';
+}
