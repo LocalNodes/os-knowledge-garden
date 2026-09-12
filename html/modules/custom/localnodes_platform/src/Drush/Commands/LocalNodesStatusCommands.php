@@ -57,8 +57,8 @@ class LocalNodesStatusCommands extends DrushCommands {
       $profile = \Drupal::getContainer()->getParameter('install_profile');
       return is_string($profile) && $profile !== '' ? $profile : NULL;
     }
-    catch (\Exception $e) {
-      $this->logger()->warning('Could not determine install profile: ' . $e->getMessage());
+    catch (\Throwable $e) {
+      $this->logger()?->warning('Could not determine install profile: ' . $e->getMessage());
       return NULL;
     }
   }
@@ -73,8 +73,8 @@ class LocalNodesStatusCommands extends DrushCommands {
       try {
         $installed = \Drupal::service('extension.list.module')->exists($name);
       }
-      catch (\Exception $e) {
-        $this->logger()->warning("Could not check module '$name': " . $e->getMessage());
+      catch (\Throwable $e) {
+        $this->logger()?->warning("Could not check module '$name': " . $e->getMessage());
       }
       $modules[$name] = [
         'installed' => $installed,
@@ -112,8 +112,8 @@ class LocalNodesStatusCommands extends DrushCommands {
       }
       return $search;
     }
-    catch (\Exception $e) {
-      $this->logger()->warning('Could not read Search API index status: ' . $e->getMessage());
+    catch (\Throwable $e) {
+      $this->logger()?->warning('Could not read Search API index status: ' . $e->getMessage());
       return [];
     }
   }
@@ -136,8 +136,8 @@ class LocalNodesStatusCommands extends DrushCommands {
         $ai['model_id'] = $chat['model_id'] ?? NULL;
       }
     }
-    catch (\Exception $e) {
-      $this->logger()->warning('Could not read AI chat provider config: ' . $e->getMessage());
+    catch (\Throwable $e) {
+      $this->logger()?->warning('Could not read AI chat provider config: ' . $e->getMessage());
     }
 
     return $ai;
