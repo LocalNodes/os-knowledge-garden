@@ -1,0 +1,27 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - siwe_login
+    - user
+  theme:
+    - socialblue
+id: socialblue_siwe_login
+theme: socialblue
+region: header
+weight: 1
+provider: null
+plugin: siwe_login_block
+settings:
+  id: siwe_login_block
+  label: 'SIWE Login Block'
+  label_display: '0'
+  provider: siwe_login
+visibility:
+  user_role:
+    id: user_role
+    roles:
+      anonymous: anonymous
+    negate: false
+    context_mapping:
+      user: '@user.current_user_context:current_user'
