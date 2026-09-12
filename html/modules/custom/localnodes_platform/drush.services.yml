@@ -3,3 +3,7 @@ services:
     class: Drupal\localnodes_platform\Drush\Commands\LocalNodesDemoCommands
     tags:
       - { name: drush.command }
+  localnodes_platform.status.drush.commands:
+    class: Drupal\localnodes_platform\Drush\Commands\LocalNodesStatusCommands
+    tags:
+      - { name: drush.command }
