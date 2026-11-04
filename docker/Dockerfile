@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Builder — Composer install with patches applied
 # =============================================================================
-FROM php:8.3-cli AS builder
+FROM php:8.3.36-cli AS builder
 
 # Install system dependencies needed for composer install
 # Must include libs for gd/gmp since composer validates platform requirements
@@ -41,7 +41,7 @@ RUN composer run-script post-install-cmd --no-interaction || true
 # =============================================================================
 # Stage 2: Runtime — Lean Apache with built artifacts
 # =============================================================================
-FROM php:8.3-apache AS runtime
+FROM php:8.3.36-apache AS runtime
 
 # Install system dependencies for PHP extensions
 RUN apt-get update && apt-get install -y \
