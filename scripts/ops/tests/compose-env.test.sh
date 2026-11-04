@@ -11,6 +11,7 @@
 #     environment (IMAGE_TAG is interpolation-only: it selects the image tag).
 #  2. Every getenv('KEY') in settings.php and localnodes_platform.install is in it.
 #  3. The entrypoint's mail, organizer and WEB3_ENABLED variables are in it.
+#  4. The install-time SMTP port is not one the VPS blocks outbound (25, 465).
 # IS_DDEV_PROJECT is exempt (DDEV-only).
 #
 # Usage: bash scripts/ops/tests/compose-env.test.sh   (env COMPOSE=... to test another copy)
@@ -49,6 +50,14 @@ done
 for K in RESEND_API_KEY ORGANIZER_EMAIL ORGANIZER_NAME PROVISION_CALLBACK_URL PROVISION_CALLBACK_SECRET STRIPE_SESSION_ID WEB3_ENABLED; do
   need entrypoint.sh "$K"
 done
+
+# 4. The SMTP transport created at install avoids ports the VPS provider blocks
+#    outbound (Hetzner: 25 and 465), which otherwise time out on every message.
+PORT="$(grep -oE "'port' => [0-9]+" "$INSTALL" | grep -oE '[0-9]+$' | head -1)"
+case "$PORT" in
+  25|465|"") FAIL=$((FAIL + 1)); echo "FAIL - SMTP port '$PORT' in localnodes_platform.install is blocked outbound on the VPS (use 587)" ;;
+  *) PASS=$((PASS + 1)) ;;
+esac
 
 echo "passed: $PASS  failed: $FAIL"
 [ "$FAIL" -eq 0 ]

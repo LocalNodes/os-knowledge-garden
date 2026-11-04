@@ -49,7 +49,10 @@ function _localnodes_platform_configure_mailer() {
         // settings.php. See html/sites/default/settings.php.
         'pass' => 'placeholder',
         'host' => 'smtp.resend.com',
-        'port' => 465,
+        // 587 with STARTTLS (Symfony Mailer upgrades automatically when the
+        // server offers it, as Resend does). Not 465: Hetzner blocks outbound
+        // 25 and 465 by default, so 465 timed out after 60 s per message.
+        'port' => 587,
         'query' => [
           'verify_peer' => TRUE,
           'local_domain' => '',
