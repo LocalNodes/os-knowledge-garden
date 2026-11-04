@@ -1,6 +1,6 @@
 services:
   opensocial:
-    image: ghcr.io/localnodes/os-knowledge-garden:latest
+    image: ghcr.io/localnodes/os-knowledge-garden:${IMAGE_TAG:-latest}  # IMAGE_TAG pins a GHCR sha7 tag per instance (set in the Coolify app env); unset means latest; rollback = set IMAGE_TAG to the previous sha7 (e.g. the March build 8d03591) and redeploy
     pull_policy: always
     environment:
       DB_HOST: mariadb

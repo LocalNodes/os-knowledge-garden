@@ -33,6 +33,10 @@ on:
         description: 'Base URL to POST status updates to (e.g., https://localnodes.xyz)'
         required: false
         type: string
+      image_tag:
+        description: 'GHCR sha7 tag to pin as IMAGE_TAG (e.g., "9b8e2a1"); empty means latest'
+        required: false
+        type: string
 
 env:
   COOLIFY_API: https://coolify.localnodes.xyz/api/v1
@@ -45,13 +49,24 @@ env:
 jobs:
   provision:
     runs-on: ubuntu-latest
+    # Every workflow input and secret reaches the shell through env: and is only ever
+    # expanded as a quoted variable. No ${{ }} expression appears inside a run: block,
+    # so a crafted input (e.g. site_name) is data, never shell source.
+    # scripts/ops/tests/provision-workflow.test.sh enforces this.
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
     steps:
-      - name: Validate subdomain
+      - name: Validate inputs
+        env:
+          SUBDOMAIN_INPUT: ${{ inputs.subdomain }}
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
         run: |
-          SUBDOMAIN="${{ inputs.subdomain }}"
-          # Lowercase, alphanumeric + hyphens only, no leading/trailing hyphen
-          if ! echo "$SUBDOMAIN" | grep -qE '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'; then
-            echo "::error::Invalid subdomain '$SUBDOMAIN'. Use lowercase letters, numbers, and hyphens only."
+          SUBDOMAIN="$SUBDOMAIN_INPUT"
+          # Lowercase, alphanumeric + hyphens only, no leading/trailing hyphen. Bash =~ tests the
+          # whole string (grep would accept a multi-line value whose first line matches, which
+          # would then inject extra lines into $GITHUB_ENV).
+          if [[ ! "$SUBDOMAIN" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+            echo "::error::Invalid subdomain. Use lowercase letters, numbers, and hyphens only."
             exit 1
           fi
           # Reserved subdomains
@@ -61,18 +76,23 @@ jobs:
               exit 1
             fi
           done
+          # Optional image pin, validated here so a bad tag fails before any Coolify mutation
+          if [ -n "$IMAGE_TAG_INPUT" ] && [[ ! "$IMAGE_TAG_INPUT" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "::error::Invalid image_tag. Use a GHCR sha tag: 7 to 40 lowercase hex characters."
+            exit 1
+          fi
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
           echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
 
       - name: Check subdomain availability
         run: |
           # Query Coolify for existing apps with this domain
-          APPS=$(curl -s "$COOLIFY_API/applications" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+          APPS=$(curl -sS --fail-with-body "$COOLIFY_API/applications" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Accept: application/json")
 
           # Applications list is a plain array (no .data wrapper)
-          if echo "$APPS" | jq -e ".[] | select(.docker_compose_domains != null) | .docker_compose_domains" 2>/dev/null | grep -q "$FQDN"; then
+          if printf '%s' "$APPS" | jq -e '.[] | select(.docker_compose_domains != null) | .docker_compose_domains' 2>/dev/null | grep -qF "$FQDN"; then
             echo "::error::Subdomain '$SUBDOMAIN' is already in use."
             exit 1
           fi
@@ -83,25 +103,22 @@ jobs:
         run: |
           # Include docker_compose_domains at creation time so Coolify
           # parses the compose file and sets up domain routing in one step.
-          RESPONSE=$(curl -s -X POST "$COOLIFY_API/applications/public" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+          BODY=$(jq -n \
+            --arg name "$SUBDOMAIN" --arg project "$COOLIFY_PROJECT" --arg env "$COOLIFY_ENV" \
+            --arg server "$COOLIFY_SERVER" --arg repo "$GIT_REPO" --arg branch "$GIT_BRANCH" \
+            --arg domain "https://$FQDN" \
+            '{name: $name, project_uuid: $project, environment_name: $env, server_uuid: $server,
+              git_repository: $repo, git_branch: $branch, build_pack: "dockercompose",
+              ports_exposes: "80", docker_compose_location: "docker-compose.yaml",
+              docker_compose_domains: [{name: "opensocial", domain: $domain}]}')
+          RESPONSE=$(printf '%s' "$BODY" | curl -sS -X POST "$COOLIFY_API/applications/public" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
-            -d "{
-              \"name\": \"$SUBDOMAIN\",
-              \"project_uuid\": \"$COOLIFY_PROJECT\",
-              \"environment_name\": \"$COOLIFY_ENV\",
-              \"server_uuid\": \"$COOLIFY_SERVER\",
-              \"git_repository\": \"$GIT_REPO\",
-              \"git_branch\": \"$GIT_BRANCH\",
-              \"build_pack\": \"dockercompose\",
-              \"ports_exposes\": \"80\",
-              \"docker_compose_location\": \"docker-compose.yaml\",
-              \"docker_compose_domains\": [{\"name\": \"opensocial\", \"domain\": \"https://$FQDN\"}]
-            }")
+            --data-binary @-)
 
-          APP_UUID=$(echo "$RESPONSE" | jq -r '.uuid')
-          if [ -z "$APP_UUID" ] || [ "$APP_UUID" = "null" ]; then
+          APP_UUID=$(printf '%s' "$RESPONSE" | jq -r '.uuid // empty' 2>/dev/null || true)
+          if [ -z "$APP_UUID" ] || [[ ! "$APP_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
             echo "::error::Failed to create app: $RESPONSE"
             exit 1
           fi
@@ -110,6 +127,16 @@ jobs:
           echo "Created application $APP_UUID"
 
       - name: Configure environment variables
+        env:
+          DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
+          SITE_NAME_INPUT: ${{ inputs.site_name }}
+          EMAIL_INPUT: ${{ inputs.email }}
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
+          GEMINI_API_KEY_SECRET: ${{ secrets.GEMINI_API_KEY }}
+          PROVISION_CALLBACK_SECRET_VALUE: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+          RESEND_API_KEY_SECRET: ${{ secrets.RESEND_API_KEY }}
         run: |
           # Wait for Coolify to fully parse compose file and generate env vars.
           # Coolify creates one env var per ${VAR:-default} reference in the compose
@@ -117,64 +144,126 @@ jobs:
           echo "Waiting for Coolify to parse compose file..."
           sleep 15
 
-          update_env() {
-            local KEY="$1" VALUE="$2"
-            local HTTP_CODE
-            # Try PATCH first (updates existing env var)
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X PATCH "$COOLIFY_API/applications/$APP_UUID/envs" \
-              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+          ENVS_URL="$COOLIFY_API/applications/$APP_UUID/envs"
+          RESP_FILE="$(mktemp)"
+
+          # env_request METHOD [URL]: sends the JSON body on stdin (never on the command
+          # line), writes the response body to $RESP_FILE and prints the HTTP status.
+          # If curl itself exits nonzero (network, TLS, write error...), it prints
+          # "curl-exit-N" instead, whatever HTTP code curl reported, so callers fail.
+          env_request() {
+            local CODE RC=0
+            CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' -X "$1" "${2:-$ENVS_URL}" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\"}")
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "  Updated $KEY"
+              -H "Accept: application/json" \
+              --data-binary @-) || RC=$?
+            if [ "$RC" -ne 0 ]; then
+              printf 'curl-exit-%s' "$RC"
             else
-              # PATCH returns 404 for new vars — use POST to create
-              HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$COOLIFY_API/applications/$APP_UUID/envs" \
-                -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-                -H "Content-Type: application/json" \
-                -d "{\"key\": \"$KEY\", \"value\": \"$VALUE\"}")
-              if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-                echo "  Created $KEY"
-              else
-                echo "  Warning: $KEY create returned HTTP $HTTP_CODE"
-              fi
+              printf '%s' "$CODE"
             fi
           }
 
+          # update_env KEY VALUE: persist one production env var or return nonzero.
+          #  - PATCH updates an existing variable (Coolify answers 201).
+          #  - POST is used only when PATCH reports the variable itself is missing.
+          #  - A 409 on POST means a concurrent create won the race: retry PATCH, bounded.
+          #  - Any other status (5xx, 401, 422, app-not-found 404) or a nonzero curl exit fails.
+          update_env() {
+            local KEY="$1" BODY HTTP_CODE ATTEMPT
+            BODY=$(K="$KEY" V="$2" jq -n '{key: env.K, value: env.V}')
+            for ATTEMPT in 1 2 3; do
+              HTTP_CODE=$(printf '%s' "$BODY" | env_request PATCH)
+              case "$HTTP_CODE" in
+                200|201) echo "  Updated $KEY"; return 0 ;;
+                404)
+                  if ! jq -e '.message == "Environment variable not found."' "$RESP_FILE" >/dev/null 2>&1; then
+                    echo "::error::$KEY: PATCH returned 404 that is not a missing variable"
+                    return 1
+                  fi ;;
+                *) echo "::error::$KEY: PATCH failed ($HTTP_CODE)"; return 1 ;;
+              esac
+              HTTP_CODE=$(printf '%s' "$BODY" | env_request POST)
+              case "$HTTP_CODE" in
+                200|201) echo "  Created $KEY"; return 0 ;;
+                409) echo "  $KEY was created concurrently; retrying PATCH ($ATTEMPT/3)"; sleep 2 ;;
+                *) echo "::error::$KEY: POST failed ($HTTP_CODE)"; return 1 ;;
+              esac
+            done
+            echo "::error::$KEY: still conflicting after 3 attempts"
+            return 1
+          }
+
           # Delete duplicate env vars (Coolify creates one per compose service
-          # that references the same ${VAR}, resulting in duplicates)
+          # that references the same ${VAR}, resulting in duplicates).
+          # Each DELETE must succeed (curl exit 0 and HTTP 200/204), and the list is read
+          # back until no key appears twice. Stragglers from async compose parsing get
+          # up to 3 delete rounds; anything left at the final read-back fails the step.
+          list_dupes() {
+            printf '%s' "$1" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'
+          }
           dedup_envs() {
-            local ENV_VARS
-            ENV_VARS=$(curl -s "$COOLIFY_API/applications/$APP_UUID/envs" \
-              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-              -H "Accept: application/json")
+            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND
+            # Rounds 1-3 read, then delete; round 4 only reads back the third round's result.
+            for ROUND in 1 2 3 4; do
+              ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+                -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
+              DUPES=$(list_dupes "$ENV_VARS") || { echo "::error::Could not parse env var list"; return 1; }
+              if [ -z "$DUPES" ]; then
+                [ "$ROUND" -eq 1 ] && echo "  No duplicates found" || echo "  Verified: no duplicates remain"
+                return 0
+              fi
+              [ "$ROUND" -eq 4 ] && break
 
-            local DUPES
-            DUPES=$(echo "$ENV_VARS" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]')
-            if [ -z "$DUPES" ]; then
-              echo "  No duplicates found"
-              return
-            fi
-
-            for KEY in $DUPES; do
-              local UUIDS
-              UUIDS=$(echo "$ENV_VARS" | jq -r "[.[] | select(.key == \"$KEY\")][1:][].uuid")
-              for UUID in $UUIDS; do
-                curl -s -X DELETE "$COOLIFY_API/applications/$APP_UUID/envs/$UUID" \
-                  -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" > /dev/null
-                echo "  Deleted duplicate $KEY ($UUID)"
+              for KEY in $DUPES; do
+                UUIDS=$(printf '%s' "$ENV_VARS" | jq -r --arg k "$KEY" '[.[] | select(.key == $k)][1:][].uuid')
+                for UUID in $UUIDS; do
+                  RC=0
+                  HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$ENVS_URL/$UUID" \
+                    -H "Authorization: Bearer $COOLIFY_TOKEN") || RC=$?
+                  if [ "$RC" -ne 0 ] || { [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; }; then
+                    echo "::error::Deleting duplicate $KEY ($UUID) failed (curl exit $RC, HTTP $HTTP_CODE)"
+                    return 1
+                  fi
+                  echo "  Deleted duplicate $KEY ($UUID)"
+                done
               done
             done
+            echo "::error::Duplicate env vars remain after 3 cleanup rounds:" $DUPES
+            return 1
+          }
+
+          # verify_env KEY EXPECTED: read the saved production value back and compare it
+          # inside jq. The expected value travels via the environment and is never printed.
+          verify_env() {
+            local KEY="$1" ENV_VARS
+            ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json") || { echo "::error::Could not read env vars back"; return 1; }
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1 and (.[0] | has("value"))' >/dev/null 2>&1; then
+              echo "::error::$KEY: expected exactly one readable production variable (the API token needs read:sensitive)"
+              return 1
+            fi
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" WANT="$2" jq -e '[.[] | select(.key == env.K and (.is_preview | not))][0].value == env.WANT' >/dev/null 2>&1; then
+              echo "::error::$KEY: saved value does not match what this run set"
+              return 1
+            fi
+            echo "  Verified $KEY"
           }
 
           echo "Cleaning duplicate env vars (pass 1)..."
           dedup_envs
 
           echo "Setting instance-specific values..."
-          update_env "DEMO_MODULE" "${{ inputs.demo_module }}"
-          update_env "DRUPAL_SITE_NAME" "${{ inputs.site_name }}"
-          update_env "DRUPAL_ADMIN_PASS" "localnodes2026"
-          update_env "GEMINI_API_KEY" "${{ secrets.GEMINI_API_KEY }}"
+          update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
+          update_env "DRUPAL_SITE_NAME" "$SITE_NAME_INPUT"
+          # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed
+          ADMIN_PASS="$(openssl rand -hex 16)"
+          echo "::add-mask::$ADMIN_PASS"
+          update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          update_env "GEMINI_API_KEY" "$GEMINI_API_KEY_SECRET"
 
           # Generate unique secrets for this instance
           update_env "DB_PASSWORD" "$(openssl rand -hex 16)"
@@ -182,35 +271,49 @@ jobs:
           update_env "DRUPAL_HASH_SALT" "$(openssl rand -hex 32)"
 
           # Organizer provisioning env vars (entrypoint handles user creation + email)
-          if [ -n "${{ inputs.email }}" ]; then
-            update_env "ORGANIZER_EMAIL" "${{ inputs.email }}"
-            update_env "ORGANIZER_NAME" "${{ inputs.site_name }}"
+          if [ -n "$EMAIL_INPUT" ]; then
+            update_env "ORGANIZER_EMAIL" "$EMAIL_INPUT"
+            update_env "ORGANIZER_NAME" "$SITE_NAME_INPUT"
           fi
-          if [ -n "${{ inputs.callback_url }}" ]; then
-            update_env "PROVISION_CALLBACK_URL" "${{ inputs.callback_url }}"
+          if [ -n "$CALLBACK_URL_INPUT" ]; then
+            update_env "PROVISION_CALLBACK_URL" "$CALLBACK_URL_INPUT"
           fi
-          if [ -n "${{ inputs.stripe_session_id }}" ]; then
-            update_env "STRIPE_SESSION_ID" "${{ inputs.stripe_session_id }}"
+          if [ -n "$STRIPE_SESSION_ID_INPUT" ]; then
+            update_env "STRIPE_SESSION_ID" "$STRIPE_SESSION_ID_INPUT"
           fi
-          update_env "PROVISION_CALLBACK_SECRET" "${{ secrets.PROVISION_CALLBACK_SECRET }}"
-          update_env "RESEND_API_KEY" "${{ secrets.RESEND_API_KEY }}"
+          update_env "PROVISION_CALLBACK_SECRET" "$PROVISION_CALLBACK_SECRET_VALUE"
+          update_env "RESEND_API_KEY" "$RESEND_API_KEY_SECRET"
+
+          # Optional image pin: IMAGE_TAG selects the GHCR tag in docker-compose.yaml
+          # (empty = latest). The format was validated in "Validate inputs".
+          if [ -n "$IMAGE_TAG_INPUT" ]; then
+            update_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
+          fi
 
           # Second dedup pass — catches any stragglers from async compose parsing
           echo "Cleaning duplicate env vars (pass 2)..."
           dedup_envs
 
+          # Read back what the deploy will use; a pin or password that did not stick fails here
+          echo "Verifying saved values..."
+          verify_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          if [ -n "$IMAGE_TAG_INPUT" ]; then
+            verify_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
+          fi
+
+          rm -f "$RESP_FILE"
           echo "Environment configured"
 
       - name: Deploy instance
         run: |
-          # Deploy endpoint is GET /deploy?uuid=...&force=true (not POST /applications/{uuid}/deploy)
-          RESPONSE=$(curl -s "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+          # Coolify >= 4.2 requires POST to /deploy?uuid=...&force=true (GET returns 405); 4.1 accepts GET or POST
+          RESPONSE=$(curl -sS -X POST "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Accept: application/json")
 
           # Response is { "deployments": [...] } (no .data wrapper)
-          DEPLOY_UUID=$(echo "$RESPONSE" | jq -r '.deployments[0].deployment_uuid // empty')
-          if [ -z "$DEPLOY_UUID" ] || [ "$DEPLOY_UUID" = "null" ]; then
+          DEPLOY_UUID=$(printf '%s' "$RESPONSE" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null || true)
+          if [ -z "$DEPLOY_UUID" ] || [[ ! "$DEPLOY_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
             echo "::error::Failed to trigger deployment: $RESPONSE"
             exit 1
           fi
@@ -220,25 +323,28 @@ jobs:
 
       - name: Notify status - provisioning
         if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        env:
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
         run: |
-          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
-            -d "{
-              \"session_id\": \"${{ inputs.stripe_session_id }}\",
-              \"status\": \"provisioning\",
-              \"site_url\": \"https://$FQDN\"
-            }" || echo "Warning: callback failed (non-fatal)"
+          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" --arg url "https://$FQDN" \
+            '{session_id: $sid, status: "provisioning", site_url: $url}' \
+            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              --data-binary @- || echo "Warning: callback failed (non-fatal)"
 
       - name: Wait for deployment
         run: |
-          echo "Waiting for deployment to finish (build + container start)..."
+          echo "Waiting for deployment to finish (build + container start, up to 5 min)..."
+          STATUS="unknown"
           for i in $(seq 1 30); do
             sleep 10
             # Response is flat object with .status at root (no .data wrapper)
             STATUS=$(curl -s "$COOLIFY_API/deployments/$DEPLOY_UUID" \
-              -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-              -H "Accept: application/json" | jq -r '.status // "unknown"')
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
 
             echo "  [$((i * 10))s] Status: $STATUS"
             if [ "$STATUS" = "finished" ]; then
@@ -249,18 +355,25 @@ jobs:
               exit 1
             fi
           done
+          # Deadline: anything but "finished" (still queued/in progress, or unreadable) fails the run
+          if [ "$STATUS" != "finished" ]; then
+            echo "::error::Deployment did not finish within 5 min (last status: $STATUS)"
+            exit 1
+          fi
 
       - name: Notify status - installing
         if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        env:
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
         run: |
-          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
-            -d "{
-              \"session_id\": \"${{ inputs.stripe_session_id }}\",
-              \"status\": \"installing\",
-              \"site_url\": \"https://$FQDN\"
-            }" || echo "Warning: callback failed (non-fatal)"
+          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" --arg url "https://$FQDN" \
+            '{session_id: $sid, status: "installing", site_url: $url}' \
+            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              --data-binary @- || echo "Warning: callback failed (non-fatal)"
 
       - name: Wait for site to become healthy
         run: |
@@ -276,38 +389,46 @@ jobs:
           done
 
           echo "HTTP_CODE=$HTTP_CODE" >> "$GITHUB_ENV"
+          # Deadline: no HTTP 200 within 10 min fails the run (and fires the "failed" callback),
+          # so the summary never reports an instance that is not serving
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::Site not yet responding after 10 min — may still be installing"
+            echo "::error::Site not healthy after 10 min (last HTTP $HTTP_CODE at https://$FQDN/user/login)"
+            exit 1
           fi
 
       - name: Summary
+        env:
+          SITE_NAME_INPUT: ${{ inputs.site_name }}
+          DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
+          EMAIL_INPUT: ${{ inputs.email }}
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" << EOF
-          ## LocalNodes Instance Provisioned
-
-          | | |
-          |---|---|
-          | **URL** | https://$FQDN |
-          | **Site Name** | ${{ inputs.site_name }} |
-          | **Demo Content** | ${{ inputs.demo_module }} |
-          | **Coolify UUID** | \`$APP_UUID\` |
-          | **Admin Login** | admin / localnodes2026 |
-          | **Organizer Email** | ${{ inputs.email }} |
-
-          ### Next Steps
-          - Visit https://$FQDN and verify the site
-          - Organizer will receive a welcome email with login link (sent by entrypoint)
-          - Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)
-          EOF
+          # Table cells: printf only (no heredoc expansion); strip newlines and escape pipes
+          cell() { printf '%s' "$1" | tr '\r\n' '  ' | sed 's/|/\\|/g'; }
+          {
+            printf '## LocalNodes Instance Provisioned\n\n'
+            printf '| | |\n|---|---|\n'
+            printf '| **URL** | https://%s |\n' "$FQDN"
+            printf '| **Site Name** | %s |\n' "$(cell "$SITE_NAME_INPUT")"
+            printf '| **Demo Content** | %s |\n' "$(cell "$DEMO_MODULE_INPUT")"
+            printf '| **Coolify UUID** | `%s` |\n' "$APP_UUID"
+            printf '| **Admin Login** | admin / random per-run password, stored only in the Coolify app env (DRUPAL_ADMIN_PASS); never printed |\n'
+            printf '| **Organizer Email** | %s |\n' "$(cell "$EMAIL_INPUT")"
+            printf '\n### Next Steps\n'
+            printf -- '- Visit https://%s and verify the site\n' "$FQDN"
+            printf -- '- Organizer will receive a welcome email with login link (sent by entrypoint)\n'
+            printf -- '- Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify status - failed
         if: failure() && inputs.callback_url != '' && inputs.stripe_session_id != ''
+        env:
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
         run: |
-          curl -sf -X POST "${{ inputs.callback_url }}/api/provision-callback" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.PROVISION_CALLBACK_SECRET }}" \
-            -d "{
-              \"session_id\": \"${{ inputs.stripe_session_id }}\",
-              \"status\": \"failed\",
-              \"error\": \"Provisioning workflow failed. Check GitHub Actions logs for details.\"
-            }" || echo "Warning: callback failed (non-fatal)"
+          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" \
+            '{session_id: $sid, status: "failed", error: "Provisioning workflow failed. Check GitHub Actions logs for details."}' \
+            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              --data-binary @- || echo "Warning: callback failed (non-fatal)"
