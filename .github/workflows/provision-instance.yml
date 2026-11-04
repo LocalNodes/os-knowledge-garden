@@ -103,13 +103,15 @@ jobs:
         run: |
           # Include docker_compose_domains at creation time so Coolify
           # parses the compose file and sets up domain routing in one step.
+          # docker_compose_location needs a leading slash: Coolify >= 4.1 validates it against
+          # ^/[a-zA-Z0-9._\-/~@+]+$ (ValidationPatterns::FILE_PATH_PATTERN) and answers 422 otherwise.
           BODY=$(jq -n \
             --arg name "$SUBDOMAIN" --arg project "$COOLIFY_PROJECT" --arg env "$COOLIFY_ENV" \
             --arg server "$COOLIFY_SERVER" --arg repo "$GIT_REPO" --arg branch "$GIT_BRANCH" \
             --arg domain "https://$FQDN" \
             '{name: $name, project_uuid: $project, environment_name: $env, server_uuid: $server,
               git_repository: $repo, git_branch: $branch, build_pack: "dockercompose",
-              ports_exposes: "80", docker_compose_location: "docker-compose.yaml",
+              ports_exposes: "80", docker_compose_location: "/docker-compose.yaml",
               docker_compose_domains: [{name: "opensocial", domain: $domain}]}')
           RESPONSE=$(printf '%s' "$BODY" | curl -sS -X POST "$COOLIFY_API/applications/public" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \

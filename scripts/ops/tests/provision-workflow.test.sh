@@ -109,6 +109,11 @@ check "multi-line subdomain is rejected (no GITHUB_ENV injection)" '[ $RC -ne 0 
 reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT="$INJECT" IMAGE_TAG_INPUT=
 check "injected subdomain is rejected and runs nothing" '[ $RC -ne 0 ] && ! ls "$WORK"/PWNED* >/dev/null 2>&1'
 
+echo "# Create Coolify application"
+reset_state; run_step "Create Coolify application" ok
+check "create passes Coolify 4.1 path validation (leading-slash docker_compose_location)" '[ $RC -eq 0 ] && grep -qx "APP_UUID=app123" "$WORK/github_env"'
+check "  ...and sends the compose path and domain as JSON" '[ "$(head -1 "$WORK/state/bodies.log" | jq -r ".docker_compose_location + \" \" + .docker_compose_domains[0].domain")" = "/docker-compose.yaml https://demo.localnodes.xyz" ]'
+
 echo "# Configure environment variables: update_env fails hard (P1 #2)"
 reset_state; run_step "Configure environment variables" all503 "${CONFIG_DEFAULTS[@]}"
 check "HTTP 503 on PATCH fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "PATCH failed (503)" <<<"$OUT"'

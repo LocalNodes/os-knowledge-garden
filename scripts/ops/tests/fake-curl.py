@@ -150,6 +150,15 @@ elif url and "/deployments/" in url:
         resp = None
 elif url and url.endswith("/user/login"):
     status, resp = (503, {}) if scenario == "site503" else (200, {})
+elif url and url.endswith("/applications/public") and method == "POST":
+    # Coolify 4.1 ValidationPatterns::FILE_PATH_PATTERN for docker_compose_location
+    import re
+    loc = json.loads(body).get("docker_compose_location", "")
+    if re.match(r"^/[a-zA-Z0-9._\-/~@+]+$", loc):
+        status, resp = 201, {"uuid": "app123"}
+    else:
+        status, resp = 422, {"message": "Validation failed.",
+                             "errors": {"docker_compose_location": ["The docker compose location field format is invalid."]}}
 elif url and "/deploy?" in url:
     status, resp = 200, {"deployments": [{"deployment_uuid": "dep123"}]}
 else:
