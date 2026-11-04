@@ -111,13 +111,13 @@ check "injected subdomain is rejected and runs nothing" '[ $RC -ne 0 ] && ! ls "
 
 echo "# Configure environment variables: update_env fails hard (P1 #2)"
 reset_state; run_step "Configure environment variables" all503 "${CONFIG_DEFAULTS[@]}"
-check "HTTP 503 on PATCH fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "PATCH returned HTTP 503" <<<"$OUT"'
+check "HTTP 503 on PATCH fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "PATCH failed (503)" <<<"$OUT"'
 check "  ...without falling back to POST" '! grep -q "^POST .*/envs " "$WORK/state/requests.log"'
 check "  ...and stops at the first variable" '[ "$(grep -c "^PATCH" "$WORK/state/requests.log")" -eq 1 ]'
 check "  ...and IMAGE_TAG is never written" '! grep -q " IMAGE_TAG$" "$WORK/state/requests.log"'
 
 reset_state; run_step "Configure environment variables" post503 "${CONFIG_DEFAULTS[@]}" EMAIL_INPUT=o@example.org
-check "missing variable + POST 503 fails the step" '[ $RC -ne 0 ] && grep -q "POST returned HTTP 503" <<<"$OUT"'
+check "missing variable + POST 503 fails the step" '[ $RC -ne 0 ] && grep -q "POST failed (503)" <<<"$OUT"'
 
 reset_state; run_step "Configure environment variables" app404 "${CONFIG_DEFAULTS[@]}"
 check "404 that is not a missing variable fails without POST" '[ $RC -ne 0 ] && ! grep -q "^POST" "$WORK/state/requests.log"'
@@ -127,6 +127,23 @@ check "409 from a concurrent create is retried and succeeds" '[ $RC -eq 0 ] && [
 
 reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" EMAIL_INPUT=o@example.org
 check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* ORGANIZER_EMAIL$" "$WORK/state/requests.log")" -eq 3 ]'
+
+echo "# Codex re-check: curl exit status and duplicate deletion"
+reset_state; run_step "Configure environment variables" curl23 "${CONFIG_DEFAULTS[@]}"
+check "curl exit 23 with HTTP 200 fails update_env" '[ $RC -ne 0 ] && grep -q "PATCH failed (curl-exit-23)" <<<"$OUT"'
+check "  ...and nothing after the first variable is written" '[ "$(grep -c "^PATCH" "$WORK/state/requests.log")" -eq 1 ]'
+
+reset_state; run_step "Configure environment variables" delete503 "${CONFIG_DEFAULTS[@]}"
+check "DELETE 503 on a duplicate fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "Deleting duplicate DB_PASSWORD (u9) failed (curl exit 0, HTTP 503)" <<<"$OUT"'
+check "  ...without claiming the delete happened" '! grep -q "Deleted duplicate DB_PASSWORD" <<<"$OUT"'
+check "  ...and before any value is written or deployed" '! grep -qE "^(PATCH|POST) " "$WORK/state/requests.log"'
+
+reset_state; run_step "Configure environment variables" delete_curl23 "${CONFIG_DEFAULTS[@]}"
+check "DELETE with HTTP 200 but curl exit 23 fails the step" '[ $RC -ne 0 ] && grep -q "failed (curl exit 23, HTTP 200)" <<<"$OUT"'
+
+reset_state; run_step "Configure environment variables" delete_noop "${CONFIG_DEFAULTS[@]}"
+check "DELETE that reports 200 but removes nothing is caught by read-back" '[ $RC -ne 0 ] && grep -q "Duplicate env vars remain after 3 cleanup rounds: DB_PASSWORD" <<<"$OUT"'
+check "  ...after exactly 3 bounded rounds" '[ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
 
 echo "# Configure environment variables: read-back before deploy"
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME_INPUT="$INJECT" EMAIL_INPUT=o@example.org
@@ -138,7 +155,7 @@ check "  ...password appears in output only on the ::add-mask:: line" '[ "$(grep
 check "  ...password is never on a curl command line (requests.log)" '! grep -qF -- "$PASSWD" "$WORK/state/requests.log"'
 check "injected site_name runs nothing" '! ls "$WORK"/PWNED* >/dev/null 2>&1'
 check "  ...and is stored verbatim in DRUPAL_SITE_NAME and ORGANIZER_NAME" '[ "$(stored DRUPAL_SITE_NAME)" = "$INJECT" ] && [ "$(stored ORGANIZER_NAME)" = "$INJECT" ]'
-check "  ...duplicate rows were removed" '[ "$(jq "[.[] | select(.key == \"DB_PASSWORD\")] | length" "$WORK/state/envs.json")" -eq 1 ]'
+check "  ...duplicate rows were removed and the removal verified" '[ "$(jq "[.[] | select(.key == \"DB_PASSWORD\")] | length" "$WORK/state/envs.json")" -eq 1 ] && grep -q "Verified: no duplicates remain" <<<"$OUT"'
 
 reset_state; run_step "Configure environment variables" readback_wrong "${CONFIG_DEFAULTS[@]}"
 check "IMAGE_TAG read back different from the pin fails" '[ $RC -ne 0 ] && grep -q "IMAGE_TAG: saved value does not match" <<<"$OUT"'

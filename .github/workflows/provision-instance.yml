@@ -148,21 +148,28 @@ jobs:
           RESP_FILE="$(mktemp)"
 
           # env_request METHOD [URL]: sends the JSON body on stdin (never on the command
-          # line), writes the response body to $RESP_FILE and prints the HTTP status
-          # (000 when curl itself fails).
+          # line), writes the response body to $RESP_FILE and prints the HTTP status.
+          # If curl itself exits nonzero (network, TLS, write error...), it prints
+          # "curl-exit-N" instead, whatever HTTP code curl reported, so callers fail.
           env_request() {
-            curl -sS -o "$RESP_FILE" -w '%{http_code}' -X "$1" "${2:-$ENVS_URL}" \
+            local CODE RC=0
+            CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' -X "$1" "${2:-$ENVS_URL}" \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               -H "Content-Type: application/json" \
               -H "Accept: application/json" \
-              --data-binary @- || true
+              --data-binary @-) || RC=$?
+            if [ "$RC" -ne 0 ]; then
+              printf 'curl-exit-%s' "$RC"
+            else
+              printf '%s' "$CODE"
+            fi
           }
 
           # update_env KEY VALUE: persist one production env var or return nonzero.
           #  - PATCH updates an existing variable (Coolify answers 201).
           #  - POST is used only when PATCH reports the variable itself is missing.
           #  - A 409 on POST means a concurrent create won the race: retry PATCH, bounded.
-          #  - Any other status (5xx, 401, 422, app-not-found 404, curl failure) fails.
+          #  - Any other status (5xx, 401, 422, app-not-found 404) or a nonzero curl exit fails.
           update_env() {
             local KEY="$1" BODY HTTP_CODE ATTEMPT
             BODY=$(K="$KEY" V="$2" jq -n '{key: env.K, value: env.V}')
@@ -175,13 +182,13 @@ jobs:
                     echo "::error::$KEY: PATCH returned 404 that is not a missing variable"
                     return 1
                   fi ;;
-                *) echo "::error::$KEY: PATCH returned HTTP $HTTP_CODE"; return 1 ;;
+                *) echo "::error::$KEY: PATCH failed ($HTTP_CODE)"; return 1 ;;
               esac
               HTTP_CODE=$(printf '%s' "$BODY" | env_request POST)
               case "$HTTP_CODE" in
                 200|201) echo "  Created $KEY"; return 0 ;;
                 409) echo "  $KEY was created concurrently; retrying PATCH ($ATTEMPT/3)"; sleep 2 ;;
-                *) echo "::error::$KEY: POST returned HTTP $HTTP_CODE"; return 1 ;;
+                *) echo "::error::$KEY: POST failed ($HTTP_CODE)"; return 1 ;;
               esac
             done
             echo "::error::$KEY: still conflicting after 3 attempts"
@@ -189,27 +196,41 @@ jobs:
           }
 
           # Delete duplicate env vars (Coolify creates one per compose service
-          # that references the same ${VAR}, resulting in duplicates)
+          # that references the same ${VAR}, resulting in duplicates).
+          # Each DELETE must succeed (curl exit 0 and HTTP 200/204), and the list is read
+          # back until no key appears twice. Stragglers from async compose parsing get
+          # up to 3 rounds; anything left after that fails the step.
+          list_dupes() {
+            printf '%s' "$1" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'
+          }
           dedup_envs() {
-            local ENV_VARS DUPES KEY UUIDS UUID
-            ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
-              -H "Authorization: Bearer $COOLIFY_TOKEN" \
-              -H "Accept: application/json")
+            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND
+            for ROUND in 1 2 3; do
+              ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+                -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
+              DUPES=$(list_dupes "$ENV_VARS") || { echo "::error::Could not parse env var list"; return 1; }
+              if [ -z "$DUPES" ]; then
+                [ "$ROUND" -eq 1 ] && echo "  No duplicates found" || echo "  Verified: no duplicates remain"
+                return 0
+              fi
 
-            DUPES=$(printf '%s' "$ENV_VARS" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]')
-            if [ -z "$DUPES" ]; then
-              echo "  No duplicates found"
-              return 0
-            fi
-
-            for KEY in $DUPES; do
-              UUIDS=$(printf '%s' "$ENV_VARS" | jq -r --arg k "$KEY" '[.[] | select(.key == $k)][1:][].uuid')
-              for UUID in $UUIDS; do
-                curl -sS -X DELETE "$ENVS_URL/$UUID" \
-                  -H "Authorization: Bearer $COOLIFY_TOKEN" > /dev/null
-                echo "  Deleted duplicate $KEY ($UUID)"
+              for KEY in $DUPES; do
+                UUIDS=$(printf '%s' "$ENV_VARS" | jq -r --arg k "$KEY" '[.[] | select(.key == $k)][1:][].uuid')
+                for UUID in $UUIDS; do
+                  RC=0
+                  HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$ENVS_URL/$UUID" \
+                    -H "Authorization: Bearer $COOLIFY_TOKEN") || RC=$?
+                  if [ "$RC" -ne 0 ] || { [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; }; then
+                    echo "::error::Deleting duplicate $KEY ($UUID) failed (curl exit $RC, HTTP $HTTP_CODE)"
+                    return 1
+                  fi
+                  echo "  Deleted duplicate $KEY ($UUID)"
+                done
               done
             done
+            echo "::error::Duplicate env vars remain after 3 cleanup rounds:" $DUPES
+            return 1
           }
 
           # verify_env KEY EXPECTED: read the saved production value back and compare it

@@ -15,7 +15,12 @@ $FAKE_SCENARIO picks the failure mode:
   post409_always  POST always answers 409 and the key never appears
   readback_wrong  GET returns a different IMAGE_TAG than was saved
   hidden          GET omits `value` (token without read:sensitive)
-  dupes_after     a stale DRUPAL_ADMIN_PASS row appears ahead of ours before the second dedup,
+  delete503       DELETE answers 503 and removes nothing (Codex re-check reproduction)
+  delete_noop     DELETE answers 200 but removes nothing (only the read-back can tell)
+  delete_curl23   DELETE answers 200 but curl exits 23
+  curl23          env PATCH is applied and reports 200, but curl exits 23 (Codex re-check)
+  dupes_after     a stale DRUPAL_ADMIN_PASS row appears ahead of ours on the first list after
+                  the password is written (i.e. before the second dedup),
                   so dedup keeps the stale one (the read-back must catch it)
 """
 import json
@@ -89,7 +94,8 @@ if url and url.endswith("/envs") and method == "GET":
         envs = [dict(e, value="0000000") if e["key"] == "IMAGE_TAG" else e for e in envs]
     if scenario == "hidden":
         envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} for e in envs]
-    if scenario == "dupes_after" and counter("get") == 1:
+    written = os.path.exists(os.path.join(state_dir, "pass-written"))
+    if scenario == "dupes_after" and written and counter("stale") == 0:
         envs.insert(0, {"uuid": "stale1", "key": "DRUPAL_ADMIN_PASS", "value": "compose-default", "is_preview": False})
         save(envs)
     resp = envs
@@ -102,6 +108,8 @@ elif url and url.endswith("/envs") and method == "PATCH":
         status, resp = 404, {"message": "Application not found"}
     else:
         hit = [e for e in envs if e["key"] == data["key"] and prod(e)]
+        if data["key"] == "DRUPAL_ADMIN_PASS":
+            open(os.path.join(state_dir, "pass-written"), "w").close()
         if hit:
             hit[0]["value"] = data["value"]
             save(envs)
@@ -125,8 +133,12 @@ elif url and url.endswith("/envs") and method == "POST":
         status, resp = 201, {"uuid": "new-" + data["key"]}
 elif url and "/envs/" in url and method == "DELETE":
     uuid = url.rsplit("/", 1)[1]
-    save([e for e in load() if e["uuid"] != uuid])
-    status, resp = 200, {"message": "deleted"}
+    if scenario == "delete503":
+        status, resp = 503, {"message": "Service Unavailable"}
+    else:
+        if scenario != "delete_noop":
+            save([e for e in load() if e["uuid"] != uuid])
+        status, resp = 200, {"message": "Environment variable deleted."}
 elif url and "/deploy?" in url:
     status, resp = 200, {"deployments": [{"deployment_uuid": "dep123"}]}
 else:
@@ -140,4 +152,7 @@ else:
     sys.stdout.write(text)
 if write_fmt:
     sys.stdout.write(write_fmt.replace("%{http_code}", str(status)))
+if (scenario == "curl23" and method == "PATCH" and url and url.endswith("/envs")) or \
+        (scenario == "delete_curl23" and method == "DELETE"):
+    sys.exit(23)  # curl "write error" after reporting the HTTP status
 sys.exit(22 if fail and status >= 400 else 0)
