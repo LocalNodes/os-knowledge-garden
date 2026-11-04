@@ -68,10 +68,14 @@ $config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT')
 $config['key.key.gemini_api_key']['key_provider_settings']['env_variable'] = 'GEMINI_API_KEY';
 
 // ---------------------------------------------------------------------------
-// Resend SMTP transport for outbound email.
+// Resend SMTP transport for outbound email (created by localnodes_platform at
+// install as a `dsn` transport). smtps:// on 2465 = implicit TLS, mandatory
+// before AUTH; 465 is blocked outbound on the VPS (Hetzner). Keep in sync with
+// _localnodes_platform_configure_mailer().
 // ---------------------------------------------------------------------------
 if ($resend_key = getenv('RESEND_API_KEY')) {
-  $config['symfony_mailer.mailer_transport.smtp']['configuration']['pass'] = $resend_key;
+  $config['symfony_mailer.mailer_transport.smtp']['configuration']['dsn'] =
+    'smtps://resend:' . rawurlencode($resend_key) . '@smtp.resend.com:2465';
 }
 
 // ---------------------------------------------------------------------------

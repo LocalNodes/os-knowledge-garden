@@ -11,7 +11,7 @@
 #     environment (IMAGE_TAG is interpolation-only: it selects the image tag).
 #  2. Every getenv('KEY') in settings.php and localnodes_platform.install is in it.
 #  3. The entrypoint's mail, organizer and WEB3_ENABLED variables are in it.
-#  4. The install-time SMTP port is not one the VPS blocks outbound (25, 465).
+#  4. Resend SMTP is smtps:// (implicit TLS) on 2465 in the install hook and settings.php.
 # IS_DDEV_PROJECT is exempt (DDEV-only).
 #
 # Usage: bash scripts/ops/tests/compose-env.test.sh   (env COMPOSE=... to test another copy)
@@ -20,8 +20,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
 COMPOSE="${COMPOSE:-$REPO/docker-compose.yaml}"
 WF="$REPO/.github/workflows/provision-instance.yml"
-SETTINGS="$REPO/html/sites/default/settings.php"
-INSTALL="$REPO/html/modules/custom/localnodes_platform/localnodes_platform.install"
+SETTINGS="${SETTINGS:-$REPO/html/sites/default/settings.php}"
+INSTALL="${INSTALL:-$REPO/html/modules/custom/localnodes_platform/localnodes_platform.install}"
 
 INTERPOLATION_ONLY="IMAGE_TAG"
 LOCAL_ONLY="IS_DDEV_PROJECT"   # set by DDEV only; never present in production
@@ -51,13 +51,28 @@ for K in RESEND_API_KEY ORGANIZER_EMAIL ORGANIZER_NAME PROVISION_CALLBACK_URL PR
   need entrypoint.sh "$K"
 done
 
-# 4. The SMTP transport created at install avoids ports the VPS provider blocks
-#    outbound (Hetzner: 25 and 465), which otherwise time out on every message.
-PORT="$(grep -oE "'port' => [0-9]+" "$INSTALL" | grep -oE '[0-9]+$' | head -1)"
-case "$PORT" in
-  25|465|"") FAIL=$((FAIL + 1)); echo "FAIL - SMTP port '$PORT' in localnodes_platform.install is blocked outbound on the VPS (use 587)" ;;
-  *) PASS=$((PASS + 1)) ;;
-esac
+# 4. Resend SMTP must use implicit TLS on a port the VPS can reach. Every Resend
+#    DSN in the install hook and settings.php must be smtps:// on 2465 (Resend's
+#    implicit-TLS alternative). Rejected: smtp:// (STARTTLS is opportunistic in
+#    Symfony Mailer 6.4, so a stripped STARTTLS sends the key in clear), port 587,
+#    and 25/465 (blocked outbound by Hetzner). The `smtp` plugin with a 'port' is
+#    rejected too, because it always builds smtp://.
+ALLOWED_TLS_PORTS="2465"
+smtp_check() {  # smtp_check FILE
+  local f="$1" bad=0 dsns d port
+  # [^;]* spans PHP string concatenation (settings.php builds the DSN around the key)
+  dsns="$(grep -oE "smtps?://[^;]*smtp\.resend\.com(:[0-9]+)?" "$f")"
+  if [ -z "$dsns" ]; then echo "FAIL - $(basename "$f"): no Resend DSN found"; FAIL=$((FAIL + 1)); return; fi
+  while IFS= read -r d; do
+    case "$d" in smtps://*) ;; *) echo "FAIL - $(basename "$f"): '$d' is not smtps:// (implicit TLS required)"; bad=1 ;; esac
+    port="$(printf '%s' "$d" | grep -oE ':[0-9]+$' | tr -d :)"
+    case " $ALLOWED_TLS_PORTS " in *" $port "*) ;; *) echo "FAIL - $(basename "$f"): port '${port:-none}' in '$d' (allowed: $ALLOWED_TLS_PORTS)"; bad=1 ;; esac
+  done <<<"$dsns"
+  if grep -qE "'plugin' => 'smtp'|'port' => [0-9]+" "$f"; then echo "FAIL - $(basename "$f"): uses the smtp plugin/port form (always smtp://)"; bad=1; fi
+  if [ "$bad" -eq 0 ]; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); fi
+}
+smtp_check "$INSTALL"
+smtp_check "$SETTINGS"
 
 echo "passed: $PASS  failed: $FAIL"
 [ "$FAIL" -eq 0 ]
