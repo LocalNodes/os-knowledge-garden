@@ -199,13 +199,14 @@ jobs:
           # that references the same ${VAR}, resulting in duplicates).
           # Each DELETE must succeed (curl exit 0 and HTTP 200/204), and the list is read
           # back until no key appears twice. Stragglers from async compose parsing get
-          # up to 3 rounds; anything left after that fails the step.
+          # up to 3 delete rounds; anything left at the final read-back fails the step.
           list_dupes() {
             printf '%s' "$1" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'
           }
           dedup_envs() {
             local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND
-            for ROUND in 1 2 3; do
+            # Rounds 1-3 read, then delete; round 4 only reads back the third round's result.
+            for ROUND in 1 2 3 4; do
               ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
                 -H "Authorization: Bearer $COOLIFY_TOKEN" \
                 -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
@@ -214,6 +215,7 @@ jobs:
                 [ "$ROUND" -eq 1 ] && echo "  No duplicates found" || echo "  Verified: no duplicates remain"
                 return 0
               fi
+              [ "$ROUND" -eq 4 ] && break
 
               for KEY in $DUPES; do
                 UUIDS=$(printf '%s' "$ENV_VARS" | jq -r --arg k "$KEY" '[.[] | select(.key == $k)][1:][].uuid')
@@ -335,7 +337,8 @@ jobs:
 
       - name: Wait for deployment
         run: |
-          echo "Waiting for deployment to finish (build + container start)..."
+          echo "Waiting for deployment to finish (build + container start, up to 5 min)..."
+          STATUS="unknown"
           for i in $(seq 1 30); do
             sleep 10
             # Response is flat object with .status at root (no .data wrapper)
@@ -352,6 +355,11 @@ jobs:
               exit 1
             fi
           done
+          # Deadline: anything but "finished" (still queued/in progress, or unreadable) fails the run
+          if [ "$STATUS" != "finished" ]; then
+            echo "::error::Deployment did not finish within 5 min (last status: $STATUS)"
+            exit 1
+          fi
 
       - name: Notify status - installing
         if: inputs.callback_url != '' && inputs.stripe_session_id != ''
@@ -381,8 +389,11 @@ jobs:
           done
 
           echo "HTTP_CODE=$HTTP_CODE" >> "$GITHUB_ENV"
+          # Deadline: no HTTP 200 within 10 min fails the run (and fires the "failed" callback),
+          # so the summary never reports an instance that is not serving
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::Site not yet responding after 10 min — may still be installing"
+            echo "::error::Site not healthy after 10 min (last HTTP $HTTP_CODE at https://$FQDN/user/login)"
+            exit 1
           fi
 
       - name: Summary

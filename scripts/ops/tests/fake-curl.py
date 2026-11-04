@@ -19,6 +19,10 @@ $FAKE_SCENARIO picks the failure mode:
   delete_noop     DELETE answers 200 but removes nothing (only the read-back can tell)
   delete_curl23   DELETE answers 200 but curl exits 23
   curl23          env PATCH is applied and reports 200, but curl exits 23 (Codex re-check)
+  delete_late     the first 2 DELETEs of each row remove nothing, the 3rd works (only a final read-back sees it)
+  deploy_stuck    GET /deployments/{uuid} keeps answering "in_progress"
+  deploy_garbage  GET /deployments/{uuid} answers non-JSON
+  site503         the site's /user/login keeps answering 503
   dupes_after     a stale DRUPAL_ADMIN_PASS row appears ahead of ours on the first list after
                   the password is written (i.e. before the second dedup),
                   so dedup keeps the stale one (the read-back must catch it)
@@ -39,7 +43,7 @@ while i < len(args):
     a = args[i]
     if a == "-X":
         method = args[i + 1]; i += 2; continue
-    if a == "-o":
+    if a == "-o" or (len(a) > 2 and a[0] == "-" and a[1] != "-" and a.endswith("o")):  # -o, -so
         out_file = args[i + 1]; i += 2; continue
     if a == "-w":
         write_fmt = args[i + 1]; i += 2; continue
@@ -136,15 +140,22 @@ elif url and "/envs/" in url and method == "DELETE":
     if scenario == "delete503":
         status, resp = 503, {"message": "Service Unavailable"}
     else:
-        if scenario != "delete_noop":
+        if scenario != "delete_noop" and not (scenario == "delete_late" and counter("del-" + uuid) < 2):
             save([e for e in load() if e["uuid"] != uuid])
         status, resp = 200, {"message": "Environment variable deleted."}
+elif url and "/deployments/" in url:
+    status = 200
+    resp = {"status": "in_progress"} if scenario == "deploy_stuck" else {"status": "finished"}
+    if scenario == "deploy_garbage":
+        resp = None
+elif url and url.endswith("/user/login"):
+    status, resp = (503, {}) if scenario == "site503" else (200, {})
 elif url and "/deploy?" in url:
     status, resp = 200, {"deployments": [{"deployment_uuid": "dep123"}]}
 else:
     status, resp = 200, {}
 
-text = json.dumps(resp)
+text = "<html>502 Bad Gateway</html>" if resp is None else json.dumps(resp)
 if out_file:
     with open(out_file, "w") as f:
         f.write(text)

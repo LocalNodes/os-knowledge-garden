@@ -145,6 +145,9 @@ reset_state; run_step "Configure environment variables" delete_noop "${CONFIG_DE
 check "DELETE that reports 200 but removes nothing is caught by read-back" '[ $RC -ne 0 ] && grep -q "Duplicate env vars remain after 3 cleanup rounds: DB_PASSWORD" <<<"$OUT"'
 check "  ...after exactly 3 bounded rounds" '[ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
 
+reset_state; run_step "Configure environment variables" delete_late "${CONFIG_DEFAULTS[@]}"
+check "a third-round DELETE that succeeds passes (final read-back, Codex re-check 2)" '[ $RC -eq 0 ] && grep -q "Verified: no duplicates remain" <<<"$OUT" && [ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
+
 echo "# Configure environment variables: read-back before deploy"
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME_INPUT="$INJECT" EMAIL_INPUT=o@example.org
 PASSWD="$(stored DRUPAL_ADMIN_PASS)"
@@ -167,6 +170,18 @@ check "  ...without printing any password" '! grep -qE "[0-9a-f]{32}" <<<"$(grep
 
 reset_state; run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}"
 check "token without read:sensitive fails closed" '[ $RC -ne 0 ] && grep -q "needs read:sensitive" <<<"$OUT"'
+
+echo "# Deadlines fail the run (Codex re-check 2)"
+reset_state; run_step "Wait for deployment" ok
+check "deployment that finishes passes" '[ $RC -eq 0 ] && grep -q "Deployment complete" <<<"$OUT"'
+reset_state; run_step "Wait for deployment" deploy_stuck
+check "deployment still in progress at the deadline fails" '[ $RC -ne 0 ] && grep -q "did not finish within 5 min (last status: in_progress)" <<<"$OUT" && [ "$(grep -c "/deployments/" "$WORK/state/requests.log")" -eq 30 ]'
+reset_state; run_step "Wait for deployment" deploy_garbage
+check "unreadable deployment status at the deadline fails" '[ $RC -ne 0 ] && grep -q "last status: unknown" <<<"$OUT"'
+reset_state; run_step "Wait for site to become healthy" ok
+check "site answering 200 passes" '[ $RC -eq 0 ] && grep -qx "HTTP_CODE=200" "$WORK/github_env"'
+reset_state; run_step "Wait for site to become healthy" site503
+check "site still 503 at the deadline fails" '[ $RC -ne 0 ] && grep -q "Site not healthy after 10 min (last HTTP 503" <<<"$OUT" && [ "$(grep -c "/user/login" "$WORK/state/requests.log")" -eq 60 ]'
 
 echo "# Summary and callbacks (P1 #1)"
 reset_state; run_step "Summary" ok SITE_NAME_INPUT="$INJECT|cell" DEMO_MODULE_INPUT=localnodes_demo EMAIL_INPUT="$INJECT"
