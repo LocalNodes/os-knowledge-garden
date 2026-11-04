@@ -4,6 +4,9 @@ description: 'Configures the complete AI knowledge garden stack: Solr, Qdrant, G
 core_version_requirement: ^10
 package: 'LocalNodes'
 dependencies:
+  # Logging: keep watchdog entries (e.g. the AI provider's error behind a chatbot
+  # 500) so problems can be diagnosed with drush watchdog:show. Core module.
+  - drupal:dblog
   # AI core
   - ai:ai
   - ai_agents:ai_agents
