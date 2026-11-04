@@ -33,6 +33,10 @@ on:
         description: 'Base URL to POST status updates to (e.g., https://localnodes.xyz)'
         required: false
         type: string
+      image_tag:
+        description: 'GHCR sha7 tag to pin as IMAGE_TAG (e.g., "9b8e2a1"); empty means latest'
+        required: false
+        type: string
 
 env:
   COOLIFY_API: https://coolify.localnodes.xyz/api/v1
@@ -110,6 +114,9 @@ jobs:
           echo "Created application $APP_UUID"
 
       - name: Configure environment variables
+        env:
+          # Passed via env (never interpolated into the script body) and validated below
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
         run: |
           # Wait for Coolify to fully parse compose file and generate env vars.
           # Coolify creates one env var per ${VAR:-default} reference in the compose
@@ -173,7 +180,10 @@ jobs:
           echo "Setting instance-specific values..."
           update_env "DEMO_MODULE" "${{ inputs.demo_module }}"
           update_env "DRUPAL_SITE_NAME" "${{ inputs.site_name }}"
-          update_env "DRUPAL_ADMIN_PASS" "localnodes2026"
+          # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed
+          ADMIN_PASS="$(openssl rand -hex 16)"
+          echo "::add-mask::$ADMIN_PASS"
+          update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
           update_env "GEMINI_API_KEY" "${{ secrets.GEMINI_API_KEY }}"
 
           # Generate unique secrets for this instance
@@ -195,6 +205,15 @@ jobs:
           update_env "PROVISION_CALLBACK_SECRET" "${{ secrets.PROVISION_CALLBACK_SECRET }}"
           update_env "RESEND_API_KEY" "${{ secrets.RESEND_API_KEY }}"
 
+          # Optional image pin: IMAGE_TAG selects the GHCR tag in docker-compose.yaml (empty = latest)
+          if [ -n "$IMAGE_TAG_INPUT" ]; then
+            if [[ ! "$IMAGE_TAG_INPUT" =~ ^[0-9a-f]{7,40}$ ]]; then
+              echo "::error::Invalid image_tag. Use a GHCR sha tag: 7 to 40 lowercase hex characters."
+              exit 1
+            fi
+            update_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
+          fi
+
           # Second dedup pass — catches any stragglers from async compose parsing
           echo "Cleaning duplicate env vars (pass 2)..."
           dedup_envs
@@ -203,8 +222,8 @@ jobs:
 
       - name: Deploy instance
         run: |
-          # Deploy endpoint is GET /deploy?uuid=...&force=true (not POST /applications/{uuid}/deploy)
-          RESPONSE=$(curl -s "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
+          # Coolify >= 4.2 requires POST to /deploy?uuid=...&force=true (GET returns 405); 4.1 accepts GET or POST
+          RESPONSE=$(curl -s -X POST "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
             -H "Accept: application/json")
 
@@ -291,7 +310,7 @@ jobs:
           | **Site Name** | ${{ inputs.site_name }} |
           | **Demo Content** | ${{ inputs.demo_module }} |
           | **Coolify UUID** | \`$APP_UUID\` |
-          | **Admin Login** | admin / localnodes2026 |
+          | **Admin Login** | admin / random per-run password, stored only in the Coolify app env (DRUPAL_ADMIN_PASS); never printed |
           | **Organizer Email** | ${{ inputs.email }} |
 
           ### Next Steps
