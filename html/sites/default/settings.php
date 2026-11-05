@@ -96,11 +96,13 @@ if ($eth_rpc = getenv('ETHEREUM_PROVIDER_URL')) {
 }
 
 // ---------------------------------------------------------------------------
-// Reverse proxy support (Coolify/Traefik).
+// Reverse proxy support (Coolify: Cloudflare -> Traefik -> Drupal).
+// Only the proxies in trusted-proxies.php may set X-Forwarded-*; override
+// per instance with DRUPAL_TRUSTED_PROXIES.
 // ---------------------------------------------------------------------------
 if (getenv('DRUPAL_REVERSE_PROXY') === 'true') {
   $settings['reverse_proxy'] = TRUE;
-  $settings['reverse_proxy_addresses'] = ['0.0.0.0/0'];
+  $settings['reverse_proxy_addresses'] = require __DIR__ . '/trusted-proxies.php';
   $settings['reverse_proxy_trusted_headers'] =
     \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_FOR |
     \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_HOST |
