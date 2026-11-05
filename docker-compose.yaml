@@ -25,10 +25,12 @@ services:
       SERVICE_FQDN_OPENSOCIAL: ${SERVICE_FQDN_OPENSOCIAL:-}
       # Outbound mail. The app's .env only interpolates ${...} references; a variable
       # must be listed here to reach the container. RESEND_API_KEY feeds the SMTP
-      # transport (settings.php) and the welcome mail (entrypoint); DRUPAL_SITE_MAIL is
-      # the sender (empty = noreply@localnodes.xyz, set at install by localnodes_platform).
+      # transport (settings.php) and the welcome mail (entrypoint). MAIL_FROM is the
+      # sender address for both Drupal's site mail (set at install by localnodes_platform)
+      # and the welcome mail. Empty = the localnodes.xyz defaults; provision-instance.yml
+      # sets noreply@demo.localnodes.xyz for demo and staging instances.
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      DRUPAL_SITE_MAIL: ${DRUPAL_SITE_MAIL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       # Organizer provisioning (entrypoint): account, one-time login, welcome mail, callbacks
       ORGANIZER_EMAIL: ${ORGANIZER_EMAIL:-}
       ORGANIZER_NAME: ${ORGANIZER_NAME:-}

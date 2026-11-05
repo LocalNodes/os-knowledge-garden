@@ -260,6 +260,12 @@ jobs:
 
           echo "Setting instance-specific values..."
           update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
+          # Demo and staging instances send from the demo.localnodes.xyz subdomain, so a demo
+          # mistake (e.g. a bounce spike) cannot hurt localnodes.xyz's sending reputation.
+          # Blank instances (none) keep the default localnodes.xyz sender.
+          if [ "$DEMO_MODULE_INPUT" != "none" ]; then
+            update_env "MAIL_FROM" "noreply@demo.localnodes.xyz"
+          fi
           update_env "DRUPAL_SITE_NAME" "$SITE_NAME_INPUT"
           # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed
           ADMIN_PASS="$(openssl rand -hex 16)"

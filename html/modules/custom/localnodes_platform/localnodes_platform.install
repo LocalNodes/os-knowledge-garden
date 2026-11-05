@@ -66,10 +66,11 @@ function _localnodes_platform_configure_mailer() {
 
   // Sender address. symfony_mailer's default From is the site mail, and
   // site:install leaves it at admin@example.com, which Resend rejects (it only
-  // sends from verified domains). DRUPAL_SITE_MAIL overrides it per instance.
+  // sends from verified domains). MAIL_FROM overrides it per instance (demo and
+  // staging instances use noreply@demo.localnodes.xyz).
   \Drupal::configFactory()
     ->getEditable('system.site')
-    ->set('mail', getenv('DRUPAL_SITE_MAIL') ?: 'noreply@localnodes.xyz')
+    ->set('mail', getenv('MAIL_FROM') ?: 'noreply@localnodes.xyz')
     ->save(TRUE);
 }
 
