@@ -38,8 +38,10 @@ class RelatedContentService {
     try {
       $query = $index->query();
 
-      $sourceId = 'entity:node/' . $entity->id() . ':' . $entity->language()->getId();
-      $query->addCondition('search_api_id', $sourceId, '<>');
+      // The source node is dropped in formatResults(). Don't filter on
+      // search_api_id here: it isn't an indexed field, so the Qdrant backend
+      // ignores the condition and shows a "Field @field is not indexed"
+      // warning to the visitor on every node page.
 
       $this->permissionFilter->applyPermissionFilters($query, $account);
 
