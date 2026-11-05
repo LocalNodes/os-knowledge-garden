@@ -80,15 +80,28 @@ if ($resend_key = getenv('RESEND_API_KEY')) {
 
 // ---------------------------------------------------------------------------
 // SIWE domain/URI override (instance-specific, derived from FQDN).
-// Normalised once: scheme, path and trailing slash dropped, host lowercased,
-// port kept. A value with no host sets neither key.
+// SERVICE_FQDN_OPENSOCIAL may list several domains, comma-separated (Coolify
+// does this when an app has more than one domain). Each entry is normalised:
+// scheme, path and trailing slash dropped, host lowercased, port kept.
+// Entries with no host are skipped; if none is left, neither key is set.
+// siwe_login reads both keys as comma-separated lists.
 // ---------------------------------------------------------------------------
 if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {
-  $fqdn_parts = parse_url(preg_match('#^[a-z][a-z0-9+.-]*://#i', $fqdn) ? $fqdn : 'https://' . $fqdn);
-  if (!empty($fqdn_parts['host'])) {
-    $siwe_host = strtolower($fqdn_parts['host']) . (isset($fqdn_parts['port']) ? ':' . $fqdn_parts['port'] : '');
-    $config['siwe_login.settings']['expected_domain'] = $siwe_host;
-    $config['siwe_login.settings']['expected_uri'] = 'https://' . $siwe_host;
+  $siwe_hosts = [];
+  foreach (explode(',', $fqdn) as $fqdn_entry) {
+    $fqdn_entry = trim($fqdn_entry);
+    if ($fqdn_entry === '') {
+      continue;
+    }
+    $fqdn_parts = parse_url(preg_match('#^[a-z][a-z0-9+.-]*://#i', $fqdn_entry) ? $fqdn_entry : 'https://' . $fqdn_entry);
+    if (!empty($fqdn_parts['host'])) {
+      $siwe_hosts[] = strtolower($fqdn_parts['host']) . (isset($fqdn_parts['port']) ? ':' . $fqdn_parts['port'] : '');
+    }
+  }
+  $siwe_hosts = array_values(array_unique($siwe_hosts));
+  if ($siwe_hosts) {
+    $config['siwe_login.settings']['expected_domain'] = implode(',', $siwe_hosts);
+    $config['siwe_login.settings']['expected_uri'] = implode(',', array_map(fn ($h) => 'https://' . $h, $siwe_hosts));
   }
 }
 
