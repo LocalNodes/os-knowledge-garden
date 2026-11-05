@@ -12,6 +12,10 @@ services:
       DRUPAL_HASH_SALT: ${DRUPAL_HASH_SALT:-generate-random}
       DRUPAL_TRUSTED_HOST_PATTERNS: ${DRUPAL_TRUSTED_HOST_PATTERNS:-}
       DRUPAL_REVERSE_PROXY: "true"
+      # Optional override for the proxy network trusted for X-Forwarded-For (CIDR, comma-separated).
+      # Empty = this container's own /24 (Traefik's address on the app network), plus Cloudflare's
+      # ranges, which are always trusted (html/sites/default/trusted-proxies.php).
+      DRUPAL_TRUSTED_PROXIES: ${DRUPAL_TRUSTED_PROXIES:-}
       SOLR_HOST: solr
       SOLR_PORT: 8983
       SOLR_PATH: /solr

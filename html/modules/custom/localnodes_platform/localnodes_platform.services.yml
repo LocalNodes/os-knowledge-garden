@@ -1,0 +1,7 @@
+services:
+  # Runs before core's ReverseProxyMiddleware (priority 300).
+  localnodes_platform.cloudflare_client_ip_middleware:
+    class: Drupal\localnodes_platform\StackMiddleware\CloudflareClientIpMiddleware
+    arguments: ['@settings', '@state', '@datetime.time']
+    tags:
+      - { name: http_middleware, priority: 310 }

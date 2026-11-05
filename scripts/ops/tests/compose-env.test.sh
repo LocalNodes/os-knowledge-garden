@@ -9,7 +9,7 @@
 # Checks:
 #  1. Every key provision-instance.yml writes (update_env "KEY") is in opensocial's
 #     environment (IMAGE_TAG is interpolation-only: it selects the image tag).
-#  2. Every getenv('KEY') in settings.php and localnodes_platform.install is in it.
+#  2. Every getenv('KEY') in settings.php, trusted-proxies.php and localnodes_platform.install is in it.
 #  3. The entrypoint's mail, organizer and WEB3_ENABLED variables are in it.
 #  4. Resend SMTP is smtps:// (implicit TLS) on 2465 in the install hook and settings.php.
 # IS_DDEV_PROJECT and DDEV_HOSTNAME are exempt (DDEV-only).
@@ -22,6 +22,7 @@ COMPOSE="${COMPOSE:-$REPO/docker-compose.yaml}"
 WF="$REPO/.github/workflows/provision-instance.yml"
 SETTINGS="${SETTINGS:-$REPO/html/sites/default/settings.php}"
 INSTALL="${INSTALL:-$REPO/html/modules/custom/localnodes_platform/localnodes_platform.install}"
+PROXIES="${PROXIES:-$REPO/html/sites/default/trusted-proxies.php}"
 
 INTERPOLATION_ONLY="IMAGE_TAG"
 LOCAL_ONLY="IS_DDEV_PROJECT DDEV_HOSTNAME"   # set by DDEV only; never present in production
@@ -43,7 +44,7 @@ for K in $(grep -oE 'update_env "[A-Z0-9_]+"' "$WF" | cut -d'"' -f2 | sort -u); 
     *) need provision-instance.yml "$K" ;;
   esac
 done
-for K in $(grep -ohE "getenv\('[A-Z0-9_]+'\)" "$SETTINGS" "$INSTALL" | cut -d"'" -f2 | sort -u); do
+for K in $(grep -ohE "getenv\('[A-Z0-9_]+'\)" "$SETTINGS" "$INSTALL" "$PROXIES" | cut -d"'" -f2 | sort -u); do
   case " $LOCAL_ONLY " in *" $K "*) continue ;; esac
   need "settings.php/localnodes_platform.install" "$K"
 done
