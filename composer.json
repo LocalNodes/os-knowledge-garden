@@ -6,18 +6,18 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "goalgorilla/open_social": "~13.0.0",
+        "goalgorilla/open_social": "~13.0.2",
         "php": "^8.3",
         "monolog/monolog": "^2.3.5",
         "drush/drush": "^13.7",
-        "drupal/ai": "dev-1.3.x",
+        "drupal/ai": "~1.4.11",
         "drupal/ai_agents": "dev-1.3.x",
         "drupal/key": "^1.19",
         "drupal/ai_usage_limits": "dev-1.0.x",
         "drupal/ai_file_to_text": "^1.0",
         "drupal/search_api": "^1.40",
         "drupal/gemini_provider": "1.x-dev",
-        "league/commonmark": "^2.8",
+        "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
         "drupal/siwe_login": "^1.0",
         "drupal/safe_smart_accounts": "^1.0",
@@ -79,16 +79,11 @@
         },
         "patches": {
             "drupal/ai": {
-                "AiAssistantApiRunner: fix uninitialized userMessage null safety": "patches/ai-assistant-api-runner-null-safety.patch",
-                "AgentRunner: handle null response from solve() on empty collections": "patches/ai-assistant-api-agent-runner-null-response.patch",
                 "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch",
                 "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch"
             },
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch"
-            },
-            "drupal/ai_provider_deepseek": {
-                "Add chat_with_tools support via direct Guzzle API calls": "patches/deepseek-provider-chat-with-tools-support.patch"
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
@@ -100,6 +95,13 @@
             "drupal/siwe_login": {
                 "Remove web3p/web3.php dependency (conflicts with psr/http-message ^2.0 from league/oauth2-server)": "patches/siwe-login-remove-web3php-dependency.patch"
             }
+        },
+        "patches-ignore": {
+            "goalgorilla/open_social": {
+                "drupal/redirect": {
+                    "Issue #2991423: Redirection issue when interface language is different from content language": "https://www.drupal.org/files/issues/2025-02-19/redirect-interface_language_different_from_content_language_2991423-22.patch"
+                }
+            }
         }
     },
     "config": {
@@ -110,6 +112,18 @@
             "oomphinc/composer-installers-extender": true,
             "php-http/discovery": true,
             "zaporylie/composer-drupal-optimizations": true
+        },
+        "audit": {
+            "ignore": {
+                "SA-CONTRIB-2026-236": "drupal/bootstrap 3.34 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
+                "SA-CONTRIB-2026-113": "drupal/entity 1.6.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
+                "SA-CONTRIB-2026-060": "drupal/paragraphs 1.19.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
+                "SA-CONTRIB-2026-061": "drupal/paragraphs 1.19.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
+                "SA-CONTRIB-2026-219": "drupal/gin constrained to ^3.0 by goalgorilla/open_social 13.0.x (fix is 4.1.4+); follow-up",
+                "PKSA-xwpn-zs9j-6wy5": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up",
+                "PKSA-sf9j-1gs7-xzvx": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up",
+                "PKSA-7h5p-prw9-w5nr": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up"
+            }
         }
     }
 }
