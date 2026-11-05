@@ -263,3 +263,114 @@ TM-56, Shields down:
    - An empty list means the message was never rendered (new information).
    - An entry showing `none` means Brave's cosmetic filter hid the alert.
    - A visible entry means the message was there but was missed.
+
+## siwe_login beta7: TM-24 flood control
+
+Date: 2026-11-05.
+
+TM-24 said the public `/siwe/nonce` and `/siwe/verify` routes had no flood control.
+beta7 adds it with core's `flood` service, following core's user login flood control
+(`user.flood`). The work is on a local branch only: `repos/siwe_login`, branch `beta7`,
+cut from 1.0.x at ce007ff. Nothing is pushed or tagged. THREAT-MODEL.md is unchanged;
+TM-24 moves there after the release.
+
+### Commits (repos/siwe_login, branch beta7)
+
+- ecbdfd7 test: flood control on /siwe/nonce and /siwe/verify (TM-24, failing)
+- 2bfb112 feat: flood control on /siwe/nonce and /siwe/verify (TM-24)
+- df91350 test: flood settings on the SIWE settings form (failing)
+- dfcc695 feat: flood control settings on the SIWE settings form
+- 1468e4c docs: beta7 changelog, README flood control and threat model link
+- 1c95091 style: phpcs line length in the flood settings and test base
+
+### What it does
+
+- New service `siwe_login.flood_control` (`SiweFloodControl`) on `@flood`.
+- `GET /siwe/nonce`: every request from an IP counts, malformed ones included.
+  Default: 30 per IP per 300 s.
+- `POST /siwe/verify`: only failures count (400, 401 and 403), as in core. Defaults are
+  core's `user.flood` values: 50 failures per IP per hour, and 5 per address per 6 hours.
+  The per-address identifier is the lowercased address plus the IP, like core's default
+  `uid_only: false`. With the address alone, anyone could lock a wallet out by
+  posting 5 bad messages for it. A verified signature clears that address's count,
+  including on the email and username hand-offs. It never clears the IP count.
+- Both checks run before the nonce store is touched, so a blocked request doesn't
+  spend the session's nonce. A 415 (wrong Content-Type) is not counted.
+- Past a limit: HTTP 429, body `{"error": "Too many sign-in attempts. Please wait and try again."}`
+  (same `{"error": …}` shape as the other errors). `Retry-After` is set to the window,
+  because the flood API can't say when the oldest event expires. The nonce 429 also
+  sends `Cache-Control: no-store`. Each block logs a notice on the `siwe_login` channel
+  with the route name only.
+- Config: `siwe_login.settings:flood.{nonce_ip_limit, nonce_ip_window, verify_ip_limit,
+  verify_ip_window, verify_address_limit, verify_address_window}`, with schema and
+  config/install defaults. A missing or non-positive value falls back to
+  `SiweFloodControl::DEFAULTS` in code, so beta6 sites need no update hook. The
+  fresh3 site has no `flood` key, so the live check below ran on that fallback.
+- The settings form has a collapsed **Flood control** section with the six fields
+  (number, min 1). It shows the defaults when the keys are missing.
+- README: threat model link is now `docs/security/THREAT-MODEL.md`. TM-24 moved from
+  the accepted risks to its own mitigated bullet, and there's a new Flood Control
+  config section. CHANGELOG has `## [1.0.0-beta7] - Unreleased` below `## [Unreleased]`.
+
+### Verification
+
+- New Kernel tests: `FloodControlTest` (13) and `FloodSettingsFormTest` (3). They cover
+  the nonce 429 at request limit+1 with another IP unaffected, malformed nonce
+  requests counting, the default fallback for missing and for zero or negative values,
+  the install defaults, per-IP verify failures giving 429 without spending the nonce,
+  per-address failures giving 429 for that address and IP only, case-insensitive
+  address keys, success and hand-off clearing the address count, success not clearing
+  the IP count, unchanged behaviour under the limits, and 415 not being counted. A
+  mutation check (removing the clear call) fails both clear tests.
+- Full suite (`ddev exec … phpunit … repos/siwe_login/tests`): 257 tests, 1554
+  assertions, 1 skipped, exit 0. That is the 241 baseline plus the 16 new tests. The
+  run started before 1c95091 (formatting only), so `FloodControlTest`,
+  `FloodSettingsFormTest` and `EndpointContractTest` were rerun on the final tree:
+  27 tests, 283 assertions, OK.
+- phpstan (level 0, drupal.org CI setup, on a copy under `repos/beta7check`, since
+  deleted): `[OK] No errors`.
+- phpcs (Drupal, DrupalPractice) on the changed files: clean apart from two hits that
+  were already on 1.0.x: `SiweSettingsForm.php` (blank line after the comment in
+  `validateForm()`) and `SiweKernelTestBase.php:195` (the `resetSiweServices()`
+  array line).
+
+### Live check on https://fresh3.ddev.site (curl, 2026-11-05)
+
+- `drush cr` first, since the module is symlinked and the new service has to be in the
+  container.
+- Throwaway address `0x343bE945F4BFd32F95aFa526de7614b91B51A462`. 32 GET
+  `/siwe/nonce?address=…` at 11:06:36Z: requests 1 to 30 got 200 with a nonce body,
+  31 and 32 got 429. Headers on the 429:
+  `HTTP/2 429`, `cache-control: no-store, private`, `content-type: application/json`,
+  `retry-after: 300`. Body: `{"error":"Too many sign-in attempts. Please wait and try again."}`.
+- Flood table: `siwe_login.nonce_ip | 192.168.97.7 | 30`. That IP is the DDEV router,
+  because fresh3 runs without `DRUPAL_REVERSE_PROXY`. So every client of the local site
+  shares one counter, and the block hit everyone for about 30 s.
+- Recovery: a fresh IP isn't possible from the host, so I cleared the entry with
+  `drush php:eval '\Drupal::flood()->clear("siwe_login.nonce_ip", "192.168.97.7");'`
+  at 11:07:06Z. After that, `/siwe/nonce` gave 200 with a nonce, and `/user/login` gave
+  200 with the SIWE login block. The one entry from that nonce request was cleared
+  too. The final count of `siwe_login.%` rows in `flood` is 0.
+- Not cleaned up: the nonce requests left anonymous tempstore records and sessions.
+  They expire on their own (nonce TTL and session GC).
+
+### For the orchestrator
+
+- **Production client IP (needs a decision, not in this branch).** In
+  `html/sites/default/settings.php`, `DRUPAL_REVERSE_PROXY=true` sets
+  `reverse_proxy_addresses = ['0.0.0.0/0']` and trusts `X-Forwarded-For`. Every peer
+  counts as a trusted proxy, so a client can send its own `X-Forwarded-For` and get a
+  fresh flood identifier on each request. The per-IP limits in beta7 (and core's own
+  login flood) are then easy to bypass on Coolify instances. The fix is to list only
+  Traefik's real network or address in `reverse_proxy_addresses`. Without
+  `DRUPAL_REVERSE_PROXY` (local DDEV), the problem is the other way round: one shared
+  counter for all clients behind the router.
+- TM-24 can move to mitigated in THREAT-MODEL.md once beta7 is released.
+
+### Post-deploy client-IP check (2026-11-05, run by the orchestrator)
+
+Boulder (deployed 11:49Z) and Cascadia (11:53Z) both run image `0282227`, which includes fresh3 PR #40 (trusted proxies) and PR #41 (siwe_login 1.0.0-beta7). On both sites:
+- Requests from a real client over IPv4 and IPv6 were logged by watchdog with the client's real public IP, not a Cloudflare edge.
+- The state value `localnodes_platform.cf_connecting_ip_fallback` is unset. So Traefik's `forwardedHeaders.trustedIPs` is in effect and the CF-Connecting-IP fallback is idle.
+
+TM-24 flood control therefore keys on real client IPs in production.
