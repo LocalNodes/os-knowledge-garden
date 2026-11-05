@@ -114,6 +114,18 @@ reset_state; run_step "Create Coolify application" ok
 check "create passes Coolify 4.1 path validation (leading-slash docker_compose_location)" '[ $RC -eq 0 ] && grep -qx "APP_UUID=app123" "$WORK/github_env"'
 check "  ...and sends the compose path and domain as JSON" '[ "$(head -1 "$WORK/state/bodies.log" | jq -r ".docker_compose_location + \" \" + .docker_compose_domains[0].domain")" = "/docker-compose.yaml https://demo.localnodes.xyz" ]'
 
+echo "# Configure environment variables: demo sender (MAIL_FROM)"
+for DM in localnodes_demo boulder_demo portland_demo; do
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=$DM
+  check "$DM instance sends from noreply@demo.localnodes.xyz" '[ $RC -eq 0 ] && [ "$(stored MAIL_FROM)" = noreply@demo.localnodes.xyz ]'
+done
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=none
+check "blank instance (none) leaves MAIL_FROM unset (default localnodes.xyz sender)" '[ $RC -eq 0 ] && [ -z "$(stored MAIL_FROM)" ] && ! grep -q " MAIL_FROM$" "$WORK/state/requests.log"'
+ENTRY="$(dirname "$WF")/../../docker/entrypoint.sh"
+check "welcome mail sender reads MAIL_FROM" 'grep -qF "LocalNodes <\${MAIL_FROM:-hello@localnodes.xyz}>" "$ENTRY"'
+INSTALL_PHP="$(dirname "$WF")/../../html/modules/custom/localnodes_platform/localnodes_platform.install"
+check "site mail (system.site) reads MAIL_FROM" "grep -qF \"getenv('MAIL_FROM') ?: 'noreply@localnodes.xyz'\" \"\$INSTALL_PHP\""
+
 echo "# Configure environment variables: update_env fails hard (P1 #2)"
 reset_state; run_step "Configure environment variables" all503 "${CONFIG_DEFAULTS[@]}"
 check "HTTP 503 on PATCH fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "PATCH failed (503)" <<<"$OUT"'
@@ -130,7 +142,8 @@ check "404 that is not a missing variable fails without POST" '[ $RC -ne 0 ] && 
 reset_state; run_step "Configure environment variables" post409_once "${CONFIG_DEFAULTS[@]}" EMAIL_INPUT=o@example.org
 check "409 from a concurrent create is retried and succeeds" '[ $RC -eq 0 ] && [ "$(stored ORGANIZER_EMAIL)" = o@example.org ]'
 
-reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" EMAIL_INPUT=o@example.org
+# DEMO_MODULE_INPUT=none keeps MAIL_FROM out, so ORGANIZER_EMAIL is the first missing (POSTed) key
+reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" EMAIL_INPUT=o@example.org DEMO_MODULE_INPUT=none
 check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* ORGANIZER_EMAIL$" "$WORK/state/requests.log")" -eq 3 ]'
 
 echo "# Codex re-check: curl exit status and duplicate deletion"

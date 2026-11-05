@@ -47,7 +47,7 @@ for K in $(grep -ohE "getenv\('[A-Z0-9_]+'\)" "$SETTINGS" "$INSTALL" | cut -d"'"
   case " $LOCAL_ONLY " in *" $K "*) continue ;; esac
   need "settings.php/localnodes_platform.install" "$K"
 done
-for K in RESEND_API_KEY ORGANIZER_EMAIL ORGANIZER_NAME PROVISION_CALLBACK_URL PROVISION_CALLBACK_SECRET STRIPE_SESSION_ID WEB3_ENABLED; do
+for K in RESEND_API_KEY MAIL_FROM ORGANIZER_EMAIL ORGANIZER_NAME PROVISION_CALLBACK_URL PROVISION_CALLBACK_SECRET STRIPE_SESSION_ID WEB3_ENABLED; do
   need entrypoint.sh "$K"
 done
 
