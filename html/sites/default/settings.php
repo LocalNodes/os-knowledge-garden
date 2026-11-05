@@ -79,10 +79,27 @@ if ($resend_key = getenv('RESEND_API_KEY')) {
 }
 
 // ---------------------------------------------------------------------------
-// SIWE domain override (instance-specific, derived from FQDN).
+// SIWE domain/URI override (instance-specific, derived from FQDN).
+// Normalised once: scheme, path and trailing slash dropped, host lowercased,
+// port kept. A value with no host sets neither key.
 // ---------------------------------------------------------------------------
 if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {
-  $config['siwe_login.settings']['expected_domain'] = preg_replace('#^https?://#', '', $fqdn);
+  $fqdn_parts = parse_url(preg_match('#^[a-z][a-z0-9+.-]*://#i', $fqdn) ? $fqdn : 'https://' . $fqdn);
+  if (!empty($fqdn_parts['host'])) {
+    $siwe_host = strtolower($fqdn_parts['host']) . (isset($fqdn_parts['port']) ? ':' . $fqdn_parts['port'] : '');
+    $config['siwe_login.settings']['expected_domain'] = $siwe_host;
+    $config['siwe_login.settings']['expected_uri'] = 'https://' . $siwe_host;
+  }
+}
+
+// SIWE chain ID the signed message must carry (default 1, mainnet).
+if (ctype_digit((string) getenv('SIWE_CHAIN_ID'))) {
+  $config['siwe_login.settings']['chain_id'] = (int) getenv('SIWE_CHAIN_ID');
+}
+
+// RPC for that chain (contract-wallet detection only; never accepts a login).
+if ($siwe_rpc = getenv('SIWE_CHAIN_RPC_URL')) {
+  $config['siwe_login.settings']['chain_rpc_url'] = $siwe_rpc;
 }
 
 // ---------------------------------------------------------------------------

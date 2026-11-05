@@ -96,3 +96,12 @@ The other allowed-to-fail jobs (cspell, eslint, phpcs, stylelint) are still to t
     - stylelint: 2 errors, both `order/properties-order` in `css/siwe-login.css`.
 - Annotated tag `1.0.0-beta6` = `5825b3a`, peeling to `0b19b67` (ls-remote). Pushed alone. The remote `1.0.x` is `0b19b67`. The orchestrator creates the release node.
 - Gap: CHANGELOG has no 1.0.0-beta6 section. Add it on 1.0.x afterwards.
+
+## beta7 (2026-11-05)
+
+- Tom: "release away!" (relayed by the orchestrator). Local 1.0.x was fast-forwarded to the beta7 branch, plus `004eeb9` dating the changelog entry. That adds TM-24 flood control on `/siwe/nonce` and `/siwe/verify` (core flood service, 429 plus Retry-After, configurable limits that fall back to defaults) and moves the README threat-model link to `docs/security/THREAT-MODEL.md`.
+- Local suite on the beta7 branch: 257 tests, 1 skipped (241 plus 16 flood tests). phpstan was clean.
+- Pushed `1.0.x` from `ce007ff` to `004eeb9`. Pipeline 1032257 succeeded: composer, composer-lint, phpstan and phpunit passed. cspell, eslint, phpcs and stylelint are allowed to fail, as before.
+- Tag: the agent's tag-and-push command was refused by the Claude Code auto-mode classifier and was not retried. Tom ran it himself. `git ls-remote --tags origin` shows `refs/tags/1.0.0-beta7` = `59e272c` (annotated), peeling to `004eeb9`.
+- Release node, created by the orchestrator: https://www.drupal.org/project/siwe_login/releases/1.0.0-beta7. Its notes include a line on `reverse_proxy_addresses`.
+- Deployment caveat: per-IP limits are only as good as the client IP Drupal sees. fresh3 PR #40 replaces `reverse_proxy_addresses = ['0.0.0.0/0']` with Cloudflare's ranges plus the instance's Traefik network. The fresh3 pin to beta7 waits for #40 and the Traefik subnet.

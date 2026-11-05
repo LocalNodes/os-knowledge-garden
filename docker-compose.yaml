@@ -44,6 +44,10 @@ services:
       # Optional Web3 stack (entrypoint toggle; settings.php RPC override). Empty/false = off
       WEB3_ENABLED: ${WEB3_ENABLED:-false}
       ETHEREUM_PROVIDER_URL: ${ETHEREUM_PROVIDER_URL:-}
+      # SIWE chain the signed message must carry (digits; default 1) and its RPC (contract-wallet
+      # detection only). settings.php also derives expected_domain/expected_uri from SERVICE_FQDN_OPENSOCIAL.
+      SIWE_CHAIN_ID: ${SIWE_CHAIN_ID:-}
+      SIWE_CHAIN_RPC_URL: ${SIWE_CHAIN_RPC_URL:-}
     volumes:
       - opensocial-files:/var/www/html/html/sites/default/files
       - opensocial-private:/var/www/private
