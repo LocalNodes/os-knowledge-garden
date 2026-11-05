@@ -1,0 +1,21 @@
+diff --git a/modules/ai_chatbot/src/Controller/DeepChatApi.php b/modules/ai_chatbot/src/Controller/DeepChatApi.php
+index 040ff91..3135f81 100644
+--- a/modules/ai_chatbot/src/Controller/DeepChatApi.php
++++ b/modules/ai_chatbot/src/Controller/DeepChatApi.php
+@@ -236,10 +236,14 @@ class DeepChatApi extends ControllerBase {
+         // Log the error.
+         $this->getLogger('ai_chatbot')->error('The chatbot had an error: @message', ['@message' => $e->getMessage()]);
+ 
+-        // Otherwise use the default error message.
++        // Return the message as a handled chat error with HTTP 200. Both
++        // front-end paths render {"error": ...} from a 200 response, while the
++        // verbose-mode path (deepchat-init.js getAllMessages) drops any
++        // non-OK body and shows a generic failure, so a 500 would hide the
++        // assistant's configured message. The error is logged above.
+         return new JsonResponse([
+           'error' => $error_message,
+-        ], 500);
++        ], 200);
+ 
+       }
+     }

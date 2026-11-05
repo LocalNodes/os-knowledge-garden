@@ -1,0 +1,154 @@
+diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
+index 65896af..c1030c3 100644
+--- a/src/Plugin/AiProvider/GeminiProvider.php
++++ b/src/Plugin/AiProvider/GeminiProvider.php
+@@ -7,7 +7,12 @@ namespace Drupal\gemini_provider\Plugin\AiProvider;
+ use Drupal\ai\Attribute\AiProvider;
+ use Drupal\ai\Base\AiProviderClientBase;
+ use Drupal\ai\Dto\TokenUsageDto;
++use Drupal\ai\Exception\AiBadRequestException;
++use Drupal\ai\Exception\AiQuotaException;
++use Drupal\ai\Exception\AiRateLimitException;
++use Drupal\ai\Exception\AiRequestErrorException;
+ use Drupal\ai\Exception\AiResponseErrorException;
++use Drupal\ai\Exception\AiSetupFailureException;
+ use Drupal\ai\OperationType\Chat\ChatInput;
+ use Drupal\ai\OperationType\Chat\ChatInterface;
+ use Drupal\ai\OperationType\Chat\ChatMessage;
+@@ -43,6 +48,7 @@ use Gemini\Enums\DataType;
+ use Gemini\Enums\ResponseMimeType;
+ use Gemini\Enums\ResponseModality;
+ use Gemini\Enums\Role;
++use Gemini\Exceptions\ErrorException as GeminiErrorException;
+ use Symfony\Component\DependencyInjection\ContainerInterface;
+ use Symfony\Component\Yaml\Yaml;
+ 
+@@ -355,11 +361,21 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     }
+ 
+     if ($this->streamed) {
+-      $streamedIterator = $response->streamGenerateContent(...$chat_input);
++      try {
++        $streamedIterator = $response->streamGenerateContent(...$chat_input);
++      }
++      catch (GeminiErrorException $e) {
++        throw static::mapClientException($e);
++      }
+       $message = new GeminiChatMessageIterator($streamedIterator);
+     }
+     else {
+-      $response = $response->generateContent(...$chat_input);
++      try {
++        $response = $response->generateContent(...$chat_input);
++      }
++      catch (GeminiErrorException $e) {
++        throw static::mapClientException($e);
++      }
+       $text = '';
+       $tool_outputs = [];
+ 
+@@ -510,9 +526,8 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     try {
+       $response = $this->client->embeddingModel($model_id)->embedContent($input);
+     }
+-    catch (\Exception $e) {
+-      // @todo Handle the exception properly.
+-      throw $e;
++    catch (GeminiErrorException $e) {
++      throw static::mapClientException($e);
+     }
+ 
+     return new EmbeddingsOutput($response->embedding->values, $response->toArray(), []);
+@@ -798,4 +813,92 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+     return FALSE;
+   }
+ 
++  /**
++   * Maps a Gemini API error to the AI module's typed exceptions.
++   *
++   * Without this, every Gemini error reaches callers as a plain
++   * \Gemini\Exceptions\ErrorException, so consumers such as the chatbot
++   * cannot tell an exhausted quota from a bad request and fall back to their
++   * generic error text. The original exception is kept as the previous one.
++   *
++   * @param \Gemini\Exceptions\ErrorException $e
++   *   The Gemini client exception.
++   *
++   * @return \Exception
++   *   The typed AI exception, or the original one for codes not mapped here.
++   */
++  public static function mapClientException(GeminiErrorException $e): \Exception {
++    $code = $e->getErrorCode();
++    $status = $e->getErrorStatus();
++    $message = $e->getMessage();
++    // Gemini answers 429 RESOURCE_EXHAUSTED, with the same "You exceeded your
++    // current quota" text, for per-minute (RPM/TPM) limits and for per-day
++    // limits alike. Only a per-day limit is a quota the user must wait out;
++    // per-minute limits clear in seconds. Anything that is not clearly
++    // per-day is a rate limit, the friendlier "try again shortly".
++    if ($code === 429 || $status === 'RESOURCE_EXHAUSTED') {
++      return static::isPerDayLimit($e)
++        ? new AiQuotaException($message, $code, $e)
++        : new AiRateLimitException($message, $code, $e);
++    }
++    if (in_array($code, [401, 403], TRUE) || in_array($status, ['UNAUTHENTICATED', 'PERMISSION_DENIED'], TRUE)) {
++      return new AiSetupFailureException($message, $code, $e);
++    }
++    if ($code === 400 || in_array($status, ['INVALID_ARGUMENT', 'FAILED_PRECONDITION'], TRUE)) {
++      return new AiBadRequestException($message, $code, $e);
++    }
++    if ($code >= 500 || in_array($status, ['UNAVAILABLE', 'INTERNAL', 'DEADLINE_EXCEEDED'], TRUE)) {
++      return new AiRequestErrorException($message, $code, $e);
++    }
++    return $e;
++  }
++
++  /**
++   * Whether a Gemini 429 is a per-day limit rather than a per-minute one.
++   *
++   * Reads the google.rpc.QuotaFailure violations in the error details
++   * (quotaId such as "GenerateRequestsPerDayPerProjectPerModel-FreeTier"),
++   * then falls back to the message text ("... per day limit exceeded ...").
++   * A RetryInfo retryDelay alone decides nothing: per-day errors carry one
++   * too ("Please retry in 19h24m...").
++   *
++   * @param \Gemini\Exceptions\ErrorException $e
++   *   The Gemini client exception.
++   *
++   * @return bool
++   *   TRUE only when the error clearly names a per-day limit.
++   */
++  protected static function isPerDayLimit(GeminiErrorException $e): bool {
++    // The client keeps the whole API error, details included, but exposes
++    // only code, message and status.
++    $details = [];
++    try {
++      $contents = (new \ReflectionProperty(GeminiErrorException::class, 'contents'))->getValue($e);
++      $details = is_array($contents['details'] ?? NULL) ? $contents['details'] : [];
++    }
++    catch (\Throwable) {
++      // \ReflectionException if the client renames the property, \Error if
++      // it is an uninitialized typed property. Fall back to the message.
++    }
++    $per_minute = FALSE;
++    foreach ($details as $detail) {
++      if (!is_array($detail) || !str_ends_with((string) ($detail['@type'] ?? ''), 'google.rpc.QuotaFailure')) {
++        continue;
++      }
++      foreach ((array) ($detail['violations'] ?? []) as $violation) {
++        $id = (string) ($violation['quotaId'] ?? '') . ' ' . (string) ($violation['quotaMetric'] ?? '');
++        if (stripos($id, 'PerDay') !== FALSE) {
++          return TRUE;
++        }
++        if (stripos($id, 'PerMinute') !== FALSE) {
++          $per_minute = TRUE;
++        }
++      }
++    }
++    if ($per_minute) {
++      return FALSE;
++    }
++    return (bool) preg_match('/\bper day\b/i', $e->getMessage());
++  }
++
+ }
