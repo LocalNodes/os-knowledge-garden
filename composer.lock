@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "32983b6b97161dafbeaa756a35d07402",
+    "content-hash": "d360bd02337d3ce82a31e1507730c2a2",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -7005,29 +7005,32 @@
         },
         {
             "name": "drupal/siwe_login",
-            "version": "1.0.0-beta4",
+            "version": "1.0.0-beta5",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/siwe_login.git",
-                "reference": "1.0.0-beta4"
+                "reference": "1.0.0-beta5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta4.zip",
-                "reference": "1.0.0-beta4",
-                "shasum": "205e737c9e932523e5251c05d92f18de6aded2a0"
+                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta5.zip",
+                "reference": "1.0.0-beta5",
+                "shasum": "f4f25cf9a3f5a900266e0008eea6c94c0738c171"
             },
             "require": {
                 "drupal/core": "^10 || ^11",
                 "kornrunner/keccak": "^1.0",
-                "simplito/elliptic-php": "^1.0",
-                "web3p/web3.php": "^0.3.2"
+                "simplito/elliptic-php": "^1.0"
+            },
+            "suggest": {
+                "ext-gmp": "Faster signature checks. Not required: simplito/elliptic-php falls back to ext-bcmath. One of gmp or bcmath must be installed.",
+                "web3p/web3.php": "^0.3.2: enables ENS name lookup (reverse lookup and ENS validation). Without it, sign-in works and ENS features stay off."
             },
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-beta3",
-                    "datestamp": "1765229937",
+                    "version": "1.0.x-dev",
+                    "datestamp": "1793869187",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7053,7 +7056,8 @@
             "homepage": "https://www.drupal.org/project/siwe_login",
             "support": {
                 "source": "https://git.drupalcode.org/project/siwe_login"
-            }
+            },
+            "published-time": "2026-11-05T08:59:27+00:00"
         },
         {
             "name": "drupal/state_machine",

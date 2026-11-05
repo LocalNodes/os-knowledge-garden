@@ -25,9 +25,6 @@
         "kornrunner/keccak": "^1.0",
         "simplito/elliptic-php": "^1.0"
     },
-    "replace": {
-        "web3p/web3.php": "*"
-    },
     "repositories": [
         {
             "type": "composer",
@@ -91,9 +88,6 @@
             "drupal/ai_vdb_provider_qdrant": {
                 "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch",
                 "Fix filters type hint: accept array from prepareFilters in vectorSearch/querySearch": "patches/qdrant-provider-fix-filters-type-hint.patch"
-            },
-            "drupal/siwe_login": {
-                "Remove web3p/web3.php dependency (conflicts with psr/http-message ^2.0 from league/oauth2-server)": "patches/siwe-login-remove-web3php-dependency.patch"
             }
         },
         "patches-ignore": {
