@@ -1,5 +1,5 @@
 diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
-index 65896af..5d8d467 100644
+index 65896af..ab234d9 100644
 --- a/src/Plugin/AiProvider/GeminiProvider.php
 +++ b/src/Plugin/AiProvider/GeminiProvider.php
 @@ -7,7 +7,12 @@ namespace Drupal\gemini_provider\Plugin\AiProvider;
@@ -59,7 +59,7 @@ index 65896af..5d8d467 100644
      }
  
      return new EmbeddingsOutput($response->embedding->values, $response->toArray(), []);
-@@ -798,4 +813,42 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+@@ -798,4 +813,90 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
      return FALSE;
    }
  
@@ -81,11 +81,13 @@ index 65896af..5d8d467 100644
 +    $code = $e->getErrorCode();
 +    $status = $e->getErrorStatus();
 +    $message = $e->getMessage();
-+    // Gemini answers 429 RESOURCE_EXHAUSTED both for per-minute rate limits
-+    // and for an exhausted (daily or billing) quota; only the latter says
-+    // "exceeded your current quota".
++    // Gemini answers 429 RESOURCE_EXHAUSTED, with the same "You exceeded your
++    // current quota" text, for per-minute (RPM/TPM) limits and for per-day
++    // limits alike. Only a per-day limit is a quota the user must wait out;
++    // per-minute limits clear in seconds. Anything that is not clearly
++    // per-day is a rate limit, the friendlier "try again shortly".
 +    if ($code === 429 || $status === 'RESOURCE_EXHAUSTED') {
-+      return stripos($message, 'exceeded your current quota') !== FALSE
++      return static::isPerDayLimit($e)
 +        ? new AiQuotaException($message, $code, $e)
 +        : new AiRateLimitException($message, $code, $e);
 +    }
@@ -99,6 +101,52 @@ index 65896af..5d8d467 100644
 +      return new AiRequestErrorException($message, $code, $e);
 +    }
 +    return $e;
++  }
++
++  /**
++   * Whether a Gemini 429 is a per-day limit rather than a per-minute one.
++   *
++   * Reads the google.rpc.QuotaFailure violations in the error details
++   * (quotaId such as "GenerateRequestsPerDayPerProjectPerModel-FreeTier"),
++   * then falls back to the message text ("... per day limit exceeded ...").
++   * A RetryInfo retryDelay alone decides nothing: per-day errors carry one
++   * too ("Please retry in 19h24m...").
++   *
++   * @param \Gemini\Exceptions\ErrorException $e
++   *   The Gemini client exception.
++   *
++   * @return bool
++   *   TRUE only when the error clearly names a per-day limit.
++   */
++  protected static function isPerDayLimit(GeminiErrorException $e): bool {
++    // The client keeps the whole API error, details included, but exposes
++    // only code, message and status.
++    $details = [];
++    try {
++      $contents = (new \ReflectionProperty(GeminiErrorException::class, 'contents'))->getValue($e);
++      $details = is_array($contents['details'] ?? NULL) ? $contents['details'] : [];
++    }
++    catch (\ReflectionException) {
++    }
++    $per_minute = FALSE;
++    foreach ($details as $detail) {
++      if (!is_array($detail) || !str_ends_with((string) ($detail['@type'] ?? ''), 'google.rpc.QuotaFailure')) {
++        continue;
++      }
++      foreach ((array) ($detail['violations'] ?? []) as $violation) {
++        $id = (string) ($violation['quotaId'] ?? '') . ' ' . (string) ($violation['quotaMetric'] ?? '');
++        if (stripos($id, 'PerDay') !== FALSE) {
++          return TRUE;
++        }
++        if (stripos($id, 'PerMinute') !== FALSE) {
++          $per_minute = TRUE;
++        }
++      }
++    }
++    if ($per_minute) {
++      return FALSE;
++    }
++    return (bool) preg_match('/\bper day\b/i', $e->getMessage());
 +  }
 +
  }
