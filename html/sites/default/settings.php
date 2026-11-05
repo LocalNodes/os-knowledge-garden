@@ -126,12 +126,22 @@ $settings['trusted_host_patterns'][] = '^localhost$';
 // instance host must be allowed or every citation loses its link. Other hosts
 // stay blocked. DDEV hostnames are added for local development.
 // ---------------------------------------------------------------------------
-$ai_allowed_hosts = [];
-if ($fqdn) {
-  $ai_allowed_hosts[] = preg_replace('#^https?://#', '', $fqdn);
-}
+// Each comma-separated entry may be a bare host or a URL with a scheme, port or
+// path; only the host name is kept (parse_url needs a scheme to find it).
+$ai_host_sources = $fqdn ?: '';
 if (getenv('IS_DDEV_PROJECT') == 'true' && ($ddev_hosts = getenv('DDEV_HOSTNAME'))) {
-  $ai_allowed_hosts = array_merge($ai_allowed_hosts, array_filter(array_map('trim', explode(',', $ddev_hosts))));
+  $ai_host_sources .= ',' . $ddev_hosts;
+}
+$ai_allowed_hosts = [];
+foreach (explode(',', $ai_host_sources) as $ai_host_entry) {
+  $ai_host_entry = trim($ai_host_entry);
+  if ($ai_host_entry === '') {
+    continue;
+  }
+  $ai_host = parse_url(str_contains($ai_host_entry, '://') ? $ai_host_entry : 'https://' . $ai_host_entry, PHP_URL_HOST);
+  if (is_string($ai_host) && $ai_host !== '') {
+    $ai_allowed_hosts[] = strtolower($ai_host);
+  }
 }
 if ($ai_allowed_hosts) {
   $config['ai.settings']['allowed_hosts'] = array_values(array_unique($ai_allowed_hosts));
