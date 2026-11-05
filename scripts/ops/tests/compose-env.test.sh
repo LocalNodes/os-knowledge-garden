@@ -12,7 +12,7 @@
 #  2. Every getenv('KEY') in settings.php and localnodes_platform.install is in it.
 #  3. The entrypoint's mail, organizer and WEB3_ENABLED variables are in it.
 #  4. Resend SMTP is smtps:// (implicit TLS) on 2465 in the install hook and settings.php.
-# IS_DDEV_PROJECT is exempt (DDEV-only).
+# IS_DDEV_PROJECT and DDEV_HOSTNAME are exempt (DDEV-only).
 #
 # Usage: bash scripts/ops/tests/compose-env.test.sh   (env COMPOSE=... to test another copy)
 set -u
@@ -24,7 +24,7 @@ SETTINGS="${SETTINGS:-$REPO/html/sites/default/settings.php}"
 INSTALL="${INSTALL:-$REPO/html/modules/custom/localnodes_platform/localnodes_platform.install}"
 
 INTERPOLATION_ONLY="IMAGE_TAG"
-LOCAL_ONLY="IS_DDEV_PROJECT"   # set by DDEV only; never present in production
+LOCAL_ONLY="IS_DDEV_PROJECT DDEV_HOSTNAME"   # set by DDEV only; never present in production
 
 ENV_KEYS="$(ruby -ryaml -e '
   env = YAML.load_file(ARGV[0])["services"]["opensocial"]["environment"]

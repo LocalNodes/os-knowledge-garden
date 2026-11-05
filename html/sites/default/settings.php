@@ -119,6 +119,25 @@ if ($fqdn) {
 $settings['trusted_host_patterns'][] = '^localhost$';
 
 // ---------------------------------------------------------------------------
+// AI link filter: allow the instance's own host.
+// drupal/ai >= 1.4 strips every Markdown link in an AI answer whose host is not
+// in ai.settings:allowed_hosts (empty by default), keeping only the link text.
+// The chatbot cites sources as links to this site's own content, so the
+// instance host must be allowed or every citation loses its link. Other hosts
+// stay blocked. DDEV hostnames are added for local development.
+// ---------------------------------------------------------------------------
+$ai_allowed_hosts = [];
+if ($fqdn) {
+  $ai_allowed_hosts[] = preg_replace('#^https?://#', '', $fqdn);
+}
+if (getenv('IS_DDEV_PROJECT') == 'true' && ($ddev_hosts = getenv('DDEV_HOSTNAME'))) {
+  $ai_allowed_hosts = array_merge($ai_allowed_hosts, array_filter(array_map('trim', explode(',', $ddev_hosts))));
+}
+if ($ai_allowed_hosts) {
+  $config['ai.settings']['allowed_hosts'] = array_values(array_unique($ai_allowed_hosts));
+}
+
+// ---------------------------------------------------------------------------
 // DDEV integration (must be at bottom so overrides take precedence).
 // ---------------------------------------------------------------------------
 if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev.php')) {
