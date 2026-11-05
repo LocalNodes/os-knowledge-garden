@@ -50,6 +50,63 @@ check "scheme is stripped" '["cascadia.localnodes.xyz"]' "$(run SERVICE_FQDN_OPE
 check "no FQDN: ai.settings left alone" 'unset' "$(run)"
 check "DDEV hostnames are allowed in DDEV" '["fresh3.ddev.site","alt.ddev.site"]' "$(run IS_DDEV_PROJECT=true DDEV_HOSTNAME=fresh3.ddev.site,alt.ddev.site)"
 check "DDEV_HOSTNAME ignored outside DDEV" 'unset' "$(run DDEV_HOSTNAME=fresh3.ddev.site)"
+check "port and path dropped" '["boulder.localnodes.xyz"]' "$(run SERVICE_FQDN_OPENSOCIAL=https://boulder.localnodes.xyz:8443/sub/path)"
+check "host lowercased" '["boulder.localnodes.xyz"]' "$(run SERVICE_FQDN_OPENSOCIAL=Boulder.LocalNodes.xyz)"
+check "comma-separated FQDNs all allowed" '["a.localnodes.xyz","b.localnodes.xyz"]' "$(run SERVICE_FQDN_OPENSOCIAL=https://a.localnodes.xyz,b.localnodes.xyz)"
+check "FQDN plus DDEV, deduplicated" '["x.ddev.site"]' "$(run SERVICE_FQDN_OPENSOCIAL=x.ddev.site IS_DDEV_PROJECT=true DDEV_HOSTNAME=x.ddev.site)"
+check "garbage entry ignored" '["ok.localnodes.xyz"]' "$(run 'SERVICE_FQDN_OPENSOCIAL=https://,ok.localnodes.xyz')"
+
+# ---- Round trip through drupal/ai's real HostnameFilter (optional) ---------
+# Needs the built image, which carries drupal/ai and Drupal core. Set
+#   IMAGE_PHP="docker run --rm -i -v $PWD:/repo -w /repo --entrypoint php ghcr.io/localnodes/os-knowledge-garden:<sha7>"
+# settings.php -> Drupal's ConfigFactory ($GLOBALS['config'] overrides) ->
+# HostnameFilter::filterText(): the own-host link must survive, others must not.
+if [ -n "${IMAGE_PHP:-}" ]; then
+  RT="$($IMAGE_PHP -- "$SETTINGS" <<'PHP'
+<?php
+$root = '/var/www/html';
+$loader = require "$root/vendor/autoload.php";
+$loader->addPsr4('Drupal\\ai\\', "$root/html/modules/contrib/ai/src");
+$loader->addPsr4('Drupal\\Core\\', "$root/html/core/lib/Drupal/Core");
+$loader->addPsr4('Drupal\\Component\\', "$root/html/core/lib/Drupal/Component");
+new \Drupal\Core\Site\Settings([]);
+// Minimal stand-in for typed config (unused on reads), generated from the interface.
+$iface = new ReflectionClass(\Drupal\Core\Config\TypedConfigManagerInterface::class);
+$methods = [];
+foreach ($iface->getMethods() as $m) {
+  $params = [];
+  foreach ($m->getParameters() as $p) {
+    $s = ($p->hasType() ? $p->getType() . ' ' : '') . ($p->isPassedByReference() ? '&' : '') . '$' . $p->getName();
+    if ($p->isDefaultValueAvailable()) $s .= ' = ' . var_export($p->getDefaultValue(), TRUE);
+    $params[] = $s;
+  }
+  $rt = $m->hasReturnType() ? ': ' . $m->getReturnType() : '';
+  $body = ($m->hasReturnType() && (string) $m->getReturnType() === 'void') ? '' : 'throw new \LogicException("unused");';
+  $methods[] = ($m->isStatic() ? 'public static' : 'public') . " function {$m->getName()}(" . implode(', ', $params) . ")$rt { $body }";
+}
+eval('final class StubTyped implements \Drupal\Core\Config\TypedConfigManagerInterface {' . implode("\n", $methods) . '}');
+
+foreach (['SERVICE_FQDN_OPENSOCIAL', 'IS_DDEV_PROJECT', 'DDEV_HOSTNAME', 'DRUPAL_REVERSE_PROXY'] as $k) putenv($k);
+putenv('SERVICE_FQDN_OPENSOCIAL=boulder.localnodes.xyz');
+$app_root = "$root/html"; $site_path = 'sites/default';
+$settings = []; $config = []; $databases = [];
+require $argv[1];
+$GLOBALS['config'] = $config;
+
+$dispatcher = new \Symfony\Component\EventDispatcher\EventDispatcher();
+$factory = new \Drupal\Core\Config\ConfigFactory(new \Drupal\Core\Config\MemoryStorage(), $dispatcher, new StubTyped());
+$loggers = new \Drupal\Core\Logger\LoggerChannelFactory(new \Symfony\Component\HttpFoundation\RequestStack(), new \Drupal\Core\Session\AnonymousUserSession());
+$filter = new \Drupal\ai\Service\HostnameFilter($loggers, $factory);
+$md = "- [1] [Own](https://boulder.localnodes.xyz/node/17)\n- [2] [Other](https://other-site.org/x)\n";
+$out = $filter->filterText($md);
+echo (str_contains($out, '[Own](https://boulder.localnodes.xyz/node/17)') ? 'own=kept' : 'own=stripped')
+  . ' ' . (str_contains($out, 'other-site.org') ? 'other=kept' : 'other=stripped') . "\n";
+PHP
+)"
+  check "real HostnameFilter round trip" 'own=kept other=stripped' "$(printf '%s' "$RT" | tail -1)"
+else
+  echo "SKIP real HostnameFilter round trip (set IMAGE_PHP to run it)"
+fi
 
 echo "passed $PASS, failed $FAIL"
 [ "$FAIL" -eq 0 ]
