@@ -31,12 +31,15 @@ instructions: |-
 allow_history: session_one_thread
 history_context_length: '20'
 error_message: 'I encountered an error processing your request. Please try again.'
+# Must be non-empty: DeepChatApi falls back to error_message only when these are
+# null, so '' would reach the user as an empty error (seen on staging when the
+# Gemini free-tier quota ran out during post-install indexing).
 specific_error_messages:
-  AiBadRequestException: ''
-  AiRateLimitException: ''
-  AiQuotaException: ''
-  AiSetupFailureException: ''
-  AiRequestErrorException: ''
+  AiBadRequestException: 'I could not process that request. Please rephrase your question and try again.'
+  AiRateLimitException: 'I am getting a lot of requests right now. Please wait a minute and try again.'
+  AiQuotaException: 'I have reached my AI usage limit for now. Please try again later.'
+  AiSetupFailureException: 'I am not set up correctly yet. Please let a site administrator know.'
+  AiRequestErrorException: 'I could not reach my AI service just now. Please try again in a moment.'
 llm_provider: gemini
 llm_model: models/gemini-3-flash-preview
 llm_configuration:
