@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for LocalNodes Platform.
+ */
+
+use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
+use Drupal\symfony_mailer\EmailInterface;
+
+/**
+ * Implements hook_mailer_post_render().
+ *
+ * Never sends mail to reserved test domains (RFC 2606 / RFC 6761), such as the
+ * demo users' @localnodes.example addresses. symfony_mailer's "mailer_hooks"
+ * adjuster is automatic, so this runs for every email, including legacy
+ * MailManager mail such as Open Social's activity notifications.
+ */
+function localnodes_platform_mailer_post_render(EmailInterface $email): void {
+  ReservedRecipientFilter::apply($email, \Drupal::logger('localnodes_platform'));
+}
