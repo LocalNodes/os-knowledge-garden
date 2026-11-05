@@ -99,6 +99,19 @@ foreach ($cases as $name => [$contents, $want]) {
   $kept = ($out === $e || $out->getPrevious() === $e) ? 'kept' : 'lost';
   echo "RESULT $name $got $kept\n";
 }
+// isPerDayLimit() must not throw when the client's private $contents is
+// unreadable (here: uninitialized, so reading it raises \Error); it falls back
+// to the message text.
+if (method_exists($cls, 'isPerDayLimit')) {
+  $probe = new \ReflectionMethod($cls, 'isPerDayLimit');
+  foreach (['uninit-contents' => '', 'uninit-contents-per-day-text' => 'Generate content requests per day limit exceeded on Free Tier.'] as $name => $text) {
+    $bare = (new \ReflectionClass(\Gemini\Exceptions\ErrorException::class))->newInstanceWithoutConstructor();
+    (new \ReflectionProperty(\Exception::class, 'message'))->setValue($bare, $text);
+    try { echo "RESULT $name " . ($probe->invoke(NULL, $bare) ? 'per-day' : 'not-per-day') . "\n"; }
+    catch (\Throwable $t) { echo "RESULT $name threw-" . (new \ReflectionClass($t))->getShortName() . "\n"; }
+  }
+}
+else { echo "RESULT uninit-contents missing-classifier\nRESULT uninit-contents-per-day-text missing-classifier\n"; }
 $src = file_get_contents('/tmp/t/ai/modules/ai_chatbot/src/Controller/DeepChatApi.php');
 preg_match('/\$this->getLogger\(\'ai_chatbot\'\)->error\(.*?return new JsonResponse\(\[\s*\'error\' => \$error_message,\s*\], (\d+)\);/s', $src, $m);
 echo 'RESULT deepchat-status ' . ($m[1] ?? 'not-found') . "\n";
@@ -129,6 +142,8 @@ check bad-key 'AiSetupFailureException kept'
 check bad-input 'AiBadRequestException kept'
 check overloaded 'AiRequestErrorException kept'
 check unmapped 'ErrorException kept'
+check uninit-contents not-per-day
+check uninit-contents-per-day-text per-day
 check deepchat-status 200
 
 echo "passed $PASS, failed $FAIL"

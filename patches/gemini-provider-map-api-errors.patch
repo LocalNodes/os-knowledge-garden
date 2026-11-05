@@ -1,5 +1,5 @@
 diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
-index 65896af..ab234d9 100644
+index 65896af..c1030c3 100644
 --- a/src/Plugin/AiProvider/GeminiProvider.php
 +++ b/src/Plugin/AiProvider/GeminiProvider.php
 @@ -7,7 +7,12 @@ namespace Drupal\gemini_provider\Plugin\AiProvider;
@@ -59,7 +59,7 @@ index 65896af..ab234d9 100644
      }
  
      return new EmbeddingsOutput($response->embedding->values, $response->toArray(), []);
-@@ -798,4 +813,90 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+@@ -798,4 +813,92 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
      return FALSE;
    }
  
@@ -126,7 +126,9 @@ index 65896af..ab234d9 100644
 +      $contents = (new \ReflectionProperty(GeminiErrorException::class, 'contents'))->getValue($e);
 +      $details = is_array($contents['details'] ?? NULL) ? $contents['details'] : [];
 +    }
-+    catch (\ReflectionException) {
++    catch (\Throwable) {
++      // \ReflectionException if the client renames the property, \Error if
++      // it is an uninitialized typed property. Fall back to the message.
 +    }
 +    $per_minute = FALSE;
 +    foreach ($details as $detail) {
