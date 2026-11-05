@@ -61,7 +61,7 @@ final class ReservedRecipientFilter {
    * Drops reserved recipients from an email, or cancels it.
    *
    * Runs in symfony_mailer's post-render phase, when the recipient list is
-   * final. If no To recipient is left the send is cancelled with
+   * final. If no recipient is left in To, Cc or Bcc the send is cancelled with
    * SkipMailException, which symfony_mailer treats as a deliberate skip (no
    * error, no transport call).
    *
@@ -90,13 +90,14 @@ final class ReservedRecipientFilter {
       '@addresses' => implode(', ', $dropped),
     ];
 
-    if (!$kept['to']) {
+    if (!$kept['to'] && !$kept['cc'] && !$kept['bcc']) {
       $logger->notice('Dropped @type mail: every recipient is at a reserved test domain (@addresses).', $context);
       throw new SkipMailException('All recipients are at reserved test domains');
     }
 
-    // Some real recipients remain: send to them only. 'to' is normally locked
-    // after the build phase; the third argument is symfony_mailer's late-set
+    // Some real recipients remain (in To, Cc or Bcc): send to them only. A
+    // message with only Cc or Bcc recipients is still valid. 'to' is normally
+    // locked after the build phase; the third argument is symfony_mailer's late-set
     // path for legacy emails (BaseEmailTrait::setAddress()), which is what we
     // need here because the list is only final after rendering.
     $email->setAddress('to', $kept['to'], TRUE);

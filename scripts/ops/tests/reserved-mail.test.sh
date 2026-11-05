@@ -148,6 +148,30 @@ namespace {
   $hook($m);
   $check('reserved Cc-only dropped, To kept', $m->emails('cc') === [] && $m->emails('to') === ['drupal.tom@gmail.com']);
 
+  // 5. Reserved To but a real Cc: still sent, to the Cc only (Codex review on #32).
+  Drupal::$logger = new TestLogger();
+  $m = new TestEmail(['anna@localnodes.example'], ['drupal.tom@gmail.com']);
+  $threw = FALSE;
+  try { $hook($m); } catch (\Throwable $e) { $threw = get_class($e); }
+  $check('reserved To + real Cc is not skipped', $threw === FALSE, (string) $threw);
+  $check('  ...To emptied, real Cc kept', $m->emails('to') === [] && $m->emails('cc') === ['drupal.tom@gmail.com'], json_encode([$m->emails('to'), $m->emails('cc')]));
+  $check('  ...drop logged once at notice', count(Drupal::$logger->notices) === 1);
+
+  // 6. Reserved To but a real Bcc: still sent, to the Bcc only.
+  Drupal::$logger = new TestLogger();
+  $m = new TestEmail(['anna@localnodes.example'], ['c@example.org'], ['drupal.tom@gmail.com']);
+  $threw = FALSE;
+  try { $hook($m); } catch (\Throwable $e) { $threw = get_class($e); }
+  $check('reserved To + reserved Cc + real Bcc is not skipped', $threw === FALSE, (string) $threw);
+  $check('  ...To and Cc emptied, real Bcc kept', $m->emails('to') === [] && $m->emails('cc') === [] && $m->emails('bcc') === ['drupal.tom@gmail.com'], json_encode([$m->emails('to'), $m->emails('cc'), $m->emails('bcc')]));
+
+  // 7. Everything reserved across To, Cc and Bcc: skipped.
+  Drupal::$logger = new TestLogger();
+  $m = new TestEmail(['a@localnodes.example'], ['c@example.org'], ['b@foo.test']);
+  $skipped = FALSE;
+  try { $hook($m); } catch (SkipMailException $e) { $skipped = TRUE; }
+  $check('reserved To + Cc + Bcc is skipped', $skipped);
+
   echo "passed $pass, failed $fail\n";
   exit($fail ? 1 : 0);
 }
