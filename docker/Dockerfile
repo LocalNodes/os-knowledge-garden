@@ -117,12 +117,23 @@ COPY html/modules/custom/ /var/www/html/html/modules/custom/
 # config directory would only be stale, misleading, and image bloat.
 
 # Create writable directories (files dir not in source, created at build time)
+#
+# /var/www/html/config/sync is the configuration sync directory that
+# settings.php names (../config/sync). It ships EMPTY and stays empty: it is not
+# a revived config export, and nothing runs config:import (CLAUDE.md, "Config
+# Management Philosophy"). It exists only because Drupal's requirements check
+# reports an error on every updatedb when the directory is missing, and the
+# copy site:install creates lives in the container layer, so a redeploy loses
+# it. Core writes an .htaccess into it, so it must be writable by www-data.
+# Test: scripts/ops/tests/config-sync-dir.test.sh
 RUN mkdir -p /var/www/html/html/sites/default/files \
-    && mkdir -p /var/www/private
+    && mkdir -p /var/www/private \
+    && mkdir -p /var/www/html/config/sync
 
 # Set ownership and permissions for writable directories
 RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
     && chown -R www-data:www-data /var/www/private \
+    && chown -R www-data:www-data /var/www/html/config/sync \
     && chmod 755 /var/www/html/html/sites/default
 
 # Copy and configure entrypoint
