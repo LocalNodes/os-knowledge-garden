@@ -17,7 +17,7 @@
         "drupal/ai_file_to_text": "^1.0",
         "drupal/search_api": "^1.40",
         "drupal/gemini_provider": "1.x-dev",
-        "league/commonmark": "^2.8",
+        "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
         "drupal/siwe_login": "^1.0",
         "drupal/safe_smart_accounts": "^1.0",
