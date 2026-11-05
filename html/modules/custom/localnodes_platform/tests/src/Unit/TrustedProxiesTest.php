@@ -21,10 +21,9 @@ use Symfony\Component\HttpFoundation\Request;
  * Cloudflare's ranges. Drupal's ReverseProxyMiddleware calls
  * Request::setTrustedProxies() with that list, as this test does.
  *
- * Outcome A (Traefik trusts Cloudflare, forwardedHeaders.trustedIPs):
- * Traefik keeps Cloudflare's X-Forwarded-For and appends the edge, so the
- * list alone resolves the client. The CF-Connecting-IP path (outcome B) is
- * CloudflareClientIpTest.
+ * Traefik trusts Cloudflare (forwardedHeaders.trustedIPs, Tom's choice A on
+ * 2026-11-05), so it keeps Cloudflare's X-Forwarded-For and appends the
+ * edge, and the list alone resolves the client.
  *
  * @group localnodes_platform
  */
@@ -92,8 +91,10 @@ final class TrustedProxiesTest extends UnitTestCase {
   }
 
   /**
-   * No usable container IPv4 (none, loopback, IPv6, garbage): Cloudflare
-   * only, so Traefik is untrusted (safe; limits go site-wide).
+   * No usable container IPv4 means Cloudflare only.
+   *
+   * None, loopback, IPv6 or garbage: Traefik is then untrusted (safe; per-IP
+   * limits go site-wide).
    */
   public function testNoContainerIpTrustsCloudflareOnly(): void {
     foreach ([NULL, '127.0.0.1', '::1', 'fe80::1', 'not-an-ip', ''] as $ip) {
@@ -135,18 +136,18 @@ final class TrustedProxiesTest extends UnitTestCase {
   }
 
   /**
-   * Outcome A: client -> CF -> Traefik (keeps CF's XFF) yields the client.
+   * Client -> CF -> Traefik (keeps CF's XFF) yields the client.
    */
-  public function testOutcomeARealChainYieldsClient(): void {
+  public function testChainThroughCloudflareYieldsClient(): void {
     $list = localnodes_trusted_proxies(self::APP_IP, NULL);
     $this->assertSame(self::CLIENT, $this->clientIp($list, self::TRAEFIK, self::CLIENT . ', ' . self::CF_EDGE));
     $this->assertSame(self::CLIENT_V6, $this->clientIp($list, self::TRAEFIK, self::CLIENT_V6 . ', ' . self::CF_EDGE_V6));
   }
 
   /**
-   * Outcome A: forged entries via CF or direct to the VPS show the sender.
+   * Forged entries via CF or direct to the VPS show the sender.
    */
-  public function testOutcomeAForgedHeaderYieldsSender(): void {
+  public function testForgedHeaderYieldsSender(): void {
     $list = localnodes_trusted_proxies(self::APP_IP, NULL);
     $this->assertSame(self::ATTACKER, $this->clientIp($list, self::TRAEFIK, '1.2.3.4, ' . self::ATTACKER . ', ' . self::CF_EDGE));
     $this->assertSame(self::ATTACKER, $this->clientIp($list, self::TRAEFIK, '1.2.3.4, ' . self::ATTACKER));

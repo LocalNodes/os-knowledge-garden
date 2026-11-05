@@ -97,9 +97,8 @@ if ($eth_rpc = getenv('ETHEREUM_PROVIDER_URL')) {
 
 // ---------------------------------------------------------------------------
 // Reverse proxy support (Coolify: Cloudflare -> Traefik -> Drupal).
-// Only Cloudflare's edge and the instance's Traefik network
-// (DRUPAL_TRUSTED_PROXIES) may set X-Forwarded-For/-Proto; see
-// trusted-proxies.php.
+// Only Cloudflare's edge and Traefik on this app's own network may set
+// X-Forwarded-For/-Proto; see trusted-proxies.php.
 // ---------------------------------------------------------------------------
 if (getenv('DRUPAL_REVERSE_PROXY') === 'true') {
   $settings['reverse_proxy'] = TRUE;

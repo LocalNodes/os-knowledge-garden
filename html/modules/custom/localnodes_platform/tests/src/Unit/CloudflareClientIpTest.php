@@ -9,9 +9,10 @@ use Drupal\Tests\UnitTestCase;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Outcome B: Traefik does not trust Cloudflare (no forwardedHeaders).
+ * Fallback for a Traefik that lost its Cloudflare trustedIPs setting.
  *
- * Traefik then replaces X-Forwarded-For with the single hop it saw (the
+ * Traefik normally trusts Cloudflare (Tom's choice A). If that setting is
+ * dropped, Traefik replaces X-Forwarded-For with the single hop it saw (the
  * Cloudflare edge, or a direct attacker). CloudflareClientIp uses
  * CF-Connecting-IP as the client only when all three hold:
  * - REMOTE_ADDR is in the app subnet (Traefik);
@@ -39,6 +40,11 @@ final class CloudflareClientIpTest extends UnitTestCase {
   private const ATTACKER = '198.51.100.9';
 
   /**
+   * Whether the last clientIp() call used the fallback.
+   */
+  private bool $rewrote = FALSE;
+
+  /**
    * {@inheritdoc}
    */
   protected function tearDown(): void {
@@ -60,7 +66,7 @@ final class CloudflareClientIpTest extends UnitTestCase {
       $server['HTTP_CF_CONNECTING_IP'] = $cfConnectingIp;
     }
     $request = Request::create('https://cascadia.localnodes.xyz/siwe/nonce', 'GET', [], [], [], $server);
-    CloudflareClientIp::apply($request, self::APP_SUBNETS);
+    $this->rewrote = CloudflareClientIp::apply($request, self::APP_SUBNETS, localnodes_cloudflare_ranges());
     return $request->getClientIp();
   }
 
@@ -69,15 +75,18 @@ final class CloudflareClientIpTest extends UnitTestCase {
    */
   public function testCloudflareVisitorYieldsConnectingIp(): void {
     $this->assertSame(self::CLIENT, $this->clientIp(self::TRAEFIK, self::CF_EDGE, self::CLIENT));
+    $this->assertTrue($this->rewrote);
     $this->assertSame(self::CLIENT_V6, $this->clientIp(self::TRAEFIK, self::CF_EDGE_V6, self::CLIENT_V6));
   }
 
   /**
-   * Direct hit with a forged CF-Connecting-IP: Traefik's hop is the
-   * attacker (not Cloudflare), so the header is ignored.
+   * A direct hit with a forged CF-Connecting-IP is ignored.
+   *
+   * Traefik's hop is then the attacker, not a Cloudflare edge.
    */
   public function testDirectForgedConnectingIpIsIgnored(): void {
     $this->assertSame(self::ATTACKER, $this->clientIp(self::TRAEFIK, self::ATTACKER, '1.2.3.4'));
+    $this->assertFalse($this->rewrote);
   }
 
   /**
@@ -104,11 +113,14 @@ final class CloudflareClientIpTest extends UnitTestCase {
   }
 
   /**
-   * More than one X-Forwarded-For hop means Traefik did not replace the
-   * header (outcome A or misconfiguration): no rewrite.
+   * A two-hop X-Forwarded-For is not rewritten.
+   *
+   * Traefik kept Cloudflare's header (it trusts Cloudflare), so the
+   * fallback isn't needed.
    */
   public function testMultiHopHeaderIsNotRewritten(): void {
     $this->assertSame(self::CLIENT, $this->clientIp(self::TRAEFIK, self::CLIENT . ', ' . self::CF_EDGE, '1.2.3.4'));
+    $this->assertFalse($this->rewrote, 'Two-hop chain (Traefik trusts Cloudflare) leaves the fallback unused');
   }
 
   /**
