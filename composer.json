@@ -77,10 +77,12 @@
         "patches": {
             "drupal/ai": {
                 "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch",
-                "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch"
+                "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch",
+                "AI Chatbot: return provider errors as a handled chat error (HTTP 200), not 500": "patches/ai-chatbot-provider-error-200.patch"
             },
             "drupal/gemini_provider": {
-                "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch"
+                "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch",
+                "Map Gemini API errors (429 quota/rate limit, 401/403, 400, 5xx) to the AI module exception types": "patches/gemini-provider-map-api-errors.patch"
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
