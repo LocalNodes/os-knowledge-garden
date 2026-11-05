@@ -12,3 +12,12 @@ node_modules/
 vendor/
 .env
 .env.*
+
+# Composer-managed code is installed (and patched) by the builder's composer
+# install. `COPY html/ html/` must never lay a local or committed copy over it:
+# that silently undoes patches/ (see scripts/ops/tests/no-tracked-contrib.test.sh).
+html/core/
+html/modules/contrib/
+html/profiles/contrib/
+html/themes/contrib/
+html/libraries/
