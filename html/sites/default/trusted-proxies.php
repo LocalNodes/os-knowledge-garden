@@ -2,31 +2,26 @@
 
 /**
  * @file
- * Reverse proxies whose X-Forwarded-* headers Drupal trusts.
+ * Reverse proxies whose X-Forwarded-For/-Proto headers Drupal trusts.
  *
  * The request chain on Coolify is client -> Cloudflare -> Traefik -> Drupal.
- * Drupal must trust both hops so X-Forwarded-For resolves to the real
- * client: Traefik and the Docker networks (private ranges), and Cloudflare's
- * edge. Anything else, such as a direct hit on the VPS IP with a forged
- * header, still shows the sender's own address. Trusting every address
- * (0.0.0.0/0) would let any client pick its IP and walk past per-IP flood
- * control (core login, siwe_login TM-24).
+ * For X-Forwarded-For to resolve to the real client, Drupal must trust both
+ * hops: Cloudflare's edge, and the Traefik container's own network.
  *
- * Override per instance with DRUPAL_TRUSTED_PROXIES: a comma- or
- * space-separated list of IPs or CIDR ranges that replaces this default.
+ * Only that exact Traefik network is trusted, never whole private ranges:
+ * the VPS is shared with other apps and containers, and any neighbour that
+ * is trusted could forge X-Forwarded-For. Set the network per instance with
+ * DRUPAL_TRUSTED_PROXIES: a comma- or space-separated list of IPs or CIDR
+ * ranges (normally the Docker network Traefik reaches this app on). It is
+ * ADDED to Cloudflare's ranges, so an instance can't drop Cloudflare by
+ * accident. Without it, Traefik is untrusted and every visitor appears as
+ * Traefik's address (safe, but per-IP flood limits then apply site-wide).
+ *
+ * Trusting every address (0.0.0.0/0) would let any client pick its IP and
+ * walk past per-IP flood control (core login, siwe_login TM-24).
  *
  * Returns the list of trusted proxy addresses.
  */
-
-// Private ranges: Traefik and the Docker networks it reaches Drupal on.
-$private = [
-  '10.0.0.0/8',
-  '172.16.0.0/12',
-  '192.168.0.0/16',
-  '127.0.0.1',
-  '::1',
-  'fc00::/7',
-];
 
 // Cloudflare edge ranges, from https://www.cloudflare.com/ips-v4 and
 // https://www.cloudflare.com/ips-v6, fetched 2026-11-05. Re-check when
@@ -56,9 +51,10 @@ $cloudflare = [
   '2c0f:f248::/32',
 ];
 
-$override = getenv('DRUPAL_TRUSTED_PROXIES');
-if (is_string($override) && trim($override) !== '') {
-  return array_values(array_filter(preg_split('/[\s,]+/', trim($override))));
+$instance = [];
+$env = getenv('DRUPAL_TRUSTED_PROXIES');
+if (is_string($env) && trim($env) !== '') {
+  $instance = array_values(array_filter(preg_split('/[\s,]+/', trim($env))));
 }
 
-return array_merge($private, $cloudflare);
+return array_values(array_unique(array_merge($instance, $cloudflare)));

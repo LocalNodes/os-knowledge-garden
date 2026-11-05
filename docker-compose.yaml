@@ -12,6 +12,10 @@ services:
       DRUPAL_HASH_SALT: ${DRUPAL_HASH_SALT:-generate-random}
       DRUPAL_TRUSTED_HOST_PATTERNS: ${DRUPAL_TRUSTED_HOST_PATTERNS:-}
       DRUPAL_REVERSE_PROXY: "true"
+      # The Docker network Traefik reaches this app on (CIDR, comma-separated), trusted for
+      # X-Forwarded-For on top of Cloudflare's ranges (html/sites/default/trusted-proxies.php).
+      # Empty = Traefik untrusted: visitors show as Traefik's IP and per-IP flood limits go site-wide.
+      DRUPAL_TRUSTED_PROXIES: ${DRUPAL_TRUSTED_PROXIES:-}
       SOLR_HOST: solr
       SOLR_PORT: 8983
       SOLR_PATH: /solr
