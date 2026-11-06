@@ -233,8 +233,10 @@ run_post_install() {
       count_query "organizer accounts" 'echo count(\Drupal::entityTypeManager()->getStorage("user")->loadByProperties(["mail" => getenv("ORGANIZER_EMAIL")]));'
       if [ "$COUNT" -gt 0 ] && ! step_done organizer_account; then
         echo "Organizer account exists from an install made before the step markers; adopting it (no second welcome email)."
-        mark_step organizer_account
+        # mail_sent first: if the second write fails, the next start skips
+        # (mail_sent is marked) instead of resending.
         mark_step organizer_mail_sent
+        mark_step organizer_account
       else
         if [ "$COUNT" -eq 0 ]; then
           provision_callback "creating_user" ",\"site_url\":\"$SITE_URI\""
@@ -256,8 +258,15 @@ run_post_install() {
         # Send welcome email via Resend
         provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
         if [ -n "$RESEND_API_KEY" ]; then
+          # Idempotency-Key: Resend drops a second send with the same key for
+          # 24 h. It is stable per site and organizer, so a retry after a lost
+          # response or a failed marker write cannot mail twice. A retry carries
+          # a new login link (a different body), which Resend answers with 409:
+          # the first email, whose link still works, went out.
+          WELCOME_KEY="welcome-$(printf '%s\n%s' "$SITE_URI" "$ORGANIZER_EMAIL" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -d' ' -f1)"
           EMAIL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
             -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Idempotency-Key: $WELCOME_KEY" \
             -H "Content-Type: application/json" \
             -d "{
               \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
@@ -268,6 +277,9 @@ run_post_install() {
           EMAIL_CODE=$(echo "$EMAIL_RESPONSE" | tail -1)
           if [ "$EMAIL_CODE" = "200" ]; then
             echo "Welcome email sent to $ORGANIZER_EMAIL"
+            mark_step organizer_mail_sent
+          elif [ "$EMAIL_CODE" = "409" ]; then
+            echo "Welcome email already accepted by Resend under this idempotency key (HTTP 409); not sending again."
             mark_step organizer_mail_sent
           else
             echo "WARNING: Welcome email failed (HTTP $EMAIL_CODE); not marked as sent."

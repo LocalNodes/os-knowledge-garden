@@ -50,10 +50,23 @@ new_site() {  # new_site -> prints a fresh state dir with stubs
   local t; t="$(mktemp -d "$TOP/site.XXXXXX")"
   mkdir -p "$t/bin" "$t/state"
   for c in nc chown sleep; do printf '#!/bin/sh\nexit 0\n' > "$t/bin/$c"; done
-  # curl: logs Resend calls and answers 200 (body, then the status line).
+  # curl: a fake Resend. Logs each call's Idempotency-Key (keys), and mail it
+  # accepted (mail). A key it already accepted gets 409, as Resend answers a
+  # reused key with a different body. LOSE_RESPONSE=1: accepts the mail but the
+  # caller sees no response (status 000).
   cat > "$t/bin/curl" <<'CURL'
 #!/bin/sh
-case "$*" in *api.resend.com*) echo "resend" >> "$SITE/mail"; printf '{}\n200\n' ;; esac
+case "$*" in *api.resend.com*) ;; *) exit 0 ;; esac
+key=""; prev=""
+for a in "$@"; do
+  [ "$prev" = "-H" ] && case "$a" in Idempotency-Key:*) key="${a#Idempotency-Key: }" ;; esac
+  prev="$a"
+done
+echo "${key:-<none>}" >> "$SITE/keys"
+if [ -n "$key" ] && grep -qxF "$key" "$SITE/accepted" 2>/dev/null; then printf '{}\n409\n'; exit 0; fi
+echo "$key" >> "$SITE/accepted"; echo "resend" >> "$SITE/mail"
+if [ "${LOSE_RESPONSE:-0}" = 1 ]; then printf '\n000\n'; exit 0; fi
+printf '{}\n200\n'
 exit 0
 CURL
   printf '#!/bin/sh\necho deadbeef\n' > "$t/bin/openssl"
@@ -72,7 +85,7 @@ case "$cmd" in
   status) [ -f "$SITE/installed" ] && echo "Successful" ;;
   site:install) touch "$SITE/installed" ;;
   state:get) [ "${FAIL_STATE:-0}" = 1 ] && exit 1; [ -f "$SITE/state/$1" ] && cat "$SITE/state/$1" ;;
-  state:set) printf '%s' "$2" > "$SITE/state/$1" ;;
+  state:set) [ -n "${FAIL_SET_KEY:-}" ] && [ "$1" = "$FAIL_SET_KEY" ] && exit 1; printf '%s' "$2" > "$SITE/state/$1" ;;
   php:eval)
     case "$1" in
       *'"node"'*) [ "${FAIL_NODE_COUNT:-0}" = 1 ] && exit 1; cat "$SITE/nodes" 2>/dev/null || echo 0 ;;
@@ -198,6 +211,28 @@ rc="$(run_ep "$t" $ORG)"
 check "organizer legacy: adopted" yes "$(has "$t/out" "Organizer account exists from an install made before the step markers; adopting it")"
 check "organizer legacy: no user:create, no uli, no email" "0 0 0" "$(calls "$t" "user:create") $(calls "$t" "uli") $(mails "$t")"
 check "organizer legacy: demo content adopted, not reloaded" "0 yes" "$(calls "$t" "social-demo:add") $(has "$t/out" "adopting it as loaded")"
+
+# 5e. Adoption writes organizer_mail_sent first: if the organizer_account write
+#     then fails, the next start skips the organizer, with no email.
+t="$(new_site)"; touch "$t/installed" "$t/organizer"; echo 18 > "$t/nodes"
+rc="$(run_ep "$t" $ORG FAIL_SET_KEY=localnodes.install_step.organizer_account)"
+check "adoption, second write fails: stops (non-zero), mail_sent already marked" "yes yes" "$([ "$rc" != 0 ] && echo yes || echo no) $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+rc="$(run_ep "$t" $ORG)"
+check "adoption, restart: skipped, no uli, no email" "yes 0 0" "$(has "$t/out" "Organizer already provisioned and emailed; skipping.") $(calls "$t" "uli") $(mails "$t")"
+
+# 5f. The welcome POST carries an Idempotency-Key that is stable across runs.
+#     Resend accepted the mail but the mail_sent write failed: the restart sends
+#     again with the SAME key, gets 409, marks it sent; one email in total.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG FAIL_SET_KEY=localnodes.install_step.organizer_mail_sent)"
+check "lost marker: first run stops after Resend accepted (one email)" "yes 1" "$([ "$rc" != 0 ] && echo yes || echo no) $(mails "$t")"
+rc="$(run_ep "$t" $ORG)"
+k1="$(sed -n 1p "$t/keys")"; k2="$(sed -n 2p "$t/keys")"
+check "idempotency key present on the welcome POST (welcome-<sha256>)" yes "$(printf '%s' "$k1" | grep -qE '^welcome-[0-9a-f]{64}$' && echo yes || echo "no ($k1)")"
+check "idempotency key stable across runs" "$k1" "$k2"
+check "lost marker, restart: Resend 409, marked sent, still one email" "yes yes 1" "$(has "$t/out" "already accepted by Resend under this idempotency key (HTTP 409)") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $(mails "$t")"
+t2="$(new_site)"; rc="$(run_ep "$t2" ORGANIZER_EMAIL=other@example.org ORGANIZER_NAME=Test RESEND_API_KEY=test)"
+check "idempotency key differs for another organizer" yes "$([ "$(sed -n 1p "$t2/keys")" != "$k1" ] && echo yes || echo no)"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \
