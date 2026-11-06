@@ -5,6 +5,9 @@
 #     specific message reaches the user as {"error":""}.
 #  2. localnodes_platform depends on drupal:dblog, so a fresh install keeps the
 #     watchdog log (the only place the AI provider's real error is recorded).
+#  3. localnodes_platform ships symfony_mailer's test-email policy with a
+#     non-empty subject. Open Social deletes the module's own copy at install,
+#     and Resend refuses mail without a subject (550, staging 2026-11-06).
 # Usage: bash scripts/ops/tests/install-config.test.sh   (env ASSISTANT=..., INFO=... to test other copies)
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -27,6 +30,17 @@ if [ -z "$OUT" ]; then ok; else while IFS= read -r k; do bad "group_assistant $k
 
 if ruby -ryaml -e 'exit((YAML.load_file(ARGV[0])["dependencies"] || []).include?("drupal:dblog") ? 0 : 1)' "$INFO"; then ok
 else bad "localnodes_platform.info.yml does not depend on drupal:dblog"; fi
+
+POLICY="${POLICY:-$M/config/optional/symfony_mailer.mailer_policy.symfony_mailer.test.yml}"
+if [ ! -f "$POLICY" ]; then bad "symfony_mailer test-email policy not shipped ($POLICY)"
+elif ruby -ryaml -e '
+  p = YAML.load_file(ARGV[0])
+  ok = p["id"] == "symfony_mailer.test" &&
+       !p.dig("configuration", "email_subject", "value").to_s.strip.empty? &&
+       !p.dig("configuration", "email_body", "content", "value").to_s.strip.empty? &&
+       (p.dig("dependencies", "module") || []).include?("symfony_mailer")
+  exit(ok ? 0 : 1)' "$POLICY"; then ok
+else bad "symfony_mailer test-email policy has no id/subject/body/module dependency"; fi
 
 echo "passed: $PASS  failed: $FAIL"
 [ "$FAIL" -eq 0 ]
