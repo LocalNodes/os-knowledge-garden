@@ -12,7 +12,8 @@
 #  2. Every getenv('KEY') in settings.php, trusted-proxies.php and localnodes_platform.install is in it.
 #  3. The entrypoint's mail, organizer and WEB3_ENABLED variables are in it.
 #  4. Resend SMTP is smtps:// (implicit TLS) on 2465 in the install hook and settings.php.
-# IS_DDEV_PROJECT and DDEV_HOSTNAME are exempt (DDEV-only).
+# IS_DDEV_PROJECT and DDEV_HOSTNAME are exempt (DDEV-only). LOCALNODES_DEFER_INDEXING
+# is exempt too: the entrypoint sets it for one drush command, never for the container.
 #
 # Usage: bash scripts/ops/tests/compose-env.test.sh   (env COMPOSE=... to test another copy)
 set -u
@@ -25,7 +26,7 @@ INSTALL="${INSTALL:-$REPO/html/modules/custom/localnodes_platform/localnodes_pla
 PROXIES="${PROXIES:-$REPO/html/sites/default/trusted-proxies.php}"
 
 INTERPOLATION_ONLY="IMAGE_TAG"
-LOCAL_ONLY="IS_DDEV_PROJECT DDEV_HOSTNAME"   # set by DDEV only; never present in production
+LOCAL_ONLY="IS_DDEV_PROJECT DDEV_HOSTNAME LOCALNODES_DEFER_INDEXING"   # DDEV-only, or per-command (entrypoint demo load); never container env
 
 ENV_KEYS="$(ruby -ryaml -e '
   env = YAML.load_file(ARGV[0])["services"]["opensocial"]["environment"]

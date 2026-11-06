@@ -2,7 +2,7 @@
 set -e
 
 SITE_URI="${SERVICE_URL_OPENSOCIAL:-http://localhost}"
-DRUSH="/var/www/html/vendor/bin/drush -r /var/www/html/html --uri=$SITE_URI"
+DRUSH="${LOCALNODES_DRUSH:-/var/www/html/vendor/bin/drush} -r /var/www/html/html --uri=$SITE_URI"
 
 # --- Auto-generate hash salt if using default sentinel value ---
 if [ "$DRUPAL_HASH_SALT" = "generate-random" ] || [ -z "$DRUPAL_HASH_SALT" ]; then
@@ -46,25 +46,36 @@ fi
 chown -R www-data:www-data /var/www/html/html/sites/default/files 2>/dev/null || true
 chown -R www-data:www-data /var/www/private 2>/dev/null || true
 
-# --- Detect install state ---
-# Use drush bootstrap check instead of raw MySQL query (more reliable, avoids spurious reinstall on DB connection issues)
-INSTALLED=false
-if $DRUSH status --field=bootstrap 2>/dev/null | grep -q 'Successful'; then
-  INSTALLED=true
-fi
+# --- Install completion marker ---
+# A Drupal state key, so it lives in the database and goes with the install.
+# It is written only after every post-install step below has run. A database
+# that bootstraps but has no marker is an install that stopped part-way (for
+# example the container was killed or a step failed): the next start resumes
+# the post-install steps instead of taking the redeploy path, which would skip
+# them for good and still print READY (staging, 2026-11-06).
+# Test: scripts/ops/tests/install-resume.test.sh
+INSTALL_MARKER="localnodes.install_complete"
+install_marker_present() {
+  [ -n "$($DRUSH state:get "$INSTALL_MARKER" 2>/dev/null)" ]
+}
+step_done() {      # step_done NAME: the step finished on an earlier run
+  [ -n "$($DRUSH state:get "localnodes.install_step.$1" 2>/dev/null)" ]
+}
+mark_step() {      # mark_step NAME
+  $DRUSH state:set "localnodes.install_step.$1" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+# Index steps are allowed to fail: an AI quota or a slow Solr must not stop the
+# install or the container. Items that did not index stay tracked, and cron
+# indexes them later.
+soft() {           # soft LABEL CMD...
+  local label="$1" rc=0; shift
+  "$@" || rc=$?
+  [ "$rc" -eq 0 ] && return 0
+  echo "WARNING: $label failed (exit $rc); continuing. Unindexed items stay tracked for cron."
+}
 
-if [ "$INSTALLED" = false ]; then
-  echo "=== FRESH INSTALL ==="
-
-  # Install Open Social
-  $DRUSH site:install social \
-    --site-name="${DRUPAL_SITE_NAME:-LocalNodes}" \
-    --account-name="${DRUPAL_ADMIN_USER:-admin}" \
-    --account-pass="${DRUPAL_ADMIN_PASS:-admin}" \
-    --account-mail="${DRUPAL_ADMIN_EMAIL:-admin@example.com}" \
-    --db-url="mysql://${DB_USER:-opensocial}:${DB_PASSWORD:-changeme}@${DB_HOST:-mariadb}:${DB_PORT:-3306}/${DB_NAME:-opensocial}" \
-    -y
-
+# Every step after site:install. Each one is safe to run again on resume.
+run_post_install() {
   # Enable LocalNodes platform (AI config, block placement, Solr/Qdrant overrides)
   echo "Enabling localnodes_platform..."
   $DRUSH en localnodes_platform -y
@@ -93,63 +104,85 @@ if [ "$INSTALLED" = false ]; then
     echo "Enabling demo module: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y
 
-    # Load demo content using the correct plugin IDs for the demo module.
-    # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
-    # with a module-specific prefix (e.g., localnodes_user, boulder_user).
-    # The base social_demo uses unprefixed IDs (user, group, etc.).
-    echo "Loading demo content for $DEMO_MODULE..."
-    case "$DEMO_MODULE" in
-      localnodes_demo)
-        PLUGIN_PREFIX="localnodes"
-        ;;
-      boulder_demo)
-        PLUGIN_PREFIX="boulder"
-        ;;
-      portland_demo)
-        PLUGIN_PREFIX="portland"
-        ;;
-      *)
-        # Default: use social_demo's unprefixed plugin IDs
-        PLUGIN_PREFIX=""
-        ;;
-    esac
-
-    if [ -n "$PLUGIN_PREFIX" ]; then
-      $DRUSH social-demo:add \
-        ${PLUGIN_PREFIX}_file \
-        ${PLUGIN_PREFIX}_user_terms \
-        ${PLUGIN_PREFIX}_event_type \
-        ${PLUGIN_PREFIX}_user \
-        ${PLUGIN_PREFIX}_group \
-        ${PLUGIN_PREFIX}_topic \
-        ${PLUGIN_PREFIX}_event \
-        ${PLUGIN_PREFIX}_event_enrollment \
-        ${PLUGIN_PREFIX}_comment \
-        ${PLUGIN_PREFIX}_post \
-        ${PLUGIN_PREFIX}_like
+    # social-demo:add is not idempotent (it re-creates nodes, groups and users),
+    # so it runs once: skipped when its step is marked, or when an install that
+    # predates the step markers already holds content.
+    NODE_COUNT="$($DRUSH php:eval 'echo \Drupal::entityQuery("node")->accessCheck(FALSE)->count()->execute();' 2>/dev/null || echo 0)"
+    if step_done demo_content; then
+      echo "Demo content already loaded; skipping."
+    elif [ "${NODE_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+      echo "WARNING: $NODE_COUNT nodes exist but the demo content step is not marked; not reloading it (social-demo:add is not idempotent)."
+      mark_step demo_content
     else
-      $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+      # Load demo content using the correct plugin IDs for the demo module.
+      # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
+      # with a module-specific prefix (e.g., localnodes_user, boulder_user).
+      # The base social_demo uses unprefixed IDs (user, group, etc.).
+      echo "Loading demo content for $DEMO_MODULE..."
+      case "$DEMO_MODULE" in
+        localnodes_demo)
+          PLUGIN_PREFIX="localnodes"
+          ;;
+        boulder_demo)
+          PLUGIN_PREFIX="boulder"
+          ;;
+        portland_demo)
+          PLUGIN_PREFIX="portland"
+          ;;
+        *)
+          # Default: use social_demo's unprefixed plugin IDs
+          PLUGIN_PREFIX=""
+          ;;
+      esac
+
+      # LOCALNODES_DEFER_INDEXING=1 turns off direct (post-request) indexing for
+      # this one command (settings.php), so no embedding call runs inside it.
+      if [ -n "$PLUGIN_PREFIX" ]; then
+        LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add \
+          ${PLUGIN_PREFIX}_file \
+          ${PLUGIN_PREFIX}_user_terms \
+          ${PLUGIN_PREFIX}_event_type \
+          ${PLUGIN_PREFIX}_user \
+          ${PLUGIN_PREFIX}_group \
+          ${PLUGIN_PREFIX}_topic \
+          ${PLUGIN_PREFIX}_event \
+          ${PLUGIN_PREFIX}_event_enrollment \
+          ${PLUGIN_PREFIX}_comment \
+          ${PLUGIN_PREFIX}_post \
+          ${PLUGIN_PREFIX}_like
+      else
+        LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+      fi
+      mark_step demo_content
     fi
   else
     echo "DEMO_MODULE=none — skipping demo content"
   fi
 
-  # Index Solr
+  # Index Solr (and the vector indexes). Non-fatal: see soft() above.
   echo "Indexing content in Solr..."
-  $DRUSH search-api:index
+  soft "search-api:index" $DRUSH search-api:index
 
   # Run cron 3x for vector embedding queue processing
   echo "Running cron for vector indexing (3 passes)..."
-  $DRUSH cron
+  soft "cron pass 1" $DRUSH cron
   sleep 5
-  $DRUSH cron
+  soft "cron pass 2" $DRUSH cron
   sleep 5
-  $DRUSH cron
+  soft "cron pass 3" $DRUSH cron
 
   # --- Organizer account provisioning ---
   # When ORGANIZER_EMAIL is set (automated provisioning), create the organizer's admin account,
   # generate a one-time login link, send callbacks, and send the welcome email.
-  if [ -n "$ORGANIZER_EMAIL" ]; then
+  # Runs once: a resumed install does not send a second welcome email.
+  if [ -n "$ORGANIZER_EMAIL" ] && step_done organizer; then
+    echo "Organizer already provisioned; skipping."
+  elif [ -n "$ORGANIZER_EMAIL" ] && $DRUSH user:information --mail="$ORGANIZER_EMAIL" >/dev/null 2>&1; then
+    # An install from before the step markers: the account exists, so the
+    # welcome email went out then. Do not send another.
+    echo "Organizer account already exists; not provisioning again."
+    mark_step organizer
+  elif [ -n "$ORGANIZER_EMAIL" ]; then
     ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
 
     # Callback helper
@@ -197,10 +230,43 @@ if [ "$INSTALLED" = false ]; then
     fi
 
     provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
+    mark_step organizer
     echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
   fi
 
+  $DRUSH state:set "$INSTALL_MARKER" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "=== FRESH INSTALL COMPLETE ==="
+}
+
+# --- Detect install state ---
+# Use drush bootstrap check instead of raw MySQL query (more reliable, avoids spurious reinstall on DB connection issues)
+INSTALLED=false
+if $DRUSH status --field=bootstrap 2>/dev/null | grep -q 'Successful'; then
+  INSTALLED=true
+fi
+
+if [ "$INSTALLED" = false ]; then
+  echo "=== FRESH INSTALL ==="
+
+  # Install Open Social
+  $DRUSH site:install social \
+    --site-name="${DRUPAL_SITE_NAME:-LocalNodes}" \
+    --account-name="${DRUPAL_ADMIN_USER:-admin}" \
+    --account-pass="${DRUPAL_ADMIN_PASS:-admin}" \
+    --account-mail="${DRUPAL_ADMIN_EMAIL:-admin@example.com}" \
+    --db-url="mysql://${DB_USER:-opensocial}:${DB_PASSWORD:-changeme}@${DB_HOST:-mariadb}:${DB_PORT:-3306}/${DB_NAME:-opensocial}" \
+    -y
+
+  run_post_install
+elif ! install_marker_present; then
+  # Installed, but the post-install steps never all finished. This includes
+  # installs made before the marker existed: their next start runs the
+  # (re-runnable) post-install steps once and writes the marker.
+  echo "=== RESUMING INSTALL (no completion marker) ==="
+  echo "Running database updates..."
+  $DRUSH updatedb -y
+  $DRUSH cr
+  run_post_install
 else
   echo "=== EXISTING INSTALL ==="
 

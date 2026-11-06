@@ -57,6 +57,24 @@ $config['search_api.server.social_solr']['backend_config']['connector_config']['
 $config['search_api.server.social_solr']['backend_config']['connector_config']['path'] = '/';
 
 // ---------------------------------------------------------------------------
+// Defer direct indexing for one process (the install's demo content load).
+// social_posts and social_comments (localnodes_platform config/install) index
+// directly: each entity save queues post-request indexing, which embeds the
+// item with Gemini when the request or drush command ends. During the demo
+// content load that is hundreds of embedding calls inside
+// `drush social-demo:add`, and an AI quota error there ends the command
+// non-zero, which stopped the staging install on 2026-11-06. The entrypoint
+// sets LOCALNODES_DEFER_INDEXING=1 for that one command only; the items stay
+// tracked, and the install's explicit, non-fatal index steps embed them.
+// Nothing is written to config. Test: scripts/ops/tests/install-resume.test.sh
+// ---------------------------------------------------------------------------
+if (getenv('LOCALNODES_DEFER_INDEXING') === '1') {
+  foreach (['social_posts', 'social_comments'] as $index_id) {
+    $config["search_api.index.$index_id"]['options']['index_directly'] = FALSE;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Qdrant config overrides.
 // ---------------------------------------------------------------------------
 $config['ai_vdb_provider_qdrant.settings']['host'] = getenv('QDRANT_HOST') ?: 'qdrant';

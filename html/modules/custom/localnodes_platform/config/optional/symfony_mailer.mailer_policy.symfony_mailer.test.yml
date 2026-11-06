@@ -1,0 +1,22 @@
+# Subject and body for symfony_mailer's "Send test email" (admin/config/system/mailer/test).
+# symfony_mailer ships this policy, but Open Social's social_swiftmail_install()
+# deletes every mailer policy except the default one, so on a fresh install the
+# test email had no subject and Resend refused it ("550 Missing `subject`
+# field", staging 2026-11-06). Optional config: installed when symfony_mailer
+# and the email_html text format exist, as they do in Open Social.
+# Test: scripts/ops/tests/install-config.test.sh
+langcode: en
+status: true
+dependencies:
+  config:
+    - filter.format.email_html
+  module:
+    - symfony_mailer
+id: symfony_mailer.test
+configuration:
+  email_subject:
+    value: 'Test email from [site:name]'
+  email_body:
+    content:
+      value: '<p>This is a test email from <a href="[site:url]">[site:name]</a>. If it arrived, outgoing mail works.</p>'
+      format: email_html
