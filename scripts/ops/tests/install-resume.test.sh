@@ -51,9 +51,11 @@ new_site() {  # new_site -> prints a fresh state dir with stubs
   mkdir -p "$t/bin" "$t/state"
   for c in nc chown sleep; do printf '#!/bin/sh\nexit 0\n' > "$t/bin/$c"; done
   # curl: a fake Resend. Logs each call's Idempotency-Key (keys), and mail it
-  # accepted (mail). A key it already accepted gets 409, as Resend answers a
-  # reused key with a different body. LOSE_RESPONSE=1: accepts the mail but the
-  # caller sees no response (status 000).
+  # accepted (mail), and a hash of each request body (bodies). A key it already
+  # accepted gets 409 invalid_idempotent_request (Resend's answer to a reused
+  # key with a different body). CONCURRENT=N: the first N calls get 409
+  # concurrent_idempotent_requests. MAIL_CODE=500 (or 429): refused.
+  # LOSE_RESPONSE=1: accepts the mail but the caller sees no response (000).
   cat > "$t/bin/curl" <<'CURL'
 #!/bin/sh
 case "$*" in *api.resend.com*) ;; *) exit 0 ;; esac
@@ -63,7 +65,11 @@ for a in "$@"; do
   prev="$a"
 done
 echo "${key:-<none>}" >> "$SITE/keys"
-if [ -n "$key" ] && grep -qxF "$key" "$SITE/accepted" 2>/dev/null; then printf '{}\n409\n'; exit 0; fi
+prev=""; for a in "$@"; do [ "$prev" = "-d" ] && printf '%s' "$a" | cksum | cut -d' ' -f1 >> "$SITE/bodies"; prev="$a"; done
+n=$(cat "$SITE/calls_resend" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" > "$SITE/calls_resend"
+if [ "$n" -le "${CONCURRENT:-0}" ]; then printf '{"statusCode":409,"name":"concurrent_idempotent_requests"}\n409\n'; exit 0; fi
+if [ -n "${MAIL_CODE:-}" ]; then printf '{"statusCode":%s,"name":"rate_limit_exceeded"}\n%s\n' "$MAIL_CODE" "$MAIL_CODE"; exit 0; fi
+if [ -n "$key" ] && grep -qxF "$key" "$SITE/accepted" 2>/dev/null; then printf '{"statusCode":409,"name":"invalid_idempotent_request","message":"x"}\n409\n'; exit 0; fi
 echo "$key" >> "$SITE/accepted"; echo "resend" >> "$SITE/mail"
 if [ "${LOSE_RESPONSE:-0}" = 1 ]; then printf '\n000\n'; exit 0; fi
 printf '{}\n200\n'
@@ -73,6 +79,18 @@ CURL
   # Only the Qdrant readiness probe calls `bash -c` by name.
   printf '#!/bin/sh\nexit 0\n' > "$t/bin/bash"
   printf '#!/bin/sh\necho "APACHE STARTED"\n' > "$t/bin/apache2-foreground"
+  # mariadb: the empty-database check. Answers the table count (users_table = 1
+  # table, other_tables = 3 more); logs its argv and whether the password came
+  # through MYSQL_PWD (never argv).
+  cat > "$t/bin/mariadb" <<'DB'
+#!/bin/sh
+echo "$* PWD_ENV=${MYSQL_PWD:+set}" >> "$SITE/dbcalls"
+[ "${FAIL_DB_QUERY:-0}" = 1 ] && { echo "ERROR 2002: Can't connect" >&2; exit 1; }
+n=0; [ -f "$SITE/users_table" ] && n=$((n + 1))
+# A query that asks only about `users` gets only that; any other gets all tables.
+case "$*" in *"table_name = 'users'"*) ;; *) [ -f "$SITE/other_tables" ] && n=$((n + 3)) ;; esac
+echo "$n"
+DB
   cat > "$t/bin/drush" <<'DRUSH'
 #!/bin/sh
 # Fake drush. Skips the -r/--uri prefix, logs the command, keeps state in $SITE.
@@ -82,8 +100,8 @@ done
 cmd="$1"; shift
 echo "$cmd DEFER=${LOCALNODES_DEFER_INDEXING:-}" >> "$SITE/calls"
 case "$cmd" in
-  status) [ -f "$SITE/installed" ] && echo "Successful" ;;
-  site:install) touch "$SITE/installed" ;;
+  status) [ "${FAIL_BOOTSTRAP:-0}" = 1 ] && exit 1; [ -f "$SITE/installed" ] && echo "Successful" ;;
+  site:install) touch "$SITE/installed" "$SITE/users_table" ;;
   state:get) [ "${FAIL_STATE:-0}" = 1 ] && exit 1; [ -f "$SITE/state/$1" ] && cat "$SITE/state/$1" ;;
   state:set) [ -n "${FAIL_SET_KEY:-}" ] && [ "$1" = "$FAIL_SET_KEY" ] && exit 1; printf '%s' "$2" > "$SITE/state/$1" ;;
   php:eval)
@@ -230,9 +248,69 @@ rc="$(run_ep "$t" $ORG)"
 k1="$(sed -n 1p "$t/keys")"; k2="$(sed -n 2p "$t/keys")"
 check "idempotency key present on the welcome POST (welcome-<sha256>)" yes "$(printf '%s' "$k1" | grep -qE '^welcome-[0-9a-f]{64}$' && echo yes || echo "no ($k1)")"
 check "idempotency key stable across runs" "$k1" "$k2"
-check "lost marker, restart: Resend 409, marked sent, still one email" "yes yes 1" "$(has "$t/out" "already accepted by Resend under this idempotency key (HTTP 409)") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $(mails "$t")"
+check "lost marker, restart: Resend 409, marked sent, still one email" "yes yes 1" "$(has "$t/out" "already accepted by Resend under this idempotency key (409 invalid_idempotent_request)") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $(mails "$t")"
 t2="$(new_site)"; rc="$(run_ep "$t2" ORGANIZER_EMAIL=other@example.org ORGANIZER_NAME=Test RESEND_API_KEY=test)"
 check "idempotency key differs for another organizer" yes "$([ "$(sed -n 1p "$t2/keys")" != "$k1" ] && echo yes || echo no)"
+
+# 7. Resend 409 concurrent_idempotent_requests: retried with the same key and
+#    the same body, then sent; not counted as sent by itself.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG CONCURRENT=1)"
+check "concurrent 409 once: retried, then sent (2 POSTs, 1 email, marked)" "2 1 yes" "$(wc -l < "$t/keys" | tr -d ' ') $(mails "$t") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+check "concurrent 409 once: same key and same body on the retry" "1 1" "$(sort -u "$t/keys" | wc -l | tr -d ' ') $(sort -u "$t/bodies" | wc -l | tr -d ' ')"
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG CONCURRENT=9)"
+check "concurrent 409 always: 3 attempts, not marked, install completes" "3 no yes" "$(wc -l < "$t/keys" | tr -d ' ') $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+check "concurrent 409 always: warning logged" yes "$(has "$t/out" "still reports the welcome email in progress after 3 attempts")"
+
+# 8. A failed welcome send (Resend 429/5xx) is retried on later starts: once
+#    per start, until it goes out; then never again.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+check "failed send: install completes, mail not marked" "0 yes no" "$rc $(has "$t/out" "=== FRESH INSTALL COMPLETE ===") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+check "failed send: warning names the status" yes "$(has "$t/out" "Welcome email failed (HTTP 500, rate_limit_exceeded); not marked as sent")"
+rc="$(run_ep "$t" $ORG MAIL_CODE=429)"
+check "later start, still failing: one attempt, startup continues" "0 2 yes" "$rc $(wc -l < "$t/keys" | tr -d ' ') $(has "$t/out" "=== EXISTING INSTALL READY ===")"
+rc="$(run_ep "$t" $ORG)"
+check "later start, Resend back: pending email sent once, marked" "yes 1 yes" "$(has "$t/out" "Organizer welcome email is pending") $(mails "$t") $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+rc="$(run_ep "$t" $ORG)"
+check "start after that: no further POST" 3 "$(wc -l < "$t/keys" | tr -d ' ')"
+t="$(new_site)"; touch "$t/installed" "$t/organizer"; echo 18 > "$t/nodes"; echo x > "$t/state/localnodes.install_complete"
+rc="$(run_ep "$t" $ORG)"
+check "pre-marker site with the marker: no pending retry, no POST" "no 0" "$(has "$t/out" "pending") $([ -f "$t/keys" ] && wc -l < "$t/keys" | tr -d ' ' || echo 0)"
+
+# 9. Empty-database guard before site:install.
+t="$(new_site)"
+rc="$(run_ep "$t")"
+check "empty DB: installs; password via MYSQL_PWD, not argv" "0 1 yes no" "$rc $(calls "$t" "site:install") $(grep -q 'PWD_ENV=set' "$t/dbcalls" && echo yes || echo no) $(grep -qE -- ' -p|--password' "$t/dbcalls" && echo yes || echo no)"
+t="$(new_site)"; touch "$t/installed" "$t/users_table"; echo 18 > "$t/nodes"
+rc="$(run_ep "$t" FAIL_BOOTSTRAP=1)"
+check "bootstrap fails on a live DB: refuses site:install, stops" "yes 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install")"
+check "bootstrap fails on a live DB: says why" yes "$(has "$t/out" "is not empty (it has '1' tables)")"
+t="$(new_site)"; touch "$t/other_tables"
+rc="$(run_ep "$t")"
+check "damaged DB (no users table, other tables): refuses site:install, stops" "yes 0 yes" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install") $(has "$t/out" "is not empty (it has '3' tables)")"
+t="$(new_site)"
+rc="$(run_ep "$t" FAIL_DB_QUERY=1)"
+check "empty-DB check fails: no site:install, stops" "yes 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install")"
+
+# 10. Resend's idempotency key lasts 24 h: no welcome POST more than 23 h after
+#     the first attempt. The first attempt time is stored once.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+first="$(cat "$t/state/localnodes.install_step.organizer_mail_first_attempt" 2>/dev/null)"
+check "first attempt time stored (epoch seconds)" yes "$(printf '%s' "$first" | grep -qE '^[0-9]{9,}$' && echo yes || echo no)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+check "first attempt time not moved by a retry" "$first" "$(cat "$t/state/localnodes.install_step.organizer_mail_first_attempt")"
+printf '%s' "$(( $(date -u +%s) - 3600 ))" > "$t/state/localnodes.install_step.organizer_mail_first_attempt"
+rc="$(run_ep "$t" $ORG)"
+check "1 h after the first attempt: retried and sent" "3 yes" "$(wc -l < "$t/keys" | tr -d ' ') $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+printf '%s' "$(( $(date -u +%s) - 24 * 3600 ))" > "$t/state/localnodes.install_step.organizer_mail_first_attempt"
+rc="$(run_ep "$t" $ORG)"
+check "24 h after the first attempt: no POST, not marked, startup continues" "1 no 0" "$(wc -l < "$t/keys" | tr -d ' ') $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $rc"
+check "24 h after the first attempt: says to check Resend" yes "$(has "$t/out" "welcome mail unconfirmed after 23h; check Resend dashboard")"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \

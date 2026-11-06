@@ -153,6 +153,112 @@ provision_callback() {
   fi
 }
 
+# --- Organizer welcome email ---
+welcome_login_url() {  # sets LOGIN_URL; non-zero if drush uli fails
+  LOGIN_URL="$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)" || return 1
+  echo "Login URL: $LOGIN_URL"
+}
+# Sends the welcome email (uses LOGIN_URL) and marks organizer_mail_sent when
+# Resend accepted it. Never stops the entrypoint: a failed send is logged, left
+# unmarked, and retried on the next start (retry_pending_welcome).
+#
+# Idempotency-Key: Resend drops a second send with the same key for 24 h. The
+# key is stable per site and organizer, so a retry after a lost response or a
+# failed marker write cannot mail twice. Resend answers a reused key with 409:
+#   invalid_idempotent_request      the key was used with a different body (a
+#                                   retry carries a new login link): the first
+#                                   email went out, and its link still works.
+#   concurrent_idempotent_requests  the first request is still running: retry
+#                                   later with the same key AND the same body.
+# Any other 409 or error is not counted as sent.
+#
+# The key only protects for 24 h. The first POST's time is stored
+# (organizer_mail_first_attempt, epoch seconds), and no POST is made more than
+# 23 h after it: a first send that Resend accepted but whose response was lost
+# could otherwise be sent a second time once the key has expired.
+WELCOME_RETRY_WINDOW=$((23 * 3600))
+send_welcome_email() {
+  if [ -z "$RESEND_API_KEY" ]; then
+    echo "WARNING: RESEND_API_KEY is not set; welcome email not sent."
+    return 0
+  fi
+  local first now
+  read_state "localnodes.install_step.organizer_mail_first_attempt"
+  first="$STATE_VALUE"
+  now="$(date -u +%s)"
+  if [ -z "$first" ]; then
+    $DRUSH state:set "localnodes.install_step.organizer_mail_first_attempt" "$now"
+  else
+    case "$first" in
+      *[!0-9]*)
+        echo "WARNING: welcome mail unconfirmed and its first-attempt time is unreadable ('$first'); not retrying. Check the Resend dashboard."
+        return 0
+        ;;
+    esac
+    if [ $((now - first)) -gt "$WELCOME_RETRY_WINDOW" ]; then
+      echo "WARNING: welcome mail unconfirmed after 23h; check Resend dashboard. Not retrying (the idempotency key has expired)."
+      return 0
+    fi
+  fi
+  local key body response code name attempt=1
+  key="welcome-$(printf '%s\n%s' "$SITE_URI" "$ORGANIZER_EMAIL" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -d' ' -f1)"
+  body="{
+    \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
+    \"to\": [\"$ORGANIZER_EMAIL\"],
+    \"subject\": \"Your knowledge garden is ready!\",
+    \"html\": \"<h1>Your knowledge garden is ready!</h1><p>Your community's knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is live and waiting for you.</p><h2>Getting started</h2><ol><li><strong>Set your password</strong> &mdash; click the button below (single-use, works once).</li><li><strong>Explore your garden</strong> &mdash; visit Groups, Events, and Topics to see the demo content.</li><li><strong>Invite your community</strong> &mdash; use the Groups section to add members.</li><li><strong>Try the AI assistant</strong> &mdash; ask the chat widget anything about your community's content.</li></ol><p><a href='$LOGIN_URL' style='background:#14b8a6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;'>Set Password &amp; Log In</a></p><p style='color:#888;font-size:0.85em;'>This link is single-use and will expire. If it expires, visit <a href='$SITE_URI/user/password'>$SITE_URI/user/password</a> to request a new one.</p><p>Happy gardening,<br>The LocalNodes Team</p>\"
+  }"
+  while :; do
+    response="$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
+      -H "Authorization: Bearer $RESEND_API_KEY" \
+      -H "Idempotency-Key: $key" \
+      -H "Content-Type: application/json" \
+      -d "$body")" || true
+    code="$(printf '%s\n' "$response" | tail -1)"
+    name="$(printf '%s\n' "$response" | sed '$d' | grep -o '"name"[[:space:]]*:[[:space:]]*"[a-z_]*"' | head -1 | sed 's/.*"\([a-z_]*\)"$/\1/')"
+    case "$code:$name" in
+      200:*)
+        echo "Welcome email sent to $ORGANIZER_EMAIL"
+        mark_step organizer_mail_sent
+        return 0
+        ;;
+      409:invalid_idempotent_request)
+        echo "Welcome email already accepted by Resend under this idempotency key (409 invalid_idempotent_request); not sending again."
+        mark_step organizer_mail_sent
+        return 0
+        ;;
+      409:concurrent_idempotent_requests)
+        if [ "$attempt" -lt 3 ]; then
+          echo "Resend is still processing a welcome email with this key (409 concurrent_idempotent_requests); retrying in 5 s with the same key and body ($attempt/3)."
+          attempt=$((attempt + 1))
+          sleep 5
+          continue
+        fi
+        echo "WARNING: Resend still reports the welcome email in progress after 3 attempts; not marked as sent, the next start retries it."
+        return 0
+        ;;
+      *)
+        echo "WARNING: Welcome email failed (HTTP $code${name:+, $name}); not marked as sent, the next start retries it."
+        return 0
+        ;;
+    esac
+  done
+}
+# On every later start: an account this entrypoint created whose welcome email
+# never went out (a 429/5xx, a lost response, a crash) gets one more attempt.
+retry_pending_welcome() {
+  [ -n "$ORGANIZER_EMAIL" ] || return 0
+  step_done organizer_mail_sent && return 0
+  step_done organizer_account || return 0
+  ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
+  echo "Organizer welcome email is pending (account created, email not sent); trying once on this start."
+  if welcome_login_url; then
+    send_welcome_email
+  else
+    echo "WARNING: drush uli failed; the welcome email stays pending for the next start."
+  fi
+}
+
 # Every step after site:install. Each one is safe to run again on resume.
 run_post_install() {
   # Enable LocalNodes platform (AI config, block placement, Solr/Qdrant overrides)
@@ -251,42 +357,16 @@ run_post_install() {
         fi
         $DRUSH user:role:add sitemanager "$ORGANIZER_USERNAME" 2>&1
 
-        # Generate one-time login URL
-        LOGIN_URL=$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)
-        echo "Login URL: $LOGIN_URL"
+        # One-time login URL; if drush cannot make it, stop so the container
+        # retries (organizer_account is marked, so the retry sends the email).
+        if ! welcome_login_url; then
+          echo "ERROR: drush uli failed; stopping so the container retries."
+          exit 1
+        fi
 
         # Send welcome email via Resend
         provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
-        if [ -n "$RESEND_API_KEY" ]; then
-          # Idempotency-Key: Resend drops a second send with the same key for
-          # 24 h. It is stable per site and organizer, so a retry after a lost
-          # response or a failed marker write cannot mail twice. A retry carries
-          # a new login link (a different body), which Resend answers with 409:
-          # the first email, whose link still works, went out.
-          WELCOME_KEY="welcome-$(printf '%s\n%s' "$SITE_URI" "$ORGANIZER_EMAIL" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -d' ' -f1)"
-          EMAIL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
-            -H "Authorization: Bearer $RESEND_API_KEY" \
-            -H "Idempotency-Key: $WELCOME_KEY" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
-              \"to\": [\"$ORGANIZER_EMAIL\"],
-              \"subject\": \"Your knowledge garden is ready!\",
-              \"html\": \"<h1>Your knowledge garden is ready!</h1><p>Your community's knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is live and waiting for you.</p><h2>Getting started</h2><ol><li><strong>Set your password</strong> &mdash; click the button below (single-use, works once).</li><li><strong>Explore your garden</strong> &mdash; visit Groups, Events, and Topics to see the demo content.</li><li><strong>Invite your community</strong> &mdash; use the Groups section to add members.</li><li><strong>Try the AI assistant</strong> &mdash; ask the chat widget anything about your community's content.</li></ol><p><a href='$LOGIN_URL' style='background:#14b8a6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;'>Set Password &amp; Log In</a></p><p style='color:#888;font-size:0.85em;'>This link is single-use and will expire. If it expires, visit <a href='$SITE_URI/user/password'>$SITE_URI/user/password</a> to request a new one.</p><p>Happy gardening,<br>The LocalNodes Team</p>\"
-            }")
-          EMAIL_CODE=$(echo "$EMAIL_RESPONSE" | tail -1)
-          if [ "$EMAIL_CODE" = "200" ]; then
-            echo "Welcome email sent to $ORGANIZER_EMAIL"
-            mark_step organizer_mail_sent
-          elif [ "$EMAIL_CODE" = "409" ]; then
-            echo "Welcome email already accepted by Resend under this idempotency key (HTTP 409); not sending again."
-            mark_step organizer_mail_sent
-          else
-            echo "WARNING: Welcome email failed (HTTP $EMAIL_CODE); not marked as sent."
-          fi
-        else
-          echo "WARNING: RESEND_API_KEY is not set; welcome email not sent."
-        fi
+        send_welcome_email
 
         provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
         echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
@@ -306,6 +386,24 @@ if $DRUSH status --field=bootstrap 2>/dev/null | grep -q 'Successful'; then
 fi
 
 if [ "$INSTALLED" = false ]; then
+  # Drupal did not bootstrap. That alone is not proof of an empty database: a
+  # DB hiccup, a bad setting or a PHP fatal would otherwise run site:install
+  # over a live site and wipe it. Install only on positive evidence that the
+  # database is EMPTY (no tables at all: a damaged site may have lost `users`
+  # but still hold node or config tables, which site:install would drop); if
+  # the check itself fails, or any table exists, stop so the container retries
+  # (and a human looks).
+  # Test: scripts/ops/tests/install-resume.test.sh
+  if ! DB_TABLES="$(MYSQL_PWD="${DB_PASSWORD:-changeme}" mariadb -h "${DB_HOST:-mariadb}" -P "${DB_PORT:-3306}" -u "${DB_USER:-opensocial}" -N -B \
+      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()" "${DB_NAME:-opensocial}")"; then
+    echo "ERROR: Drupal did not bootstrap and the empty-database check failed; not installing. Stopping so the container retries."
+    exit 1
+  fi
+  if [ "$DB_TABLES" != "0" ]; then
+    echo "ERROR: Drupal did not bootstrap, but database ${DB_NAME:-opensocial} is not empty (it has '$DB_TABLES' tables). Refusing to run site:install over it; stopping so the container retries. If this is a broken install on a throwaway instance, delete its volumes and redeploy."
+    exit 1
+  fi
+
   echo "=== FRESH INSTALL ==="
 
   # Install Open Social
@@ -351,6 +449,8 @@ else
     echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   fi
+
+  retry_pending_welcome
 
   echo "=== EXISTING INSTALL READY ==="
 fi
