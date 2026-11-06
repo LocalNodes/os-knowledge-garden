@@ -105,3 +105,11 @@ The other allowed-to-fail jobs (cspell, eslint, phpcs, stylelint) are still to t
 - Tag: the agent's tag-and-push command was refused by the Claude Code auto-mode classifier and was not retried. Tom ran it himself. `git ls-remote --tags origin` shows `refs/tags/1.0.0-beta7` = `59e272c` (annotated), peeling to `004eeb9`.
 - Release node, created by the orchestrator: https://www.drupal.org/project/siwe_login/releases/1.0.0-beta7. Its notes include a line on `reverse_proxy_addresses`.
 - Deployment caveat: per-IP limits are only as good as the client IP Drupal sees. fresh3 PR #40 replaces `reverse_proxy_addresses = ['0.0.0.0/0']` with Cloudflare's ranges plus the instance's Traefik network. The fresh3 pin to beta7 waits for #40 and the Traefik subnet.
+
+## beta8 (2026-11-06)
+
+- Tom: "go" (relayed by the orchestrator, about 02:50 UTC). beta8 carries the Phase 19 code-review fixes: WR-01 to WR-06 and IN-01 to IN-06 (see `.planning/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW-DISPOSITION.md`).
+- Local suite on the beta8 branch: 271 tests, 1 skipped (257 plus 14 new). siwe_login_waap: 36 tests passed. phpstan was clean.
+- The orchestrator dated the changelog (`a461e5d`), fast-forwarded `1.0.x` and pushed it, then created and pushed the annotated tag with plain `git push` from this Mac. Nothing was refused this time. `git ls-remote --tags origin` shows `refs/tags/1.0.0-beta8` = `5f21667` (annotated), peeling to `a461e5d`.
+- Release node, created by the orchestrator: https://www.drupal.org/project/siwe_login/releases/1.0.0-beta8. Release type: Bug fixes, not Security update, because no security advisory is involved.
+- fresh3 pin: PR #48 (`138b317`), lock only. The lock shasum `d759568e…` matches the drupal.org zip, checked by both sessions. Apart from the packaging script's version lines, the zip matches the tag.
