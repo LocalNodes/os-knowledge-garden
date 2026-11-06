@@ -7005,17 +7005,17 @@
         },
         {
             "name": "drupal/siwe_login",
-            "version": "1.0.0-beta7",
+            "version": "1.0.0-beta8",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/siwe_login.git",
-                "reference": "1.0.0-beta7"
+                "reference": "1.0.0-beta8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta7.zip",
-                "reference": "1.0.0-beta7",
-                "shasum": "fff13dc4a99d61261659cb261815a52c98939af4"
+                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta8.zip",
+                "reference": "1.0.0-beta8",
+                "shasum": "d759568ee440f819462c26bb24d106ce38ce069c"
             },
             "require": {
                 "drupal/core": "^10 || ^11",
@@ -7023,14 +7023,14 @@
                 "simplito/elliptic-php": "^1.0"
             },
             "suggest": {
-                "ext-gmp": "Faster signature checks. Not required: simplito/elliptic-php falls back to ext-bcmath. One of gmp or bcmath must be installed.",
+                "ext-gmp": "Faster signature checks. Composer requires it through simplito/elliptic-php, which also runs on ext-bcmath: a BCMath-only host needs config.platform.ext-gmp in the site's root composer.json (see the README). One of gmp or bcmath must be installed.",
                 "web3p/web3.php": "^0.3.2: enables ENS name lookup (reverse lookup and ENS validation). Without it, sign-in works and ENS features stay off."
             },
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-beta7",
-                    "datestamp": "1793877899",
+                    "version": "1.0.0-beta8",
+                    "datestamp": "1793933699",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7057,7 +7057,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/siwe_login"
             },
-            "published-time": "2026-11-05T11:24:39+00:00"
+            "published-time": "2026-11-06T02:54:39+00:00"
         },
         {
             "name": "drupal/state_machine",
