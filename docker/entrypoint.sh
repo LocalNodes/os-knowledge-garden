@@ -55,14 +55,37 @@ chown -R www-data:www-data /var/www/private 2>/dev/null || true
 # them for good and still print READY (staging, 2026-11-06).
 # Test: scripts/ops/tests/install-resume.test.sh
 INSTALL_MARKER="localnodes.install_complete"
+# Reads never guess: if drush cannot answer, the entrypoint stops (non-zero),
+# nothing is marked, and the container's restart tries again. A failed read must
+# not look like "not done" (re-sending mail) or "empty site" (reloading content).
+read_state() {     # read_state KEY: sets STATE_VALUE ('' when the key is unset)
+  if ! STATE_VALUE="$($DRUSH state:get "$1")"; then
+    echo "ERROR: drush state:get $1 failed; stopping so the container retries."
+    exit 1
+  fi
+}
 install_marker_present() {
-  [ -n "$($DRUSH state:get "$INSTALL_MARKER" 2>/dev/null)" ]
+  read_state "$INSTALL_MARKER"
+  [ -n "$STATE_VALUE" ]
 }
 step_done() {      # step_done NAME: the step finished on an earlier run
-  [ -n "$($DRUSH state:get "localnodes.install_step.$1" 2>/dev/null)" ]
+  read_state "localnodes.install_step.$1"
+  [ -n "$STATE_VALUE" ]
 }
 mark_step() {      # mark_step NAME
   $DRUSH state:set "localnodes.install_step.$1" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+count_query() {    # count_query LABEL PHP: sets COUNT, or stops the entrypoint
+  if ! COUNT="$($DRUSH php:eval "$2")"; then
+    echo "ERROR: counting $1 failed; stopping so the container retries (nothing loaded, created or sent)."
+    exit 1
+  fi
+  case "$COUNT" in
+    ''|*[!0-9]*)
+      echo "ERROR: counting $1 returned '$COUNT', not a number; stopping so the container retries."
+      exit 1
+      ;;
+  esac
 }
 # Index steps are allowed to fail: an AI quota or a slow Solr must not stop the
 # install or the container. Items that did not index stay tracked, and cron
@@ -72,6 +95,62 @@ soft() {           # soft LABEL CMD...
   "$@" || rc=$?
   [ "$rc" -eq 0 ] && return 0
   echo "WARNING: $label failed (exit $rc); continuing. Unindexed items stay tracked for cron."
+}
+
+load_demo_content() {
+  # Load demo content using the correct plugin IDs for the demo module.
+  # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
+  # with a module-specific prefix (e.g., localnodes_user, boulder_user).
+  # The base social_demo uses unprefixed IDs (user, group, etc.).
+  echo "Loading demo content for $DEMO_MODULE..."
+  case "$DEMO_MODULE" in
+    localnodes_demo)
+      PLUGIN_PREFIX="localnodes"
+      ;;
+    boulder_demo)
+      PLUGIN_PREFIX="boulder"
+      ;;
+    portland_demo)
+      PLUGIN_PREFIX="portland"
+      ;;
+    *)
+      # Default: use social_demo's unprefixed plugin IDs
+      PLUGIN_PREFIX=""
+      ;;
+  esac
+
+  # LOCALNODES_DEFER_INDEXING=1 turns off direct (post-request) indexing for
+  # this one command (settings.php), so no embedding call runs inside it.
+  if [ -n "$PLUGIN_PREFIX" ]; then
+    LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add \
+      ${PLUGIN_PREFIX}_file \
+      ${PLUGIN_PREFIX}_user_terms \
+      ${PLUGIN_PREFIX}_event_type \
+      ${PLUGIN_PREFIX}_user \
+      ${PLUGIN_PREFIX}_group \
+      ${PLUGIN_PREFIX}_topic \
+      ${PLUGIN_PREFIX}_event \
+      ${PLUGIN_PREFIX}_event_enrollment \
+      ${PLUGIN_PREFIX}_comment \
+      ${PLUGIN_PREFIX}_post \
+      ${PLUGIN_PREFIX}_like
+  else
+    LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+  fi
+  mark_step demo_content
+}
+
+# Callback helper (automated provisioning)
+provision_callback() {
+  local STATUS="$1"
+  shift
+  if [ -n "$PROVISION_CALLBACK_URL" ] && [ -n "$STRIPE_SESSION_ID" ] && [ -n "$PROVISION_CALLBACK_SECRET" ]; then
+    curl -sf -X POST "$PROVISION_CALLBACK_URL/api/provision-callback" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $PROVISION_CALLBACK_SECRET" \
+      -d "{\"session_id\":\"$STRIPE_SESSION_ID\",\"status\":\"$STATUS\"$*}" \
+      || echo "Warning: $STATUS callback failed (non-fatal)"
+  fi
 }
 
 # Every step after site:install. Each one is safe to run again on resume.
@@ -104,56 +183,23 @@ run_post_install() {
     echo "Enabling demo module: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y
 
-    # social-demo:add is not idempotent (it re-creates nodes, groups and users),
-    # so it runs once: skipped when its step is marked, or when an install that
-    # predates the step markers already holds content.
-    NODE_COUNT="$($DRUSH php:eval 'echo \Drupal::entityQuery("node")->accessCheck(FALSE)->count()->execute();' 2>/dev/null || echo 0)"
+    # Demo content loads once. demo_content_started is marked before the load
+    # and demo_content after it, so a load that stopped part-way is told apart
+    # from a site installed before these markers (content, no markers).
     if step_done demo_content; then
       echo "Demo content already loaded; skipping."
-    elif [ "${NODE_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-      echo "WARNING: $NODE_COUNT nodes exist but the demo content step is not marked; not reloading it (social-demo:add is not idempotent)."
-      mark_step demo_content
     else
-      # Load demo content using the correct plugin IDs for the demo module.
-      # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
-      # with a module-specific prefix (e.g., localnodes_user, boulder_user).
-      # The base social_demo uses unprefixed IDs (user, group, etc.).
-      echo "Loading demo content for $DEMO_MODULE..."
-      case "$DEMO_MODULE" in
-        localnodes_demo)
-          PLUGIN_PREFIX="localnodes"
-          ;;
-        boulder_demo)
-          PLUGIN_PREFIX="boulder"
-          ;;
-        portland_demo)
-          PLUGIN_PREFIX="portland"
-          ;;
-        *)
-          # Default: use social_demo's unprefixed plugin IDs
-          PLUGIN_PREFIX=""
-          ;;
-      esac
-
-      # LOCALNODES_DEFER_INDEXING=1 turns off direct (post-request) indexing for
-      # this one command (settings.php), so no embedding call runs inside it.
-      if [ -n "$PLUGIN_PREFIX" ]; then
-        LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add \
-          ${PLUGIN_PREFIX}_file \
-          ${PLUGIN_PREFIX}_user_terms \
-          ${PLUGIN_PREFIX}_event_type \
-          ${PLUGIN_PREFIX}_user \
-          ${PLUGIN_PREFIX}_group \
-          ${PLUGIN_PREFIX}_topic \
-          ${PLUGIN_PREFIX}_event \
-          ${PLUGIN_PREFIX}_event_enrollment \
-          ${PLUGIN_PREFIX}_comment \
-          ${PLUGIN_PREFIX}_post \
-          ${PLUGIN_PREFIX}_like
+      count_query "nodes" 'echo \Drupal::entityQuery("node")->accessCheck(FALSE)->count()->execute();'
+      if step_done demo_content_started; then
+        echo "WARNING: an earlier demo content load started but did not finish ($COUNT nodes exist). Loading again; social-demo:add skips every entity whose UUID already exists."
+        load_demo_content
+      elif [ "$COUNT" -gt 0 ]; then
+        echo "Demo content: $COUNT nodes from an install made before the step markers; adopting it as loaded."
+        mark_step demo_content
       else
-        LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
+        mark_step demo_content_started
+        load_demo_content
       fi
-      mark_step demo_content
     fi
   else
     echo "DEMO_MODULE=none — skipping demo content"
@@ -174,64 +220,66 @@ run_post_install() {
   # --- Organizer account provisioning ---
   # When ORGANIZER_EMAIL is set (automated provisioning), create the organizer's admin account,
   # generate a one-time login link, send callbacks, and send the welcome email.
-  # Runs once: a resumed install does not send a second welcome email.
-  if [ -n "$ORGANIZER_EMAIL" ] && step_done organizer; then
-    echo "Organizer already provisioned; skipping."
-  elif [ -n "$ORGANIZER_EMAIL" ] && $DRUSH user:information --mail="$ORGANIZER_EMAIL" >/dev/null 2>&1; then
-    # An install from before the step markers: the account exists, so the
-    # welcome email went out then. Do not send another.
-    echo "Organizer account already exists; not provisioning again."
-    mark_step organizer
-  elif [ -n "$ORGANIZER_EMAIL" ]; then
+  # organizer_account (marked just before user:create) and organizer_mail_sent
+  # are separate: a run that created the account but stopped before the email
+  # retries the login link and the email; an account with neither marker comes
+  # from an install made before the markers and is adopted, with no second email.
+  if [ -n "$ORGANIZER_EMAIL" ]; then
     ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
-
-    # Callback helper
-    provision_callback() {
-      local STATUS="$1"
-      shift
-      if [ -n "$PROVISION_CALLBACK_URL" ] && [ -n "$STRIPE_SESSION_ID" ] && [ -n "$PROVISION_CALLBACK_SECRET" ]; then
-        curl -sf -X POST "$PROVISION_CALLBACK_URL/api/provision-callback" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $PROVISION_CALLBACK_SECRET" \
-          -d "{\"session_id\":\"$STRIPE_SESSION_ID\",\"status\":\"$STATUS\"$*}" \
-          || echo "Warning: $STATUS callback failed (non-fatal)"
-      fi
-    }
-
-    provision_callback "creating_user" ",\"site_url\":\"$SITE_URI\""
-
-    # Create user
-    PASSWORD=$(openssl rand -hex 16)
-    $DRUSH user:create "$ORGANIZER_USERNAME" --mail="$ORGANIZER_EMAIL" --password="$PASSWORD" 2>&1 || echo "Warning: user may already exist"
-    $DRUSH user:role:add sitemanager "$ORGANIZER_USERNAME" 2>&1 || echo "Warning: role may already be assigned"
-
-    # Generate one-time login URL
-    LOGIN_URL=$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)
-    echo "Login URL: $LOGIN_URL"
-
-    # Send welcome email via Resend
-    provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
-    if [ -n "$RESEND_API_KEY" ]; then
-      EMAIL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
-        -H "Authorization: Bearer $RESEND_API_KEY" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
-          \"to\": [\"$ORGANIZER_EMAIL\"],
-          \"subject\": \"Your knowledge garden is ready!\",
-          \"html\": \"<h1>Your knowledge garden is ready!</h1><p>Your community's knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is live and waiting for you.</p><h2>Getting started</h2><ol><li><strong>Set your password</strong> &mdash; click the button below (single-use, works once).</li><li><strong>Explore your garden</strong> &mdash; visit Groups, Events, and Topics to see the demo content.</li><li><strong>Invite your community</strong> &mdash; use the Groups section to add members.</li><li><strong>Try the AI assistant</strong> &mdash; ask the chat widget anything about your community's content.</li></ol><p><a href='$LOGIN_URL' style='background:#14b8a6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;'>Set Password &amp; Log In</a></p><p style='color:#888;font-size:0.85em;'>This link is single-use and will expire. If it expires, visit <a href='$SITE_URI/user/password'>$SITE_URI/user/password</a> to request a new one.</p><p>Happy gardening,<br>The LocalNodes Team</p>\"
-        }")
-      EMAIL_CODE=$(echo "$EMAIL_RESPONSE" | tail -1)
-      if [ "$EMAIL_CODE" = "200" ]; then
-        echo "Welcome email sent to $ORGANIZER_EMAIL"
+    if step_done organizer_mail_sent; then
+      echo "Organizer already provisioned and emailed; skipping."
+    else
+      # The address reaches PHP through the environment, never through the code string.
+      count_query "organizer accounts" 'echo count(\Drupal::entityTypeManager()->getStorage("user")->loadByProperties(["mail" => getenv("ORGANIZER_EMAIL")]));'
+      if [ "$COUNT" -gt 0 ] && ! step_done organizer_account; then
+        echo "Organizer account exists from an install made before the step markers; adopting it (no second welcome email)."
+        mark_step organizer_account
+        mark_step organizer_mail_sent
       else
-        echo "WARNING: Welcome email failed (HTTP $EMAIL_CODE)"
+        if [ "$COUNT" -eq 0 ]; then
+          provision_callback "creating_user" ",\"site_url\":\"$SITE_URI\""
+          # Marked BEFORE user:create: from here on an existing account is this
+          # entrypoint's own, so a crash anywhere below retries the email
+          # instead of adopting the account as a pre-marker one.
+          mark_step organizer_account
+          PASSWORD=$(openssl rand -hex 16)
+          $DRUSH user:create "$ORGANIZER_USERNAME" --mail="$ORGANIZER_EMAIL" --password="$PASSWORD" 2>&1
+        else
+          echo "WARNING: the organizer account was created by an earlier run that stopped before the welcome email; sending the login link and the email now."
+        fi
+        $DRUSH user:role:add sitemanager "$ORGANIZER_USERNAME" 2>&1
+
+        # Generate one-time login URL
+        LOGIN_URL=$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)
+        echo "Login URL: $LOGIN_URL"
+
+        # Send welcome email via Resend
+        provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
+        if [ -n "$RESEND_API_KEY" ]; then
+          EMAIL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
+              \"to\": [\"$ORGANIZER_EMAIL\"],
+              \"subject\": \"Your knowledge garden is ready!\",
+              \"html\": \"<h1>Your knowledge garden is ready!</h1><p>Your community's knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is live and waiting for you.</p><h2>Getting started</h2><ol><li><strong>Set your password</strong> &mdash; click the button below (single-use, works once).</li><li><strong>Explore your garden</strong> &mdash; visit Groups, Events, and Topics to see the demo content.</li><li><strong>Invite your community</strong> &mdash; use the Groups section to add members.</li><li><strong>Try the AI assistant</strong> &mdash; ask the chat widget anything about your community's content.</li></ol><p><a href='$LOGIN_URL' style='background:#14b8a6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;'>Set Password &amp; Log In</a></p><p style='color:#888;font-size:0.85em;'>This link is single-use and will expire. If it expires, visit <a href='$SITE_URI/user/password'>$SITE_URI/user/password</a> to request a new one.</p><p>Happy gardening,<br>The LocalNodes Team</p>\"
+            }")
+          EMAIL_CODE=$(echo "$EMAIL_RESPONSE" | tail -1)
+          if [ "$EMAIL_CODE" = "200" ]; then
+            echo "Welcome email sent to $ORGANIZER_EMAIL"
+            mark_step organizer_mail_sent
+          else
+            echo "WARNING: Welcome email failed (HTTP $EMAIL_CODE); not marked as sent."
+          fi
+        else
+          echo "WARNING: RESEND_API_KEY is not set; welcome email not sent."
+        fi
+
+        provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
+        echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
       fi
     fi
-
-    provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
-    mark_step organizer
-    echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
   fi
 
   $DRUSH state:set "$INSTALL_MARKER" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"

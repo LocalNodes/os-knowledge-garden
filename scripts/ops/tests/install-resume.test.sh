@@ -50,7 +50,12 @@ new_site() {  # new_site -> prints a fresh state dir with stubs
   local t; t="$(mktemp -d "$TOP/site.XXXXXX")"
   mkdir -p "$t/bin" "$t/state"
   for c in nc chown sleep; do printf '#!/bin/sh\nexit 0\n' > "$t/bin/$c"; done
-  printf '#!/bin/sh\nexit 0\n' > "$t/bin/curl"
+  # curl: logs Resend calls and answers 200 (body, then the status line).
+  cat > "$t/bin/curl" <<'CURL'
+#!/bin/sh
+case "$*" in *api.resend.com*) echo "resend" >> "$SITE/mail"; printf '{}\n200\n' ;; esac
+exit 0
+CURL
   printf '#!/bin/sh\necho deadbeef\n' > "$t/bin/openssl"
   # Only the Qdrant readiness probe calls `bash -c` by name.
   printf '#!/bin/sh\nexit 0\n' > "$t/bin/bash"
@@ -66,15 +71,20 @@ echo "$cmd DEFER=${LOCALNODES_DEFER_INDEXING:-}" >> "$SITE/calls"
 case "$cmd" in
   status) [ -f "$SITE/installed" ] && echo "Successful" ;;
   site:install) touch "$SITE/installed" ;;
-  state:get) [ -f "$SITE/state/$1" ] && cat "$SITE/state/$1" ;;
+  state:get) [ "${FAIL_STATE:-0}" = 1 ] && exit 1; [ -f "$SITE/state/$1" ] && cat "$SITE/state/$1" ;;
   state:set) printf '%s' "$2" > "$SITE/state/$1" ;;
-  php:eval) cat "$SITE/nodes" 2>/dev/null || echo 0 ;;
-  social-demo:add) [ "${FAIL_DEMO:-0}" = 1 ] && exit 1; echo 18 > "$SITE/nodes" ;;
+  php:eval)
+    case "$1" in
+      *'"node"'*) [ "${FAIL_NODE_COUNT:-0}" = 1 ] && exit 1; cat "$SITE/nodes" 2>/dev/null || echo 0 ;;
+      *'"user"'*) [ "${FAIL_USER_LOOKUP:-0}" = 1 ] && exit 1; [ -f "$SITE/organizer" ] && echo 1 || echo 0 ;;
+      *) exit 1 ;;
+    esac ;;
+  social-demo:add) [ "${FAIL_DEMO:-0}" = 1 ] && { echo 5 > "$SITE/nodes"; exit 1; }; echo 18 > "$SITE/nodes" ;;
   search-api:index) [ "${FAIL_INDEX:-0}" = 1 ] && { echo "AiQuotaException: embed_content per day" >&2; exit 3; } ;;
   cron) [ "${FAIL_CRON:-0}" = 1 ] && exit 4 ;;
   user:information) [ -f "$SITE/organizer" ] || exit 1 ;;
   user:create) touch "$SITE/organizer" ;;
-  uli) echo "http://localhost/user/reset/1/x/y/login" ;;
+  uli) [ "${FAIL_ULI:-0}" = 1 ] && exit 1; echo "http://localhost/user/reset/1/x/y/login" ;;
 esac
 exit 0
 DRUSH
@@ -125,31 +135,69 @@ check "marker: no resume" no "$(has "$t/out" "RESUMING")"
 check "marker: no search-api:index" 0 "$(calls "$t" "search-api:index")"
 check "marker: no FRESH INSTALL COMPLETE" no "$(has "$t/out" "FRESH INSTALL COMPLETE")"
 
-# 4. A real demo-content failure still stops the install (no marker), and the
-#    restart loads the demo content and finishes.
+# 4. A demo load that fails part-way (5 of 18 nodes) stops the install with no
+#    marker; the restart sees demo_content_started without demo_content, warns,
+#    and loads again (social-demo:add skips existing UUIDs).
 t="$(new_site)"
 rc="$(run_ep "$t" FAIL_DEMO=1)"
-check "demo failure: install stops (non-zero)" yes "$([ "$rc" != 0 ] && echo yes || echo no)"
-check "demo failure: no FRESH INSTALL COMPLETE" no "$(has "$t/out" "FRESH INSTALL COMPLETE")"
-check "demo failure: no marker" no "$([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+check "partial demo: install stops (non-zero)" yes "$([ "$rc" != 0 ] && echo yes || echo no)"
+check "partial demo: no FRESH INSTALL COMPLETE" no "$(has "$t/out" "FRESH INSTALL COMPLETE")"
+check "partial demo: no completion marker" no "$([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+check "partial demo: started marked, done not marked" "yes no" "$([ -e "$t/state/localnodes.install_step.demo_content_started" ] && echo yes || echo no) $([ -e "$t/state/localnodes.install_step.demo_content" ] && echo yes || echo no)"
 rc="$(run_ep "$t")"
-check "demo failure, restart: RESUMING INSTALL" yes "$(has "$t/out" "RESUMING INSTALL")"
-check "demo failure, restart: demo content loaded" 2 "$(calls "$t" "social-demo:add")"
-check "demo failure, restart: FRESH INSTALL COMPLETE" yes "$(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+check "partial demo, restart: RESUMING INSTALL" yes "$(has "$t/out" "RESUMING INSTALL")"
+check "partial demo, restart: loud warning" yes "$(has "$t/out" "WARNING: an earlier demo content load started but did not finish (5 nodes exist)")"
+check "partial demo, restart: demo content loaded again" 2 "$(calls "$t" "social-demo:add")"
+check "partial demo, restart: demo_content marked, FRESH INSTALL COMPLETE" "yes yes" "$([ -e "$t/state/localnodes.install_step.demo_content" ] && echo yes || echo no) $(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
 
-# 5. Organizer: provisioned once. A resumed install (step marked) and an
-#    install from before the markers (account exists) send no second email.
+# 4b. The node count fails (drush/DB error): stop, load nothing, mark nothing.
+t="$(new_site)"; touch "$t/installed"
+rc="$(run_ep "$t" FAIL_NODE_COUNT=1)"
+check "count failure: stops (non-zero)" yes "$([ "$rc" != 0 ] && echo yes || echo no)"
+check "count failure: no demo load" 0 "$(calls "$t" "social-demo:add")"
+check "count failure: nothing marked" 0 "$(ls "$t/state" | wc -l | tr -d ' ')"
+check "count failure: error logged" yes "$(has "$t/out" "ERROR: counting nodes failed")"
+
+# 4c. A state read fails: stop, do not treat it as "no marker" and reload/resend.
+t="$(new_site)"; touch "$t/installed"; echo 18 > "$t/nodes"
+rc="$(run_ep "$t" FAIL_STATE=1)"
+check "state read failure: stops (non-zero)" yes "$([ "$rc" != 0 ] && echo yes || echo no)"
+check "state read failure: no updatedb, no index" "0 0" "$(calls "$t" "updatedb") $(calls "$t" "search-api:index")"
+
+# 5. Organizer. ORG = the organizer variables for every run below.
+ORG="ORGANIZER_EMAIL=organizer@example.org ORGANIZER_NAME=Test RESEND_API_KEY=test"
+mails() { [ -f "$1/mail" ] && wc -l < "$1/mail" | tr -d ' ' || echo 0; }
+# 5a. Fresh: one account, one email; then a restart without the completion
+#     marker sends nothing more.
 t="$(new_site)"
-rc="$(run_ep "$t" ORGANIZER_EMAIL=organizer@example.org ORGANIZER_NAME=Test FAIL_INDEX=1)"
-check "organizer fresh: account created once" 1 "$(calls "$t" "user:create")"
+rc="$(run_ep "$t" $ORG FAIL_INDEX=1)"
+check "organizer fresh: one account, one email" "1 1" "$(calls "$t" "user:create") $(mails "$t")"
+check "organizer fresh: both steps marked" "yes yes" "$([ -e "$t/state/localnodes.install_step.organizer_account" ] && echo yes || echo no) $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
 rm -f "$t/state/localnodes.install_complete"
-rc="$(run_ep "$t" ORGANIZER_EMAIL=organizer@example.org ORGANIZER_NAME=Test)"
-check "organizer resume: skipped (step marked)" yes "$(has "$t/out" "Organizer already provisioned; skipping.")"
-check "organizer resume: no second account or login link" "1 0" "$(calls "$t" "user:create") $(grep -c '^uli' "$t/calls" | awk '{print $1-1}')"
+rc="$(run_ep "$t" $ORG)"
+check "organizer resume: skipped" yes "$(has "$t/out" "Organizer already provisioned and emailed; skipping.")"
+check "organizer resume: still one account, one email, one uli" "1 1 1" "$(calls "$t" "user:create") $(mails "$t") $(calls "$t" "uli")"
+# 5b. The account lookup fails: stop, no account, no login link, no email.
 t="$(new_site)"; touch "$t/installed" "$t/organizer"; echo 18 > "$t/nodes"
-rc="$(run_ep "$t" ORGANIZER_EMAIL=organizer@example.org)"
-check "organizer legacy: existing account detected" yes "$(has "$t/out" "Organizer account already exists; not provisioning again.")"
-check "organizer legacy: no user:create, no uli" "0 0" "$(calls "$t" "user:create") $(calls "$t" "uli")"
+rc="$(run_ep "$t" $ORG FAIL_USER_LOOKUP=1)"
+check "lookup failure: stops (non-zero)" yes "$([ "$rc" != 0 ] && echo yes || echo no)"
+check "lookup failure: no user:create, no uli, no email" "0 0 0" "$(calls "$t" "user:create") $(calls "$t" "uli") $(mails "$t")"
+check "lookup failure: organizer steps and completion unmarked" "no no no" "$([ -e "$t/state/localnodes.install_step.organizer_account" ] && echo yes || echo no) $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+# 5c. This entrypoint created the account, then stopped before the email (uli
+#     failed): the restart retries the login link and the email, once.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG FAIL_ULI=1)"
+check "account without mail: first run stops before the email" "yes 1 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "user:create") $(mails "$t")"
+rc="$(run_ep "$t" $ORG)"
+check "account without mail, restart: warns and retries" yes "$(has "$t/out" "stopped before the welcome email; sending the login link and the email now")"
+check "account without mail, restart: no second account, one email" "1 1" "$(calls "$t" "user:create") $(mails "$t")"
+check "account without mail, restart: mail_sent marked, COMPLETE" "yes yes" "$([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+# 5d. An install from before the markers (account, no markers): adopted, no email.
+t="$(new_site)"; touch "$t/installed" "$t/organizer"; echo 18 > "$t/nodes"
+rc="$(run_ep "$t" $ORG)"
+check "organizer legacy: adopted" yes "$(has "$t/out" "Organizer account exists from an install made before the step markers; adopting it")"
+check "organizer legacy: no user:create, no uli, no email" "0 0 0" "$(calls "$t" "user:create") $(calls "$t" "uli") $(mails "$t")"
+check "organizer legacy: demo content adopted, not reloaded" "0 yes" "$(calls "$t" "social-demo:add") $(has "$t/out" "adopting it as loaded")"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \
