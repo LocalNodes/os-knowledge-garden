@@ -79,13 +79,17 @@ CURL
   # Only the Qdrant readiness probe calls `bash -c` by name.
   printf '#!/bin/sh\nexit 0\n' > "$t/bin/bash"
   printf '#!/bin/sh\necho "APACHE STARTED"\n' > "$t/bin/apache2-foreground"
-  # mariadb: the empty-database check. Answers the users-table count; logs its
-  # argv and whether the password came through MYSQL_PWD (never argv).
+  # mariadb: the empty-database check. Answers the table count (users_table = 1
+  # table, other_tables = 3 more); logs its argv and whether the password came
+  # through MYSQL_PWD (never argv).
   cat > "$t/bin/mariadb" <<'DB'
 #!/bin/sh
 echo "$* PWD_ENV=${MYSQL_PWD:+set}" >> "$SITE/dbcalls"
 [ "${FAIL_DB_QUERY:-0}" = 1 ] && { echo "ERROR 2002: Can't connect" >&2; exit 1; }
-[ -f "$SITE/users_table" ] && echo 1 || echo 0
+n=0; [ -f "$SITE/users_table" ] && n=$((n + 1))
+# A query that asks only about `users` gets only that; any other gets all tables.
+case "$*" in *"table_name = 'users'"*) ;; *) [ -f "$SITE/other_tables" ] && n=$((n + 3)) ;; esac
+echo "$n"
 DB
   cat > "$t/bin/drush" <<'DRUSH'
 #!/bin/sh
@@ -282,10 +286,31 @@ check "empty DB: installs; password via MYSQL_PWD, not argv" "0 1 yes no" "$rc $
 t="$(new_site)"; touch "$t/installed" "$t/users_table"; echo 18 > "$t/nodes"
 rc="$(run_ep "$t" FAIL_BOOTSTRAP=1)"
 check "bootstrap fails on a live DB: refuses site:install, stops" "yes 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install")"
-check "bootstrap fails on a live DB: says why" yes "$(has "$t/out" "already has a users table")"
+check "bootstrap fails on a live DB: says why" yes "$(has "$t/out" "is not empty (it has '1' tables)")"
+t="$(new_site)"; touch "$t/other_tables"
+rc="$(run_ep "$t")"
+check "damaged DB (no users table, other tables): refuses site:install, stops" "yes 0 yes" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install") $(has "$t/out" "is not empty (it has '3' tables)")"
 t="$(new_site)"
 rc="$(run_ep "$t" FAIL_DB_QUERY=1)"
 check "empty-DB check fails: no site:install, stops" "yes 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install")"
+
+# 10. Resend's idempotency key lasts 24 h: no welcome POST more than 23 h after
+#     the first attempt. The first attempt time is stored once.
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+first="$(cat "$t/state/localnodes.install_step.organizer_mail_first_attempt" 2>/dev/null)"
+check "first attempt time stored (epoch seconds)" yes "$(printf '%s' "$first" | grep -qE '^[0-9]{9,}$' && echo yes || echo no)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+check "first attempt time not moved by a retry" "$first" "$(cat "$t/state/localnodes.install_step.organizer_mail_first_attempt")"
+printf '%s' "$(( $(date -u +%s) - 3600 ))" > "$t/state/localnodes.install_step.organizer_mail_first_attempt"
+rc="$(run_ep "$t" $ORG)"
+check "1 h after the first attempt: retried and sent" "3 yes" "$(wc -l < "$t/keys" | tr -d ' ') $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no)"
+t="$(new_site)"
+rc="$(run_ep "$t" $ORG MAIL_CODE=500)"
+printf '%s' "$(( $(date -u +%s) - 24 * 3600 ))" > "$t/state/localnodes.install_step.organizer_mail_first_attempt"
+rc="$(run_ep "$t" $ORG)"
+check "24 h after the first attempt: no POST, not marked, startup continues" "1 no 0" "$(wc -l < "$t/keys" | tr -d ' ') $([ -e "$t/state/localnodes.install_step.organizer_mail_sent" ] && echo yes || echo no) $rc"
+check "24 h after the first attempt: says to check Resend" yes "$(has "$t/out" "welcome mail unconfirmed after 23h; check Resend dashboard")"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \

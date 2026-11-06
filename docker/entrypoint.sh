@@ -171,10 +171,34 @@ welcome_login_url() {  # sets LOGIN_URL; non-zero if drush uli fails
 #   concurrent_idempotent_requests  the first request is still running: retry
 #                                   later with the same key AND the same body.
 # Any other 409 or error is not counted as sent.
+#
+# The key only protects for 24 h. The first POST's time is stored
+# (organizer_mail_first_attempt, epoch seconds), and no POST is made more than
+# 23 h after it: a first send that Resend accepted but whose response was lost
+# could otherwise be sent a second time once the key has expired.
+WELCOME_RETRY_WINDOW=$((23 * 3600))
 send_welcome_email() {
   if [ -z "$RESEND_API_KEY" ]; then
     echo "WARNING: RESEND_API_KEY is not set; welcome email not sent."
     return 0
+  fi
+  local first now
+  read_state "localnodes.install_step.organizer_mail_first_attempt"
+  first="$STATE_VALUE"
+  now="$(date -u +%s)"
+  if [ -z "$first" ]; then
+    $DRUSH state:set "localnodes.install_step.organizer_mail_first_attempt" "$now"
+  else
+    case "$first" in
+      *[!0-9]*)
+        echo "WARNING: welcome mail unconfirmed and its first-attempt time is unreadable ('$first'); not retrying. Check the Resend dashboard."
+        return 0
+        ;;
+    esac
+    if [ $((now - first)) -gt "$WELCOME_RETRY_WINDOW" ]; then
+      echo "WARNING: welcome mail unconfirmed after 23h; check Resend dashboard. Not retrying (the idempotency key has expired)."
+      return 0
+    fi
   fi
   local key body response code name attempt=1
   key="welcome-$(printf '%s\n%s' "$SITE_URI" "$ORGANIZER_EMAIL" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -d' ' -f1)"
@@ -365,16 +389,18 @@ if [ "$INSTALLED" = false ]; then
   # Drupal did not bootstrap. That alone is not proof of an empty database: a
   # DB hiccup, a bad setting or a PHP fatal would otherwise run site:install
   # over a live site and wipe it. Install only on positive evidence that the
-  # database has no Drupal `users` table; if the check itself fails, or the
-  # table exists, stop so the container retries (and a human looks).
+  # database is EMPTY (no tables at all: a damaged site may have lost `users`
+  # but still hold node or config tables, which site:install would drop); if
+  # the check itself fails, or any table exists, stop so the container retries
+  # (and a human looks).
   # Test: scripts/ops/tests/install-resume.test.sh
-  if ! USERS_TABLES="$(MYSQL_PWD="${DB_PASSWORD:-changeme}" mariadb -h "${DB_HOST:-mariadb}" -P "${DB_PORT:-3306}" -u "${DB_USER:-opensocial}" -N -B \
-      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'users'" "${DB_NAME:-opensocial}")"; then
+  if ! DB_TABLES="$(MYSQL_PWD="${DB_PASSWORD:-changeme}" mariadb -h "${DB_HOST:-mariadb}" -P "${DB_PORT:-3306}" -u "${DB_USER:-opensocial}" -N -B \
+      -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()" "${DB_NAME:-opensocial}")"; then
     echo "ERROR: Drupal did not bootstrap and the empty-database check failed; not installing. Stopping so the container retries."
     exit 1
   fi
-  if [ "$USERS_TABLES" != "0" ]; then
-    echo "ERROR: Drupal did not bootstrap, but database ${DB_NAME:-opensocial} already has a users table (check returned '$USERS_TABLES'). Refusing to run site:install over it; stopping so the container retries. If this is a broken install on a throwaway instance, delete its volumes and redeploy."
+  if [ "$DB_TABLES" != "0" ]; then
+    echo "ERROR: Drupal did not bootstrap, but database ${DB_NAME:-opensocial} is not empty (it has '$DB_TABLES' tables). Refusing to run site:install over it; stopping so the container retries. If this is a broken install on a throwaway instance, delete its volumes and redeploy."
     exit 1
   fi
 
