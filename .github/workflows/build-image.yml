@@ -3,6 +3,9 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [main]
+  # PRs run the Phase 22 gate only; nothing is built or published.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -69,6 +72,7 @@ jobs:
 
   build:
     needs: phase22-evals
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
