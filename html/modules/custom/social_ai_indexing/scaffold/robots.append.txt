@@ -1,0 +1,3 @@
+# LocalNodes (D-27d): keep crawlers off the paid AI endpoints.
+Disallow: /api/ai/
+Disallow: /index.php/api/ai/

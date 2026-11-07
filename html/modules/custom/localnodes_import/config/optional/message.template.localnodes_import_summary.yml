@@ -1,0 +1,37 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  module:
+    - activity_logger
+third_party_settings:
+  activity_logger:
+    # No entity action creates this message: ImportRunFinalizer posts one per
+    # finished import run (D-24), with the run's first imported Topic's group
+    # relationship as the related object, so group_activity_context gives the
+    # group as the recipient. The group stream only: no notifications or
+    # email.
+    activity_bundle_entities: {  }
+    activity_action: ''
+    activity_context: group_activity_context
+    activity_destinations:
+      stream_group: stream_group
+    activity_create_direct: true
+    activity_aggregate: false
+    activity_entity_condition: ''
+    email_subject: ''
+template: localnodes_import_summary
+label: 'Documents imported into a group'
+description: 'One group stream item per import run: "@count documents added to this group" (D-24).'
+text:
+  -
+    value: '<p>[message:localnodes_import_summary]</p>'
+    format: basic_html
+settings:
+  'token options':
+    clear: false
+    'token replace': true
+  purge_override: false
+  purge_methods: {  }

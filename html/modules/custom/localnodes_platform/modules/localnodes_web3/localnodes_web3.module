@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the LocalNodes Web3 module.
+ */
+
+/**
+ * Implements hook_library_info_alter().
+ *
+ * Hangs the LocalNodes treasury styles (localnodes_web3/treasury) off the
+ * shared Phase 21 components library, so every page that shows the Test
+ * network banner, a receipt panel or a Short ID gets the LocalNodes look.
+ * safe_smart_accounts and group_treasury stay theme-neutral and never
+ * reference this library or any --ln-* token (D-04).
+ */
+function localnodes_web3_library_info_alter(array &$libraries, $extension) {
+  if ($extension !== 'safe_smart_accounts' || !isset($libraries['components'])) {
+    return;
+  }
+  $dependencies = $libraries['components']['dependencies'] ?? [];
+  if (!in_array('localnodes_web3/treasury', $dependencies, TRUE)) {
+    $dependencies[] = 'localnodes_web3/treasury';
+  }
+  $libraries['components']['dependencies'] = $dependencies;
+}

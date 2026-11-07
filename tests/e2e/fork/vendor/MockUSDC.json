@@ -1,0 +1,252 @@
+{
+  "name": "MockUSDC",
+  "source": "MockUSDC.sol",
+  "solc": "0.8.24+commit.e11b9ed9",
+  "evmVersion": "cancun",
+  "optimizerRuns": 200,
+  "forgeCommand": "docker run --rm -v \"$PWD/tests/e2e/fork/vendor:/src:ro\" --entrypoint \"\" ghcr.io/foundry-rs/foundry:v1.8.6@sha256:4a16a86f41d30418fbdca47ce2868121bbb0aeaa0a34bde2dd1e2911c4be2464 sh -c 'mkdir -p /tmp/p/src && cp /src/MockUSDC.sol /tmp/p/src/ && cd /tmp/p && forge build --root /tmp/p --contracts src --out out --use 0.8.24 --evm-version cancun --optimize --optimizer-runs 200 && cat out/MockUSDC.sol/MockUSDC.json'",
+  "runtime": "0x608060405234801561000f575f80fd5b506004361061009b575f3560e01c806340c10f191161006357806340c10f191461014357806370a082311461015857806395d89b4114610177578063a9059cbb1461019a578063dd62ed3e146101ad575f80fd5b806306fdde031461009f578063095ea7b3146100dd57806318160ddd1461010057806323b872dd14610116578063313ce56714610129575b5f80fd5b6100c7604051806040016040528060098152602001684d6f636b205553444360b81b81525081565b6040516100d4919061049e565b60405180910390f35b6100f06100eb366004610505565b6101d7565b60405190151581526020016100d4565b6101085f5481565b6040519081526020016100d4565b6100f061012436600461052d565b610243565b610131600681565b60405160ff90911681526020016100d4565b610156610151366004610505565b6102fd565b005b610108610166366004610566565b60016020525f908152604090205481565b6100c7604051806040016040528060048152602001635553444360e01b81525081565b6100f06101a8366004610505565b610382565b6101086101bb366004610586565b600260209081525f928352604080842090915290825290205481565b335f8181526002602090815260408083206001600160a01b038716808552925280832085905551919290917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925906102319086815260200190565b60405180910390a35060015b92915050565b6001600160a01b0383165f9081526002602090815260408083203384529091528120545f1981146102e757828110156102b95760405162461bcd60e51b81526020600482015260136024820152724d6f636b555344433a20616c6c6f77616e636560681b60448201526064015b60405180910390fd5b6102c383826105cb565b6001600160a01b0386165f9081526002602090815260408083203384529091529020555b6102f2858585610397565b506001949350505050565b805f8082825461030d91906105de565b90915550506001600160a01b0382165f90815260016020526040812080548392906103399084906105de565b90915550506040518181526001600160a01b038316905f907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a35050565b5f61038e338484610397565b50600192915050565b6001600160a01b0383165f908152600160205260409020548111156103f25760405162461bcd60e51b81526020600482015260116024820152704d6f636b555344433a2062616c616e636560781b60448201526064016102b0565b6001600160a01b0383165f90815260016020526040812080548392906104199084906105cb565b90915550506001600160a01b0382165f90815260016020526040812080548392906104459084906105de565b92505081905550816001600160a01b0316836001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8360405161049191815260200190565b60405180910390a3505050565b5f602080835283518060208501525f5b818110156104ca578581018301518582016040015282016104ae565b505f604082860101526040601f19601f8301168501019250505092915050565b80356001600160a01b0381168114610500575f80fd5b919050565b5f8060408385031215610516575f80fd5b61051f836104ea565b946020939093013593505050565b5f805f6060848603121561053f575f80fd5b610548846104ea565b9250610556602085016104ea565b9150604084013590509250925092565b5f60208284031215610576575f80fd5b61057f826104ea565b9392505050565b5f8060408385031215610597575f80fd5b6105a0836104ea565b91506105ae602084016104ea565b90509250929050565b634e487b7160e01b5f52601160045260245ffd5b8181038181111561023d5761023d6105b7565b8082018082111561023d5761023d6105b756fea2646970667358221220cadb1a0d6ed9d5c71f41b3328e1dc05554d5932c10c9d772a26984bef46fb4d664736f6c63430008180033",
+  "runtimeCodeHash": "0x63cd4857b6f8c3e5f538f5fb5d1c45b4e7c888b1db029d93e5703276648f7323",
+  "abi": [
+    {
+      "type": "function",
+      "name": "allowance",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "approve",
+      "inputs": [
+        {
+          "name": "spender",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "balanceOf",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "decimals",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "mint",
+      "inputs": [
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "name",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "symbol",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "totalSupply",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "transfer",
+      "inputs": [
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "transferFrom",
+      "inputs": [
+        {
+          "name": "from",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "Approval",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "spender",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "value",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "Transfer",
+      "inputs": [
+        {
+          "name": "from",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "value",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    }
+  ]
+}

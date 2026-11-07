@@ -1,0 +1,38 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - safe_smart_accounts
+id: ethereum_sepolia
+label: 'Ethereum Sepolia'
+chain_id: 11155111
+is_testnet: true
+rpc_urls:
+  - 'https://eth-sepolia-testnet.api.pocket.network'
+  - 'https://ethereum-sepolia-rpc.publicnode.com'
+explorer:
+  name: Blockscout
+  address_url: 'https://eth-sepolia.blockscout.com/address/{address}'
+  tx_url: 'https://eth-sepolia.blockscout.com/tx/{hash}'
+native_currency:
+  name: Ether
+  symbol: ETH
+  decimals: 18
+tokens:
+  -
+    address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'
+    label: USDC
+contracts:
+  safe_singleton: ''
+  safe_l2_singleton: ''
+  safe_proxy_factory: '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67'
+  fallback_handler: ''
+  reality: ''
+  hats: ''
+  eas: ''
+  arbitrator: ''
+  daostar: ''
+safe_version: '1.4.1'
+block_seconds: 12
+drop_after_blocks: 50
+weight: 0

@@ -28,6 +28,9 @@ WORKDIR /app
 # Copy composer files and patches first (maximizes Docker layer caching)
 COPY composer.json composer.lock ./
 COPY patches/ patches/
+# composer.json's scaffold step appends this file to robots.txt, so it must
+# exist before composer install runs.
+COPY html/modules/custom/social_ai_indexing/scaffold/ html/modules/custom/social_ai_indexing/scaffold/
 
 # Install dependencies (patches applied automatically by cweagans/composer-patches)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
@@ -138,7 +141,8 @@ RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
 
 # Copy and configure entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY docker/worker-loop.sh /usr/local/bin/worker-loop.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/worker-loop.sh
 
 EXPOSE 80
 

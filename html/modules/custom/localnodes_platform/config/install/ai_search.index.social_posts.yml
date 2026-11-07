@@ -26,6 +26,18 @@ indexing_options:
     field_name: citation_url
     indexing_option: attributes
     max: 0
+  citation_source_url:
+    field_name: citation_source_url
+    indexing_option: attributes
+    max: 0
+  citation_license:
+    field_name: citation_license
+    indexing_option: attributes
+    max: 0
+  citation_attribution:
+    field_name: citation_attribution
+    indexing_option: attributes
+    max: 0
   field_content_visibility:
     field_name: field_content_visibility
     indexing_option: attributes

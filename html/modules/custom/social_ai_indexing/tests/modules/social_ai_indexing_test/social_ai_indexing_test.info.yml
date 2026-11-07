@@ -1,0 +1,9 @@
+name: 'Social AI Indexing test support'
+type: module
+description: 'Test-only doubles for social_ai_indexing: a stub AI search backend (honour, ignore, throw) and a scripted LLM.'
+core_version_requirement: ^10 || ^11
+package: Testing
+hidden: true
+dependencies:
+  - ai:ai
+  - search_api:search_api

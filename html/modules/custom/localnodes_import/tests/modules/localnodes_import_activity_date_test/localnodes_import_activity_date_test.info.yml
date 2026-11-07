@@ -1,0 +1,6 @@
+name: 'LocalNodes import activity date test'
+type: module
+description: 'Test only: an activity template that prints the stream date link, as Open Social''s socialbase theme does (22-23 follow-up).'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

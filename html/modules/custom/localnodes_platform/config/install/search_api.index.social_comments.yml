@@ -24,6 +24,10 @@ field_settings:
     label: 'Citation URL'
     property_path: citation_url
     type: string
+  field_content_visibility:
+    label: 'Content visibility (from the parent post)'
+    property_path: parent_content_visibility
+    type: string
   group_id:
     label: 'Group ID'
     property_path: group_id
@@ -74,6 +78,10 @@ processor_settings:
     weights:
       add_properties: 0
     enabled: true
+  content_visibility_metadata:
+    weights:
+      add_properties: 5
+    enabled: true
   custom_value: {  }
   entity_type: {  }
   group_metadata:
@@ -89,7 +97,10 @@ tracker_settings:
   default:
     indexing_order: fifo
 options:
-  cron_limit: 50
+  # Free-tier Gemini allows 100 embedding requests a minute. drupal/ai aborts
+  # a whole index batch on the first 429 and marks none of it indexed, so a
+  # pass must stay well under that (22-26 live check; AiIndexCronLimitTest).
+  cron_limit: 8
   delete_on_fail: true
   index_directly: true
   track_changes_in_references: true

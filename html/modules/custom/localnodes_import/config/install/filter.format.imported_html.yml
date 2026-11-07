@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies: {  }
+name: 'Imported HTML'
+format: imported_html
+weight: 10
+filters:
+  filter_html:
+    id: filter_html
+    provider: filter
+    status: true
+    weight: -10
+    settings:
+      allowed_html: '<p> <br> <h2 id> <h3 id> <h4 id> <h5 id> <h6 id> <a href hreflang> <em> <strong> <cite> <q> <blockquote cite> <code> <pre> <ul type> <ol start type> <li> <dl> <dt> <dd> <sup> <sub> <table> <caption> <thead> <tbody> <tr> <th scope> <td>'
+      filter_html_help: false
+      filter_html_nofollow: true
+  filter_htmlcorrector:
+    id: filter_htmlcorrector
+    provider: filter
+    status: true
+    weight: 10
+    settings: {  }

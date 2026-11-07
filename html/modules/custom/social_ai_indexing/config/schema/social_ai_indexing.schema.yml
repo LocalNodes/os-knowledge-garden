@@ -1,0 +1,39 @@
+social_ai_indexing.settings:
+  type: config_object
+  label: 'Social AI Indexing settings'
+  mapping:
+    overview_flood:
+      type: mapping
+      label: 'AI overview flood limits'
+      mapping:
+        user_limit:
+          type: integer
+          label: 'Counted overview requests per member per window'
+        ip_limit:
+          type: integer
+          label: 'Counted overview requests per client IP per window'
+        window:
+          type: integer
+          label: 'Window, in seconds'
+    overview_max_query_chars:
+      type: integer
+      label: 'Longest overview question, in characters'
+    support_check:
+      type: mapping
+      label: 'Runtime support check of cited sentences'
+      mapping:
+        assistant:
+          type: boolean
+          label: 'Check the group assistant''s answers'
+        overview:
+          type: boolean
+          label: 'Check the search overview'
+        provider:
+          type: string
+          label: 'Provider plugin for the check'
+        model:
+          type: string
+          label: 'Model for the check'
+        timeout:
+          type: integer
+          label: 'HTTP timeout for the check call, in seconds'

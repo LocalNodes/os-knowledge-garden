@@ -1,0 +1,32 @@
+{#
+/**
+ * @file
+ * The import batch's progress bar (UI-SPEC S4, 22-17).
+ *
+ * Used for the importer's batch only (a theme suggestion from
+ * localnodes_import.module). Core's Batch API renders this template on the
+ * first page load and on every no-JavaScript refresh; with JavaScript,
+ * batch.js replaces the [data-drupal-progress] element's content with its
+ * own bar, which js/progress-a11y.js gives the same ARIA. The hint sits
+ * outside that element so it stays in both cases.
+ *
+ * No aria-live here: without JavaScript every step is a new page load.
+ *
+ * Available variables:
+ * - attributes: HTML attributes for the bar container.
+ * - label: "‹i› of ‹N›: ‹name›" for the item just finished, if any.
+ * - message: "‹i› of ‹N›" (or "0 of ‹N›" before the first item).
+ * - percent: the percentage done.
+ * - current, total: the two numbers of the message.
+ * - bar_label: the run title, the bar's accessible name.
+ */
+#}
+<div class="progress-wrapper localnodes-import-progressbar" data-drupal-progress>
+  <div class="message">{{ label ?: message }}</div>
+  <div{{ attributes.addClass('progress') }}>
+    <div class="progress-bar" role="progressbar" style="width: {{ percent }}%" aria-label="{{ bar_label }}" aria-valuemin="0" aria-valuemax="{{ total }}" aria-valuenow="{{ current }}" aria-valuetext="{{ '@current of @total'|t({'@current': current, '@total': total}) }}">
+      <span class="percentage">{{ percent }}%</span>
+    </div>
+  </div>
+</div>
+<p class="localnodes-import-progress-hint">{{ "Keep this tab open until the import finishes. Each item becomes a page in the group as it's done."|t }}</p>

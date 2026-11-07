@@ -302,3 +302,10 @@ corepack_enable: false
 #   - exec: drush sql:sanitize
 #   - exec: drush updatedb
 #   - exec: drush cache:rebuild
+
+# Pitfall 5 (22-RESEARCH): settings.php sets file_private_path to /var/www/private,
+# which prod creates in docker/Dockerfile. Here it points at the gitignored private/ folder in the
+# project, so private and secret:// files (e.g. the default profile picture) survive a restart.
+hooks:
+  post-start:
+    - exec: mkdir -p /var/www/html/private && sudo rm -rf /var/www/private && sudo ln -sfn /var/www/html/private /var/www/private

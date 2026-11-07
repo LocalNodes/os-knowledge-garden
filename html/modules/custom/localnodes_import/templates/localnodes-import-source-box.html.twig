@@ -1,0 +1,78 @@
+{#
+/**
+ * @file
+ * S6 Source box on an imported Topic (UI-SPEC Part 8 S6, D-14, D-25).
+ *
+ * Web page: "Source: ‹site name›, ‹original address›, ‹licence›". The address
+ * is the link text, because it is the attribution CC BY-SA 4.0 §3(a)(1)(A)
+ * asks for. The licence part is there only when an open licence was detected;
+ * otherwise the line ends after the address. Then the change note
+ * (§3(a)(1)(B)) and the dates.
+ *
+ * Uploaded file: "Source: uploaded file ‹file name›" linked to the download,
+ * then "Credit: ‹credit›" and "Licence: ‹licence text›" when the organizer
+ * gave them. The licence text is printed as typed, escaped, never linked.
+ *
+ * External links carry the external icon (hidden from screen readers) and a
+ * visually hidden "(opens another site)"; they open in the same tab. The
+ * licence link is named with the licence's full name (aria-label), so the
+ * note is its description instead.
+ *
+ * Available variables:
+ * - kind: 'web' or 'file'.
+ * - site_name: The source site's name, or NULL.
+ * - source_url: The original address (web).
+ * - licence: NULL, or {label, name, url} for a detected open licence (web).
+ * - licence_note_id: The id of the licence link's "(opens another site)".
+ * - file_name, file_url: The uploaded file and its download address (file).
+ * - credit: The organizer's credit, or NULL (file).
+ * - licence_text: The organizer's licence text, or NULL (file).
+ * - imported, refreshed: Formatted dates, or NULL.
+ * - preview: TRUE on S3's preview of the first address (22-30): nothing has
+ *   been imported yet, so the change note and the dates, which say what
+ *   happened, are left out.
+ * - no_text: For a page whose file has no readable text, the report's reason
+ *   ("This looks like a scanned PDF…"), carried onto the page (22-30), or
+ *   NULL.
+ */
+#}
+{% set external_icon %}<svg class="localnodes-import-source__icon" aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{% endset %}
+<section class="localnodes-import-source" aria-labelledby="localnodes-import-source-heading">
+  <h2 id="localnodes-import-source-heading" class="localnodes-import-source__heading">{{ 'Source'|t }}</h2>
+  {% if kind == 'web' %}
+    <p class="localnodes-import-source__attribution">
+      {{- 'Source:'|t }} {% if site_name %}{{ site_name }}, {% endif -%}
+      <a href="{{ source_url }}" class="localnodes-import-source__address">{{ source_url }}{{ external_icon }}<span class="visually-hidden"> {{ '(opens another site)'|t }}</span></a>
+      {%- if licence -%}
+        , <a href="{{ licence.url }}" class="localnodes-import-source__licence-link" aria-label="{{ licence.name }}" aria-describedby="{{ licence_note_id }}">{{ licence.label }}{{ external_icon }}<span id="{{ licence_note_id }}" class="visually-hidden"> {{ '(opens another site)'|t }}</span></a>
+      {%- endif -%}
+    </p>
+    {% if not preview %}
+      <p class="localnodes-import-source__note">{{ 'Formatting was converted for this site. The original page may look different.'|t }}</p>
+    {% endif %}
+  {% else %}
+    <p class="localnodes-import-source__attribution">
+      {{- 'Source: uploaded file'|t }} {% if file_url %}<a href="{{ file_url }}" class="localnodes-import-source__address">{{ file_name }}</a>{% else %}{{ file_name }}{% endif -%}
+    </p>
+    {% if credit %}
+      <p class="localnodes-import-source__credit">{{ 'Credit:'|t }} {{ credit }}</p>
+    {% endif %}
+    {% if licence_text %}
+      <p class="localnodes-import-source__licence">{{ 'Licence:'|t }} {{ licence_text }}</p>
+    {% endif %}
+  {% endif %}
+  {% if no_text %}
+    <p class="localnodes-import-source__no-text">{{ no_text }}</p>
+  {% endif %}
+  {% if (imported or refreshed) and not preview %}
+    <p class="localnodes-import-source__meta">
+      {%- if imported -%}
+        {{ 'Imported @date'|t({'@date': imported}) }}
+      {%- endif -%}
+      {%- if imported and refreshed %} · {% endif -%}
+      {%- if refreshed -%}
+        {{ 'Refreshed from source @date'|t({'@date': refreshed}) }}
+      {%- endif -%}
+    </p>
+  {% endif %}
+</section>

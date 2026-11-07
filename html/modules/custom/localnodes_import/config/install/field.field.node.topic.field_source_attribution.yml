@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  config:
+    - field.storage.node.field_source_attribution
+    - node.type.topic
+id: node.topic.field_source_attribution
+field_name: field_source_attribution
+entity_type: node
+bundle: topic
+label: Credit
+description: 'Who wrote or published the source.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

@@ -15,14 +15,122 @@ services:
       - '@social_ai_indexing.permission_filter'
       - '@entity_type.manager'
 
+  # Search-page AI overview (S8): its own SourceRegistry per generation,
+  # the shared CitationRewriter, setSystemPrompt + social_ai_overview tag.
   social_ai_indexing.ai_overview:
     class: Drupal\social_ai_indexing\Service\AiOverviewService
     arguments:
       - '@social_ai_indexing.hybrid_search'
       - '@ai.provider'
+      - '@social_ai_indexing.citation_rewriter'
+      - '@logger.channel.social_ai_indexing'
+    calls:
+      - [setSupportCheck, ['@social_ai_indexing.support_check']]
+
+  social_ai_indexing.support_check:
+    class: Drupal\social_ai_indexing\Citation\SupportCheck
+    arguments:
+      - '@ai.provider'
+      - '@config.factory'
+      - '@key.repository'
 
   social_ai_indexing.related_content:
     class: Drupal\social_ai_indexing\Service\RelatedContentService
     arguments:
       - '@entity_type.manager'
       - '@social_ai_indexing.permission_filter'
+
+  social_ai_indexing.file_text_store:
+    class: Drupal\social_ai_indexing\Service\FileTextStore
+    arguments: ['@keyvalue', '@file_system']
+
+  # Request-wide [R#] source registry (D-19, KNOW-04). Shared: one instance
+  # per request under PHP-FPM; reset() at the start of every agent run.
+  social_ai_indexing.source_registry:
+    class: Drupal\social_ai_indexing\Citation\SourceRegistry
+
+  logger.channel.social_ai_indexing:
+    parent: logger.channel_base
+    arguments: ['social_ai_indexing']
+
+  # Agent-exit citation rewrite (AI-SPEC §4 step 4, D-19, KNOW-04).
+  social_ai_indexing.citation_rewriter:
+    class: Drupal\social_ai_indexing\Citation\CitationRewriter
+
+  social_ai_indexing.citation_rewrite_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber
+    arguments:
+      - '@social_ai_indexing.source_registry'
+      - '@social_ai_indexing.citation_rewriter'
+      - '@logger.channel.social_ai_indexing'
+      - '@ai_assistant_api.runner'
+      - '@current_user'
+      - '@entity_type.manager'
+    calls:
+      - [setSupportCheck, ['@social_ai_indexing.support_check']]
+    tags:
+      - { name: event_subscriber }
+
+  # Per-caller Gemini caps: maxOutputTokens, thinking low, no sampling keys
+  # (AI-SPEC guardrail G6, E11).
+  social_ai_indexing.gemini_request_config_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\GeminiRequestConfigSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  # Tool-level trace: plugin id, index, counts and labels only (E10).
+  social_ai_indexing.tool_trace_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\ToolTraceSubscriber
+    arguments: ['@social_ai_indexing.source_registry', '@logger.channel.social_ai_indexing']
+    tags:
+      - { name: event_subscriber }
+
+  # The last gate (AI-SPEC §4 step 5, guardrail G4): any group_assistant exit
+  # that escaped the rewrite becomes the fixed fallback copy. The first four
+  # arguments are AgentRunner's own.
+  social_ai_indexing.agent_runner_guard:
+    class: Drupal\social_ai_indexing\Service\CitationGuardAgentRunner
+    decorates: ai_assistant_api.agent_runner
+    arguments:
+      - '@ai.provider'
+      - '@tempstore.private'
+      - '@event_dispatcher'
+      - '@?plugin.manager.ai_agents'
+      - '@social_ai_indexing.source_registry'
+      - '@logger.channel.social_ai_indexing'
+
+  # Query-embedding cache (D-27b, D-27c): its own bin, 7-day entries,
+  # provider + model + normalised-text key, the vector only.
+  cache.ai_embeddings:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: ['@cache_factory', 'get']
+    arguments: [ai_embeddings]
+
+  # Serves and stores embeddings only inside an AI-search query context,
+  # never during indexing (W-2). Shared, so its depths are request-scoped.
+  social_ai_indexing.embedding_cache_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\EmbeddingCacheSubscriber
+    arguments: ['@cache.ai_embeddings', '@datetime.time']
+    tags:
+      - { name: event_subscriber }
+
+  # X-Robots-Tag: noindex, nofollow on /search and /api/ai (D-27d).
+  social_ai_indexing.noindex_header_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\NoIndexHeaderSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  # Chatbot length limit and per-member, shared anonymous and per-IP flood
+  # caps (D-27; Tom, 2026-11-05). REQUEST priority 25: after routing (32)
+  # and the access check (30), before DeepChatApi::api().
+  social_ai_indexing.chatbot_guard_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\ChatbotGuardSubscriber
+    arguments:
+      - '@flood'
+      - '@config.factory'
+      - '@logger.channel.social_ai_indexing'
+      - '@current_user'
+    tags:
+      - { name: event_subscriber }

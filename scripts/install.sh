@@ -76,6 +76,8 @@ ENVEOF
 ensure_gemini_key
 
 # Step 1: Install dependencies (applies patches too).
+# ext-gmp is satisfied via config.platform shim in composer.json (elliptic-php
+# runs on bcmath, which DDEV ships); no --ignore-platform-req flag needed.
 echo ">>> Installing composer dependencies..."
 ddev composer install
 
@@ -121,7 +123,7 @@ esac
 echo ">>> Rebuilding caches..."
 ddev drush cr
 
-# Recreate Qdrant collection with correct vector dimensions (3072 for gemini-embedding-001).
+# Recreate Qdrant collection with correct vector dimensions (3072, the default size of gemini-embedding-2).
 # The Qdrant provider defaults to 1536 dims, so we must pre-create the collection.
 echo ">>> Recreating Qdrant collection (3072 dims)..."
 ddev exec curl -s -X DELETE http://qdrant:6333/collections/knowledge_garden > /dev/null 2>&1 || true

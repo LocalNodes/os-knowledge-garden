@@ -1,0 +1,142 @@
+<?php
+
+/**
+ * @file
+ * Install-time configuration for LocalNodes Import.
+ *
+ * This is a distribution in development: config lives in config/install and
+ * in this hook_install(). There is no hook_update_N() (CLAUDE.md).
+ */
+
+declare(strict_types=1);
+
+use Drupal\field\Entity\FieldConfig;
+use Drupal\group\Entity\GroupRole;
+use Drupal\user\Entity\Role;
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_import_install(bool $is_syncing): void {
+  if ($is_syncing) {
+    return;
+  }
+  _localnodes_import_grant_group_permission();
+  _localnodes_import_extend_topic_file_extensions();
+  _localnodes_import_hide_source_fields();
+  _localnodes_import_create_reference_term();
+  _localnodes_import_grant_text_format();
+}
+
+/**
+ * Lets the roles that edit imported Topics use the imported_html format.
+ *
+ * The format ships in config/install. Without the permission, an imported
+ * Topic's body shows as disabled on its edit form. The format allows no more
+ * than basic_html does, so sitemanager, contentmanager and authenticated get
+ * it (RESEARCH Open Question 5). Roles that don't exist are skipped.
+ * Idempotent.
+ */
+function _localnodes_import_grant_text_format(): void {
+  $permission = 'use text format imported_html';
+  foreach (['sitemanager', 'contentmanager', 'authenticated'] as $rid) {
+    $role = Role::load($rid);
+    if ($role !== NULL && !$role->hasPermission($permission)) {
+      $role->grantPermission($permission)->save();
+    }
+  }
+}
+
+/**
+ * Grants "import content into group" to flexible group managers (D-07).
+ *
+ * The site-manager group roles (flexible_group-sm-insider and
+ * flexible_group-ba5854c29) are admin: true, so they pass without a grant.
+ * Idempotent.
+ */
+function _localnodes_import_grant_group_permission(): void {
+  $role = GroupRole::load('flexible_group-group_manager');
+  if ($role !== NULL && !$role->hasPermission('import content into group')) {
+    $role->grantPermission('import content into group')->save();
+  }
+}
+
+/**
+ * Lets Topic attachments carry every type the importer accepts (D-14).
+ *
+ * social_topic ships field_files without odt and md. Imported files are
+ * attached programmatically, which skips validation, but a later edit of an
+ * imported .odt or .md Topic would fail it. Idempotent, de-duplicated.
+ */
+function _localnodes_import_extend_topic_file_extensions(): void {
+  $field = FieldConfig::loadByName('node', 'topic', 'field_files');
+  if ($field === NULL) {
+    return;
+  }
+  $current = preg_split('/\s+/', trim((string) $field->getSetting('file_extensions'))) ?: [];
+  $extensions = array_values(array_unique(array_filter(array_merge($current, ['odt', 'md']))));
+  if ($extensions !== array_values(array_filter($current))) {
+    $field->setSetting('file_extensions', implode(' ', $extensions))->save();
+  }
+}
+
+/**
+ * Keeps the source fields off the Topic's existing displays.
+ *
+ * social_topic ships the Topic form and view displays, so they can't be
+ * shipped again here (pre-existing config fails `drush en`). New
+ * configurable fields aren't normally placed, but if any display has them,
+ * remove them: the Source box renders them as an extra field (22-20).
+ */
+function _localnodes_import_hide_source_fields(): void {
+  $fields = ['field_source_url', 'field_source_license', 'field_source_license_text', 'field_source_attribution'];
+  $entity_type_manager = \Drupal::entityTypeManager();
+  foreach (['entity_view_display', 'entity_form_display'] as $display_type) {
+    $displays = $entity_type_manager->getStorage($display_type)->loadByProperties([
+      'targetEntityType' => 'node',
+      'bundle' => 'topic',
+    ]);
+    foreach ($displays as $display) {
+      $changed = FALSE;
+      foreach ($fields as $field_name) {
+        if ($display->getComponent($field_name) !== NULL) {
+          $display->removeComponent($field_name);
+          $changed = TRUE;
+        }
+      }
+      if ($changed) {
+        $display->save();
+      }
+    }
+  }
+}
+
+/**
+ * Creates the "Reference" topic type that imports default to (D-26).
+ *
+ * Terms are content, so they can't ship in config/install. Idempotent: an
+ * existing topic_types term named Reference is reused.
+ *
+ * @return int|null
+ *   The term id, or NULL when the topic_types vocabulary doesn't exist.
+ */
+function _localnodes_import_create_reference_term(): ?int {
+  $entity_type_manager = \Drupal::entityTypeManager();
+  if ($entity_type_manager->getStorage('taxonomy_vocabulary')->load('topic_types') === NULL) {
+    return NULL;
+  }
+  $storage = $entity_type_manager->getStorage('taxonomy_term');
+  $existing = $storage->getQuery()
+    ->accessCheck(FALSE)
+    ->condition('vid', 'topic_types')
+    ->condition('name', 'Reference')
+    ->sort('tid')
+    ->range(0, 1)
+    ->execute();
+  if ($existing !== []) {
+    return (int) reset($existing);
+  }
+  $term = $storage->create(['vid' => 'topic_types', 'name' => 'Reference']);
+  $term->save();
+  return (int) $term->id();
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Test data for the 21-42 link specs. existing: the real pre-existing Safe on each network, linked only in fork mode (Ethereum Sepolia: Run 1b's Safe, v1.3.0, 21-LIVE-CHECK; Base Sepolia: 21-RESEARCH's SafeL2 1.4.1). safeL2Singleton141 and fallbackHandler141: the canonical Safe 1.4.1 contracts, from 21-39's tests/e2e/fork/vendor/safe-1.4.1 (same address on every chain id).",
+  "ethereum_sepolia": {
+    "existing": "0x3E852dEF104033D32EB20f45e0A82B76a37BF142",
+    "safeL2Singleton141": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+    "fallbackHandler141": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99"
+  },
+  "base_sepolia": {
+    "existing": "0x821abd6a11026dd92e19de6147829e9257e7de5a",
+    "safeL2Singleton141": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+    "fallbackHandler141": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99"
+  }
+}

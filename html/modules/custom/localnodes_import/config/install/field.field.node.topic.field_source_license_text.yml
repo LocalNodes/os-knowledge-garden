@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  config:
+    - field.storage.node.field_source_license_text
+    - node.type.topic
+id: node.topic.field_source_license_text
+field_name: field_source_license_text
+entity_type: node
+bundle: topic
+label: Licence
+description: 'The licence as text: what the organizer typed on Upload files, or a detected open licence that has no list key.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

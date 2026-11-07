@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * @file
+ * Test only: prints an activity's date link (22-23 follow-up).
+ *
+ * activity_creator's own activity.html.twig prints only {{ content }}; the
+ * stream's "@time ago" link ({{ date }}) is printed by the socialbase theme,
+ * which Kernel tests don't install. This suggestion template prints the
+ * date, so a Kernel test can render an activity through the real theme
+ * system and render cache and read where the date leads.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_theme().
+ *
+ * activity_creator_theme_suggestions_activity() suggests
+ * activity__<view mode>, so the default view mode picks this template.
+ */
+function localnodes_import_activity_date_test_theme(): array {
+  return [
+    'activity__default' => [
+      'base hook' => 'activity',
+      'template' => 'activity--default',
+    ],
+  ];
+}

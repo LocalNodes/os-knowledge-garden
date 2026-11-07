@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Test only: records each node save and whether it was syncing (22-24).
+ *
+ * Open Social's activity_basics returns early for a syncing entity, so a
+ * syncing save creates no stream item or notification (D-24). The refresh
+ * test reads this record to prove a refresh saves the Topic that way.
+ */
+
+declare(strict_types=1);
+
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_ENTITY_TYPE_update() for node.
+ */
+function localnodes_import_save_spy_node_update(NodeInterface $node): void {
+  $state = \Drupal::state();
+  $saves = $state->get('localnodes_import_save_spy.saves', []);
+  $saves[] = ['nid' => (int) $node->id(), 'syncing' => $node->isSyncing()];
+  $state->set('localnodes_import_save_spy.saves', $saves);
+}

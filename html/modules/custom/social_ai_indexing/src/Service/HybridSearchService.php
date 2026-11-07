@@ -41,6 +41,11 @@ class HybridSearchService {
   public const RRF_K = 60;
 
   /**
+   * The social_content field holding a node's group ids (social_group).
+   */
+  public const KEYWORD_GROUP_FIELD = 'groups';
+
+  /**
    * Constructs a HybridSearchService.
    *
    * @param \Drupal\social_ai_indexing\Service\PermissionFilterService $permission_filter
@@ -162,8 +167,23 @@ class HybridSearchService {
       // Include all content types searchable in social_content index.
       $search_query->addCondition('type', ['post', 'topic', 'event'], 'IN');
 
-      // Apply permission filters to the query.
-      $this->permissionFilter->applyPermissionFilters($search_query, $account);
+      // social_content isn't an AI search index, so SearchQuerySubscriber
+      // doesn't filter it. Without both permission fields there is no
+      // pre-filter at all: return nothing (fail closed, D-18).
+      foreach (['field_content_visibility', self::KEYWORD_GROUP_FIELD] as $field) {
+        if ($index->getField($field) === NULL) {
+          \Drupal::logger('social_ai_indexing')->warning('permission_abort index=@index reason=@reason', [
+            '@index' => 'social_content',
+            '@reason' => 'missing_' . $field,
+          ]);
+          return [];
+        }
+      }
+
+      // The same rule as the search results list on that page: members see
+      // their own groups' members-only pages (22-22). The post-filter in
+      // search() still checks every result with access('view').
+      $this->permissionFilter->applyMemberAwareFilters($search_query, $account, self::KEYWORD_GROUP_FIELD);
 
       // Execute and get results.
       $results = $search_query->execute();
@@ -237,36 +257,23 @@ class HybridSearchService {
   /**
    * Get unique entity ID from a search result.
    *
-   * Uses drupal_entity_id if available, falls back to parsing the Search API
-   * item ID (format: entity:type:id:language).
+   * The entity type and id, from the explicit metadata or the Search API item
+   * id (PermissionFilterService::resultEntityRef()). Rows it can't read are
+   * skipped; the post-filter would drop them anyway.
    *
    * @param array $result
    *   A search result item.
    *
    * @return string|int|null
-   *   The entity ID or NULL if not determinable.
+   *   "type:id", or NULL if not determinable.
    */
   protected function getResultId(array $result): string|int|null {
-    // Primary: use explicit entity ID field.
-    if (isset($result['drupal_entity_id'])) {
-      return $result['drupal_entity_id'];
+    // Keyed on type and id, so a comment never merges with (and replaces)
+    // the node that shares its numeric id.
+    [$type, $id] = PermissionFilterService::resultEntityRef($result);
+    if ($type !== NULL) {
+      return $type . ':' . $id;
     }
-
-    if (isset($result['id'])) {
-      // If it's already a numeric ID.
-      if (is_numeric($result['id'])) {
-        return $result['id'];
-      }
-
-      // Parse Search API item ID format: entity:node:123:en
-      if (is_string($result['id']) && str_contains($result['id'], ':')) {
-        $parts = explode(':', $result['id']);
-        if (count($parts) >= 3 && is_numeric($parts[2])) {
-          return (int) $parts[2];
-        }
-      }
-    }
-
     return NULL;
   }
 

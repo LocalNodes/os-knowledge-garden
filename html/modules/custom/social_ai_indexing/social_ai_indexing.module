@@ -5,6 +5,33 @@
  * Primary module hooks for Social AI Indexing.
  */
 
+use Drupal\Component\Serialization\Json;
+use Drupal\file\FileInterface;
+use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
+
+/**
+ * Implements hook_ai_function_call_info_alter().
+ *
+ * Swaps the class behind 'ai_search:rag_search' for PermissionAwareRagTool
+ * (F-3; D-18 safeguard 2, D-19). Only the class changes: the plugin id,
+ * function_name ('ai_search_rag_search') and context definitions stay
+ * RagTool's, so the group assistant's tools, tool_settings and
+ * tool_usage_limits keep matching, and so does
+ * AiAgentEntityWrapper::allRequiredToolsRan().
+ *
+ * A class swap beats a second plugin id (AI-SPEC §4 step 1): a new id would
+ * need its own function_name (getFunctionCallFromFunctionName() returns the
+ * first match) and edits to the agent config, and it would leave the stock
+ * tool, which hands every retrieved chunk to the LLM without an access
+ * check, available to any other agent. Definitions are cached: a cache
+ * rebuild picks the swap up.
+ */
+function social_ai_indexing_ai_function_call_info_alter(array &$definitions): void {
+  if (isset($definitions['ai_search:rag_search'])) {
+    $definitions['ai_search:rag_search']['class'] = PermissionAwareRagTool::class;
+  }
+}
+
 /**
  * Implements hook_theme().
  */
@@ -57,8 +84,9 @@ function social_ai_indexing_preprocess_block(array &$variables): void {
  * fires at line 634 BEFORE the connect key is set (line 644). By preprocess
  * time, connect exists as a JSON string in $variables['deepchat_settings'].
  *
- * IMPORTANT: Do NOT use early return in this function. The messageStyles
- * configuration below must run on ALL pages, not just Group pages.
+ * IMPORTANT: Do NOT use early return in this function. The chat settings
+ * below (names, error copy, library) must run on ALL pages, not just Group
+ * pages.
  */
 function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   // --- Group context injection (UI-02) ---
@@ -81,22 +109,65 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
       if (is_array($connect)) {
         // Add group_id to the contexts sent with each chatbot message.
         $connect['additionalBodyProps']['contexts']['group_id'] = (int) $group->id();
-        $variables['deepchat_settings']['connect'] = json_encode($connect);
+        $variables['deepchat_settings']['connect'] = Json::encode($connect);
       }
     }
   }
 
-  // --- AI visual distinction (UI-05) ---
-  // Add visual distinction for AI vs user messages via DeepChat messageStyles.
-  // messageStyles is a JSON string at preprocess time.
-  $message_styles_json = $variables['deepchat_settings']['messageStyles'] ?? '{}';
-  $message_styles = is_string($message_styles_json) ? json_decode($message_styles_json, TRUE) : [];
-  if (!is_array($message_styles)) {
-    $message_styles = [];
+  // --- LocalNodes chat (UI-SPEC S7) ---
+  // Message colours come from the style file
+  // (module:social_ai_indexing:localnodes.yml); nothing is hard-coded here.
+  $variables['#attached']['library'][] = 'social_ai_indexing/deepchat';
+
+  // Not set here: DeepChat 'names'. DeepChatFormBlock passes bot_name to
+  // DeepChat only in toolbar placement, and in the floating panel a name
+  // column beside every message squeezes the answer to a few words a line.
+  // The always-visible header label and the first message carry the AI
+  // disclosure instead (UI-SPEC S7, EU AI Act Art. 50).
+  //
+  // The template prints every value inside single-quoted attributes, so
+  // encode with Json::encode() (it escapes apostrophes, as
+  // DeepChatFormBlock does), never plain json_encode().
+  // Service error copy for failures that never reach DeepChatApi's JSON
+  // error (network failure, gateway error, an empty error string). Errors
+  // the API does return use the assistant's error_message, which carries the
+  // same copy (UI-SPEC Copywriting Contract, "Chat service error").
+  $error_json = $variables['deepchat_settings']['errorMessages'] ?? '{}';
+  $error_messages = is_string($error_json) ? json_decode($error_json, TRUE) : [];
+  if (!is_array($error_messages)) {
+    $error_messages = [];
   }
-  $message_styles['default']['ai']['bubble']['borderLeft'] = '3px solid #4a90d9';
-  $message_styles['default']['ai']['bubble']['backgroundColor'] = '#f8f9fa';
-  $variables['deepchat_settings']['messageStyles'] = json_encode($message_styles);
+  $copy = (string) t("Something went wrong and I couldn't answer. Wait a moment, then ask again.");
+  $error_messages['displayServiceErrorMessages'] = TRUE;
+  $error_messages['overrides']['default'] = $copy;
+  $error_messages['overrides']['service'] = $copy;
+  $variables['deepchat_settings']['errorMessages'] = Json::encode($error_messages);
+}
+
+/**
+ * Implements hook_ai_chatbot_style_modules_alter().
+ *
+ * Lets DeepChatFormBlock discover this module's deepchat_styles/, so the
+ * block can use style_file 'module:social_ai_indexing:localnodes.yml'.
+ */
+function social_ai_indexing_ai_chatbot_style_modules_alter(array &$module_list): void {
+  if (!in_array('social_ai_indexing', $module_list, TRUE)) {
+    $module_list[] = 'social_ai_indexing';
+  }
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ *
+ * Uses this module's ai-deepchat.html.twig for the floating chat: the same
+ * markup with the header's nested button moved out and named (UI-SPEC S7,
+ * D-05 axe fixes). The toolbar variant (ai_deepchat__toolbar) is untouched.
+ */
+function social_ai_indexing_theme_registry_alter(array &$theme_registry): void {
+  if (isset($theme_registry['ai_deepchat'])) {
+    $theme_registry['ai_deepchat']['path'] = \Drupal::service('extension.list.module')->getPath('social_ai_indexing') . '/templates';
+    $theme_registry['ai_deepchat']['template'] = 'ai-deepchat';
+  }
 }
 
 /**
@@ -106,4 +177,14 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
  */
 function social_ai_indexing_page_attachments(array &$attachments) {
   $attachments['#attached']['library'][] = 'social_ai_indexing/deepchat-links';
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for file entities.
+ *
+ * Removes the file's stored extracted text, so a deleted file's words do not
+ * linger in the key_value store (AI-SPEC 1b, erasure).
+ */
+function social_ai_indexing_file_delete(FileInterface $file): void {
+  \Drupal::service('social_ai_indexing.file_text_store')->delete((int) $file->id());
 }

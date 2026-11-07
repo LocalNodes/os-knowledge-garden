@@ -1,0 +1,111 @@
+localnodes_import.landing:
+  path: '/group/{group}/import'
+  defaults:
+    _controller: '\Drupal\localnodes_import\Controller\ImportLandingController::view'
+    _title: "Bring In Your Group's Documents"
+  requirements:
+    _group_permission: 'import content into group'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_import.files:
+  path: '/group/{group}/import/files'
+  defaults:
+    _form: '\Drupal\localnodes_import\Form\UploadFilesForm'
+    _title: 'Upload Files'
+  requirements:
+    _group_permission: 'import content into group'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_import.web:
+  path: '/group/{group}/import/web'
+  defaults:
+    _form: '\Drupal\localnodes_import\Form\ImportWebPagesForm'
+    _title: 'Import Web Pages'
+  requirements:
+    _group_permission: 'import content into group'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+# S5 status for status.js (22-25): the panel's numbers and sentences.
+localnodes_import.status:
+  path: '/group/{group}/import/status'
+  defaults:
+    _controller: '\Drupal\localnodes_import\Controller\SearchStatusController::json'
+  methods: [GET]
+  requirements:
+    _group_permission: 'import content into group'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_import.run_report:
+  path: '/group/{group}/import/runs/{localnodes_import_run}'
+  defaults:
+    _controller: '\Drupal\localnodes_import\Controller\RunReportController::view'
+    _title: 'Import Finished'
+  requirements:
+    _group_permission: 'import content into group'
+    _entity_access: 'localnodes_import_run.view'
+    group: \d+
+    localnodes_import_run: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+      localnodes_import_run:
+        type: entity:localnodes_import_run
+
+# "Refresh from source" (22-24): the confirmation for a web Topic in the
+# group, reached from a duplicate web row of a run report (?run=). The
+# parameter is {topic}, not {node}: Open Social treats a route with a node
+# parameter as that node's page (its hero replaces the page title).
+# Both requirements must pass: the import permission, and view and update
+# access to a Topic that is in the group now (merge review R1 item 2).
+localnodes_import.refresh:
+  path: '/group/{group}/import/refresh/{topic}'
+  defaults:
+    _form: '\Drupal\localnodes_import\Form\RefreshFromSourceConfirmForm'
+    # The page title is the question (Open Social's title block reads the
+    # route title, not the form's #title).
+    _title_callback: '\Drupal\localnodes_import\Form\RefreshFromSourceConfirmForm::title'
+  requirements:
+    _group_permission: 'import content into group'
+    _localnodes_import_refresh_access: 'TRUE'
+    group: \d+
+    topic: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+      topic:
+        type: entity:node
+
+# One file per POST from upload.js (D-11). The header token comes from
+# /session/token; core's upload handler validates type, size and name length.
+localnodes_import.upload_file:
+  path: '/group/{group}/import/files/upload'
+  defaults:
+    _controller: '\Drupal\localnodes_import\Controller\UploadController::upload'
+  methods: [POST]
+  requirements:
+    _group_permission: 'import content into group'
+    _csrf_request_header_token: 'TRUE'
+    _format: json
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group

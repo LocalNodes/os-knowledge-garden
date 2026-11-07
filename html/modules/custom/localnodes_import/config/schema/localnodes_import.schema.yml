@@ -1,0 +1,13 @@
+localnodes_import.settings:
+  type: config_object
+  label: 'LocalNodes Import settings'
+  mapping:
+    max_file_mb:
+      type: integer
+      label: 'Largest file accepted, in MB'
+    max_urls:
+      type: integer
+      label: 'Most web addresses accepted in one import'
+    allowed_extensions:
+      type: string
+      label: 'File extensions the importer accepts, separated by spaces'

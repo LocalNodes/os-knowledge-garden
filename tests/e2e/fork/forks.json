@@ -1,0 +1,14 @@
+{
+  "ethereum_sepolia": {
+    "registry": "html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.ethereum_sepolia.yml",
+    "port": 18545,
+    "block": null,
+    "pinned_on": null
+  },
+  "base_sepolia": {
+    "registry": "html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.base_sepolia.yml",
+    "port": 18546,
+    "block": null,
+    "pinned_on": null
+  }
+}

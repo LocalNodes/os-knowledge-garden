@@ -1,0 +1,68 @@
+# S2 "Upload files": per-file transport and styles (22-14).
+upload:
+  version: VERSION
+  js:
+    js/upload.js: {}
+  css:
+    component:
+      css/import.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+
+# S3 "Import web pages": styles, and focus on the error summary (22-24).
+web:
+  version: VERSION
+  js:
+    js/web.js: {}
+  css:
+    component:
+      css/import.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupal.ajax
+    - core/once
+
+# S1 Import tab and S5 search status (22-25): choice cards, status panel,
+# Past imports, and the refresh and polling of the panel.
+status:
+  version: VERSION
+  js:
+    js/status.js: {}
+  css:
+    component:
+      css/import.css: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+# S4 report: table, badges and actions (22-17).
+report:
+  version: VERSION
+  css:
+    component:
+      css/import.css: {}
+
+# S4 progress page: ARIA values and throttled announcements on our batch's
+# JavaScript bar (22-17). Attached by the importer's progress-bar template.
+progress_a11y:
+  version: VERSION
+  js:
+    js/progress-a11y.js: {}
+  css:
+    component:
+      css/import.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+    - core/drupal.batch
+
+# S6 Source box and the quote styles of imported text (22-20). Attached by
+# localnodes_import_node_view() on the full view of imported Topics.
+source_box:
+  version: VERSION
+  css:
+    component:
+      css/import.css: {}

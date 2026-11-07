@@ -1,0 +1,10 @@
+# The group's "Import" tab, after Topics (weight 50), where imported pages
+# go. Only rendered for people who can reach localnodes_import.landing (D-07,
+# D-08). At weight 70 it came after Manage members, so socialblue's tab bar
+# always moved it behind its overflow arrow; at 55 it stays visible from
+# 900 px wide (22-30 KB-08, Q1).
+localnodes_import.group_import:
+  route_name: localnodes_import.landing
+  base_route: entity.group.canonical
+  title: Import
+  weight: 55

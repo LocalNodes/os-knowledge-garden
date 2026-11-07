@@ -1,4 +1,13 @@
 services:
+  # D-27 (Tom, 2026-11-05; checker W-1): at the ai_usage_limits token
+  # ceiling, an index run's embeddings call becomes a SearchApiException, so
+  # search_api's cron and post-request catches log it and keep the items
+  # tracked. Shared, so its indexing depth is request-scoped.
+  localnodes_platform.ai_ceiling_indexing_subscriber:
+    class: Drupal\localnodes_platform\EventSubscriber\AiCeilingIndexingSubscriber
+    arguments: ['@state', '@config.factory']
+    tags:
+      - { name: event_subscriber }
   # Runs before core's ReverseProxyMiddleware (priority 300).
   localnodes_platform.cloudflare_client_ip_middleware:
     class: Drupal\localnodes_platform\StackMiddleware\CloudflareClientIpMiddleware

@@ -1,0 +1,27 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  config:
+    - field.storage.node.field_source_url
+    - node.type.topic
+  module:
+    - link
+id: node.topic.field_source_url
+field_name: field_source_url
+entity_type: node
+bundle: topic
+label: 'Source address'
+description: 'The public web address this page was imported from.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  # LinkItemInterface::LINK_EXTERNAL (0x10): external addresses only.
+  link_type: 16
+  # DRUPAL_DISABLED: no link text.
+  title: 0
+field_type: link

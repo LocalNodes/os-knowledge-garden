@@ -5,13 +5,23 @@ declare(strict_types=1);
 namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
 
 use Drupal\comment\CommentInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\search_api\Datasource\DatasourceInterface;
 use Drupal\search_api\Item\ItemInterface;
 use Drupal\search_api\Processor\ProcessorPluginBase;
 use Drupal\search_api\Processor\ProcessorProperty;
 
 /**
- * Adds citation metadata (URL, title, type) to indexed items for AI responses.
+ * Adds citation metadata to indexed items for AI responses.
+ *
+ * URL, title and type for every item. For Topics imported by
+ * localnodes_import, also the provenance the assistant cites (D-14, D-25):
+ * citation_source_url (the original address), citation_license and
+ * citation_attribution (the site name or the organizer's credit).
+ *
+ * citation_url is stored root-relative (D-19): answer-time links are built
+ * from the entity, and an absolute address baked in at index time would
+ * carry whatever host the indexer ran under.
  *
  * @SearchApiProcessor(
  *   id = "citation_metadata",
@@ -25,6 +35,11 @@ use Drupal\search_api\Processor\ProcessorProperty;
  * )
  */
 class CitationMetadata extends ProcessorPluginBase {
+
+  /**
+   * Field_source_license keys that stand for an open licence (D-25).
+   */
+  protected const OPEN_LICENSE_KEYS = ['cc_by_4_0', 'cc_by_sa_4_0', 'cc0_1_0'];
 
   /**
    * {@inheritdoc}
@@ -50,6 +65,27 @@ class CitationMetadata extends ProcessorPluginBase {
       $properties['citation_type'] = new ProcessorProperty([
         'label' => $this->t('Citation Type'),
         'description' => $this->t('The content type or entity type of the indexed item.'),
+        'type' => 'string',
+        'processor_id' => $this->getPluginId(),
+      ]);
+
+      $properties['citation_source_url'] = new ProcessorProperty([
+        'label' => $this->t('Citation source address'),
+        'description' => $this->t('The public address an imported page came from.'),
+        'type' => 'string',
+        'processor_id' => $this->getPluginId(),
+      ]);
+
+      $properties['citation_license'] = new ProcessorProperty([
+        'label' => $this->t('Citation licence'),
+        'description' => $this->t('The open licence detected for an imported page, or the licence text an organizer typed for a file. Empty when none was stated.'),
+        'type' => 'string',
+        'processor_id' => $this->getPluginId(),
+      ]);
+
+      $properties['citation_attribution'] = new ProcessorProperty([
+        'label' => $this->t('Citation attribution'),
+        'description' => $this->t('Who published the source: the site name, or the credit an organizer gave.'),
         'type' => 'string',
         'processor_id' => $this->getPluginId(),
       ]);
@@ -111,10 +147,11 @@ class CitationMetadata extends ProcessorPluginBase {
   protected function addCommentCitationFields(ItemInterface $item, CommentInterface $comment, $parent_entity): void {
     $fields = $item->getFields(FALSE);
 
-    // Build anchor URL: parent node URL + #comment-{id} fragment.
+    // Build anchor URL: parent node URL (root-relative, D-19) +
+    // #comment-{id} fragment.
     $url = NULL;
     try {
-      $parent_url = $parent_entity->toUrl('canonical', ['absolute' => TRUE])->toString();
+      $parent_url = $parent_entity->toUrl('canonical')->toString();
       $url = $parent_url . '#comment-' . $comment->id();
     }
     catch (\Exception $e) {
@@ -173,11 +210,11 @@ class CitationMetadata extends ProcessorPluginBase {
   protected function addCitationFields(ItemInterface $item, $entity, string $type): void {
     $fields = $item->getFields(FALSE);
 
-    // Generate canonical URL.
+    // Generate the canonical URL, root-relative (D-19).
     $url = NULL;
     try {
       if (method_exists($entity, 'toUrl')) {
-        $url = $entity->toUrl('canonical', ['absolute' => TRUE])->toString();
+        $url = $entity->toUrl('canonical')->toString();
       }
     }
     catch (\Exception $e) {
@@ -219,8 +256,59 @@ class CitationMetadata extends ProcessorPluginBase {
         case 'citation_type':
           $field->addValue($type);
           break;
+
+        case 'citation_source_url':
+        case 'citation_license':
+        case 'citation_attribution':
+          $value = $this->provenance($entity)[$property_path];
+          if ($value !== NULL) {
+            $field->addValue($value);
+          }
+          break;
       }
     }
+  }
+
+  /**
+   * The provenance of an imported Topic (D-14, D-25).
+   *
+   * citation_license is the field_source_license label for an open key
+   * (cc_by_4_0, cc_by_sa_4_0, cc0_1_0), else field_source_license_text (a
+   * detected licence label, or what an organizer typed for a file), else
+   * NULL. "Not stated" and "All rights reserved" are never given as a
+   * licence. Entities without the fields give NULL for every value.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The indexed entity.
+   *
+   * @return array<string, string|null>
+   *   citation_source_url, citation_license and citation_attribution.
+   */
+  protected function provenance($entity): array {
+    $license = NULL;
+    $key = $this->fieldString($entity, 'field_source_license', 'value');
+    if ($key !== NULL && in_array($key, self::OPEN_LICENSE_KEYS, TRUE)) {
+      $allowed = options_allowed_values($entity->getFieldDefinition('field_source_license')->getFieldStorageDefinition(), $entity);
+      $license = isset($allowed[$key]) ? trim(strip_tags((string) $allowed[$key])) : NULL;
+    }
+    $license ??= $this->fieldString($entity, 'field_source_license_text', 'value');
+
+    return [
+      'citation_source_url' => $this->fieldString($entity, 'field_source_url', 'uri'),
+      'citation_license' => $license === '' ? NULL : $license,
+      'citation_attribution' => $this->fieldString($entity, 'field_source_attribution', 'value'),
+    ];
+  }
+
+  /**
+   * A trimmed, non-empty field property, or NULL when absent or empty.
+   */
+  protected function fieldString($entity, string $field_name, string $property): ?string {
+    if (!$entity instanceof FieldableEntityInterface || !$entity->hasField($field_name) || $entity->get($field_name)->isEmpty()) {
+      return NULL;
+    }
+    $value = trim((string) $entity->get($field_name)->first()?->get($property)->getValue());
+    return $value === '' ? NULL : $value;
   }
 
   /**

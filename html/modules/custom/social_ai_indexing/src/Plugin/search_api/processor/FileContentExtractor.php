@@ -4,15 +4,27 @@ declare(strict_types=1);
 
 namespace Drupal\social_ai_indexing\Plugin\search_api\processor;
 
+use Drupal\ai_file_to_text\Extractor\FileExtractorManager;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\file\FileInterface;
 use Drupal\search_api\Datasource\DatasourceInterface;
 use Drupal\search_api\Item\ItemInterface;
 use Drupal\search_api\Processor\ProcessorPluginBase;
 use Drupal\search_api\Processor\ProcessorProperty;
+use Drupal\social_ai_indexing\Service\FileTextStore;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Extracts text content from file fields for indexing.
+ *
+ * Text comes from the social_ai_indexing.file_text_store first (the importer
+ * stores it once at import). On a miss it is extracted with
+ * ai_file_to_text.extractor_manager from the file's real path and stored, so
+ * a reindex never parses the same bytes twice. Which files are read follows
+ * the installed extractors (FileExtractorManager::isSupported()), not a
+ * MIME list. Without ai_file_to_text, nothing is extracted.
  *
  * @SearchApiProcessor(
  *   id = "file_content_extractor",
@@ -28,17 +40,9 @@ use Drupal\search_api\Processor\ProcessorProperty;
 class FileContentExtractor extends ProcessorPluginBase {
 
   /**
-   * Supported MIME types for extraction.
+   * PHP notice and warning levels a parser may raise (counted, not logged).
    */
-  const SUPPORTED_MIME_TYPES = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  ];
+  protected const PARSER_NOTICE_LEVELS = E_WARNING | E_NOTICE | E_DEPRECATED | E_USER_WARNING | E_USER_NOTICE | E_USER_DEPRECATED;
 
   /**
    * File fields to check on entities.
@@ -51,9 +55,58 @@ class FileContentExtractor extends ProcessorPluginBase {
   ];
 
   /**
+   * Constructs a FileContentExtractor.
+   *
+   * @param array $configuration
+   *   The plugin configuration.
+   * @param string $plugin_id
+   *   The plugin id.
+   * @param array $plugin_definition
+   *   The plugin definition.
+   * @param \Drupal\social_ai_indexing\Service\FileTextStore $fileTextStore
+   *   The extracted-text store.
+   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
+   *   The file system (stream wrapper aware realpath()).
+   * @param \Psr\Log\LoggerInterface $logger
+   *   The social_ai_indexing logger.
+   * @param \Drupal\ai_file_to_text\Extractor\FileExtractorManager|null $extractorManager
+   *   The ai_file_to_text extractor manager, or NULL when ai_file_to_text
+   *   is not installed.
+   */
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    array $plugin_definition,
+    protected FileTextStore $fileTextStore,
+    protected FileSystemInterface $fileSystem,
+    protected LoggerInterface $logger,
+    protected ?FileExtractorManager $extractorManager = NULL,
+  ) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+  }
+
+  /**
    * {@inheritdoc}
    */
-  public function getPropertyDefinitions(DatasourceInterface $datasource = NULL): array {
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    $processor = new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('social_ai_indexing.file_text_store'),
+      $container->get('file_system'),
+      $container->get('logger.factory')->get('social_ai_indexing'),
+      $container->has('ai_file_to_text.extractor_manager') ? $container->get('ai_file_to_text.extractor_manager') : NULL,
+    );
+    $processor->setStringTranslation($container->get('string_translation'));
+    $processor->setFieldsHelper($container->get('search_api.fields_helper'));
+    return $processor;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPropertyDefinitions(?DatasourceInterface $datasource = NULL): array {
     $properties = [];
 
     if (!$datasource) {
@@ -87,7 +140,7 @@ class FileContentExtractor extends ProcessorPluginBase {
     $extracted_content = [];
     foreach ($files as $file) {
       $content = $this->extractFileContent($file);
-      if (!empty($content)) {
+      if ($content !== NULL && $content !== '') {
         $extracted_content[] = $content;
       }
     }
@@ -126,10 +179,8 @@ class FileContentExtractor extends ProcessorPluginBase {
       }
 
       foreach ($field->referencedEntities() as $referenced) {
-        if ($referenced instanceof FileInterface) {
-          if ($this->isSupportedFileType($referenced)) {
-            $files[] = $referenced;
-          }
+        if ($referenced instanceof FileInterface && $this->isSupportedFileType($referenced)) {
+          $files[] = $referenced;
         }
       }
     }
@@ -138,44 +189,82 @@ class FileContentExtractor extends ProcessorPluginBase {
   }
 
   /**
-   * Check if file type is supported for extraction.
+   * Whether an installed extractor reads this file's extension.
    */
   protected function isSupportedFileType(FileInterface $file): bool {
-    $mime_type = $file->getMimeType();
-    return in_array($mime_type, self::SUPPORTED_MIME_TYPES);
+    return $this->extractorManager !== NULL
+      && $this->extractorManager->isSupported($this->getExtension($file));
   }
 
   /**
-   * Extract text content from a file.
+   * The file's extension, lowercase, without the dot.
+   */
+  protected function getExtension(FileInterface $file): string {
+    $name = (string) $file->getFilename();
+    if ($name === '') {
+      $name = (string) $file->getFileUri();
+    }
+    return strtolower(pathinfo($name, PATHINFO_EXTENSION));
+  }
+
+  /**
+   * Returns a file's text: stored text first, else extract once and store.
+   *
+   * @return string|null
+   *   The text, or NULL when the file has none or can't be read. Never
+   *   throws: a parser failure of any kind leaves the file without text.
    */
   protected function extractFileContent(FileInterface $file): ?string {
     if (!$this->isSupportedFileType($file)) {
       return NULL;
     }
 
+    $stored = $this->fileTextStore->get($file);
+    if ($stored !== NULL) {
+      return $stored === '' ? NULL : $stored;
+    }
+
+    $real_path = $this->fileSystem->realpath($file->getFileUri());
+    if ($real_path === FALSE || $real_path === '' || !is_file($real_path)) {
+      return NULL;
+    }
+
+    $text = '';
+    $notices = 0;
+    // PhpWord's MsDoc reader raises tens of thousands of warnings per legacy
+    // .doc file. Count them here so they reach neither the watchdog nor a
+    // test's error handler, and log the count once.
+    set_error_handler(static function () use (&$notices): bool {
+      $notices++;
+      return TRUE;
+    }, self::PARSER_NOTICE_LEVELS);
     try {
-      if (\Drupal::hasService('ai_file_to_text.extractor')) {
-        $extractor = \Drupal::service('ai_file_to_text.extractor');
-        $content = $extractor->extract($file);
-        return $content;
-      }
-
-      $uri = $file->getFileUri();
-      $real_path = \Drupal::service('file_system')->realpath($uri);
-      
-      if (!file_exists($real_path)) {
-        return NULL;
-      }
-
-      return NULL;
+      $text = trim((string) $this->extractorManager->extract($real_path, $this->getExtension($file), 'text'));
     }
-    catch (\Exception $e) {
-      \Drupal::logger('social_ai_indexing')->warning(
-        'Failed to extract content from file @fid: @message',
-        ['@fid' => $file->id(), '@message' => $e->getMessage()]
-      );
-      return NULL;
+    catch (\Throwable $e) {
+      // File id and exception class only: the message may quote file text.
+      $this->logger->warning('Text extraction failed for file @fid (@class).', [
+        '@fid' => $file->id(),
+        '@class' => get_class($e),
+      ]);
+      $text = '';
     }
+    finally {
+      restore_error_handler();
+    }
+
+    if ($notices > 0) {
+      $this->logger->notice('Text extraction for file @fid raised @count PHP notices or warnings (suppressed).', [
+        '@fid' => $file->id(),
+        '@count' => $notices,
+      ]);
+    }
+
+    // Stored even when empty, so an unreadable or hostile file is not parsed
+    // again on every reindex.
+    $this->fileTextStore->put($file, $text);
+
+    return $text === '' ? NULL : $text;
   }
 
 }

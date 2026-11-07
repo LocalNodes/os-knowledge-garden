@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  config:
+    - field.storage.node.field_source_license
+    - node.type.topic
+  module:
+    - options
+id: node.topic.field_source_license
+field_name: field_source_license
+entity_type: node
+bundle: topic
+label: Licence
+description: 'The licence the source was published under.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

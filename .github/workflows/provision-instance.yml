@@ -21,6 +21,15 @@ on:
           - portland_demo
           - none
         default: localnodes_demo
+      gemini_key_tier:
+        description: 'Gemini key tier: paid = key from a Cloud project with billing on. Required (paid) unless demo_module is a demo (AI-SPEC G8)'
+        required: false
+        type: choice
+        options:
+          - undeclared
+          - paid
+          - free
+        default: undeclared
       email:
         description: 'Organizer email address'
         required: false
@@ -84,6 +93,25 @@ jobs:
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
           echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
 
+      - name: Check Gemini key tier (G8)
+        # Members' content may only go to a paid (billing-enabled) Gemini key:
+        # Google may use content sent with an unpaid key and have people
+        # review it (AI-SPEC 1b, guardrail G8). Demo sites hold made-up
+        # content only and are exempt (Tom, 2026-11-05). Runs before any
+        # Coolify call, so a refused site creates nothing.
+        env:
+          DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
+          GEMINI_KEY_TIER_INPUT: ${{ inputs.gemini_key_tier }}
+        run: |
+          if [ -n "$DEMO_MODULE_INPUT" ] && [ "$DEMO_MODULE_INPUT" != "none" ]; then
+            echo "Demo site ($DEMO_MODULE_INPUT): paid-key check skipped."
+          elif [ "$GEMINI_KEY_TIER_INPUT" != "paid" ]; then
+            echo "::error::A non-demo site (demo_module=none) needs gemini_key_tier=paid: a Gemini key from a Google Cloud project with billing turned on. Got '$GEMINI_KEY_TIER_INPUT'."
+            exit 1
+          else
+            echo "Paid Gemini key declared."
+          fi
+
       - name: Check subdomain availability
         run: |
           # Query Coolify for existing apps with this domain
@@ -137,6 +165,7 @@ jobs:
           STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
           IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
           GEMINI_API_KEY_SECRET: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_TIER_INPUT: ${{ inputs.gemini_key_tier }}
           PROVISION_CALLBACK_SECRET_VALUE: ${{ secrets.PROVISION_CALLBACK_SECRET }}
           RESEND_API_KEY_SECRET: ${{ secrets.RESEND_API_KEY }}
         run: |
@@ -272,6 +301,10 @@ jobs:
           echo "::add-mask::$ADMIN_PASS"
           update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
           update_env "GEMINI_API_KEY" "$GEMINI_API_KEY_SECRET"
+          # Read by settings.php -> status report (G8). Left unset when undeclared or empty.
+          if [ -n "$GEMINI_KEY_TIER_INPUT" ] && [ "$GEMINI_KEY_TIER_INPUT" != "undeclared" ]; then
+            update_env "GEMINI_KEY_TIER" "$GEMINI_KEY_TIER_INPUT"
+          fi
 
           # Generate unique secrets for this instance
           update_env "DB_PASSWORD" "$(openssl rand -hex 16)"
@@ -409,6 +442,7 @@ jobs:
           SITE_NAME_INPUT: ${{ inputs.site_name }}
           DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
           EMAIL_INPUT: ${{ inputs.email }}
+          GEMINI_KEY_TIER_INPUT: ${{ inputs.gemini_key_tier }}
         run: |
           # Table cells: printf only (no heredoc expansion); strip newlines and escape pipes
           cell() { printf '%s' "$1" | tr '\r\n' '  ' | sed 's/|/\\|/g'; }
@@ -418,6 +452,7 @@ jobs:
             printf '| **URL** | https://%s |\n' "$FQDN"
             printf '| **Site Name** | %s |\n' "$(cell "$SITE_NAME_INPUT")"
             printf '| **Demo Content** | %s |\n' "$(cell "$DEMO_MODULE_INPUT")"
+            printf '| **Gemini Key Tier** | %s |\n' "$(cell "$GEMINI_KEY_TIER_INPUT")"
             printf '| **Coolify UUID** | `%s` |\n' "$APP_UUID"
             printf '| **Admin Login** | admin / random per-run password, stored only in the Coolify app env (DRUPAL_ADMIN_PASS); never printed |\n'
             printf '| **Organizer Email** | %s |\n' "$(cell "$EMAIL_INPUT")"

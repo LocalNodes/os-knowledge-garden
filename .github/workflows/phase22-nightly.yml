@@ -1,0 +1,79 @@
+name: Phase 22 nightly
+
+# Every non-Functional Phase 22 test (plan 22-29), once a night. It doesn't
+# gate anything: the image build waits only for the smaller phase22-evals
+# set in build-image.yml, which proves the release blockers (AI-SPEC §7).
+# A red run here is a finding to fix, not a blocked deploy.
+#
+# Same rules as the gate: recorded fixtures and mocks only, SQLite, no
+# provider key referenced anywhere, and the egress guard fails the job if
+# any test reaches an AI provider host.
+#
+# One download is expected: tiktoken's cl100k_base vocab file, from
+# openaipublic.blob.core.windows.net (Azure blob storage). The ai module's
+# text chunker needs it when a test indexes content. It is tokenizer data,
+# not a model call. scripts/ci/tiktoken-vocab.sh fetches it before the tests
+# and checks its sha256, and actions/cache keeps it between runs, so the
+# tests themselves need no network. The guard doesn't list that host on
+# purpose.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase22-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TIKTOKEN_CACHE_DIR: ${{ github.workspace }}/.tiktoken
+      PHASE22_EVALS_SET: full
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache the tiktoken vocab
+        uses: actions/cache@v4
+        with:
+          path: .tiktoken
+          key: tiktoken-cl100k-223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7
+
+      - name: Fetch and verify the tiktoken vocab (tokenizer data, not a model call)
+        run: bash scripts/ci/tiktoken-vocab.sh
+
+      - name: Arm the AI egress guard
+        run: bash scripts/ci/ai-egress-guard.sh arm
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, ctype, curl, dom, gd, iconv, mbstring, pdo_sqlite, sodium, xml, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Locate the Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock', 'patches/**') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Composer install (from the committed lock, with dev for PHPUnit)
+        run: composer install --no-interaction --no-progress
+
+      - name: All Phase 22 tests except Functional (fixtures and mocks, SQLite)
+        run: bash scripts/ci/phase22-evals.sh
+
+      - name: Check the AI egress guard
+        if: always()
+        run: bash scripts/ci/ai-egress-guard.sh check

@@ -1,14 +1,24 @@
 {#
 /**
  * @file
- * Template for the AI Overview block placeholder.
+ * The search page's AI overview panel (22-UI-SPEC S8).
  *
- * JavaScript populates this container with an AI-generated summary
- * fetched from /api/ai/overview.
+ * Hidden until the script shows the loading skeleton (after 400ms) or an
+ * answer. The script fills the body from /api/ai/overview: the summary is
+ * already filtered on the server to p, strong, em, ul, ol and li; the
+ * Sources list is built from structured data with DOM APIs. With no
+ * relevant content, or on an error, the script removes the panel.
  *
  * Variables:
  * - query: The current search query string.
  */
 #}
-<div data-ai-overview class="ai-overview" role="complementary" aria-label="{{ 'AI Overview'|t }}">
+<div data-ai-overview class="ai-overview" role="complementary" aria-label="{{ 'AI overview'|t }}" hidden>
+  <div class="ai-overview__content">
+    <p class="ai-overview__header">
+      <span class="ai-overview__label">{{ 'AI overview'|t }}</span>
+      <span class="ai-overview__disclosure">{{ 'Written by AI from pages you can see. Check the sources.'|t }}</span>
+    </p>
+    <div class="ai-overview__body" data-ai-overview-body></div>
+  </div>
 </div>

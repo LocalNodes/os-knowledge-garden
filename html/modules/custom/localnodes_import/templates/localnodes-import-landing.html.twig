@@ -1,0 +1,97 @@
+{#
+/**
+ * @file
+ * S1, the group's Import landing (22-UI-SPEC Part 8).
+ *
+ * The h1 is the page title. No primary button on this screen: each choice
+ * card is one link of equal weight (the status panel's "Refresh search
+ * status" is a default button).
+ *
+ * Available variables:
+ * - intro: The intro sentence.
+ * - status: The search status panel (S5, localnodes-import-status), or empty
+ *   while the group has no imported page.
+ * - cards: Choice cards, each with url, title, description and icon (file
+ *   or link).
+ * - empty: The empty-state card (heading, body), or empty once the group
+ *   has an imported page.
+ * - past: Past imports (D-21), or empty before the first run:
+ *   - rows: id, url, date, datetime, kind, by, in_progress, lines.
+ *   - pager: The list's pager.
+ */
+#}
+{% macro card_icon(name) %}
+  <svg class="localnodes-import-choice-card__icon" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true" focusable="false">
+    {% if name == 'file' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/>
+    {% else %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>
+    {% endif %}
+  </svg>
+{% endmacro %}
+{% import _self as landing %}
+<div class="localnodes-import-landing">
+  {% if intro %}
+    <p class="localnodes-import-landing__intro">{{ intro }}</p>
+  {% endif %}
+
+  {{ status }}
+
+  <ul class="localnodes-import-landing__cards">
+    {% for card in cards %}
+      <li class="card localnodes-import-choice-card localnodes-import-choice-card--{{ card.icon }}">
+        <a class="localnodes-import-choice-card__link" href="{{ card.url }}">
+          {{ landing.card_icon(card.icon) }}
+          <h2 class="localnodes-import-choice-card__title">{{ card.title }}</h2>
+          <p class="localnodes-import-choice-card__description">{{ card.description }}</p>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if empty %}
+    <section class="card localnodes-import-empty">
+      <h2 class="localnodes-import-empty__heading">{{ empty.heading }}</h2>
+      <p class="localnodes-import-empty__body">{{ empty.body }}</p>
+    </section>
+  {% endif %}
+
+  {% if past %}
+    <section class="localnodes-import-past" aria-labelledby="localnodes-import-past-heading">
+      <h2 id="localnodes-import-past-heading" class="localnodes-import-past__heading">{{ 'Past imports'|t }}</h2>
+      <table class="localnodes-import-report localnodes-import-past__table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'Date'|t }}</th>
+            <th scope="col">{{ 'Imported by'|t }}</th>
+            <th scope="col">{{ 'Result'|t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in past.rows %}
+            <tr class="localnodes-import-past__row" data-run="{{ row.id }}">
+              <td class="localnodes-import-past__date" data-label="{{ 'Date'|t }}">
+                <a href="{{ row.url }}"><time datetime="{{ row.datetime }}">{{ row.date }}{% if row.date != row.date_full %}<span class="visually-hidden"> ({{ row.date_full }})</span>{% endif %}</time></a>
+                <span class="localnodes-import-past__kind">{{ row.kind }}</span>
+              </td>
+              <td class="localnodes-import-past__by" data-label="{{ 'Imported by'|t }}">{{ row.by }}</td>
+              <td class="localnodes-import-past__result" data-label="{{ 'Result'|t }}">
+                {%- if row.in_progress -%}
+                  <span class="localnodes-import-badge localnodes-import-badge--attention"><svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2"/></svg>{{ 'In progress'|t }}</span>
+                {%- endif -%}
+                {%- if row.lines -%}
+                  <ul class="localnodes-import-past__lines">
+                    {%- for line in row.lines -%}
+                      <li>{{ line }}</li>
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {{ past.pager }}
+    </section>
+  {% endif %}
+</div>

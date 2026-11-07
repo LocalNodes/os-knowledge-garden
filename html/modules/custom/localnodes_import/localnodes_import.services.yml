@@ -1,0 +1,91 @@
+services:
+  localnodes_import.topic_factory:
+    class: Drupal\localnodes_import\Service\TopicFactory
+    arguments:
+      - '@entity_type.manager'
+      - '@file_system'
+      - '@localnodes_import.document_text_extractor'
+      - '@localnodes_import.duplicate_finder'
+      - '@social_ai_indexing.file_text_store'
+      - '@lock'
+      - '@config.factory'
+      - '@logger.channel.localnodes_import'
+      - '@localnodes_import.web_page_extractor'
+
+  # One fetcher per request (22-15): a batch request's operations share its
+  # per-host interval, bot-challenge memory and DNS pins. The User-Agent is
+  # the site's honest one (D-13).
+  localnodes_import.safe_fetcher:
+    class: Drupal\localnodes_import\Fetch\SafeFetcher
+    factory: ['Drupal\localnodes_import\Fetch\SafeFetcherFactory', 'create']
+    arguments: ['@request_stack', '@config.factory']
+
+  localnodes_import.html_sanitizer:
+    class: Drupal\localnodes_import\Service\HtmlSanitizer
+
+  localnodes_import.mediawiki_client:
+    class: Drupal\localnodes_import\Fetch\MediaWikiClient
+    arguments: ['@localnodes_import.safe_fetcher', '@localnodes_import.html_sanitizer']
+
+  localnodes_import.web_page_extractor:
+    class: Drupal\localnodes_import\Fetch\WebPageExtractor
+    arguments: ['@localnodes_import.safe_fetcher', '@localnodes_import.mediawiki_client', '@localnodes_import.html_sanitizer']
+
+  # "Refresh from source" (22-24): new body revision, credit kept, one
+  # row on the refresh's own run.
+  localnodes_import.refresh_from_source:
+    class: Drupal\localnodes_import\Service\RefreshFromSource
+    arguments:
+      - '@entity_type.manager'
+      - '@localnodes_import.web_page_extractor'
+      - '@localnodes_import.run_finalizer'
+      - '@current_user'
+      - '@datetime.time'
+      - '@logger.channel.localnodes_import'
+      - '@localnodes_import.refresh_access'
+
+  # Who may refresh a Topic (merge review R1 item 2): the route's access
+  # check, asked again by the service right before it saves.
+  localnodes_import.refresh_access:
+    class: Drupal\localnodes_import\Access\RefreshAccessCheck
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: access_check, applies_to: _localnodes_import_refresh_access }
+
+  # S5 "N of M searchable" (22-25): item rows joined to the social_posts
+  # tracker.
+  localnodes_import.search_status:
+    class: Drupal\localnodes_import\Service\SearchStatus
+    arguments: ['@database', '@entity_type.manager', '@datetime.time', '@current_user']
+
+  localnodes_import.document_text_extractor:
+    class: Drupal\localnodes_import\Service\DocumentTextExtractor
+    arguments:
+      - '@file_system'
+      - '@ai_file_to_text.extractor_manager'
+      - '@logger.channel.localnodes_import'
+
+  localnodes_import.duplicate_finder:
+    class: Drupal\localnodes_import\Service\DuplicateFinder
+    arguments: ['@entity_type.manager']
+
+  localnodes_import.run_finalizer:
+    class: Drupal\localnodes_import\Service\ImportRunFinalizer
+    arguments: ['@entity_type.manager', '@datetime.time', '@logger.channel.localnodes_import']
+
+  localnodes_import.upload_rules:
+    class: Drupal\localnodes_import\UploadRules
+    arguments: ['@config.factory', '@file_system']
+
+  # The import progress page in the community theme (UI-SPEC S4, 22-17).
+  # Above core's admin-theme negotiator (-40); core's BatchNegotiator (1000)
+  # only finds the batch on a POST, so a GET falls through to here.
+  localnodes_import.batch_theme_negotiator:
+    class: Drupal\localnodes_import\Theme\BatchThemeNegotiator
+    arguments: ['@batch.storage', '@request_stack', '@config.factory']
+    tags:
+      - { name: theme_negotiator, priority: 500 }
+
+  logger.channel.localnodes_import:
+    parent: logger.channel_base
+    arguments: ['localnodes_import']
