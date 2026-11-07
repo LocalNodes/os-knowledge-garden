@@ -1,0 +1,100 @@
+{#
+/**
+ * @file
+ * S5 "Search status" panel on the Import tab (22-25; UI-SPEC Part 8 S5).
+ *
+ * Order: h2, the count sentence, the stale-worker alert (only when a page
+ * has waited more than an hour; role="alert", rendered once by the server),
+ * the non-zero breakdown lines or the all-clear line, the two lists, then
+ * "Updated ‹relative time›" and "Refresh search status".
+ *
+ * status.js (library localnodes_import/status) refreshes the numbers from
+ * data-status-url on the button, and polls at most every 30 seconds while
+ * pages wait and the tab is visible. It writes text with textContent, and
+ * announces only the change to "All imported pages are searchable." in the
+ * one polite live region. Without JavaScript the button reloads the page.
+ *
+ * Available variables:
+ * - heading_id: Unique id of the h2.
+ * - status: total, searchable, waiting, no_text, stale, updated.
+ * - summary: "‹N› of ‹M› imported pages are searchable."
+ * - lines: Non-zero breakdown lines.
+ * - all: "All imported pages are searchable."
+ * - all_hidden: Whether the all-clear line is hidden (pages wait or can't be
+ *   searched).
+ * - stale: The stale-worker message, or empty.
+ * - waiting, no_text: Each a list (label, items, pager, open), or empty.
+ *   Items have title, url and (no_text) reason.
+ * - updated_iso, updated_text, updated_full: The stamp's machine time,
+ *   "Updated just now", and the absolute time.
+ * - refresh_action, refresh_query: The no-JS refresh form's target.
+ * - status_url: The JSON route.
+ */
+#}
+{% macro icon(name) %}
+  <svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+    {% if name == 'success' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M8 12l3 3l5-6"/>
+    {% elseif name == 'attention' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2"/>
+    {% elseif name == 'refresh' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/>
+    {% endif %}
+  </svg>
+{% endmacro %}
+{% import _self as ui %}
+<section class="card localnodes-import-status" aria-labelledby="{{ heading_id }}" data-localnodes-import-status data-status-url="{{ status_url }}" data-waiting="{{ status.waiting }}" data-no-text="{{ status.no_text }}" data-updated="{{ status.updated }}">
+  <h2 id="{{ heading_id }}" class="localnodes-import-status__heading">{{ 'Search status'|t }}</h2>
+
+  <p class="localnodes-import-status__summary" data-status-summary>{{ summary }}</p>
+
+  {% if stale %}
+    <div class="localnodes-import-alert localnodes-import-alert--attention localnodes-import-status__stale" role="alert" data-status-stale>
+      {{ ui.icon('attention') }}
+      <p class="localnodes-import-alert__body">{{ stale }}</p>
+    </div>
+  {% endif %}
+
+  <ul class="localnodes-import-status__breakdown" data-status-lines{% if not lines %} hidden{% endif %}>
+    {%- for line in lines -%}
+      <li>{{ line }}</li>
+    {%- endfor -%}
+  </ul>
+  <p class="localnodes-import-status__all" data-status-all{% if all_hidden %} hidden{% endif %}>{{ ui.icon('success') }}<span>{{ all }}</span></p>
+
+  {% for list in [waiting, no_text] %}
+    {% if list %}
+      {% set kind = loop.first ? 'waiting' : 'no-text' %}
+      <details class="localnodes-import-status__details localnodes-import-status__{{ kind }}" data-status-list="{{ kind }}"{% if list.open %} open{% endif %}>
+        <summary class="localnodes-import-status__toggle">{{ list.label }}</summary>
+        <ul class="localnodes-import-status__list">
+          {% for item in list.items %}
+            <li class="localnodes-import-status__item">
+              {%- if item.url -%}
+                <a href="{{ item.url }}">{{ item.title }}</a>
+              {%- else -%}
+                <span>{{ item.title }}</span>
+              {%- endif -%}
+              {%- if item.reason -%}
+                <span class="localnodes-import-status__reason">{{ item.reason }}</span>
+              {%- endif -%}
+            </li>
+          {% endfor %}
+        </ul>
+        {{ list.pager }}
+      </details>
+    {% endif %}
+  {% endfor %}
+
+  <div class="localnodes-import-status__footer">
+    <p class="localnodes-import-status__updated"><time datetime="{{ updated_iso }}" data-status-time><span data-status-relative>{{ updated_text }}</span><span class="visually-hidden" data-status-full> ({{ updated_full }})</span></time></p>
+    <form class="localnodes-import-status__refresh" method="get" action="{{ refresh_action }}" data-status-refresh>
+      {% for name, value in refresh_query %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {% endfor %}
+      <button type="submit" class="btn btn-default button localnodes-import-status__button">{{ ui.icon('refresh') }}{{ 'Refresh search status'|t }}</button>
+    </form>
+  </div>
+
+  <div class="visually-hidden" aria-live="polite" data-status-live></div>
+</section>

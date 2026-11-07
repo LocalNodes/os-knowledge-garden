@@ -1,0 +1,27 @@
+name: Web3 gates
+
+# Fails when fresh3's own custom code (html/modules/custom) gains a mock or a
+# literal chain id, address, RPC/explorer host or network name outside the
+# localnodes_web3 registry YAMLs and tests/ (Phase 21: D-07, D-14).
+#
+# The module repos (safe_smart_accounts, group_treasury, siwe_login) are
+# gitignored in fresh3 (/repos/, /html/modules/contrib), so this checkout can't
+# see them. They gate themselves with PHPUnit guard tests in their own repos.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web3-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check custom code for mocks and literal chain data
+        run: bash scripts/ci/check-web3-gates.sh

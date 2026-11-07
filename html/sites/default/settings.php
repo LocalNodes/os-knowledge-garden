@@ -86,6 +86,30 @@ $config['ai_vdb_provider_qdrant.settings']['port'] = (int)(getenv('QDRANT_PORT')
 $config['key.key.gemini_api_key']['key_provider_settings']['env_variable'] = 'GEMINI_API_KEY';
 
 // ---------------------------------------------------------------------------
+// Gemini data tier (AI-SPEC 1b, guardrail G8). Google may use content sent
+// with an unpaid key and have people review it, so members' content must only
+// go to a key from a Cloud project with billing on. Declare it per instance
+// with GEMINI_KEY_TIER=paid. localnodes_platform_requirements() shows a
+// status-report error when a non-demo site hasn't declared it (no runtime
+// block: Tom's warn-and-provision decision, 2026-11-05).
+// - DDEV is 'local' (fictional fixtures only).
+// - Off DDEV, only 'paid' counts; any other value becomes 'unpaid', so
+//   'local' can't be declared on a public instance. Unset stays ''.
+// ---------------------------------------------------------------------------
+if (getenv('IS_DDEV_PROJECT') == 'true') {
+  $settings['localnodes_ai_data_tier'] = 'local';
+}
+else {
+  $gemini_key_tier = strtolower(trim((string) getenv('GEMINI_KEY_TIER')));
+  $settings['localnodes_ai_data_tier'] = $gemini_key_tier === 'paid' ? 'paid' : ($gemini_key_tier === '' ? '' : 'unpaid');
+}
+// Demo sites (fictional content only) are exempt from the tier check. Same
+// value and default as docker/entrypoint.sh: DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}",
+// so an unset or empty DEMO_MODULE counts as the default demo; 'none' is a
+// real (blank) community site.
+$settings['localnodes_demo_module'] = getenv('DEMO_MODULE') ?: 'localnodes_demo';
+
+// ---------------------------------------------------------------------------
 // Resend SMTP transport for outbound email (created by localnodes_platform at
 // install as a `dsn` transport). smtps:// on 2465 = implicit TLS, mandatory
 // before AUTH; 465 is blocked outbound on the VPS (Hetzner). Keep in sync with
@@ -141,6 +165,53 @@ if ($siwe_rpc = getenv('SIWE_CHAIN_RPC_URL')) {
 // ---------------------------------------------------------------------------
 if ($eth_rpc = getenv('ETHEREUM_PROVIDER_URL')) {
   $config['siwe_login.settings']['ethereum_provider_url'] = $eth_rpc;
+}
+
+// ---------------------------------------------------------------------------
+// Safe network registry RPC overrides (optional, localnodes_web3).
+// The registry entries ship in localnodes_web3 config/install. Set one of
+// these to send that network's reads to a dedicated provider. The URL
+// REPLACES the entry's whole stored RPC list: no shipped public URL stays on
+// as a fallback (SafeNetwork::getRpcUrls() reads $settings['safe_rpc_urls']).
+// This is a setting, not a $config override, because Drupal merges a config
+// list by position: an override of one URL replaced only the first stored URL
+// and left the rest in use (21-25 fix). The stored config is never changed.
+// ---------------------------------------------------------------------------
+if ($safe_rpc_ethereum_sepolia = getenv('SAFE_RPC_URL_ETHEREUM_SEPOLIA')) {
+  $settings['safe_rpc_urls']['ethereum_sepolia'] = [$safe_rpc_ethereum_sepolia];
+}
+if ($safe_rpc_base_sepolia = getenv('SAFE_RPC_URL_BASE_SEPOLIA')) {
+  $settings['safe_rpc_urls']['base_sepolia'] = [$safe_rpc_base_sepolia];
+}
+
+// ---------------------------------------------------------------------------
+// Local e2e chain routing (DDEV only, .test hosts; 21-40).
+// The e2e lane's Safes exist only on local anvil chains (tests/e2e/fork), so a
+// request to a .test host on DDEV must read those chains, never the real ones.
+// Both conditions are required: production never sets IS_DDEV_PROJECT, and no
+// public instance answers a .test host. CLI runs without --uri have no
+// HTTP_HOST, so they read the shipped RPCs.
+// ---------------------------------------------------------------------------
+if (getenv('IS_DDEV_PROJECT') == 'true') {
+  $e2e_host = preg_replace('/:\d+$/', '', strtolower((string) ($_SERVER['HTTP_HOST'] ?? '')));
+  if (str_ends_with($e2e_host, '.test')) {
+    // A full replacement, like the overrides above: no stored public URL is
+    // left as a fallback to the real chain.
+    foreach (['ethereum_sepolia', 'base_sepolia'] as $e2e_network_id) {
+      $settings['safe_rpc_urls'][$e2e_network_id] = ['http://anvil-' . str_replace('_', '-', $e2e_network_id) . ':8545'];
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// WaaP sign-in (siwe_login_waap): per-instance environment and Reown /
+// WalletConnect project ID. Inert unless siwe_login_waap is enabled.
+// ---------------------------------------------------------------------------
+if ($waap_env = getenv('WAAP_ENVIRONMENT')) {
+  $config['siwe_login_waap.settings']['environment'] = $waap_env;
+}
+if ($walletconnect_project_id = getenv('WALLETCONNECT_PROJECT_ID')) {
+  $config['siwe_login_waap.settings']['walletconnect_project_id'] = $walletconnect_project_id;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,11 +272,19 @@ if ($ai_allowed_hosts) {
 // ---------------------------------------------------------------------------
 // DDEV integration (must be at bottom so overrides take precedence).
 // ---------------------------------------------------------------------------
+// Test-only modules are visible on local DDEV, so the Phase 21 a11y RPC
+// fixture module can be enabled there (D-18). Production never matches.
+if (getenv('IS_DDEV_PROJECT') == 'true') { $settings['extension_discovery_scan_tests'] = TRUE; }
 if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev.php')) {
   include __DIR__ . '/settings.ddev.php';
 }
 
-// Local, untracked overrides (DB credentials, hash_salt, per-machine values). Never commit.
+// ---------------------------------------------------------------------------
+// Local-only settings (gitignored, never committed): DB credentials,
+// hash_salt, per-machine values. A real site has none. The e2e and a11y lane
+// test sites get theirs from tests/e2e/site/site.sh. Last, so a local value
+// wins.
+// ---------------------------------------------------------------------------
 if (file_exists(__DIR__ . '/settings.local.php')) {
   include __DIR__ . '/settings.local.php';
 }

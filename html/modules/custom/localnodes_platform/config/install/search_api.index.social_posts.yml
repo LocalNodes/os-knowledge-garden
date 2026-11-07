@@ -25,6 +25,18 @@ field_settings:
     label: 'Citation Type'
     property_path: citation_type
     type: string
+  citation_attribution:
+    label: 'Citation attribution'
+    property_path: citation_attribution
+    type: string
+  citation_license:
+    label: 'Citation licence'
+    property_path: citation_license
+    type: string
+  citation_source_url:
+    label: 'Citation source address'
+    property_path: citation_source_url
+    type: string
   citation_url:
     label: 'Citation URL'
     property_path: citation_url
@@ -127,7 +139,10 @@ tracker_settings:
   default:
     indexing_order: fifo
 options:
-  cron_limit: 50
+  # Free-tier Gemini allows 100 embedding requests a minute. drupal/ai aborts
+  # a whole index batch on the first 429 and marks none of it indexed, so a
+  # pass must stay well under that (22-26 live check; AiIndexCronLimitTest).
+  cron_limit: 8
   delete_on_fail: true
   index_directly: true
   track_changes_in_references: true

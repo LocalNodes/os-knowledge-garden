@@ -375,6 +375,113 @@ Boulder (deployed 11:49Z) and Cascadia (11:53Z) both run image `0282227`, which 
 
 TM-24 flood control therefore keys on real client IPs in production.
 
+## siwe_login beta8: Phase 19 review fixes
+
+Date: 2026-11-05.
+
+This fixes the siwe_login findings from `.planning/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW.md` (WR-01 to WR-06 and IN-01 to IN-06). CR-01 was fixed earlier in fresh3 PR #40.
+
+The work is on local branches only: `repos/siwe_login` branch `beta8`, cut from 1.0.x at 004eeb9 (beta7). The WaaP connector part is one commit on `waap-connector`. Nothing is pushed or tagged. THREAT-MODEL.md is unchanged. The clone is left on `beta8`.
+
+### Commits (repos/siwe_login, branch beta8)
+
+- 235d7d6 fix(email): new-account verification link expires after one day (WR-01)
+- 133d1bf fix(mail): plain-text token replacement; [siwe:*] tokens in subjects (WR-02)
+- 141bdfd fix(locks): the address lock outlives the inner lock wait (WR-03)
+- da75f41 fix(email): case-insensitive email recheck on every database (WR-04)
+- 0d398ef fix(paths): sign-in URLs and redirects follow the site base path (WR-05)
+- 601660f fix(web3onboard): response checks and wallet disconnect on every path (WR-06)
+- 9db92a3 fix(flood): post-proof failures count per IP only; 429 no-store and shown (IN-03, IN-05)
+- 2fad63a fix(email): every email writer takes the email lock; a busy lock asks to retry (IN-01, IN-04)
+- d6743ef fix(js): a sign-in error replaces only the previous sign-in error (IN-06)
+- 53bf5f5 docs(composer): ext-gmp suggest text says what Composer actually needs (IN-02)
+- ef5b86d docs: 1.0.0-beta8 changelog (Phase 19 review fixes)
+- c5d588c style: phpcs in EmailClaimLockTest (array width, method name)
+
+On `waap-connector`: 207714e fix(waap): sign-in fetches follow the base path; errors keep other messages (WR-05, IN-06). It is not merged into beta8. That branch is still based on beta6 (ce007ff).
+
+### Outcome per finding
+
+| ID | Outcome | What changed |
+|---|---|---|
+| WR-01 | fixed | The `verification_<hash>` entry now stores the issue time. For uid 0, `confirm()` requires the URL timestamp to equal it and the link to be at most `LINK_TIMEOUT` (86400 s) old. The hash that keys the entry is the HMAC over timestamp, email and address, so the lookup plus this equality bind the timestamp. An expired entry is deleted. A tampered timestamp is refused and the real link still works. |
+| WR-02 | fixed | hook_mail replaces `[siwe:*]` in the subject and the body, then core tokens with `Token::replacePlain()`. |
+| WR-03 | fixed | The address lock is held for 30 s (`ADDRESS_LOCK_LIFETIME`). That is longer than one 5 s inner wait, plus the 5 s inner hold, plus the save. This covers the email lock and also the account lock in `linkVerifiedAddress()`, which had the same gap. |
+| WR-04 | fixed | Both email lookups (`otherAccountHoldsEmail()` and the form's `otherAccountWithEmail()`) use `LIKE` on `Database::getConnection()->escapeLike($email)`. Core maps this to ILIKE on PostgreSQL. |
+| WR-05 | fixed | Both legacy clients and the WaaP connector use `Drupal.url('siwe/nonce?…')` and `Drupal.url('siwe/verify')`. The controller redirects use `Url::fromRoute(...)->toString(TRUE)->getGeneratedUrl()`. |
+| WR-06 | fixed | `siwe-web3onboard.js` uses `.json().catch(() => ({}))`, success needs `ok && success`, and everything after the wallet connects runs in try/finally with the disconnect in it. |
+| IN-01 | fixed | `createUserWithUsername()` rechecks and writes a non-empty email under the email lock. `UsernameCreationForm` fails closed on `EmailInUseException`. |
+| IN-02 | fixed | The `ext-gmp` suggest text now says what Composer needs. `config.platform` stays for drupal.org CI. |
+| IN-03 | fixed | After `validateMessage()` succeeds, failures register the per-IP event only. |
+| IN-04 | fixed | A new `EmailLockUnavailableException`, a subclass of `EmailInUseException`. The confirmation catches it first, keeps the link, and shows "Your email could not be confirmed just now. Please open the link again in a moment." |
+| IN-05 | fixed | The verify 429 goes through `noStore()`. Both legacy clients show the server's `error` text when the nonce request fails. |
+| IN-06 | fixed | Errors carry the id `siwe-login-error`. Only that message is removed, guarded by `select()`, because `Drupal.Message.remove()` throws on a missing id. Fixed in `siwe-login.js` and `siwe-web3onboard.js` on beta8, and in `siwe-login-waap.js` on waap-connector. |
+
+### Tests (each written first and seen failing, except where noted)
+
+- WR-01: new `VerificationLinkExpiryTest` (Kernel). It runs the real flow: a signed login, the email form, the link taken from the captured mail, then `confirm()`. Only the clock is moved. Results:
+  - a link at exactly 86400 s works;
+  - a link at 86401 s is refused, and stays refused after moving the clock back;
+  - timestamps of +3600 and -1 are refused, and the untampered link then works.
+  - Before the fix, the expired and tampered cases created the account.
+- WR-02: `VerificationMailTest` has two new tests.
+  - With site name "Bob's Garden & Co" and user "o'neil", the subject and body are unescaped. This holds both in the sent mail and in what hook_mail returns.
+  - `[siwe:email-verification-url]` and `[siwe:wallet-address]` are replaced in a subject.
+  - Note: core's `MailManager` already runs the subject through `PlainTextOutput::renderFromHtml()` before sending, so the sent-mail subject looked right before the fix. The failing assertion was on hook_mail's own output, which is what `hook_mail_alter()`, `SiweMail::format()` and contrib mailers receive.
+- WR-03: `EmailClaimLockTest::testAddressLockOutlivesTheEmailLockWait` and `AccountLinkTest::testAddressLockOutlivesTheAccountLockWait`. The lock doubles now record lifetimes and waits. Before the fix: 5.0 is not greater than 10.0.
+- WR-04: no failing test was possible here. MariaDB (`_ci`) and SQLite (Drupal creates mail as `COLLATE NOCASE_UTF8`) already compare mail case-insensitively; only PostgreSQL differs, and no PostgreSQL was available. The existing `testConcurrentClaimInOtherCaseIsRejected` stays green. The new `testRecheckEscapesLikeWildcards` pins the escaping: `cl_im@`, `cl%@` and `CLA_M@` do not match `claim@`, while `Cl_Im@` does match `cl_im@`.
+- WR-05: `EndpointContractTest::testHandoffRedirectsUseTheBasePath`, with the request context base URL set to `/garden`. Before the fix it got `/siwe/email-verification`. For the JS: `grep -n "siwe/" js/*.js` shows only `Drupal.url(...)` calls. On waap-connector, `ConnectorLibraryTest::testEndpointsUseDrupalUrl` checks the connector source.
+- WR-06: JS only. `node --check` passes. There is no JS test harness in the module.
+- IN-01: `EmailClaimLockTest`. The username creator refuses an email that another account holds in another case; before the fix it saved it. It saves a free email inside the address lock and then the email lock.
+- IN-03: `FloodControlTest::testFailureAfterProofDoesNotCountAgainstTheAddress`. Address limit 1 and the wallet address lock refused: two post-proof 401s, then a normal login works, and the per-IP count still blocks. A mutation check (putting back `$address`) gives 429 on attempt 2.
+- IN-04: `EmailClaimLockTest::testBusyEmailLockIsDistinctFromEmailInUse` and `VerificationLinkExpiryTest::testBusyEmailLockAsksToRetry`. With the email lock refused, the member gets the retry message and no account; once the lock is free, the same link works.
+- IN-05: `assertTooMany()` now requires `no-store`. Before the fix, three verify-429 tests failed with `'no-cache, private'`.
+- IN-06: `ConnectorLibraryTest::testErrorKeepsOtherMessages` (connector). The legacy clients are JS only: `grep -n "clear()" js/*.js` finds nothing.
+
+### Verification
+
+- Full suite (`ddev exec … phpunit … repos/siwe_login/tests`, 12 min 37 s): 271 tests, 1690 assertions, 1 skipped. That is the 257 baseline plus 14 new tests.
+  - There was one error: `testUsernameCreatorSavesAFreeEmailUnderTheLock` was renamed (c5d588c, for phpcs) while the run was going, so phpunit called a method that no longer existed.
+  - `EmailClaimLockTest` rerun on the final tree: 13 tests, 73 assertions, OK.
+  - `VerificationLinkExpiryTest` rerun after switching back from waap-connector: 4 tests, OK.
+- waap-connector suite (`repos/siwe_login/modules/siwe_login_waap/tests`): 36 tests, 340 assertions, OK.
+- phpstan (level 0, drupal.org CI setup, on a copy under `repos/beta8check`, since deleted): `[OK] No errors`.
+- phpcs (Drupal, DrupalPractice) on every changed PHP file: no new findings. The 7 remaining hits are all on lines unchanged from beta7, and running phpcs on a beta7 copy gives the same 7:
+  - `EmailVerificationForm` and `UsernameCreationForm`: an inline doc block;
+  - `EthereumUserManager`: comment punctuation and line length in `isGeneratedUsername()`, `updateUsernameToEns()` and `isEnsUsername()`.
+  - `ConnectorLibraryTest` on waap-connector is clean.
+
+### Live check on https://fresh3.ddev.site (curl, 2026-11-05)
+
+The site loads siwe_login through the symlink `html/modules/contrib/siwe_login -> repos/siwe_login`, so it ran beta8.
+
+Mail goes through symfony_mailer (`social_swiftmail`, `mailer_transport`).
+
+- **Settings.**
+  - Before: `require_email_verification: false`, `require_ens_or_username: true`, and `siwe_login.mail:email_verification.subject` = `Verify your email address for [site:name]`.
+  - During the check: `require_email_verification: true` and the subject `Verify [user:mail] for [site:name], wallet [siwe:wallet-address]`. The site name has no special characters, so `[user:mail]` carries them instead, and `[siwe:wallet-address]` shows the subject-token fix.
+  - After: both values restored to the "before" values. `require_ens_or_username` was not touched.
+- **Sign-in.** Hardhat key #0 (`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`, no account on fresh3), signed in the container with the test trait.
+  - `GET /siwe/nonce` gave 200 with `cache-control: no-store, private`.
+  - `POST /siwe/verify` gave 200 `{"success":true,"redirect":"\/siwe\/email-verification"}`. That is the route-built redirect, with the `language` module on and no early-rendering error.
+  - The email form, posted with `o'neil&co+beta8@example.com`, redirected to the front page with "Check your inbox and open the link in this same browser to finish signing in."
+- **Mailpit.** The subject was `Verify o'neil&co+beta8@example.com for Drush Site-Install, wallet 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`. It is unescaped, and `[siwe:wallet-address]` is filled in (before the fix it would have been empty). The body has no `&#039;` or `&amp;`, and still says "will expire after one day".
+- **Tampered timestamp.** The mailed link with its timestamp changed to +3600 s and to -86401 s, with the real hash, in the same session: both gave 302 to the front page with "The verification link is invalid or has expired.". No account holds the address or the email. The real link was not opened, so no account was created.
+- **Aged link.** Not aged live. The expiry is covered by `VerificationLinkExpiryTest` with a moved clock, as planned.
+- **Cleanup.**
+  - The Mailpit message was deleted.
+  - The curl session's two `tempstore.private.siwe_login` rows (owner `-z1l28BW5…`) were deleted.
+  - The one `siwe_login.nonce_ip` flood row from the check was deleted. The count of `siwe_login%` flood rows since the check is now 0.
+  - The temporary signer `repos/beta8check/sign.php` was removed.
+  - Not cleaned up: watchdog notices and the anonymous session row, which expire with session GC.
+
+### Notes
+
+- WR-03: of the two fixes the reviewer offered, I chose the longer address-lock lifetime. Not waiting for the inner lock would have turned every concurrent confirmation into an immediate retry.
+- WR-01 widens the `$time` / `$date_time` constructor type of `EmailVerificationController` and `EmailVerificationForm` from `Time` to `TimeInterface`. This is backward compatible for callers, and the kernel test needs it to replace the clock.
+- WR-02's practical effect on a stock site is smaller than the review suggests, because core decodes subjects before sending (see Tests). The `[siwe:*]` subject fix is a real behaviour change.
+- The waap-connector branch is still based on beta6. Rebasing it onto beta8 is left for its own release.
+
 ## siwe_login beta9: connect a wallet (TM-58) and the chain list (TM-59)
 
 Date: 2026-11-06.

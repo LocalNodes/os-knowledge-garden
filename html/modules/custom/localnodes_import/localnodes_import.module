@@ -1,0 +1,480 @@
+<?php
+
+/**
+ * @file
+ * Hooks for LocalNodes Import.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Component\Utility\Html;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+use Drupal\file\FileInterface;
+use Drupal\group\Entity\Group;
+use Drupal\localnodes_import\Controller\RunReportController;
+use Drupal\localnodes_import\Entity\ImportItem;
+use Drupal\localnodes_import\Entity\ImportRun;
+use Drupal\localnodes_import\Fetch\DetectedLicense;
+use Drupal\localnodes_import\Service\ImportRunFinalizer;
+use Drupal\localnodes_import\Theme\BatchThemeNegotiator;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_theme().
+ */
+function localnodes_import_theme(): array {
+  return [
+    'localnodes_import_landing' => [
+      'variables' => [
+        'intro' => NULL,
+        'cards' => [],
+        'empty' => NULL,
+        'status' => NULL,
+        // Past imports (22-25): rows and pager, or NULL before the first run.
+        'past' => NULL,
+      ],
+    ],
+    // S5 search status panel (22-25), built by SearchStatusController.
+    'localnodes_import_status' => [
+      'variables' => [
+        'heading_id' => NULL,
+        'status' => [],
+        'summary' => NULL,
+        'lines' => [],
+        'all' => NULL,
+        'all_hidden' => TRUE,
+        'stale' => NULL,
+        'waiting' => NULL,
+        'no_text' => NULL,
+        'updated_iso' => NULL,
+        'updated_text' => NULL,
+        'updated_full' => NULL,
+        'refresh_action' => NULL,
+        'refresh_query' => [],
+        'status_url' => NULL,
+      ],
+    ],
+    // The Import tab's pagers (22-25, D-22): a nav labelled with the list's
+    // name, aria-current on the current page, "Previous page" and "Next
+    // page". Core's pager preprocess builds the links.
+    'pager__localnodes_import' => [
+      'base hook' => 'pager',
+      'template' => 'pager--localnodes-import',
+    ],
+    // S4 report (22-17).
+    'localnodes_import_report' => [
+      'variables' => [
+        'in_progress' => FALSE,
+        'summary' => NULL,
+        // "‹total› files, including ‹n› that can't be imported" (22-30).
+        'count_note' => NULL,
+        // A refresh run's own summary (22-24): outcome and page title.
+        'refresh' => NULL,
+        'group_id' => NULL,
+        'run_id' => NULL,
+        'breakdown' => [],
+        // S5 for this import (22-25): the "Search is catching up" line.
+        'search' => NULL,
+        'name_heading' => NULL,
+        'rows' => [],
+        'view_url' => NULL,
+        'more_url' => NULL,
+      ],
+    ],
+    // S6 Source box on imported Topics (22-20).
+    'localnodes_import_source_box' => [
+      'variables' => [
+        'kind' => 'web',
+        'site_name' => NULL,
+        'source_url' => NULL,
+        'licence' => NULL,
+        'licence_note_id' => NULL,
+        'file_name' => NULL,
+        'file_url' => NULL,
+        'credit' => NULL,
+        'licence_text' => NULL,
+        'imported' => NULL,
+        'refreshed' => NULL,
+        'preview' => FALSE,
+        'no_text' => NULL,
+      ],
+    ],
+    // The import batch's progress bar (S4, 22-17): same ARIA as the JS bar
+    // and the hint under it. Picked by
+    // localnodes_import_theme_suggestions_progress_bar_alter().
+    'progress_bar__localnodes_import' => [
+      'base hook' => 'progress_bar',
+      'template' => 'progress-bar--localnodes-import',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for progress_bar.
+ *
+ * Only the importer's batch gets the accessible bar; other batches keep the
+ * theme's own (BatchThemeNegotiator::isImportBatch()).
+ */
+function localnodes_import_theme_suggestions_progress_bar_alter(array &$suggestions, array $variables): void {
+  if (\Drupal::routeMatch()->getRouteName() !== BatchThemeNegotiator::ROUTE) {
+    return;
+  }
+  if (\Drupal::service('localnodes_import.batch_theme_negotiator')->isImportBatch()) {
+    $suggestions[] = 'progress_bar__localnodes_import';
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for progress_bar__localnodes_import.
+ *
+ * Reads "‹i› of ‹N›" from the batch's message for the bar's ARIA values,
+ * names the bar with the run title, and attaches progress-a11y.js for the
+ * JavaScript bar that batch.js builds.
+ */
+function localnodes_import_preprocess_progress_bar__localnodes_import(array &$variables): void {
+  $message = $variables['message'];
+  $text = is_array($message) ? (string) ($message['#markup'] ?? '') : (string) $message;
+  $current = 0;
+  $total = 0;
+  if (preg_match('/(\d+)\D+(\d+)/', strip_tags($text), $match)) {
+    $current = (int) $match[1];
+    $total = (int) $match[2];
+  }
+  $variables['current'] = min($current, $total);
+  $variables['total'] = $total;
+
+  $batch = batch_get();
+  $title = $batch['sets'][$batch['current_set'] ?? 0]['title'] ?? ($batch['sets'][0]['title'] ?? '');
+  $variables['bar_label'] = is_string($title) || $title instanceof \Stringable ? strip_tags((string) $title) : '';
+
+  $variables['#attached']['library'][] = 'localnodes_import/progress_a11y';
+  $variables['#attached']['drupalSettings']['localnodesImportProgress']['label'] = $variables['bar_label'];
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for node.
+ *
+ * A deleted Topic leaves S5's counts (22-25): the row that made it becomes
+ * "deleted", and every row naming it is unlinked, so no report links a page
+ * that is gone. Duplicate, failed and refreshed rows keep their own outcome
+ * (the report still says what happened then). Saved through the entity API,
+ * so the item list cache tag is invalidated.
+ */
+function localnodes_import_node_delete(EntityInterface $node): void {
+  $storage = \Drupal::entityTypeManager()->getStorage('localnodes_import_item');
+  $ids = $storage->getQuery()
+    ->accessCheck(FALSE)
+    ->condition('nid', $node->id())
+    ->execute();
+  foreach ($storage->loadMultiple($ids) as $item) {
+    $item->set('nid', NULL);
+    if (in_array($item->get('outcome')->value, [ImportItem::OUTCOME_IMPORTED, ImportItem::OUTCOME_NOT_SEARCHABLE], TRUE)) {
+      $item->set('outcome', ImportItem::OUTCOME_DELETED);
+    }
+    $item->save();
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for activity.
+ *
+ * Where the import summary's "@time ago" leads (22-23 follow-up, Tom's
+ * decision A). Open Social links it to the related object, which for the
+ * summary is the first imported Topic (the anchor relationship that puts the
+ * item in the group stream; it stays as it is). Instead:
+ * - a viewer who may open the run's report (the route's own access check:
+ *   'import content into group' in that group, D-07, and view access on the
+ *   run) gets the report;
+ * - everyone else, and everyone once the run is gone or the field is empty,
+ *   gets the group's Topics list.
+ * Only the link's URL changes; its text stays Open Social's "@time ago".
+ * Other stream items are left alone.
+ *
+ * The link is decided per viewer, so the activity's render cache varies by
+ * the viewer's group permissions (plus whatever the route access check
+ * adds), and is invalidated with the run and the message.
+ */
+function localnodes_import_preprocess_activity(array &$variables): void {
+  // A notification view mode prints the date as plain text: nothing to do.
+  if (!isset($variables['date']) || !is_array($variables['date']) || !isset($variables['date']['#url'])) {
+    return;
+  }
+  $activity = $variables['elements']['#activity'] ?? NULL;
+  if (!$activity instanceof ContentEntityInterface || !$activity->hasField('field_activity_message')) {
+    return;
+  }
+  $message = $activity->get('field_activity_message')->entity;
+  if (!$message instanceof ContentEntityInterface || $message->bundle() !== ImportRunFinalizer::SUMMARY_TEMPLATE) {
+    return;
+  }
+
+  $cache = CacheableMetadata::createFromRenderArray($variables)
+    ->addCacheContexts(['user.group_permissions'])
+    ->addCacheableDependency($message);
+  $url = _localnodes_import_summary_date_url($activity, $message, $cache);
+  if ($url !== NULL) {
+    $variables['date']['#url'] = $url;
+  }
+  // On the template's variables (ThemeManager bubbles these to the
+  // activity's render cache entry) and on the link itself.
+  $cache->applyTo($variables);
+  CacheableMetadata::createFromRenderArray($variables['date'])->merge($cache)->applyTo($variables['date']);
+}
+
+/**
+ * The summary date's URL for the current user: run report or Topics list.
+ *
+ * @param \Drupal\Core\Entity\ContentEntityInterface $activity
+ *   The summary's activity.
+ * @param \Drupal\Core\Entity\ContentEntityInterface $message
+ *   Its localnodes_import_summary message.
+ * @param \Drupal\Core\Cache\CacheableMetadata $cache
+ *   Collects what the choice depends on.
+ *
+ * @return \Drupal\Core\Url|null
+ *   The URL, or NULL when no group can be found (Open Social's link stays).
+ */
+function _localnodes_import_summary_date_url(ContentEntityInterface $activity, ContentEntityInterface $message, CacheableMetadata $cache): ?Url {
+  $gid = NULL;
+  $run = $message->hasField(ImportRunFinalizer::RUN_FIELD) ? $message->get(ImportRunFinalizer::RUN_FIELD)->entity : NULL;
+  if ($run instanceof ImportRun) {
+    $cache->addCacheableDependency($run);
+    $gid = $run->getGroupId();
+    if ($gid !== NULL) {
+      $report = Url::fromRoute('localnodes_import.run_report', [
+        'group' => $gid,
+        'localnodes_import_run' => $run->id(),
+      ]);
+      // The route's own access check (_group_permission and
+      // _entity_access), with its cacheability.
+      $access = $report->access(\Drupal::currentUser(), TRUE);
+      $cache->addCacheableDependency($access);
+      if ($access->isAllowed()) {
+        return $report;
+      }
+    }
+  }
+
+  // The Topics list of the group the item was posted to.
+  if ($gid === NULL && $activity->hasField('field_activity_recipient_group') && !$activity->get('field_activity_recipient_group')->isEmpty()) {
+    $gid = $activity->get('field_activity_recipient_group')->target_id;
+  }
+  $group = $gid === NULL ? NULL : Group::load($gid);
+  if ($group === NULL) {
+    return NULL;
+  }
+  $cache->addCacheableDependency($group);
+  if (\Drupal::service('router.route_provider')->getRoutesByNames([RunReportController::TOPICS_ROUTE]) !== []) {
+    return Url::fromRoute(RunReportController::TOPICS_ROUTE, ['group' => $group->id()]);
+  }
+  return $group->toUrl();
+}
+
+/**
+ * Implements hook_entity_extra_field_info().
+ *
+ * The S6 Source box is an extra field, so no Topic display config is shipped
+ * or edited (RESEARCH Pattern 7). Extra fields are visible by default, so
+ * every Topic display picks it up; hook_node_view() renders it on the full
+ * view of imported Topics only.
+ */
+function localnodes_import_entity_extra_field_info(): array {
+  $extra = [];
+  $extra['node']['topic']['display']['localnodes_import_source_box'] = [
+    'label' => t('Source box'),
+    'description' => t('Where an imported page came from, its licence, and when it was imported. Shown on imported pages only.'),
+    // After the body (0). The comments field (1) is moved below the content
+    // by the theme, so this sits between the page text and the comments.
+    'weight' => 1,
+    'visible' => TRUE,
+  ];
+  return $extra;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for pager__localnodes_import.
+ *
+ * The nav's accessible name is the list's ("Past imports pages"), so the
+ * Import tab's pagers can be told apart (and no heading id repeats).
+ */
+function localnodes_import_preprocess_pager__localnodes_import(array &$variables): void {
+  $variables['label'] = $variables['pager']['#localnodes_import_label'] ?? t('Pages');
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for node.
+ */
+function localnodes_import_node_view(array &$build, EntityInterface $node, EntityViewDisplayInterface $display, string $view_mode): void {
+  if ($view_mode !== 'full' || !$node instanceof NodeInterface || $node->bundle() !== 'topic' || $node->isNew()) {
+    return;
+  }
+  $component = $display->getComponent('localnodes_import_source_box');
+  if ($component === NULL) {
+    return;
+  }
+  // Added to the Topic's own cache metadata, never in place of it: the
+  // render cache needs the node's tags and initial contexts kept.
+  $cache = CacheableMetadata::createFromRenderArray($build);
+  // A new import or refresh row changes the dates.
+  $cache->addCacheTags(['localnodes_import_item_list']);
+  $box = _localnodes_import_source_box($node, $cache);
+  $cache->applyTo($build);
+  if ($box === NULL) {
+    return;
+  }
+  $box['#weight'] = $component['weight'] ?? 1;
+  $box['#attached']['library'][] = 'localnodes_import/source_box';
+  $build['localnodes_import_source_box'] = $box;
+  // Read by localnodes_import_preprocess_node() to scope the quote styles.
+  $build['#localnodes_import_imported'] = TRUE;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for node.
+ *
+ * Marks an imported Topic so import.css can style the quotes in its text
+ * (4px grey rule, credit line kept) without touching other pages.
+ */
+function localnodes_import_preprocess_node(array &$variables): void {
+  if (!empty($variables['elements']['#localnodes_import_imported'])) {
+    $variables['attributes']['class'][] = 'localnodes-import-imported';
+  }
+}
+
+/**
+ * Builds the S6 Source box for a Topic, or NULL when it wasn't imported.
+ *
+ * A Topic counts as imported when an import item row for it ended imported,
+ * imported but not searchable, or refreshed. Duplicate and failed rows can
+ * name a Topic too, but don't make it imported.
+ */
+function _localnodes_import_source_box(NodeInterface $node, CacheableMetadata $cache): ?array {
+  $storage = \Drupal::entityTypeManager()->getStorage('localnodes_import_item');
+  $ids = $storage->getQuery()
+    ->accessCheck(FALSE)
+    ->condition('nid', $node->id())
+    ->condition('outcome', [
+      ImportItem::OUTCOME_IMPORTED,
+      ImportItem::OUTCOME_NOT_SEARCHABLE,
+      ImportItem::OUTCOME_REFRESHED,
+    ], 'IN')
+    ->sort('created')
+    ->sort('id')
+    ->execute();
+  if (!$ids) {
+    return NULL;
+  }
+
+  $imported = NULL;
+  $refreshed = NULL;
+  foreach ($storage->loadMultiple($ids) as $item) {
+    $cache->addCacheableDependency($item);
+    if ($item->get('outcome')->value === ImportItem::OUTCOME_REFRESHED) {
+      $refreshed = $item;
+    }
+    else {
+      $imported = $item;
+    }
+  }
+  $first = $imported ?? $refreshed;
+  $run = $first->get('run')->entity;
+  $kind = $run instanceof ImportRun ? (string) $run->get('kind')->value : '';
+  if ($kind === '') {
+    $kind = _localnodes_import_field_string($node, 'field_source_url', 'uri') !== NULL ? ImportRun::KIND_WEB : ImportRun::KIND_FILES;
+  }
+
+  $date_formatter = \Drupal::service('date.formatter');
+  $box = [
+    '#theme' => 'localnodes_import_source_box',
+    '#kind' => $kind === ImportRun::KIND_WEB ? 'web' : 'file',
+    '#imported' => $imported ? $date_formatter->format((int) $imported->get('created')->value, 'custom', 'j F Y') : NULL,
+    '#refreshed' => $refreshed ? $date_formatter->format((int) $refreshed->get('created')->value, 'custom', 'j F Y') : NULL,
+  ];
+  // A page with no readable text says so on the page too, not only in the
+  // report (22-30, Codex review): search and the assistant won't find it.
+  if ($imported && $imported->get('outcome')->value === ImportItem::OUTCOME_NOT_SEARCHABLE) {
+    $box['#no_text'] = \Drupal::service('localnodes_import.search_status')->noTextReason((string) $imported->get('reason')->value);
+  }
+
+  if ($box['#kind'] === 'web') {
+    $box['#site_name'] = _localnodes_import_field_string($node, 'field_source_attribution');
+    $box['#source_url'] = _localnodes_import_field_string($node, 'field_source_url', 'uri');
+    $box['#licence'] = _localnodes_import_open_licence($node);
+    if ($box['#licence'] !== NULL) {
+      $box['#licence_note_id'] = Html::getUniqueId('localnodes-import-source-licence-note');
+    }
+    return $box;
+  }
+
+  // Uploaded file: the attached file, or the item's file.
+  $file = NULL;
+  if ($node->hasField('field_files') && !$node->get('field_files')->isEmpty()) {
+    $file = $node->get('field_files')->entity;
+  }
+  if (!$file instanceof FileInterface && $first->get('fid')->value) {
+    $file = \Drupal::entityTypeManager()->getStorage('file')->load($first->get('fid')->value);
+  }
+  if ($file instanceof FileInterface) {
+    $cache->addCacheableDependency($file);
+    $box['#file_name'] = (string) $file->getFilename();
+    $box['#file_url'] = \Drupal::service('file_url_generator')->generateString($file->getFileUri());
+  }
+  else {
+    $box['#file_name'] = (string) $first->get('source_name')->value;
+  }
+  $box['#credit'] = _localnodes_import_field_string($node, 'field_source_attribution');
+  // D-25d: shown as typed, as plain text. Twig escapes it; it's never linked.
+  $box['#licence_text'] = _localnodes_import_field_string($node, 'field_source_license_text');
+  return $box;
+}
+
+/**
+ * The open licence a web Topic was detected under, or NULL (D-25a, D-25c).
+ *
+ * An open field_source_license key gives its allowed-values label (the same
+ * label CitationMetadata gives the assistant). Otherwise licence text in
+ * DetectedLicense's label format ("CC BY 4.0", "CC BY-SA 3.0", "CC0 1.0")
+ * gives that label. Anything else, including not_stated, all rights
+ * reserved and free text, gives NULL, so no licence is claimed.
+ *
+ * The deed address and full name come from DetectedLicense's fixed map,
+ * never from stored addresses (threat T-22-87).
+ *
+ * @return array{label: string, name: string, url: string}|null
+ *   The label to show, the full name for the accessible name, and the deed.
+ */
+function _localnodes_import_open_licence(NodeInterface $node): ?array {
+  $keys = [
+    'cc_by_4_0' => 'CC BY 4.0',
+    'cc_by_sa_4_0' => 'CC BY-SA 4.0',
+    'cc0_1_0' => 'CC0 1.0',
+  ];
+  $key = _localnodes_import_field_string($node, 'field_source_license');
+  if ($key !== NULL && isset($keys[$key])) {
+    $license = DetectedLicense::fromLabel($keys[$key]);
+    $allowed = options_allowed_values($node->getFieldDefinition('field_source_license')->getFieldStorageDefinition(), $node);
+    $label = isset($allowed[$key]) ? (string) $allowed[$key] : $license->label;
+    return ['label' => $label, 'name' => $license->name, 'url' => $license->url];
+  }
+  $text = _localnodes_import_field_string($node, 'field_source_license_text');
+  $license = $text !== NULL ? DetectedLicense::fromLabel($text) : NULL;
+  if ($license === NULL) {
+    return NULL;
+  }
+  return ['label' => $license->label, 'name' => $license->name, 'url' => $license->url];
+}
+
+/**
+ * A trimmed, non-empty field value, or NULL.
+ */
+function _localnodes_import_field_string(NodeInterface $node, string $field_name, string $property = 'value'): ?string {
+  if (!$node->hasField($field_name) || $node->get($field_name)->isEmpty()) {
+    return NULL;
+  }
+  $value = trim((string) $node->get($field_name)->first()?->get($property)->getValue());
+  return $value === '' ? NULL : $value;
+}

@@ -1,0 +1,99 @@
+/**
+ * @file
+ * Chat header bar for the LocalNodes ai-deepchat template (UI-SPEC S7).
+ *
+ * The template puts the "Chat options" menu beside the role="button" header
+ * (not inside it), so this bar gives both one dark strip. Colours are UI-SPEC
+ * Part 1 tokens: navbar-bg #27272a, white text, amber #fbbf24 focus ring on
+ * dark surfaces. The ring is inset because the fixed chat container clips
+ * anything outside it.
+ */
+.ai-deepchat .ln-chat-bar {
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px 8px 0 0;
+  background: #27272a;
+}
+
+.ai-deepchat .ln-chat-bar .ai-deepchat--header {
+  flex: 1 1 auto;
+  min-height: 44px;
+  border: none;
+  border-radius: 0 8px 0 0;
+  background: #27272a;
+}
+
+.ai-deepchat .ln-chat-bar .chat-dropdown-button {
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+}
+
+.ai-deepchat .ln-chat-bar .ai-deepchat--header:focus,
+.ai-deepchat .ln-chat-bar .chat-dropdown-button:focus {
+  outline: none;
+}
+
+.ai-deepchat .ln-chat-bar .ai-deepchat--header:focus-visible,
+.ai-deepchat .ln-chat-bar .chat-dropdown-button:focus-visible,
+.ai-deepchat .ln-chat-bar .chat-dropdown-link:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: -4px;
+}
+
+.ai-deepchat .ln-chat-bar .chat-dropdown-link {
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  border: none;
+  background: #ffffff;
+  color: #343434;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ai-deepchat .ln-chat-bar .chat-dropdown-link:hover {
+  background: #f3f3f3;
+  color: #343434;
+}
+
+/*
+ * Closed, the launcher is only as wide as the "AI assistant" header and its
+ * icon, at the window's right edge. The
+ * 322px-wide closed bar covered the AI overview's Sources links on the
+ * search page (22-30, Codex review). The panel itself is inert and out of
+ * view while closed (deepchat-links.js), so its width doesn't matter then.
+ */
+.ai-deepchat.chat-container.chat-collapsed {
+  left: auto;
+  width: auto;
+  /* ai_chatbot gives the panel 80% of the window below 768px; collapsed,
+     it's only as tall as its launcher bar (22-30). */
+  height: auto;
+  /* ai_chatbot slides the collapsed panel down by its own height and leaves
+     a 50px strip showing. The panel is now only the launcher bar (taller
+     than 50px), so dock it at the bottom edge instead: the whole bar shows
+     and nothing hangs below the window. */
+  margin-bottom: 0;
+  transform: none;
+}
+.ai-deepchat.chat-container.chat-collapsed .chat-element {
+  min-width: 0 !important;
+  width: 0;
+  /* Collapsed, the body takes no space, isn't painted and takes no clicks,
+     site-wide: only the launcher bar sits over the page. It used to keep its
+     full height below the window, which full-page captures drew over the
+     content (Phase 21's Group Fund walkthrough, 22-30). */
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.ai-deepchat.chat-container.chat-collapsed .ai-deepchat--header {
+  flex: 0 0 auto;
+  padding-right: 16px;
+}
+/* "Chat options" (Clear History) only applies to an open chat. */
+.ai-deepchat.chat-container.chat-collapsed .chat-dropdown {
+  display: none;
+}

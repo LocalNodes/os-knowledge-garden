@@ -1,0 +1,47 @@
+{#
+/**
+ * @file
+ * A pager on the Import tab (22-25, D-22; UI-SPEC UI Considerations row
+ * "overflow: Group with hundreds of imported pages").
+ *
+ * Core's pager preprocess builds the items and sets aria-current="page" on
+ * the current page's link. The nav is named after its list ("Past imports
+ * pages"), so several pagers on one page are told apart and no heading id
+ * repeats. The Previous and Next links are named "Previous page" and "Next
+ * page". A page link's name is its number; screen readers say "current
+ * page" from aria-current. Page links keep socialbase's pagination classes.
+ *
+ * Available variables:
+ * - label: The nav's accessible name.
+ * - items: Pager items (previous, pages, next), from core.
+ * - current: The current page number.
+ * - ellipses: Whether pages are left out before or after the listed ones.
+ */
+#}
+{% if items %}
+  <nav class="pager-nav localnodes-import-pager" aria-label="{{ label }}">
+    <ul class="pagination js-pager__items">
+      {% if items.previous %}
+        <li class="pager__item pager__item--previous">
+          <a href="{{ items.previous.href }}" rel="prev"{{ items.previous.attributes }}>{{ 'Previous page'|t }}</a>
+        </li>
+      {% endif %}
+      {% if ellipses.previous %}
+        <li class="pager__item pager__item--ellipsis" role="presentation">&hellip;</li>
+      {% endif %}
+      {% for key, item in items.pages %}
+        <li class="pager__item{{ current == key ? ' pager__item--current' : '' }}">
+          <a href="{{ item.href }}"{{ item.attributes }}>{{- key -}}</a>
+        </li>
+      {% endfor %}
+      {% if ellipses.next %}
+        <li class="pager__item pager__item--ellipsis" role="presentation">&hellip;</li>
+      {% endif %}
+      {% if items.next %}
+        <li class="pager__item pager__item--next">
+          <a href="{{ items.next.href }}" rel="next"{{ items.next.attributes }}>{{ 'Next page'|t }}</a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}

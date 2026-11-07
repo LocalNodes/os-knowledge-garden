@@ -3,6 +3,8 @@ status: true
 dependencies:
   module:
     - ai_chatbot
+    - social_ai_indexing
+    - system
   theme:
     - socialblue
 id: socialblue_aideepchatchatbot
@@ -13,17 +15,17 @@ provider: null
 plugin: ai_deepchat_block
 settings:
   id: ai_deepchat_block
-  label: 'LocalNodes Liaison'
+  label: 'AI assistant'
   label_display: visible
   provider: ai_chatbot
   ai_assistant: group_assistant
-  bot_name: Assistant
+  bot_name: 'AI assistant'
   bot_image: /modules/contrib/ai/modules/ai_chatbot/assets/ai-icon-gradient.svg
   use_username: 0
   default_username: ''
   use_avatar: 0
   default_avatar: ''
-  first_message: 'Welcome to LocalNodes!'
+  first_message: "Hi, I'm an AI assistant. I answer only from pages on this site that you're allowed to see, and I number my sources so you can check them. I can get things wrong, so open a source before you rely on an answer."
   loading_message: ''
   stream: null
   toggle_state: remember
@@ -33,6 +35,10 @@ settings:
   show_structured_results: false
   show_copy_icon: true
   collapse_minimal: false
-  style_file: 'module:ai_chatbot:chatgpt.yml'
+  style_file: 'module:social_ai_indexing:localnodes.yml'
   verbose_mode: false
-visibility: {  }
+visibility:
+  request_path:
+    id: request_path
+    negate: true
+    pages: "/group/*/import\r\n/group/*/import/*"

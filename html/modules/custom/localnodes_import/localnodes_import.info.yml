@@ -1,0 +1,18 @@
+name: 'LocalNodes Import'
+type: module
+description: 'Lets group organizers bring documents into a group: each uploaded file becomes a group Topic that members can search and the group assistant can cite.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - group:group
+  - group:gnode
+  - social:social_group
+  - social:social_topic
+  - social:social_activity
+  - drupal:file
+  - drupal:link
+  - drupal:options
+  - drupal:filter
+  - search_api:search_api
+  - ai_file_to_text:ai_file_to_text
+  - social_ai_indexing:social_ai_indexing

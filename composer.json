@@ -23,7 +23,13 @@
         "drupal/safe_smart_accounts": "^1.0",
         "drupal/group_treasury": "^1.0",
         "kornrunner/keccak": "^1.0",
-        "simplito/elliptic-php": "^1.0"
+        "simplito/elliptic-php": "^1.0",
+        "brick/math": "^0.17 || ^1.0",
+        "symfony/http-client": "^6.4.50",
+        "fivefilters/readability.php": "^3.3"
+    },
+    "require-dev": {
+        "drupal/core-dev": "^10.6"
     },
     "repositories": [
         {
@@ -39,6 +45,11 @@
         "drupal-scaffold": {
             "locations": {
                 "web-root": "html/"
+            },
+            "file-mapping": {
+                "[web-root]/robots.txt": {
+                    "append": "html/modules/custom/social_ai_indexing/scaffold/robots.append.txt"
+                }
             }
         },
         "installer-types": [
@@ -82,7 +93,8 @@
             },
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch",
-                "Map Gemini API errors (429 quota/rate limit, 401/403, 400, 5xx) to the AI module exception types": "patches/gemini-provider-map-api-errors.patch"
+                "Map Gemini API errors (429 quota/rate limit, 401/403, 400, 5xx) to the AI module exception types": "patches/gemini-provider-map-api-errors.patch",
+                "Reset content parts per message in chat(); name the call on an empty tool-call turn": "patches/gemini-provider-reset-content-parts.patch"
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
@@ -101,13 +113,18 @@
         }
     },
     "config": {
+        "platform": {
+            "ext-gmp": "8.2"
+        },
         "allow-plugins": {
             "composer/installers": true,
             "cweagans/composer-patches": true,
             "drupal/core-composer-scaffold": true,
             "oomphinc/composer-installers-extender": true,
             "php-http/discovery": true,
-            "zaporylie/composer-drupal-optimizations": true
+            "zaporylie/composer-drupal-optimizations": true,
+            "phpstan/extension-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
         },
         "audit": {
             "ignore": {

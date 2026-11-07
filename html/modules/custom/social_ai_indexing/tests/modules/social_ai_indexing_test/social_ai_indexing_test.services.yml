@@ -1,0 +1,15 @@
+services:
+  # Scripted LLM double (AI-SPEC §5 "LLM double", leak door 1). Shared, so a
+  # test scripts it and reads inputs() from the same instance the event
+  # dispatcher calls.
+  social_ai_indexing_test.scripted_llm:
+    class: Drupal\social_ai_indexing_test\EventSubscriber\ScriptedLlmSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  # Spy logger on every channel (leak door 6, E10). Tagged 'logger', so the
+  # logger factory attaches it to every channel.
+  social_ai_indexing_test.spy_logger:
+    class: Drupal\social_ai_indexing_test\Logger\SpyLogger
+    tags:
+      - { name: logger }

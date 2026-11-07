@@ -1,0 +1,21 @@
+# DES-01 design tokens (22-UI-SPEC Part 1): --ln-* custom properties, the AA
+# overrides for socialblue, focus ring, reduced motion and chat clearance.
+# Attached on every socialbase-derived page by localnodes_platform_page_attachments().
+# Core puts module CSS in CSS_AGGREGATE_DEFAULT regardless of what is declared
+# here, which would load it BEFORE socialblue; localnodes_platform_css_alter()
+# moves it into CSS_AGGREGATE_THEME at a weight after socialblue's brand--sky.css.
+tokens:
+  version: VERSION
+  css:
+    theme:
+      css/ln-tokens.css: { weight: 900 }
+
+# A real "More group pages" button for socialblue's group-tab overflow arrow
+# (22-30 KB-08): keyboard and screen-reader access to the tabs that don't fit.
+group_tabs:
+  version: VERSION
+  js:
+    js/group-tabs.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

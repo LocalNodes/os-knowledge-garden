@@ -9,17 +9,17 @@ name: 'AI Knowledge Garden'
 description: 'Vector database server for AI-powered knowledge retrieval'
 backend: search_api_ai_search
 backend_config:
-  chat_model: gemini__models/gemini-3-flash-preview
+  chat_model: gemini__models/gemini-3.8-flash
   database: qdrant
   database_settings:
     database_name: default
     collection: knowledge_garden
     metric: cosine_similarity
-  embeddings_engine: gemini__models/gemini-embedding-001
+  embeddings_engine: gemini__models/gemini-embedding-2
   embeddings_engine_configuration:
     set_dimensions: true
     dimensions: 3072
-  embedding_strategy: average_pool
+  embedding_strategy: contextual_chunks
   embedding_strategy_configuration:
     chunk_size: '384'
     chunk_min_overlap: '50'

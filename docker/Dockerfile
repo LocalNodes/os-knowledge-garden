@@ -138,7 +138,8 @@ RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
 
 # Copy and configure entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY docker/worker-loop.sh /usr/local/bin/worker-loop.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/worker-loop.sh
 
 EXPOSE 80
 

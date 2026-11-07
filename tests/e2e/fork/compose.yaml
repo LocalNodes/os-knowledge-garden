@@ -1,0 +1,36 @@
+# Local anvil chains for the Phase 21 wallet e2e lane (21-39).
+# Started only through tests/e2e/fork/fork.sh, one profile per registry network id.
+# The image entrypoint is `/bin/sh -c`, so `command` is one string; fork.sh supplies the
+# per-chain anvil arguments through LN_ANVIL_ARGS_<ID>. In fork mode the provider URL reaches
+# the container only as the LN_FORK_URL environment variable, which the container's shell
+# expands, so it never appears in a command line, a script's output or the run state.
+# No networks block: fork.sh attaches running chains to the DDEV network with
+# `docker network connect` once that network exists.
+name: fresh3-e2e-chains
+
+services:
+  anvil-ethereum-sepolia:
+    profiles: [ethereum_sepolia]
+    container_name: fresh3-e2e-anvil-ethereum-sepolia
+    image: ghcr.io/foundry-rs/foundry:v1.8.6@sha256:4a16a86f41d30418fbdca47ce2868121bbb0aeaa0a34bde2dd1e2911c4be2464
+    command: ["anvil --host 0.0.0.0 --port 8545 ${LN_ANVIL_ARGS_ETHEREUM_SEPOLIA:-}"]
+    environment:
+      LN_FORK_URL: ${LN_FORK_URL_ETHEREUM_SEPOLIA:-}
+    ports:
+      - "${LN_FORK_BIND:-127.0.0.1}:18545:8545"
+    mem_limit: 1g
+    cpus: 1.0
+    restart: "no"
+
+  anvil-base-sepolia:
+    profiles: [base_sepolia]
+    container_name: fresh3-e2e-anvil-base-sepolia
+    image: ghcr.io/foundry-rs/foundry:v1.8.6@sha256:4a16a86f41d30418fbdca47ce2868121bbb0aeaa0a34bde2dd1e2911c4be2464
+    command: ["anvil --host 0.0.0.0 --port 8545 ${LN_ANVIL_ARGS_BASE_SEPOLIA:-}"]
+    environment:
+      LN_FORK_URL: ${LN_FORK_URL_BASE_SEPOLIA:-}
+    ports:
+      - "${LN_FORK_BIND:-127.0.0.1}:18546:8545"
+    mem_limit: 1g
+    cpus: 1.0
+    restart: "no"

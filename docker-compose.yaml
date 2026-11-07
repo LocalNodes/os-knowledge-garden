@@ -22,6 +22,9 @@ services:
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # 'paid' = key from a Cloud project with billing on (AI-SPEC G8). Shown on
+      # the status report; demo sites (DEMO_MODULE != none) are exempt.
+      GEMINI_KEY_TIER: ${GEMINI_KEY_TIER:-}
       DEMO_MODULE: ${DEMO_MODULE:-localnodes_demo}
       DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
       DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
@@ -48,6 +51,17 @@ services:
       # detection only). settings.php also derives expected_domain/expected_uri from SERVICE_FQDN_OPENSOCIAL.
       SIWE_CHAIN_ID: ${SIWE_CHAIN_ID:-}
       SIWE_CHAIN_RPC_URL: ${SIWE_CHAIN_RPC_URL:-}
+      # Safe network registry RPC overrides (localnodes_web3; settings.php). Empty = the
+      # registry entry's default RPC URLs.
+      SAFE_RPC_URL_ETHEREUM_SEPOLIA: ${SAFE_RPC_URL_ETHEREUM_SEPOLIA:-}
+      SAFE_RPC_URL_BASE_SEPOLIA: ${SAFE_RPC_URL_BASE_SEPOLIA:-}
+      # WaaP sign-in (siwe_login_waap; settings.php). Inert unless that module is enabled.
+      WAAP_ENVIRONMENT: ${WAAP_ENVIRONMENT:-}
+      WALLETCONNECT_PROJECT_ID: ${WALLETCONNECT_PROJECT_ID:-}
+      # Recurring cron + search indexing worker (docker/worker-loop.sh, forked by the
+      # entrypoint). WORKER_ENABLED=false turns it off; WORKER_INTERVAL is in seconds.
+      WORKER_ENABLED: ${WORKER_ENABLED:-true}
+      WORKER_INTERVAL: ${WORKER_INTERVAL:-60}
     volumes:
       - opensocial-files:/var/www/html/html/sites/default/files
       - opensocial-private:/var/www/private

@@ -10,7 +10,65 @@ env:
   IMAGE_NAME: localnodes/os-knowledge-garden
 
 jobs:
+  # Phase 22 tests (plan 22-29, AI-SPEC §5 CI/CD). Recorded fixtures and
+  # mocks only, on SQLite: no provider key is referenced anywhere in this
+  # workflow, and the egress guard fails the job if any test attempts a
+  # request to an AI provider host. The build waits for it, so a red leak or
+  # citation test keeps the image every instance pulls from being published.
+  # What runs and what's left out: scripts/ci/phase22-evals.sh and
+  # 22-29-PROGRESS.md.
+  phase22-evals:
+    # Two parallel jobs (orchestrator, 2026-11-07); the build needs both.
+    strategy:
+      fail-fast: false
+      matrix:
+        set: [gate-a, gate-b]
+    name: phase22-evals (${{ matrix.set }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Arm the AI egress guard
+        run: bash scripts/ci/ai-egress-guard.sh arm
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, ctype, curl, dom, gd, iconv, mbstring, pdo_sqlite, sodium, xml, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Locate the Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock', 'patches/**') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Composer install (from the committed lock, with dev for PHPUnit)
+        run: composer install --no-interaction --no-progress
+
+      - name: Phase 22 tests (fixtures and mocks, SQLite)
+        env:
+          PHASE22_EVALS_SET: ${{ matrix.set }}
+        run: bash scripts/ci/phase22-evals.sh
+
+      - name: Check the AI egress guard
+        if: always()
+        run: bash scripts/ci/ai-egress-guard.sh check
+
   build:
+    needs: phase22-evals
     runs-on: ubuntu-latest
     permissions:
       contents: read

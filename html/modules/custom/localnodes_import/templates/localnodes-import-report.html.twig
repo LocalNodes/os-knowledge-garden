@@ -1,0 +1,116 @@
+{#
+/**
+ * @file
+ * The S4 report of one import run (UI-SPEC Part 8 S4).
+ *
+ * The page title (h1) comes from the controller: "Import finished", or the
+ * run title while the run is still going.
+ *
+ * Available variables:
+ * - in_progress: TRUE while the run may still be running.
+ * - summary: "‹imported› of ‹total› imported."
+ * - refresh: for a refresh run (22-24), its outcome ('refreshed' or
+ *   'failed') and the page title; the summary then names the page.
+ * - group_id, run_id: the group and this run, for the refresh link.
+ * - breakdown: non-zero outcome lines ("18 imported", ...).
+ * - search: S5 for this import while its pages wait (22-25): "Search is
+ *   catching up. ‹N› of ‹M› new pages are searchable so far. ...", or
+ *   empty once every page is searchable.
+ * - name_heading: "File" or "Page".
+ * - rows: one per submitted item, problems first. Each has:
+ *   - id: the item id.
+ *   - outcome: the outcome code.
+ *   - nid: the linked page's id, or NULL.
+ *   - refreshable: a web page already in the group, which can be
+ *     refreshed from its source.
+ *   - title: the page title (or the original name).
+ *   - name: the page title link, or the original name as text.
+ *   - original: the original file name when it differs from the title.
+ *   - badge: label and variant (success, attention, neutral, danger), and
+ *     an icon when it isn't the variant's own ('no-text': not searchable,
+ *     which isn't a wait).
+ *   - action: the reason and next step, or empty.
+ * - count_note: "‹total› files, including ‹n› that can't be imported." when
+ *   files were refused before upload, or NULL.
+ * - view_url: the group's Topics list, or NULL when the run made no page.
+ * - more_url: the Import landing page.
+ */
+#}
+{% macro badge_icon(variant, icon) %}
+  <svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+    {% if icon == 'no-text' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 8v5M12 16v.01"/>
+    {% elseif variant == 'success' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M8 12l3 3l5-6"/>
+    {% elseif variant == 'attention' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2"/>
+    {% elseif variant == 'neutral' %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 9h10v10H9zM5 15V5h10"/>
+    {% else %}
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M9 9l6 6M15 9l-6 6"/>
+    {% endif %}
+  </svg>
+{% endmacro %}
+{% import _self as report %}
+<div class="localnodes-import-report-page">
+  {% if in_progress %}
+    <p class="localnodes-import-report__status-line">
+      <span class="localnodes-import-badge localnodes-import-badge--attention localnodes-import-report__status">{{ report.badge_icon('attention') }}{{ 'In progress'|t }}</span>
+    </p>
+  {% endif %}
+
+  <p class="localnodes-import-report__summary">
+    {%- if refresh and refresh.outcome == 'refreshed' -%}
+      {{ '@title was refreshed from its source.'|t({'@title': refresh.title}) }}
+    {%- elseif refresh -%}
+      {{ "@title couldn't be refreshed. The current version stays."|t({'@title': refresh.title}) }}
+    {%- else -%}
+      {{ summary }}
+    {%- endif -%}
+  </p>
+  {% if count_note %}
+    <p class="localnodes-import-report__count-note">{{ count_note }}</p>
+  {% endif %}
+  {% if breakdown %}
+    <ul class="localnodes-import-report__breakdown">
+      {% for line in breakdown %}
+        <li>{{ line }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if search %}
+    <p class="localnodes-import-report__search">{{ report.badge_icon('attention') }}<span>{{ search }}</span></p>
+  {% endif %}
+
+  <h2 class="localnodes-import-report__heading">{{ 'Results'|t }}</h2>
+  <table class="localnodes-import-report">
+    <thead>
+      <tr>
+        <th scope="col">{{ name_heading }}</th>
+        <th scope="col">{{ 'Result'|t }}</th>
+        <th scope="col">{{ 'What you can do'|t }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr class="localnodes-import-report__row localnodes-import-report__row--{{ row.outcome|clean_class }}" data-item="{{ row.id }}">
+          <td class="localnodes-import-report__name" data-label="{{ name_heading }}">{{ row.name }}{% if row.original %}<span class="localnodes-import-report__original">{{ row.original }}</span>{% endif %}</td>
+          <td class="localnodes-import-report__result" data-label="{{ 'Result'|t }}"><span class="localnodes-import-badge localnodes-import-report__badge localnodes-import-badge--{{ row.badge.variant }}">{{ report.badge_icon(row.badge.variant, row.badge.icon) }}{{ row.badge.label }}</span></td>
+          <td class="localnodes-import-report__action" data-label="{{ 'What you can do'|t }}">
+            {{- row.action -}}
+            {%- if row.refreshable -%}
+              {{ ' ' }}<a href="{{ path('localnodes_import.refresh', {'group': group_id, 'topic': row.nid}, {'query': {'run': run_id}}) }}" class="btn btn-default button localnodes-import-report__refresh" aria-label="{{ 'Refresh from source: @title'|t({'@title': row.title}) }}"><svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>{{ 'Refresh from source'|t }}</a>
+            {%- endif -%}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="localnodes-import-report__actions">
+    {% if view_url %}
+      <a href="{{ view_url }}" class="btn btn-primary button button--primary localnodes-import-report__primary">{{ 'View imported pages'|t }}</a>
+    {% endif %}
+    <a href="{{ more_url }}" class="localnodes-import-report__more">{{ 'Import more documents'|t }}</a>
+  </div>
+</div>

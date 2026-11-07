@@ -1,0 +1,52 @@
+{#
+/**
+ * @file
+ * LocalNodes override of ai_chatbot's ai-deepchat.html.twig (UI-SPEC S7).
+ *
+ * Registered by social_ai_indexing_theme_registry_alter(). Same classes and
+ * data attributes as the contrib template, so ai_chatbot's sticky-chatbot.js
+ * and deepchat-init.js keep working. Accessibility changes (D-05):
+ * - The "Chat options" menu sits next to the header instead of inside it, so
+ *   the role="button" header has no focusable descendants (nested-interactive).
+ * - The menu button has an accessible name (button-name).
+ * - The header takes its accessible name from its visible label ("AI
+ *   assistant"), not aria-label "Toggle Chat"; the icons are aria-hidden.
+ */
+#}
+{{ attach_library('ai_chatbot/sticky-chatbot') }}
+
+<div class="{{ current_theme }} ai-deepchat chat-collapsed chat-container {{ settings.placement }}" data-chat-id="bot1">
+
+  <div class="ln-chat-bar">
+    <div class="chat-dropdown">
+      <button type="button" class="chat-dropdown-button" aria-label="{{ 'Chat options'|t }}">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" id="chevron" class="chevron-icon" aria-hidden="true" focusable="false">
+          <path fill="none" stroke="currentColor" d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
+        </svg>
+      </button>
+      <div class="chat-dropdown-content">
+        <button type="button" class="clear-history chat-dropdown-link">{{ 'Clear History'|t }}</button>
+      </div>
+    </div>
+
+    <div class="ai-deepchat--header" tabindex="0" role="button" aria-expanded="false">
+      <div class="ai-deepchat--label">
+        <span class="ai-deepchat--bullet" aria-hidden="true"></span>
+        {{ settings.label }}
+      </div>
+      <span class="toggle-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewbox="-1 -1 16 16" height="16" width="16" focusable="false">
+          <path d="m0.29166666666666663 0.2910833333333333 13.416666666666664 13.416666666666664" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          <path d="m13.708333333333332 0.2910833333333333 -13.416666666666664 13.416666666666664" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="chat-element chat-collapsed" style="min-width: {{ settings.width }}">
+
+    <deep-chat {% for key, value in deepchat_settings %}{{ key }}='{{ value|raw }}'
+    {% endfor %}></deep-chat>
+
+  </div>
+</div>

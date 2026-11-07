@@ -7,6 +7,7 @@ ai-overview:
       css/ai-overview.css: {}
   dependencies:
     - core/drupal
+    - core/drupal.announce
     - core/drupalSettings
 
 deepchat-links:
@@ -15,3 +16,10 @@ deepchat-links:
     js/deepchat-links.js: {}
   dependencies:
     - core/drupal
+    - core/drupal.announce
+
+deepchat:
+  version: 1.x
+  css:
+    theme:
+      css/deepchat.css: {}

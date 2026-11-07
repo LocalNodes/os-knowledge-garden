@@ -1,0 +1,6 @@
+services:
+  localnodes_a11y_ai_guard.subscriber:
+    class: Drupal\localnodes_a11y_ai_guard\EventSubscriber\AiGuardSubscriber
+    arguments: ['@state', '@request_stack']
+    tags:
+      - { name: event_subscriber }

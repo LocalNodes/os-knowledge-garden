@@ -5,6 +5,7 @@
 docs/
 private/
 html/sites/default/files/
+html/sites/*/settings.local.php
 *.sql
 *.sql.gz
 .DS_Store

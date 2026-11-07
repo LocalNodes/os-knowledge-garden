@@ -1,0 +1,6 @@
+name: 'LocalNodes import save spy'
+type: module
+description: 'Test only: records whether each node save was a syncing save (22-24).'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

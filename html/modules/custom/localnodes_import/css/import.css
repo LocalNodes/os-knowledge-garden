@@ -1,0 +1,1037 @@
+/**
+ * @file
+ * S2 "Upload files": drop zone, chosen-files rows, badges, progress bar and
+ * error summary. Colours and spacing come from the ln tokens (22-05,
+ * localnodes_platform/css/ln-tokens.css); fallbacks keep the screen usable
+ * if the token file isn't loaded. No colour-only signals: every state has
+ * a word, and badges carry an icon.
+ */
+
+.localnodes-import-error-summary {
+  margin: 0 0 var(--ln-space-lg, 24px);
+  padding: var(--ln-space-md, 16px);
+  border: 2px solid var(--ln-color-danger, #b42318);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-danger-bg, #fef3f2);
+  color: var(--ln-color-text, #343434);
+}
+
+.localnodes-import-error-summary:focus {
+  outline: 3px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-error-summary h2 {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.localnodes-import-error-summary ul {
+  margin: 0;
+  padding-left: var(--ln-space-lg, 24px);
+}
+
+.localnodes-import-error-summary a {
+  color: var(--ln-color-danger, #b42318);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.localnodes-import-field-error {
+  margin-top: var(--ln-space-xs, 4px);
+  color: var(--ln-color-danger, #b42318);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.localnodes-import-upload__heading {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Drop zone: the input inside stays the control. */
+.localnodes-import-dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ln-space-sm, 8px);
+  padding: var(--ln-space-lg, 24px);
+  border: 1px dashed var(--ln-color-border-control, #8a8a8a);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-surface, #ffffff);
+}
+
+.localnodes-import-dropzone.is-dragover {
+  padding: calc(var(--ln-space-lg, 24px) - 1px);
+  border: 2px solid var(--ln-color-primary, #0f766e);
+  background: var(--ln-color-tint, #f0fdfa);
+}
+
+.localnodes-import-dropzone input[type="file"] {
+  min-height: 44px;
+}
+
+.localnodes-import-chosen {
+  margin: var(--ln-space-md, 16px) 0 var(--ln-space-lg, 24px);
+}
+
+.localnodes-import-chosen__count,
+.localnodes-import-chosen__summary {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  font-weight: 600;
+}
+
+.localnodes-import-chosen__note {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}
+
+.localnodes-import-chosen__progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ln-space-md, 16px);
+}
+
+.localnodes-import-chosen__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ln-color-divider, #e6e6e6);
+}
+
+.localnodes-import-chosen__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 44px;
+  align-items: center;
+  gap: var(--ln-space-sm, 8px) var(--ln-space-md, 16px);
+  padding: var(--ln-space-sm, 8px) 0;
+  border-bottom: 1px solid var(--ln-color-divider, #e6e6e6);
+}
+
+.localnodes-import-chosen__name {
+  overflow-wrap: anywhere;
+  color: var(--ln-color-text, #343434);
+}
+
+.localnodes-import-chosen__size,
+.localnodes-import-chosen__status {
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-chosen__row[data-state="failed"] .localnodes-import-chosen__status {
+  color: var(--ln-color-danger, #b42318);
+  font-weight: 600;
+}
+
+.localnodes-import-chosen__reason {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--ln-color-text, #343434);
+  font-size: 14px;
+}
+
+.localnodes-import-chosen__retry,
+.localnodes-import-chosen__stop {
+  min-height: 44px;
+}
+
+.localnodes-import-chosen__retry {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.localnodes-import-chosen__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ln-radius-control, 6px);
+  background: transparent;
+  color: var(--ln-color-text, #343434);
+  cursor: pointer;
+}
+
+.localnodes-import-chosen__remove:hover {
+  border-color: var(--ln-color-border-control, #8a8a8a);
+}
+
+/* With JavaScript the list under the drop zone is what's chosen, and the
+   input is emptied after each choice, so the browser's own "No file chosen"
+   next to the button contradicted "25 files chosen." (22-30 WK-03). Only the
+   button's own words stay visible. */
+.localnodes-import-dropzone .localnodes-import-upload__input {
+  color: transparent;
+}
+
+.localnodes-import-dropzone .localnodes-import-upload__input::file-selector-button {
+  color: var(--ln-color-text, #343434);
+}
+
+/* S3 "Page addresses" is 8 rows (UI-SPEC S3). socialbase's textarea
+   template drops the rows attribute, so the browser showed 2 (22-30 WK-04). */
+.localnodes-import-web__addresses {
+  min-height: calc(8 * 1.5em + 1rem);
+}
+
+/* socialbase's .btn sets display: block, which beats the browser's own
+   [hidden] rule, so "Stop uploading", "Retry upload" and the spinner showed
+   (and took focus) before any upload started (22-30 KB-01). */
+.localnodes-import-upload [hidden],
+.localnodes-import-chosen [hidden] {
+  display: none !important;
+}
+
+.localnodes-import-chosen__remove:focus-visible,
+.localnodes-import-chosen__retry:focus-visible,
+.localnodes-import-chosen__stop:focus-visible,
+.localnodes-import-chosen__summary:focus {
+  outline: 3px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+/* Determinate bar, 8px. The status word next to it carries the value. */
+.localnodes-import-progress {
+  grid-column: 1 / -1;
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--ln-radius-pill, 999px);
+  background: var(--ln-color-canvas, #f3f3f3);
+}
+
+.localnodes-import-progress__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--ln-color-primary, #0f766e);
+  transition: width 0.2s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .localnodes-import-progress__fill {
+    transition: none;
+  }
+}
+
+/* Status badge (UI-SPEC Part 4), danger variant: icon plus words. */
+.localnodes-import-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ln-space-xs, 4px);
+  padding: 2px var(--ln-space-sm, 8px);
+  border-radius: var(--ln-radius-pill, 999px);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.localnodes-import-badge--danger {
+  color: var(--ln-color-danger, #b42318);
+  background: var(--ln-color-danger-bg, #fef3f2);
+}
+
+.localnodes-import-icon {
+  flex: none;
+}
+
+.localnodes-import-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-left: var(--ln-space-sm, 8px);
+  vertical-align: middle;
+  border: 3px solid var(--ln-color-divider, #e6e6e6);
+  border-top-color: var(--ln-color-primary, #0f766e);
+  border-radius: 50%;
+  animation: localnodes-import-spin 0.8s linear infinite;
+}
+
+.localnodes-import-spinner[hidden] {
+  display: none;
+}
+
+@keyframes localnodes-import-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .localnodes-import-spinner {
+    animation: none;
+  }
+}
+
+.localnodes-import-upload__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: var(--ln-space-md, 16px);
+}
+
+/* Stacked rows under 768px. */
+@media (max-width: 767px) {
+  .localnodes-import-chosen__row {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .localnodes-import-chosen__size,
+  .localnodes-import-chosen__status,
+  .localnodes-import-badge {
+    grid-column: 1 / 2;
+  }
+
+  .localnodes-import-chosen__remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/* Badge variants (UI-SPEC Part 4): success, attention, neutral. */
+.localnodes-import-badge--success {
+  color: var(--ln-color-success, #1e6b2e);
+  background: var(--ln-color-success-bg, #ecfdf3);
+}
+
+.localnodes-import-badge--attention {
+  color: var(--ln-color-on-highlight, #343434);
+  background: var(--ln-color-highlight, #fbbf24);
+}
+
+.localnodes-import-badge--neutral {
+  color: var(--ln-color-text-muted, #555555);
+  background: var(--ln-color-canvas, #f3f3f3);
+  border: 1px solid var(--ln-color-border-control, #8a8a8a);
+}
+
+/* S4 report (22-17). */
+.localnodes-import-report__status-line {
+  margin: 0 0 var(--ln-space-md, 16px);
+}
+
+.localnodes-import-report__summary {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  color: var(--ln-color-text, #343434);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-report__breakdown {
+  margin: 0 0 var(--ln-space-lg, 24px);
+  padding-left: var(--ln-space-lg, 24px);
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-report__heading {
+  margin: var(--ln-space-lg, 24px) 0 var(--ln-space-md, 16px);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.localnodes-import-report {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.localnodes-import-report th,
+.localnodes-import-report td {
+  padding: var(--ln-space-sm, 8px) var(--ln-space-md, 16px) var(--ln-space-sm, 8px) 0;
+  border-bottom: 1px solid var(--ln-color-divider, #e6e6e6);
+  text-align: left;
+  vertical-align: top;
+}
+
+.localnodes-import-report th {
+  color: var(--ln-color-text, #343434);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Long names wrap instead of widening the table. */
+.localnodes-import-report__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.localnodes-import-report__name a {
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+  /* A page title breaks between words, not inside one ("Troubleshootin g");
+     addresses and file names still break anywhere (22-30 WK-06). */
+  overflow-wrap: break-word;
+}
+
+.localnodes-import-report__original {
+  display: block;
+  margin-top: 2px;
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.localnodes-import-report__action {
+  color: var(--ln-color-text, #343434);
+  font-size: 14px;
+}
+
+.localnodes-import-report__action a {
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+}
+
+.localnodes-import-report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ln-space-md, 16px);
+  margin-top: var(--ln-space-lg, 24px);
+}
+
+.localnodes-import-report__primary,
+.localnodes-import-report__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.localnodes-import-report a:focus-visible,
+.localnodes-import-report__actions a:focus-visible {
+  outline: 2px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+/* Below 768px each row is a card; the column header becomes a label. */
+@media (max-width: 767px) {
+  .localnodes-import-report thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .localnodes-import-report,
+  .localnodes-import-report tbody,
+  .localnodes-import-report tr,
+  .localnodes-import-report td {
+    display: block;
+    width: 100%;
+  }
+
+  .localnodes-import-report tr {
+    margin-bottom: var(--ln-space-md, 16px);
+    padding: var(--ln-space-md, 16px);
+    border: 1px solid var(--ln-color-divider, #e6e6e6);
+    border-radius: var(--ln-radius-card, 8px);
+    background: var(--ln-color-surface, #ffffff);
+  }
+
+  .localnodes-import-report td {
+    padding: var(--ln-space-xs, 4px) 0;
+    border-bottom: 0;
+  }
+
+  .localnodes-import-report td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--ln-color-text-muted, #555555);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .localnodes-import-report td:empty {
+    display: none;
+  }
+}
+
+/* S4 progress page (22-17). */
+.localnodes-import-progress-hint {
+  margin: var(--ln-space-sm, 8px) 0 0;
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}
+
+.localnodes-import-progress-live {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
+/*
+ * On the batch page (an admin route) socialblue puts the h1 in the dark
+ * navbar but keeps the body text colour, about 1.2:1. This file loads there
+ * only on the import batch (progress_a11y), so the fix stays on our page.
+ */
+.path-batch .navbar-default .section-title {
+  color: var(--ln-color-surface, #ffffff);
+  /* It sat against the window's left edge (22-30 WK-08). */
+  padding: 0 var(--ln-space-lg, 24px);
+}
+
+/*
+ * The batch bar had no visible track or fill on this page, only the
+ * percentage (22-30 WK-07; UI-SPEC Part 3 "Progress": a bar plus text). The
+ * same 8px bar as S2's rows, with a 1px boundary because the track's grey is
+ * the page's grey. The "‹i› of ‹N›: ‹name›" line above it carries the value.
+ */
+.path-batch .progress-wrapper .progress {
+  height: 8px;
+  margin: var(--ln-space-sm, 8px) 0;
+  overflow: hidden;
+  border: 1px solid var(--ln-color-border-control, #8a8a8a);
+  border-radius: var(--ln-radius-pill, 999px);
+  background: var(--ln-color-surface, #ffffff);
+  box-shadow: none;
+}
+
+.path-batch .progress-wrapper .progress-bar {
+  /* batch.js builds the bar with no width until the first step answers, so
+     it filled the track at "0 of 25"; its inline width wins once set. */
+  width: 0;
+  height: 100%;
+  background: var(--ln-color-primary, #0f766e);
+  box-shadow: none;
+}
+
+/*
+ * S6 Source box (22-20, UI-SPEC Part 8 S6): tinted card with a 4px teal
+ * left rule, after the page text and before the comments.
+ */
+.localnodes-import-source {
+  max-width: 72ch;
+  margin: var(--ln-space-lg, 24px) 0;
+  padding: var(--ln-space-lg, 24px);
+  border-left: 4px solid var(--ln-color-primary, #0f766e);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-tint, #f0fdfa);
+  color: var(--ln-color-text, #343434);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.localnodes-import-source__heading {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.localnodes-import-source p {
+  margin: 0 0 var(--ln-space-sm, 8px);
+}
+
+.localnodes-import-source p:last-child {
+  margin-bottom: 0;
+}
+
+.localnodes-import-source a {
+  display: inline-block;
+  min-height: 24px;
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+}
+
+.localnodes-import-source a:focus-visible {
+  outline: 3px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+/* The address is the attribution: it wraps anywhere and is never cut. */
+.localnodes-import-source__address {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.localnodes-import-source__icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: var(--ln-space-xs, 4px);
+  vertical-align: -1px;
+}
+
+.localnodes-import-source__meta {
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/*
+ * Quoted writers inside imported text keep their quote shape: 4px grey rule,
+ * 16px padding, body text. The credit line the sanitiser keeps after a quote
+ * stays visible as its own line, so a quoted writer is never shown as the
+ * community's words.
+ */
+.localnodes-import-imported .body-text blockquote {
+  margin: var(--ln-space-md, 16px) 0;
+  padding: 0 0 0 var(--ln-space-md, 16px);
+  border-left: 4px solid var(--ln-color-border-control, #8a8a8a);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ln-color-text, #343434);
+}
+
+.localnodes-import-imported .body-text blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A credit inside the quote; one after it stays a normal paragraph, since
+ * CSS can't tell a credit from the page's own next paragraph. */
+.localnodes-import-imported .body-text blockquote cite {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ln-color-text-muted, #555555);
+}
+
+/*
+ * S3 "Import web pages" (22-24): the detected licence lines, the no-licence
+ * alert (UI-SPEC Part 4 "Inline alert", attention variant) and the Source box
+ * preview. The licence line is plain text; its deed link has the external
+ * icon and a visually hidden "(opens another site)".
+ */
+.localnodes-import-web__addresses {
+  font-family: inherit;
+  overflow-wrap: anywhere;
+}
+
+.localnodes-import-web__detected {
+  margin: var(--ln-space-lg, 24px) 0;
+}
+
+.localnodes-import-web__detected-lines:empty {
+  display: none;
+}
+
+.localnodes-import-web__licence {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  color: var(--ln-color-text, #343434);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.localnodes-import-web__licence a {
+  display: inline-block;
+  min-height: 24px;
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+}
+
+.localnodes-import-web__licence a:focus-visible,
+.localnodes-import-web__check:focus-visible {
+  outline: 3px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-alert {
+  display: flex;
+  gap: var(--ln-space-sm, 8px);
+  margin: 0 0 var(--ln-space-sm, 8px);
+  padding: var(--ln-space-md, 16px);
+  border-left: 4px solid var(--ln-color-highlight, #fbbf24);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-surface, #ffffff);
+  color: var(--ln-color-text, #343434);
+  box-shadow: 0 0 0 1px var(--ln-color-border, #d6d6d6);
+}
+
+.localnodes-import-alert .localnodes-import-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--ln-color-on-highlight, #343434);
+}
+
+.localnodes-import-web__alert-body p {
+  margin: 0;
+}
+
+.localnodes-import-web__alert-site {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.localnodes-import-web__check {
+  margin-top: var(--ln-space-sm, 8px);
+}
+
+.localnodes-import-web__preview:empty {
+  display: none;
+}
+
+/* "Refresh from source" on a duplicate web row, and its confirmation. */
+.localnodes-import-report__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ln-space-xs, 4px);
+  min-height: 44px;
+  margin-top: var(--ln-space-sm, 8px);
+}
+
+.localnodes-import-report__refresh:focus-visible,
+.localnodes-import-refresh .form-actions a:focus-visible {
+  outline: 3px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-refresh__body {
+  max-width: 72ch;
+}
+
+.localnodes-import-refresh .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ln-space-sm, 8px);
+  align-items: center;
+}
+
+/* S1 Import tab (22-25): choice cards, side by side from 768px. */
+.localnodes-import-landing__intro {
+  max-width: 72ch;
+  margin: 0 0 var(--ln-space-xl, 32px);
+}
+
+.localnodes-import-landing__cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ln-space-lg, 24px);
+  margin: 0 0 var(--ln-space-xl, 32px);
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .localnodes-import-landing__cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.localnodes-import-choice-card {
+  margin: 0;
+  border: 1px solid var(--ln-color-divider, #e6e6e6);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-surface, #ffffff);
+}
+
+/* The whole card is one link. */
+.localnodes-import-choice-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ln-space-sm, 8px);
+  height: 100%;
+  padding: var(--ln-space-md, 16px);
+  border-radius: var(--ln-radius-card, 8px);
+  color: var(--ln-color-text, #343434);
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .localnodes-import-choice-card__link {
+    padding: var(--ln-space-lg, 24px);
+  }
+}
+
+.localnodes-import-choice-card__link:hover,
+.localnodes-import-choice-card__link:focus {
+  color: var(--ln-color-text, #343434);
+  text-decoration: none;
+}
+
+.localnodes-import-choice-card__link:hover {
+  box-shadow: 0 0 0 2px var(--ln-color-primary, #0f766e);
+}
+
+.localnodes-import-choice-card__link:focus-visible {
+  outline: 2px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-choice-card__icon {
+  flex: none;
+  color: var(--ln-color-text, #343434);
+}
+
+.localnodes-import-choice-card__title {
+  margin: 0;
+  color: var(--ln-color-link, #115e59);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: underline;
+}
+
+.localnodes-import-choice-card__description {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* S1 empty state (UI-SPEC Part 3 "Empty"). */
+.localnodes-import-empty {
+  margin: 0 0 var(--ln-space-xl, 32px);
+  padding: var(--ln-space-2xl, 48px) var(--ln-space-lg, 24px);
+  border: 1px solid var(--ln-color-divider, #e6e6e6);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-surface, #ffffff);
+}
+
+.localnodes-import-empty__heading,
+.localnodes-import-past__heading,
+.localnodes-import-status__heading {
+  margin: 0 0 var(--ln-space-md, 16px);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.localnodes-import-empty__body {
+  margin: 0;
+}
+
+.localnodes-import-empty__body a,
+.localnodes-import-status a,
+.localnodes-import-past a {
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+}
+
+/* S5 search status panel (22-25). */
+.localnodes-import-status {
+  margin: 0 0 var(--ln-space-xl, 32px);
+  padding: var(--ln-space-md, 16px);
+  border: 1px solid var(--ln-color-divider, #e6e6e6);
+  border-radius: var(--ln-radius-card, 8px);
+  background: var(--ln-color-surface, #ffffff);
+}
+
+@media (min-width: 768px) {
+  .localnodes-import-status {
+    padding: var(--ln-space-lg, 24px);
+  }
+}
+
+.localnodes-import-status__summary {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-status__breakdown {
+  margin: 0 0 var(--ln-space-md, 16px);
+  padding-left: var(--ln-space-lg, 24px);
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-status__all {
+  display: flex;
+  align-items: center;
+  gap: var(--ln-space-xs, 4px);
+  margin: 0 0 var(--ln-space-md, 16px);
+  color: var(--ln-color-success, #1e6b2e);
+}
+
+.localnodes-import-status__stale {
+  margin: var(--ln-space-sm, 8px) 0 var(--ln-space-md, 16px);
+}
+
+.localnodes-import-status__stale p {
+  margin: 0;
+}
+
+.localnodes-import-status__details {
+  margin: 0 0 var(--ln-space-sm, 8px);
+}
+
+.localnodes-import-status__toggle {
+  display: list-item;
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--ln-color-link, #115e59);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-status__toggle:focus-visible {
+  outline: 2px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-status__list {
+  margin: 0 0 var(--ln-space-md, 16px);
+  padding-left: var(--ln-space-lg, 24px);
+}
+
+.localnodes-import-status__item {
+  padding: 2px 0;
+  line-height: 1.5;
+}
+
+.localnodes-import-status__reason {
+  display: block;
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}
+
+.localnodes-import-status__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ln-space-sm, 8px) var(--ln-space-md, 16px);
+  margin-top: var(--ln-space-md, 16px);
+}
+
+.localnodes-import-status__updated {
+  margin: 0;
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}
+
+.localnodes-import-status__refresh {
+  margin: 0;
+}
+
+.localnodes-import-status__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ln-space-xs, 4px);
+  min-height: 44px;
+}
+
+.localnodes-import-status__button:focus-visible {
+  outline: 2px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+/* S1 Past imports (22-25, D-21). The table shares the report's styles. */
+.localnodes-import-past {
+  margin: 0 0 var(--ln-space-xl, 32px);
+}
+
+.localnodes-import-past__kind {
+  display: block;
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}
+
+.localnodes-import-past__date a {
+  display: inline-block;
+  min-height: 24px;
+}
+
+.localnodes-import-past__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The Import tab's pagers (D-22): 44px targets. */
+.localnodes-import-pager {
+  margin: var(--ln-space-md, 16px) 0;
+}
+
+.localnodes-import-pager .pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ln-space-xs, 4px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.localnodes-import-pager .pager__item a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--ln-space-sm, 8px);
+  border: 1px solid var(--ln-color-divider, #e6e6e6);
+  border-radius: var(--ln-radius-control, 6px);
+  background: var(--ln-color-surface, #ffffff);
+  color: var(--ln-color-link, #115e59);
+  text-decoration: underline;
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-pager .pager__item a[aria-current="page"] {
+  border-color: var(--ln-color-primary, #0f766e);
+  color: var(--ln-color-text, #343434);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.localnodes-import-pager .pager__item a:focus-visible {
+  outline: 2px solid var(--ln-color-focus, #0f766e);
+  outline-offset: 2px;
+}
+
+.localnodes-import-pager .pager__item--ellipsis {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--ln-space-xs, 4px);
+}
+
+[data-localnodes-import-status] [hidden] {
+  display: none !important;
+}
+
+/* S4: S5 for this import (22-25), "Search is catching up…". */
+.localnodes-import-report__search {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ln-space-xs, 4px);
+  max-width: 72ch;
+  margin: 0 0 var(--ln-space-lg, 24px);
+  font-variant-numeric: tabular-nums;
+}
+
+.localnodes-import-report__search .localnodes-import-icon {
+  margin-top: 4px;
+}
+
+/* S3: the Source box under the licence lines is a preview, and says so
+   (22-30, Codex review). Label 14/600. */
+.localnodes-import-web__preview-label {
+  margin: var(--ln-space-lg, 24px) 0 calc(-1 * var(--ln-space-md, 16px));
+  color: var(--ln-color-text, #343434);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* S6: a page with no readable text says so in its Source box (22-30). */
+.localnodes-import-source__no-text {
+  margin: var(--ln-space-sm, 8px) 0 0;
+  color: var(--ln-color-text, #343434);
+}
+
+/* S2, S3: "Importing into ‹group name›" (22-30, Codex CX-04/07). Label
+   14/600, above the form. */
+.localnodes-import__destination {
+  margin: 0 0 var(--ln-space-md, 16px);
+  color: var(--ln-color-text, #343434);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* S4: why the count includes files that couldn't be imported (22-30). */
+.localnodes-import-report__count-note {
+  margin: 0 0 var(--ln-space-sm, 8px);
+  color: var(--ln-color-text-muted, #555555);
+  font-size: 14px;
+}

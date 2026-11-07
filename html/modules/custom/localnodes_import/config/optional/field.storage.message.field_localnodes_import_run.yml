@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_import
+  module:
+    - localnodes_import
+    - message
+id: message.field_localnodes_import_run
+field_name: field_localnodes_import_run
+entity_type: message
+type: entity_reference
+settings:
+  target_type: localnodes_import_run
+module: core
+locked: true
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -20,6 +20,160 @@ function localnodes_platform_install() {
   // writing to the database. No need to apply them here.
   _localnodes_platform_grant_chatbot_access();
   _localnodes_platform_configure_mailer();
+  // DES-01 brand tokens (22-UI-SPEC Part 1): socialblue scheme + shapes.
+  _localnodes_platform_apply_brand_palette();
+  _localnodes_platform_configure_theme_shape();
+  // D-27: the site-wide Gemini token ceiling (ai_usage_limits).
+  _localnodes_platform_configure_ai_usage_limits();
+}
+
+/**
+ * Sets the site-wide Gemini token ceiling in ai_usage_limits.
+ *
+ * D-27 (Tom, 2026-11-05): the last-resort spend stop across every AI
+ * feature. 30,000,000 tokens per 30-day window by default; each instance
+ * can change it at /admin/config/ai/usage_limits.
+ *
+ * All five counters get the same limit, so the total governs. That works
+ * around two ai_usage_limits quirks: its check ignores enable_limits and
+ * refuses as soon as any counter with usage has a missing or lower limit,
+ * and it adds reasoning tokens to the input counter. It counts chat output
+ * only, but the check runs before every call to the provider, embeddings
+ * included, so at the ceiling vector search and indexing pause too
+ * (localnodes_platform's AiCeilingIndexingSubscriber keeps index runs
+ * resumable). Per-user, anonymous and per-IP caps are flood control in
+ * social_ai_indexing (22-31, 22-32).
+ *
+ * Why this lives in hook_install: ai_usage_limits ships
+ * ai_usage_limits.settings in its own config/install, so a module copy
+ * would be pre-existing config. Only writes when providers.gemini is
+ * absent, so an admin's change survives.
+ */
+function _localnodes_platform_configure_ai_usage_limits() {
+  $limit = 30000000;
+  $config = \Drupal::configFactory()->getEditable('ai_usage_limits.settings');
+  if ($config->get('providers.gemini') === NULL) {
+    $config->set('providers.gemini', [
+      'enable_limits' => TRUE,
+      'input_token_usage' => $limit,
+      'output_token_usage' => $limit,
+      'total_token_usage' => $limit,
+      'cached_token_usage' => $limit,
+      'reasoning_token_usage' => $limit,
+    ]);
+    $config->set('retention_days', 30);
+    $config->save();
+  }
+
+  // ai_usage_limits_cron() loops over this State value without a NULL
+  // check, so it warns on every cron run until the first chat call.
+  $state = \Drupal::state();
+  if (!is_array($state->get('ai_usage_limits'))) {
+    $state->set('ai_usage_limits', []);
+  }
+}
+
+/**
+ * Applies the LocalNodes brand palette to socialblue and regenerates its CSS.
+ *
+ * Stock socialblue fails WCAG AA (primary #29abe2 is 2.62:1 on white), so the
+ * distribution ships the AA palette from 22-UI-SPEC Part 1 (DES-01, D-03:
+ * keep socialblue, no sub-theme). The palette lives in this module's
+ * config/optional/color.theme.socialblue.yml and is read from there, so the
+ * YAML stays the single source of truth.
+ *
+ * Why this lives in hook_install: drupal/color generates the recoloured
+ * brand.css (and the other stylesheets listed in socialblue/color/color.inc)
+ * only in its form submit handler, color_scheme_form_submit(). Installing the
+ * YAML alone leaves socialblue rendering the stock hexes that brand.css hard
+ * codes. So we call that handler with the shipped palette, exactly as the
+ * theme settings form would. No entrypoint config:set (CLAUDE.md).
+ *
+ * Idempotent: if the stored palette already equals the shipped one and the
+ * generated stylesheets exist on disk, nothing is regenerated.
+ */
+function _localnodes_platform_apply_brand_palette() {
+  $module_handler = \Drupal::moduleHandler();
+  if (!$module_handler->moduleExists('color')
+    || !\Drupal::service('theme_handler')->themeExists('socialblue')) {
+    return;
+  }
+  $module_handler->loadInclude('color', 'module');
+
+  $path = \Drupal::service('extension.list.module')->getPath('localnodes_platform')
+    . '/config/optional/color.theme.socialblue.yml';
+  $shipped = \Drupal\Component\Serialization\Yaml::decode(file_get_contents($path));
+  $palette = $shipped['palette'] ?? [];
+  if (empty($palette)) {
+    return;
+  }
+
+  $config = \Drupal::configFactory()->getEditable('color.theme.socialblue');
+  $stylesheets = $config->get('stylesheets') ?: [];
+  $generated = !empty($stylesheets);
+  foreach ($stylesheets as $stylesheet) {
+    $generated = $generated && file_exists($stylesheet);
+  }
+  if ($generated && $config->get('palette') == $palette) {
+    return;
+  }
+
+  // Write the palette first so color_get_palette() callers (e.g. the
+  // social_swiftmail email preprocess) see it even if generation fails.
+  $config->set('palette', $palette)->save();
+
+  $info = color_get_info('socialblue');
+  if (empty($info)) {
+    return;
+  }
+  $form_state = new \Drupal\Core\Form\FormState();
+  $form_state->setValues([
+    'theme' => 'socialblue',
+    // '' is the "Custom" scheme: use the palette as given.
+    'scheme' => '',
+    'palette' => $palette,
+    'info' => $info,
+  ]);
+  $form = [];
+  color_scheme_form_submit($form, $form_state);
+
+  // color_library_info_alter() swaps the generated files in at library
+  // discovery time, so the cached library definitions must be rebuilt.
+  \Drupal::service('library.discovery')->clearCachedDefinitions();
+}
+
+/**
+ * Sets the DES-01 control and card radius on socialblue.
+ *
+ * 22-UI-SPEC Part 1 "Shape": 6px for buttons and form controls, 8px for
+ * cards (stock socialblue ships 10 / 5 / 10). improved_theme_settings renders
+ * these theme settings into the page head, and social_swiftmail uses them in
+ * emails.
+ *
+ * Why this lives in hook_install: socialblue ships socialblue.settings in its
+ * own config/install, so a module config/install copy would collide with an
+ * existing object. Editing it here is the install-time equivalent. Idempotent.
+ */
+function _localnodes_platform_configure_theme_shape() {
+  if (!\Drupal::service('theme_handler')->themeExists('socialblue')) {
+    return;
+  }
+  $config = \Drupal::configFactory()->getEditable('socialblue.settings');
+  $shape = [
+    'button_radius' => '6',
+    'form_control_radius' => '6',
+    'card_radius' => '8',
+  ];
+  $changed = FALSE;
+  foreach ($shape as $key => $value) {
+    if ((string) $config->get($key) !== $value) {
+      $config->set($key, $value);
+      $changed = TRUE;
+    }
+  }
+  if ($changed) {
+    $config->save();
+  }
 }
 
 /**
@@ -107,31 +261,31 @@ function _localnodes_platform_configure_ai_defaults() {
   $ai_config->set('default_providers', [
     'chat' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'chat_with_complex_json' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'chat_with_image_vision' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'chat_with_structured_response' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'chat_with_tools' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'embeddings' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-embedding-001',
+      'model_id' => 'models/gemini-embedding-2',
     ],
     'speech_to_text' => [
       'provider_id' => 'gemini',
-      'model_id' => 'models/gemini-3-flash-preview',
+      'model_id' => 'models/gemini-3.8-flash',
     ],
     'text_to_image' => [
       'provider_id' => 'gemini',
@@ -161,12 +315,50 @@ function _localnodes_platform_configure_ai_defaults() {
 
 /**
  * Implements hook_requirements().
+ *
+ * The G8 data-tier gate (AI-SPEC 1b, guardrail G8), as Tom chose it on
+ * 2026-11-05: warn-and-provision. A status-report error when a non-demo site
+ * hasn't declared a paid Gemini key, plus a check in
+ * .github/workflows/provision-instance.yml. No runtime block.
+ *
+ * Reads two settings from settings.php:
+ * - localnodes_ai_data_tier: 'local' on DDEV; off DDEV 'paid' when
+ *   GEMINI_KEY_TIER=paid, 'unpaid' for any other value, '' when unset.
+ * - localnodes_demo_module: DEMO_MODULE with the entrypoint's default
+ *   'localnodes_demo'. A site whose value names a demo module (set and not
+ *   'none') holds fictional content only and is exempt. A missing setting is
+ *   not exempt.
+ *
+ * Also warns when CloudflareClientIpMiddleware had to fall back to
+ * CF-Connecting-IP in the last 7 days (Traefik's trustedIPs missing).
  */
 function localnodes_platform_requirements($phase) {
   $requirements = [];
   if ($phase !== 'runtime') {
     return $requirements;
   }
+
+  $tier = (string) \Drupal\Core\Site\Settings::get('localnodes_ai_data_tier', '');
+  $demo = (string) \Drupal\Core\Site\Settings::get('localnodes_demo_module', '');
+  $requirement = ['title' => t('Gemini data tier')];
+
+  if ($tier === 'paid' || $tier === 'local') {
+    $requirement['value'] = $tier === 'paid' ? t('Paid key declared') : t('Local DDEV');
+    $requirement['severity'] = REQUIREMENT_OK;
+  }
+  elseif ($demo !== '' && $demo !== 'none') {
+    $requirement['value'] = t('Demo site, check skipped');
+    $requirement['description'] = t('DEMO_MODULE is %demo, so this site is treated as a demo with made-up content and the paid-key check is skipped. If real members start posting here, set GEMINI_KEY_TIER=paid with a key from a Cloud project that has billing turned on: Google may use content sent with an unpaid key and have people review it.', ['%demo' => $demo]);
+    $requirement['severity'] = REQUIREMENT_INFO;
+  }
+  else {
+    $requirement['value'] = t('No paid key declared');
+    $requirement['description'] = t("This site sends members' posts and documents to Gemini, but GEMINI_KEY_TIER isn't set to 'paid'. Google may use content sent with an unpaid key and have people review it, and its terms allow only paid keys for users in the EEA, Switzerland and the UK. Use a key from a Google Cloud project with billing turned on, then set GEMINI_KEY_TIER=paid for this instance and redeploy.");
+    $requirement['severity'] = REQUIREMENT_ERROR;
+  }
+
+  $requirements['localnodes_ai_data_tier'] = $requirement;
+
   // Set by CloudflareClientIpMiddleware when Traefik sent only Cloudflare's
   // edge address (its forwardedHeaders.trustedIPs setting is missing).
   $last = (int) \Drupal::state()->get('localnodes_platform.cf_connecting_ip_fallback', 0);

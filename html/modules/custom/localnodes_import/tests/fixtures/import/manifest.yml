@@ -1,0 +1,231 @@
+# Expected import outcome for every file in files/ (Phase 22, E7 source of
+# truth). Written before any importer code (plan 22-04), so the import tests
+# check the importer against these rows instead of describing what it does.
+#
+# Fields per row:
+#   file          File name in files/, exactly as submitted.
+#   kind          pdf | docx | doc | odt | xlsx
+#   expect        imported | not_searchable | duplicate | failed | refused
+#                 (not_searchable is imported but left out of "N of M
+#                 searchable"; UI-SPEC Part 8 S4 badge "Not searchable")
+#   reason        null | scanned_pdf | no_text | unreadable | unsupported_type
+#                 (UI-SPEC Copywriting Contract: "Not searchable: scanned
+#                 PDF", "Not searchable: no text", "Failed: unreadable file")
+#   title         Expected Topic title (D-16): the document's metadata title
+#                 when present, else the file name with its extension removed,
+#                 underscores and hyphens turned into spaces and the first
+#                 letter capitalised. For a duplicate it is the existing
+#                 page's title (the report links that page). null where no
+#                 Topic is created (failed, refused).
+#   phrase        The fixture phrase the searchable Topic's indexed content
+#                 must contain, or null. The scanned, encrypted and truncated
+#                 PDFs do hold a phrase (heron-11, -12, -13), but it must never
+#                 reach the index, so their phrase is null here.
+#   duplicate_of  For the byte-identical copy: the file it duplicates.
+#
+# Decided here (AI-SPEC §5 left it to the planner; RESEARCH Open Question 6):
+# the encrypted and the truncated PDF are "failed" with the unreadable-file
+# copy, not imported as not searchable. Neither may cause a fatal.
+#
+# Extractor pinned for PDFs: smalot/pdfparser (ai_file_to_text PdfExtractor).
+# If Poppler's pdftotext is on the PATH, ai_file_to_text may prefer it; the
+# tests pin smalot (AI-SPEC §5, pitfall 12). Measured by probe_extraction.php.
+pdf_extractor: smalot
+
+files:
+  - file: pdf-01-tool-share-rules.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Tool Share Rules"
+    phrase: "fixture-phrase heron-01"
+    duplicate_of: null
+  - file: pdf-02-orchard-pruning-notes.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Orchard Pruning Notes"
+    phrase: "fixture-phrase heron-02"
+    duplicate_of: null
+  - file: pdf-03-rainwater-barrels.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Rainwater Barrel Guide"
+    phrase: "fixture-phrase heron-03"
+    duplicate_of: null
+  - file: pdf-04-potluck-checklist.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Potluck Checklist"
+    phrase: "fixture-phrase heron-04"
+    duplicate_of: null
+  - file: pdf-05-beekeeping-log.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Beekeeping Log, Spring"
+    phrase: "fixture-phrase heron-05"
+    duplicate_of: null
+  - file: pdf-06-repair-cafe-flyer.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Repair Cafe Flyer"
+    phrase: "fixture-phrase heron-06"
+    duplicate_of: null
+  - file: pdf-07-meadow-survey.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Meadow Survey Summary"
+    phrase: "fixture-phrase heron-07"
+    duplicate_of: null
+  - file: pdf-08-childcare-rota.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Childcare Rota for Gatherings"
+    phrase: "fixture-phrase heron-08"
+    duplicate_of: null
+  - file: pdf-09-compost-troubleshooting.pdf
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Compost Troubleshooting"
+    phrase: "fixture-phrase heron-09"
+    duplicate_of: null
+  # D-16: the metadata title must win over this file name.
+  - file: "scan_0042_final(2).pdf"
+    kind: pdf
+    expect: imported
+    reason: null
+    title: "Garden Committee Minutes, March"
+    phrase: "fixture-phrase heron-10"
+    duplicate_of: null
+  # Image-only PDF, no text layer: imported, marked not searchable.
+  - file: scanned-notice.pdf
+    kind: pdf
+    expect: not_searchable
+    reason: scanned_pdf
+    title: "Scanned notice"
+    phrase: null
+    duplicate_of: null
+  # Encrypted (user password set): fails with the unreadable-file copy.
+  - file: locked-budget.pdf
+    kind: pdf
+    expect: failed
+    reason: unreadable
+    title: null
+    phrase: null
+    duplicate_of: null
+  # First half of a valid PDF: fails with the unreadable-file copy.
+  - file: truncated-report.pdf
+    kind: pdf
+    expect: failed
+    reason: unreadable
+    title: null
+    phrase: null
+    duplicate_of: null
+  - file: volunteer-rota.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Volunteer rota"
+    phrase: "fixture-phrase heron-14"
+    duplicate_of: null
+  - file: workshop_signup_sheet.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Workshop signup sheet"
+    phrase: "fixture-phrase heron-15"
+    duplicate_of: null
+  # D-16: the DOCX core title must win over this file name.
+  - file: handbook-draft-v2.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Seed Library Handbook"
+    phrase: "fixture-phrase heron-16"
+    duplicate_of: null
+  - file: newsletter-autumn.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Newsletter autumn"
+    phrase: "fixture-phrase heron-17"
+    duplicate_of: null
+  - file: welcome-letter.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Welcome letter"
+    phrase: "fixture-phrase heron-18"
+    duplicate_of: null
+  - file: bike-repair-steps.docx
+    kind: docx
+    expect: imported
+    reason: null
+    title: "Bike repair steps"
+    phrase: "fixture-phrase heron-19"
+    duplicate_of: null
+  # Legacy Word 97-2003 files, read through PhpWord's MsDoc reader.
+  - file: pond-cleanup-plan.doc
+    kind: doc
+    expect: imported
+    reason: null
+    title: "Pond cleanup plan"
+    phrase: "fixture-phrase heron-20"
+    duplicate_of: null
+  - file: fruit_tree_map_notes.doc
+    kind: doc
+    expect: imported
+    reason: null
+    title: "Fruit tree map notes"
+    phrase: "fixture-phrase heron-21"
+    duplicate_of: null
+  - file: storytelling-evening.doc
+    kind: doc
+    expect: imported
+    reason: null
+    title: "Storytelling evening"
+    phrase: "fixture-phrase heron-22"
+    duplicate_of: null
+  - file: shared-kitchen-guidelines.odt
+    kind: odt
+    expect: imported
+    reason: null
+    title: "Shared kitchen guidelines"
+    phrase: "fixture-phrase heron-23"
+    duplicate_of: null
+  # Byte-identical copy of pdf-03 under a new name (D-15): skipped, linking
+  # the existing page. No new Topic, so no phrase of its own.
+  - file: copy-of-pdf-03.pdf
+    kind: pdf
+    expect: duplicate
+    reason: null
+    title: "Rainwater Barrel Guide"
+    phrase: null
+    duplicate_of: pdf-03-rainwater-barrels.pdf
+  # Spreadsheet: refused with a plain message.
+  - file: budget.xlsx
+    kind: xlsx
+    expect: refused
+    reason: unsupported_type
+    title: null
+    phrase: null
+    duplicate_of: null
+
+# Expected outcome for the whole set in one action (AI-SPEC §5): 21 imported,
+# 20 of 21 searchable, 1 duplicate, 2 failed, 1 refused. "imported" counts the
+# not_searchable scan; "searchable" leaves it out.
+totals:
+  submitted: 25
+  imported: 21
+  searchable: 20
+  not_searchable: 1
+  duplicate: 1
+  failed: 2
+  refused: 1

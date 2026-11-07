@@ -1,0 +1,25 @@
+# AI overview cost limits (D-27a; Tom, 2026-11-05).
+overview_flood:
+  # Counted overview requests (answer-cache misses) per member per window.
+  user_limit: 30
+  # Counted overview requests per client IP per window (advisory).
+  ip_limit: 120
+  # Window in seconds.
+  window: 3600
+# Longest overview question, in characters; longer ones get 413.
+overview_max_query_chars: 300
+# Runtime support check (22-27 option B; orchestrator, 2026-11-07): one
+# judge call per cited answer checks each cited sentence against the
+# excerpts it cites, trims an unsupported clause or drops the sentence,
+# and never adds text. If the call fails or times out the answer goes out
+# unchanged and answer_summary says support_check=unchecked.
+support_check:
+  # The group assistant's answers.
+  assistant: true
+  # The search overview.
+  overview: true
+  # Provider plugin and model for the check (not the answering model).
+  provider: gemini
+  model: models/gemini-3.8-flash
+  # HTTP timeout for the check call, in seconds.
+  timeout: 8

@@ -1,0 +1,12 @@
+# LocalNodes visuals for the Phase 21 group fund components (D-04): the Test
+# network banner and panel left rules and a neutral Short ID, from --ln-*
+# tokens only. The generic drupal.org modules never name this library;
+# localnodes_web3_library_info_alter() adds it as a dependency of
+# safe_smart_accounts/components, so it loads wherever those components do.
+treasury:
+  version: VERSION
+  css:
+    theme:
+      css/treasury.css: {}
+  dependencies:
+    - localnodes_platform/tokens

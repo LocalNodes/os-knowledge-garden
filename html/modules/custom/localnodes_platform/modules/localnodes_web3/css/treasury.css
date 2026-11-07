@@ -1,0 +1,82 @@
+/**
+ * @file
+ * LocalNodes visuals for the Phase 21 group fund components (D-04).
+ *
+ * safe_smart_accounts and group_treasury ship structural CSS and stock
+ * socialbase classes only; ln-tokens.css already re-points .alert-*,
+ * .badge-* and .btn-danger. This file adds the few LocalNodes-only touches
+ * (21-UI-SPEC Layout and Color), using existing --ln-* tokens only: Phase 21
+ * adds no colour.
+ *
+ * - Test network banner: warning fill, 4px left rule in the warning text
+ *   colour, 16px vertical and 24px horizontal padding.
+ * - Inline alerts and the receipt/approval panel: 4px left rule in the
+ *   current state's status colour (attention, success, danger), never teal.
+ *   Info alerts keep their 1px border, because 22-UI-SPEC Part 1 reserves
+ *   the teal left rule for the AI overview and the Source box.
+ * - Short ID and full ID: neutral text, instead of the theme's tinted code
+ *   style.
+ * - Status badges: each variant takes its .badge-* token pair (21-28).
+ *
+ * Core puts module CSS before the theme's, so each rule is at least one
+ * class more specific than the socialbase or ln-tokens rule it overrides.
+ * localnodes_web3_library_info_alter() attaches this library wherever
+ * safe_smart_accounts/components is attached.
+ */
+
+/* Test network banner (21-UI-SPEC Layout, U39). */
+.alert.safe-test-network-banner {
+  padding: var(--ln-space-md) var(--ln-space-lg);
+  background-color: var(--ln-color-warning-bg);
+  border-left: 4px solid var(--ln-color-warning-text);
+}
+
+/* Inline alerts, receipt panel and approval panel: status-coloured rule. */
+.alert-warning.safe-inline-alert,
+.alert-warning.safe-receipt-panel {
+  border-left: 4px solid var(--ln-color-warning-text);
+}
+
+.alert-success.safe-inline-alert,
+.alert-success.safe-receipt-panel {
+  border-left: 4px solid var(--ln-color-success);
+}
+
+.alert-danger.safe-inline-alert,
+.alert-danger.safe-receipt-panel {
+  border-left: 4px solid var(--ln-color-danger);
+}
+
+/* Short ID (22-UI-SPEC Part 4): monospace data in the body text colour. */
+code.safe-short-id__value,
+code.safe-full-id {
+  padding: 0;
+  background: none;
+  color: var(--ln-color-text);
+}
+
+/* Status badges (21-UI-SPEC Color, status mapping; 22-UI-SPEC Part 4).
+   safe_smart_accounts marks each badge with its variant class only, so the
+   variants take the same token pairs ln-tokens.css gives .badge-warning,
+   .badge-success, .badge-danger and .badge-info. Without this the theme's
+   white badge text sat on a light grey fill (axe color-contrast, 21-28). */
+.badge.safe-status-badge--attention {
+  background-color: var(--ln-color-highlight);
+  color: var(--ln-color-on-highlight);
+}
+
+.badge.safe-status-badge--success {
+  background-color: var(--ln-color-success-bg);
+  color: var(--ln-color-success);
+}
+
+.badge.safe-status-badge--danger {
+  background-color: var(--ln-color-danger-bg);
+  color: var(--ln-color-danger);
+}
+
+.badge.safe-status-badge--neutral {
+  background-color: var(--ln-color-canvas);
+  border: 1px solid var(--ln-color-border-control);
+  color: var(--ln-color-text-muted);
+}

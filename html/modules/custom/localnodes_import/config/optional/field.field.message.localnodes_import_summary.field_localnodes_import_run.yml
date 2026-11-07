@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_localnodes_import_run
+    - message.template.localnodes_import_summary
+id: message.localnodes_import_summary.field_localnodes_import_run
+field_name: field_localnodes_import_run
+entity_type: message
+bundle: localnodes_import_summary
+label: 'Import run'
+description: 'The import run this summary reports on. A group manager''s "@time ago" link leads to its report; everyone else''s to the group''s Topics list (22-23 follow-up, decision A).'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:localnodes_import_run'
+  handler_settings: {  }
+field_type: entity_reference

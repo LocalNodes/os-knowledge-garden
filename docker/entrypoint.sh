@@ -24,7 +24,7 @@ while ! bash -c "echo > /dev/tcp/${QDRANT_HOST:-qdrant}/${QDRANT_PORT:-6333}" 2>
 echo "Qdrant is available."
 
 # --- Qdrant collection setup ---
-# Ensure knowledge_garden collection exists with correct dimensions (3072 for gemini-embedding-001).
+# Ensure knowledge_garden collection exists with correct dimensions (3072, the default size of gemini-embedding-2).
 # The Qdrant provider defaults to 1536 dims, so we must manage this ourselves.
 QDRANT_URL="http://${QDRANT_HOST:-qdrant}:${QDRANT_PORT:-6333}"
 QDRANT_COLLECTION_INFO=$(curl -sf "$QDRANT_URL/collections/knowledge_garden" 2>/dev/null || true)
@@ -315,13 +315,7 @@ run_post_install() {
   echo "Indexing content in Solr..."
   soft "search-api:index" $DRUSH search-api:index
 
-  # Run cron 3x for vector embedding queue processing
-  echo "Running cron for vector indexing (3 passes)..."
-  soft "cron pass 1" $DRUSH cron
-  sleep 5
-  soft "cron pass 2" $DRUSH cron
-  sleep 5
-  soft "cron pass 3" $DRUSH cron
+  # Vector indexing is left to the worker loop forked below: the old 3x install-time cron passes mostly indexed nothing (ultimate_cron runs search_api_cron every 15 min).
 
   # --- Organizer account provisioning ---
   # When ORGANIZER_EMAIL is set (automated provisioning), create the organizer's admin account,
@@ -462,6 +456,17 @@ chown -R www-data:www-data /var/www/private 2>/dev/null || true
 
 # Clear caches
 $DRUSH cr
+
+# --- Recurring cron + search indexing worker (Solr/vector indexing) ---
+# Runs drush cron:run search_api_cron --force and drush cron as www-data every
+# WORKER_INTERVAL seconds (default 60). See docker/worker-loop.sh. DRUSH is not
+# exported, so pass it explicitly. Set WORKER_ENABLED=false to turn it off.
+if [ "${WORKER_ENABLED:-true}" = "true" ]; then
+  DRUSH="$DRUSH" /usr/local/bin/worker-loop.sh &
+  echo "Worker loop started (pid $!, interval ${WORKER_INTERVAL:-60}s)."
+else
+  echo "Worker loop disabled (WORKER_ENABLED=${WORKER_ENABLED})."
+fi
 
 # Start Apache in foreground
 echo "Starting Apache..."

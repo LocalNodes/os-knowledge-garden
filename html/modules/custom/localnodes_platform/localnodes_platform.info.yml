@@ -6,6 +6,10 @@ package: 'LocalNodes'
 dependencies:
   # Logging: keep watchdog entries (e.g. the AI provider's error behind a chatbot
   # 500) so problems can be diagnosed with drush watchdog:show. Core module.
+  # Also Phase 22 (AI-SPEC §7): a fresh `site:install social` enables neither
+  # dblog nor syslog, so the answer_summary, permission_abort, guard_fallback
+  # and import_summary records went nowhere. ai_health_report.php reads them
+  # from dblog's watchdog table.
   - drupal:dblog
   # AI core
   - ai:ai
@@ -15,6 +19,9 @@ dependencies:
   - ai:ai_assistant_api
   - ai_file_to_text:ai_file_to_text
   - ai_vdb_provider_qdrant:ai_vdb_provider_qdrant
+  # Site-wide Gemini token ceiling (Phase 22, D-27); configured in
+  # localnodes_platform_install().
+  - ai_usage_limits:ai_usage_limits
   - gemini_provider:gemini_provider
   - key:key
   # Search
@@ -22,3 +29,8 @@ dependencies:
   - search_api_solr:search_api_solr
   # Custom AI indexing
   - social_ai_indexing:social_ai_indexing
+  # Document importer (Phase 22, D-10)
+  - localnodes_import:localnodes_import
+  # Brand palette regeneration (Phase 22, DES-01): hook_install calls
+  # color_scheme_form_submit() to recolour socialblue.
+  - color:color

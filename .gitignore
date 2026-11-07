@@ -5,6 +5,7 @@
 /html/themes/contrib
 /html/sites/default/files
 /html/libraries
+/repos/
 vendor/
 .idea
 
@@ -13,6 +14,8 @@ vendor/
 /html/sites/default/default.settings.php
 /html/sites/development.services.yml
 /html/sites/example.settings.local.php
+# Local-only settings, included by settings.php when present (lane test sites write theirs).
+/html/sites/*/settings.local.php
 /html/sites/example.sites.php
 /html/.csslintrc
 /html/.editorconfig
@@ -38,6 +41,30 @@ private/
 # DDEV service volumes (binary runtime data)
 .ddev/milvus/
 .ddev/qdrant/
+
+# Node / vitest test harness (devDependencies installed locally)
+node_modules/
+
+# Drupal simpletest runtime output (PHPUnit functional/browser output)
+/html/sites/simpletest/
+
+# Playwright a11y harness (Phase 22): persona sessions and run output
+tests/a11y/.auth/
+test-results/
+playwright-report/
+
+# Phase 21 wallet e2e (21-39): chain run state, provider key file, sessions, live-suite installs, big evidence files
+tests/e2e/.state/
+tests/e2e/.env.fork
+tests/e2e/.auth/
+tests/e2e-live/node_modules/
+tests/e2e-live/.cache-synpress/
+/.planning/phases/21-real-safe-reads-balances/e2e-evidence/runs/
+# The chains' vendored contract bytes are tracked (the root vendor/ rule is for Composer)
+!/tests/e2e/fork/vendor/
+
+# run-phpunit.sh contrib deprecation opt-in (generated)
+tests/phpunit/.combined-deprecation-ignore.txt
 
 # ── GSD baseline (auto-generated) ──
 .gsd-worktrees/

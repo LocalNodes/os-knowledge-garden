@@ -5,4 +5,8 @@ social_ai_indexing.ai_overview:
     _title: 'AI Overview'
   methods: [GET]
   requirements:
-    _permission: 'access content'
+    # Members only (D-27a): every overview can make paid Gemini calls.
+    _permission: 'use ai overview'
+    # A JSON route: a refused request gets a JSON 403, not Open Social's
+    # r4032login redirect to the login page (that only handles html).
+    _format: 'json'

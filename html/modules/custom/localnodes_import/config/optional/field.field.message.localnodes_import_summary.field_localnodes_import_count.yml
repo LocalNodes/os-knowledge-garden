@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.message.field_localnodes_import_count
+    - message.template.localnodes_import_summary
+id: message.localnodes_import_summary.field_localnodes_import_count
+field_name: field_localnodes_import_count
+entity_type: message
+bundle: localnodes_import_summary
+label: 'Documents added'
+description: 'How many Topics the import run created (the summary line''s number).'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: 0
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

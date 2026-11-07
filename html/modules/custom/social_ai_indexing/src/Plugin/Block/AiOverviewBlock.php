@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\social_ai_indexing\Plugin\Block;
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -50,6 +53,17 @@ class AiOverviewBlock extends BlockBase implements ContainerFactoryPluginInterfa
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->requestStack = $request_stack;
+  }
+
+  /**
+   * Members only (D-27a).
+   *
+   * The endpoint refuses visitors without 'use ai overview', so the block
+   * isn't shown to them either: their search pages load no overview script
+   * and make no request.
+   */
+  protected function blockAccess(AccountInterface $account): AccessResultInterface {
+    return AccessResult::allowedIfHasPermission($account, 'use ai overview');
   }
 
   /**

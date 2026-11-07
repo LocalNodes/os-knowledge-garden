@@ -1,0 +1,19 @@
+social_ai_indexing.chatbot_limits:
+  type: config_object
+  label: 'Chatbot limits'
+  mapping:
+    max_message_chars:
+      type: integer
+      label: 'Longest chatbot message, in characters'
+    user_limit:
+      type: integer
+      label: 'Chatbot messages per member per window'
+    anonymous_limit:
+      type: integer
+      label: 'Chatbot messages per window for all anonymous visitors together'
+    ip_limit:
+      type: integer
+      label: 'Chatbot messages per client IP per window'
+    window:
+      type: integer
+      label: 'Window, in seconds'

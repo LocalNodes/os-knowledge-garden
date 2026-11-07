@@ -1,0 +1,14 @@
+{
+  "name": "localnodes-e2e-live",
+  "private": true,
+  "type": "module",
+  "description": "MetaMask (Synpress) suites for Phase 21: a local recording on the 84532 anvil chain (21-45 Task A) and a CI-only live-Sepolia run (Task B). Installed with --ignore-scripts and exact pins; Playwright is the fresh3-work root copy.",
+  "scripts": {
+    "local": "node ../../node_modules/@playwright/test/cli.js test -c local.config.ts",
+    "cache:local": "node cache-local.ts"
+  },
+  "devDependencies": {
+    "@synthetixio/synpress": "4.1.2",
+    "typescript": "5.9.3"
+  }
+}

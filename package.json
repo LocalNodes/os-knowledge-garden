@@ -1,0 +1,15 @@
+{
+  "name": "os-decoupled-fresh3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:a11y": "playwright test -c tests/a11y/playwright.config.ts",
+    "test:e2e": "bash tests/e2e/run.sh"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "vitest": "^3.2.4"
+  }
+}

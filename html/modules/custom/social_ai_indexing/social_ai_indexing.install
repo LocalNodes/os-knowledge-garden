@@ -1,0 +1,38 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for Social AI Indexing.
+ */
+
+declare(strict_types=1);
+
+use Drupal\user\Entity\Role;
+use Drupal\user\RoleInterface;
+
+/**
+ * Implements hook_install().
+ */
+function social_ai_indexing_install(bool $is_syncing): void {
+  // A config sync brings its own role permissions.
+  if ($is_syncing) {
+    return;
+  }
+  _social_ai_indexing_grant_overview_permission();
+}
+
+/**
+ * Lets every signed-in user use the search page's AI overview (D-27a).
+ *
+ * The overview makes paid Gemini calls, so anonymous visitors don't get it.
+ * The authenticated role is core config, so the grant happens here rather
+ * than in a shipped user.role file, which would fail module install with
+ * pre-existing config. Idempotent; a missing role is skipped.
+ */
+function _social_ai_indexing_grant_overview_permission(): void {
+  $permission = 'use ai overview';
+  $role = Role::load(RoleInterface::AUTHENTICATED_ID);
+  if ($role !== NULL && !$role->hasPermission($permission)) {
+    user_role_grant_permissions(RoleInterface::AUTHENTICATED_ID, [$permission]);
+  }
+}

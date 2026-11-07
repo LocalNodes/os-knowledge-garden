@@ -1,0 +1,8 @@
+# Deprecations raised by contrib code we don't own, ignored only when a caller
+# opts in with:
+#   PHPUNIT_IGNORE_CONTRIB_DEPRECATIONS=1 scripts/run-phpunit.sh <path>
+# The runner joins this list with core's .deprecation-ignore.txt.
+# One regex per line (Symfony PHPUnit bridge ignoreFile format).
+# Group 2.3.1 (html/modules/contrib/group), found by Phase 21 plan 21-12 on 2026-11-06:
+%Using a translatable string as a category for field type is deprecated in drupal:10\.2\.0%
+%The "group\.membership_loader" service relies on the deprecated "Drupal\\group\\GroupMembershipLoader" class%

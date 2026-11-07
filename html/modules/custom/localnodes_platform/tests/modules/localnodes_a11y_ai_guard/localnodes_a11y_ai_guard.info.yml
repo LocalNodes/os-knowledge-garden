@@ -1,0 +1,8 @@
+name: 'LocalNodes a11y AI guard (test only)'
+type: module
+description: 'Denies and counts every AI provider call on the a11y test lane, so the browser suite makes no live AI call on the server (22-30). Never enable on a real site.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true
+dependencies:
+  - ai:ai

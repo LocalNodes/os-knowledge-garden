@@ -2,11 +2,47 @@
 
 /**
  * @file
- * Hook implementations for LocalNodes Platform.
+ * Hooks for the LocalNodes Platform module.
  */
 
 use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
 use Drupal\symfony_mailer\EmailInterface;
+
+/**
+ * Implements hook_page_attachments().
+ *
+ * Attaches the DES-01 design tokens (localnodes_platform/tokens) and the group
+ * tab bar's "More group pages" button (localnodes_platform/group_tabs) on every
+ * page rendered by socialblue or another socialbase-derived theme. Admin pages in
+ * Gin are left alone: the overrides target socialbase's Bootstrap classes.
+ */
+function localnodes_platform_page_attachments(array &$attachments) {
+  $active_theme = \Drupal::theme()->getActiveTheme();
+  if ($active_theme->getName() === 'socialbase'
+    || array_key_exists('socialbase', $active_theme->getBaseThemeExtensions())) {
+    $attachments['#attached']['library'][] = 'localnodes_platform/tokens';
+    $attachments['#attached']['library'][] = 'localnodes_platform/group_tabs';
+  }
+}
+
+/**
+ * Implements hook_css_alter().
+ *
+ * Core's library parser assigns every module stylesheet to
+ * CSS_AGGREGATE_DEFAULT (after hook_library_info_alter() has run, so that hook
+ * can't change it), and the asset resolver sorts by group before weight, so a
+ * module stylesheet always loads before the theme's whatever its weight.
+ * ln-tokens.css has to load after socialblue's brand.css and brand--sky.css
+ * (theme weight 700) for its AA overrides to win at equal specificity, so move
+ * it into the theme group here, before the resolver sorts.
+ */
+function localnodes_platform_css_alter(array &$css, $assets, $language) {
+  $path = \Drupal::service('extension.list.module')->getPath('localnodes_platform') . '/css/ln-tokens.css';
+  if (isset($css[$path])) {
+    $css[$path]['group'] = CSS_AGGREGATE_THEME;
+    $css[$path]['weight'] = CSS_THEME + 900;
+  }
+}
 
 /**
  * Implements hook_mailer_post_render().

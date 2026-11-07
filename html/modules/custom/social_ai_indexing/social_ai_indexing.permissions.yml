@@ -1,0 +1,3 @@
+use ai overview:
+  title: 'Use the AI overview on search'
+  description: 'See an AI summary above search results. Each one makes a paid AI request.'
