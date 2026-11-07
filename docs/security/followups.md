@@ -374,3 +374,56 @@ Boulder (deployed 11:49Z) and Cascadia (11:53Z) both run image `0282227`, which 
 - The state value `localnodes_platform.cf_connecting_ip_fallback` is unset. So Traefik's `forwardedHeaders.trustedIPs` is in effect and the CF-Connecting-IP fallback is idle.
 
 TM-24 flood control therefore keys on real client IPs in production.
+
+## siwe_login beta9: connect a wallet (TM-58) and the chain list (TM-59)
+
+Date: 2026-11-06.
+
+beta9 adds two features to siwe_login and closes two gaps. It is built and reviewed but not released: the work is on the local siwe_login branch `beta9` at `e929122`, on top of `bc76846` (the beta8 test fix). Nothing is pushed or tagged on drupal.org. The release, the tag and the fresh3 pin bump wait for Tom's word.
+
+### Commits (siwe_login, branch beta9)
+
+- 2411f52 feat: allowed chain list (`chain_ids`) (TM-59)
+- e3b566d feat: nobody edits `field_ethereum_address` by hand (TM-58 c)
+- 71394ff feat: connect a wallet to the signed-in account (TM-58)
+- b1c8efd docs: beta9 README, CHANGELOG and CLAUDE.md; cspell words; drop QWEN.md
+- 9ec1e29 fix: the "already has a wallet" answer no longer points at admins
+- e929122 fix: bring sign-in and connect errors into view
+
+### What members and admins see
+
+- **Wallet tab.** A signed-in member opens the Wallet tab on their own account (`/user/{uid}/wallet`, also linked from the account form) and signs "Connect this wallet to your account on <site name>". The wallet is saved only if the account has none and no other account has it. Nobody else can open the tab, site admins included.
+- **No hand edits.** Nobody can type a wallet address into an account, site admins included. Only a verified signature writes it. A member who already has a wallet sees "Your account already has a wallet connected. Changing it isn't available yet." Changing or unlinking a wallet, with re-authentication, is planned.
+- **Chain list.** The admin setting is now a list of allowed chains (default: mainnet only). The first is the default. The browser signs with the chain the wallet is on when it is listed, else the default, and never asks the wallet to switch.
+- **Errors in view.** A sign-in or connect error now scrolls into view and takes focus. Before, themes such as Olivero could show it above the page title, out of sight.
+
+### Rulings (orchestrator, 2026-11-06)
+
+1. Connect nonces stay in PrivateTempStore. Account B can't use account A's connect nonce, and a refused attempt doesn't burn A's nonce. Both behaviours have tests.
+2. The field lock applies to everyone, site admins included, because Phase 21's owner checks rely on it.
+3. An error the user can't see is a bug; fixed for both buttons, with a browser test.
+4. Codex reviews the branch before any PR; P1 and P2 findings are fixed first.
+
+### Tests (desktop DDEV lane `siwe-beta9`, 2026-11-06, at `e929122`)
+
+| Test class | Result | Covers |
+|---|---|---|
+| `Kernel/ConnectWalletTest` | OK (14 tests, 126 assertions) | Binding, the connect statement, each nonce refused for the other purpose, a nonce issued to another account, anonymous and non-JSON requests, both 409s, the 503, replay, flood counting |
+| `Functional/ConnectWalletPageTest` | OK (4 tests, 76 assertions) | Who can open the tab, the CSRF and login requirements, connect end to end, the hidden field and the form link |
+| `Kernel/WalletFieldLockTest` | OK (2 tests, 17 assertions) | Edit access refused to everyone, programmatic writes still work |
+| `Kernel/ChainListTest` | OK (9 tests, 96 assertions) | Reader fallback order, list parsing, the validator, sign-in on a second listed chain, `chainIds` in the nonce response, the settings form, the detector's RPC choice per chain |
+| `FunctionalJavascript/ErrorMessageVisibilityTest` | OK (2 tests, 10 assertions) | Both buttons with no wallet, from the bottom of a tall page: the error has focus and is in the viewport |
+
+- Full suite at `e929122`: 302 tests, 2020 assertions, 1 skipped (`EnsResolverTest`'s real-web3p case, as before).
+- Mutation checks: removing the field lock, the CSRF requirement or the focus fix makes its test fail.
+- phpstan: only the 6 old `new static` warnings. phpcs: no new findings. cspell: 0 issues.
+- A browser smoke test with no wallet installed: OK.
+- Codex (read-only review of `bc76846..9ec1e29`): ship, no P1 or P2. Its two P3 doc points are fixed in `e929122`. PHP couldn't start where it ran, so this was a reading review, not a test run.
+
+### Left for later
+
+- Tom: TM-59 accept or not. Then the beta9 release, which needs his word.
+- A connect with a real wallet joins Tom's next hands-on batch, with the WaaP check.
+- Once siwe_login requires beta9, safe_smart_accounts drops its copy of the field lock (Phase 21-21).
+- The WaaP connector gets the same chain rule.
+- A lint pass (eslint, prettier) was not run; the older phpcs, cspell, eslint and stylelint debt from beta7 is left for its own pass.
