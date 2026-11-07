@@ -417,7 +417,7 @@ beta9 adds two features to siwe_login and closes two gaps. It is built and revie
 - Full suite at `e929122`: 302 tests, 2020 assertions, 1 skipped (`EnsResolverTest`'s real-web3p case, as before).
 - Mutation checks: removing the field lock, the CSRF requirement or the focus fix makes its test fail.
 - phpstan: only the 6 old `new static` warnings. phpcs: no new findings. cspell: 0 issues.
-- A browser smoke test with no wallet installed: the error shows and nothing breaks.
+- A browser smoke test with no wallet installed: OK.
 - Codex (read-only review of `bc76846..9ec1e29`): ship, no P1 or P2. Its two P3 doc points are fixed in `e929122`. PHP couldn't start where it ran, so this was a reading review, not a test run.
 
 ### Left for later
