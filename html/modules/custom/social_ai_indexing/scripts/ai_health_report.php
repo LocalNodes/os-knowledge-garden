@@ -47,7 +47,7 @@ final class AiHealthReport {
   private const ASSISTANT_P95_MAX_MS = 15000;
   private const SINGLE_REQUEST_MAX_MS = 60000;
   private const OLDEST_PENDING_MAX_S = 3600;
-  private const TYPICAL_INPUT_TOKENS_X2 = 17000;
+  private const TYPICAL_INPUT_TOKENS_X2 = 17_000;
   private const TYPICAL_OUTPUT_TOKENS_X2 = 2800;
   private const OVERVIEW_P50_MAX_MS = 5000;
   private const MONTHLY_COST_MAX_USD = 20.0;
