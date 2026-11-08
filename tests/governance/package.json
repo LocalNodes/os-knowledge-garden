@@ -9,7 +9,8 @@
   },
   "scripts": {
     "vectors": "node vectors.mjs",
-    "smoke": "node smoke.mjs"
+    "smoke": "node smoke.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "viem": "2.57.10"

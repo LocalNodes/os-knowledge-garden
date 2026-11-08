@@ -15,6 +15,7 @@ import {
   numberToHex,
   parseAbi,
   size,
+  zeroAddress,
 } from 'viem';
 
 // Source of each row is 25-RESEARCH.md "Standard Stack" (2026-11-06) unless noted.
@@ -407,3 +408,159 @@ export function passRule({ state, scores_state, scores, scores_total, quorum }) 
   return { passed: true, reason: 'passed' };
 }
 
+
+// --- Group setup batch (RESEARCH Pattern 1, plan 25-06) --------------------------------------------------
+
+// SafeProxy creation code, exactly what SafeProxyFactory 1.4.1 (0x4e1DCf7A...ec67) returns from
+// proxyCreationCode() on Ethereum Sepolia (read at fork block 12087317, 2026-11-08). The constant is
+// the same on every chain. A fork run proves it: the Safe deployed there lands on predictSafeProxy's address.
+export const SAFE_PROXY_CREATION_CODE =
+  '0x608060405234801561001057600080fd5b506040516101e63803806101e68339818101604052602081101561003357600080fd5b8101908080519060200190929190505050600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1614156100ca576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260228152602001806101c46022913960400191505060405180910390fd5b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505060ab806101196000396000f3fe608060405273ffffffffffffffffffffffffffffffffffffffff600054167fa619486e0000000000000000000000000000000000000000000000000000000060003514156050578060005260206000f35b3660008037600080366000845af43d6000803e60008114156070573d6000fd5b3d6000f3fea264697066735822122003d1488ee65e08fa41e58e888a9865554c535f2c77126a82cb4c0f917f31441364736f6c63430007060033496e76616c69642073696e676c65746f6e20616464726573732070726f7669646564';
+export const SAFE_PROXY_CREATION_CODE_KECCAK = '0x1856e0ee08399d74e0ea0b03adca210aeade6f748969ac023cdcb4dd62dcaf5f';
+
+export const safeSetupAbi = parseAbi([
+  'function setup(address[] _owners, uint256 _threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
+  'function enableModule(address module)',
+]);
+export const createCallAbi = parseAbi([
+  'function performCreate2(uint256 value, bytes deploymentData, bytes32 salt) returns (address newContract)',
+]);
+export const arbitratorAbi = parseAbi([
+  'function setRealitio(address addr)',
+  'function owner() view returns (address)',
+  'function realitio() view returns (address)',
+]);
+
+/** Safe.setup() call data for a plain owners-and-threshold Safe with the 1.4.1 fallback handler. */
+export function safeSetupInitializer({ owners, threshold, fallbackHandler }) {
+  return encodeFunctionData({
+    abi: safeSetupAbi,
+    functionName: 'setup',
+    args: [owners, BigInt(threshold), zeroAddress, '0x', fallbackHandler, zeroAddress, 0n, zeroAddress],
+  });
+}
+
+/** CREATE2 address of init code deployed by `deployer` with `salt`. */
+export function predictCreate2(deployer, salt, initCode) {
+  return getContractAddress({ opcode: 'CREATE2', from: deployer, salt, bytecode: initCode });
+}
+
+/** SafeProxyFactory.createProxyWithNonce address: salt = keccak(keccak(initializer) ++ saltNonce), code = proxy creation code ++ singleton. */
+export function predictSafeProxy({ factory, singleton, initializer, saltNonce }) {
+  const salt = keccak256(encodePacked(['bytes32', 'uint256'], [keccak256(initializer), BigInt(saltNonce)]));
+  const deploymentData = concat([SAFE_PROXY_CREATION_CODE, encodeAbiParameters([{ type: 'uint256' }], [hexToBigInt(singleton)])]);
+  return predictCreate2(factory, salt, deploymentData);
+}
+
+export const safeTxTypes = Object.freeze({
+  SafeTx: Object.freeze([
+    { name: 'to', type: 'address' },
+    { name: 'value', type: 'uint256' },
+    { name: 'data', type: 'bytes' },
+    { name: 'operation', type: 'uint8' },
+    { name: 'safeTxGas', type: 'uint256' },
+    { name: 'baseGas', type: 'uint256' },
+    { name: 'gasPrice', type: 'uint256' },
+    { name: 'gasToken', type: 'address' },
+    { name: 'refundReceiver', type: 'address' },
+    { name: 'nonce', type: 'uint256' },
+  ]),
+});
+
+/** Typed data the Safe owners sign for execTransaction (Safe 1.4.1: domain is chainId and verifyingContract only). */
+export function safeTxTypedData(chainId, safe, tx) {
+  return {
+    domain: { chainId: Number(chainId), verifyingContract: getAddress(safe) },
+    types: { SafeTx: safeTxTypes.SafeTx },
+    primaryType: 'SafeTx',
+    message: {
+      to: tx.to,
+      value: BigInt(tx.value),
+      data: tx.data,
+      operation: tx.operation,
+      safeTxGas: BigInt(tx.safeTxGas),
+      baseGas: BigInt(tx.baseGas),
+      gasPrice: BigInt(tx.gasPrice),
+      gasToken: tx.gasToken,
+      refundReceiver: tx.refundReceiver,
+      nonce: BigInt(tx.nonce),
+    },
+  };
+}
+
+export const HAT_MAX_SUPPLY = 4294967295;
+
+/**
+ * The one Safe transaction that builds a Group's governance with the Safe in control of every authority from the
+ * first block (RESEARCH Pattern 1, "Key insight"). Inner calls, in order:
+ *   1 delegatecall CreateCall.performCreate2: the reference Arbitrator, owner = the Safe (D-07)
+ *   2 Arbitrator.setRealitio
+ *   3 ModuleProxyFactory.deployModule: the Reality module, owner = avatar = target = the Safe (D-04)
+ *   4 Safe.enableModule
+ *   5 Hats.mintTopHat to the Safe (D-17)
+ *   6 and 7 Hats.createHat for the member and proposer hats, eligibility = toggle = the Safe
+ *   8 Hats.mintHat of both hats to every owner
+ * `a` holds the contract addresses; this function reads no network table.
+ */
+export function setupBatch(input) {
+  const { a } = input;
+  const safeInitializer = safeSetupInitializer({ owners: input.owners, threshold: input.threshold, fallbackHandler: a.safeFallbackHandler });
+  const safe = predictSafeProxy({ factory: a.safeProxyFactory, singleton: a.safeSingletonL2, initializer: safeInitializer, saltNonce: input.safeSaltNonce });
+  const arbitrator = predictCreate2(safe, input.arbitratorSalt, input.arbitratorInitCode);
+  const moduleInit = realityInitializer({
+    owner: safe, avatar: safe, target: safe, oracle: a.reality,
+    timeout: input.timeout, cooldown: input.cooldown, expiration: input.expiration,
+    bond: input.bond, templateId: input.templateId, arbitrator,
+  });
+  const module = predictModuleProxy(a.moduleProxyFactory, a.realityModuleMastercopy, moduleInit, input.moduleSaltNonce);
+  const topHat = hatIdToUint(String(input.topHatNumber));
+  const memberHat = hatIdToUint(`${input.topHatNumber}.1`);
+  const proposerHat = hatIdToUint(`${input.topHatNumber}.2`);
+  const enc = (abi, functionName, args) => encodeFunctionData({ abi, functionName, args });
+  const call = (operation, to, data, purpose) => ({ operation, to, value: '0', data, purpose });
+  const calls = [
+    call(1, a.createCall, enc(createCallAbi, 'performCreate2', [0n, input.arbitratorInitCode, input.arbitratorSalt]), 'deploy the reference Arbitrator from the Safe (CREATE2, owner = the Safe)'),
+    call(0, arbitrator, enc(arbitratorAbi, 'setRealitio', [a.reality]), 'point the Arbitrator at Reality.eth'),
+    call(0, a.moduleProxyFactory, enc(moduleProxyFactoryAbi, 'deployModule', [a.realityModuleMastercopy, moduleInit, BigInt(input.moduleSaltNonce)]), 'deploy the Reality module (owner, avatar and target = the Safe)'),
+    call(0, safe, enc(safeSetupAbi, 'enableModule', [module]), 'enable the Reality module on the Safe'),
+    call(0, a.hats, enc(hatsAbi, 'mintTopHat', [safe, input.groupName, '']), 'mint the top hat to the Safe'),
+    call(0, a.hats, enc(hatsAbi, 'createHat', [topHat, 'Member', HAT_MAX_SUPPLY, safe, safe, true, '']), 'create the member hat (eligibility and toggle = the Safe)'),
+    call(0, a.hats, enc(hatsAbi, 'createHat', [topHat, 'Proposer', HAT_MAX_SUPPLY, safe, safe, true, '']), 'create the proposer hat (eligibility and toggle = the Safe)'),
+  ];
+  for (const owner of input.owners) calls.push(call(0, a.hats, enc(hatsAbi, 'mintHat', [memberHat, owner]), `mint the member hat to ${owner}`));
+  for (const owner of input.owners) calls.push(call(0, a.hats, enc(hatsAbi, 'mintHat', [proposerHat, owner]), `mint the proposer hat to ${owner}`));
+  const wire = calls.map((c) => ({ ...c, value: BigInt(c.value) }));
+  const safeTx = {
+    to: a.multiSend,
+    value: '0',
+    data: multiSendCalldata(wire),
+    operation: 1,
+    safeTxGas: '0',
+    baseGas: '0',
+    gasPrice: '0',
+    gasToken: zeroAddress,
+    refundReceiver: zeroAddress,
+    nonce: '0',
+  };
+  const typed = safeTxTypedData(input.chainId, safe, safeTx);
+  return {
+    safeInitializer,
+    calls,
+    packed: multiSendPack(wire),
+    safeTx,
+    safeTxHash: hashTypedData(typed),
+    typedData: typed,
+    moduleInitializer: moduleInit,
+    predicted: {
+      safe,
+      arbitrator,
+      module,
+      topHat: topHat.toString(),
+      memberHat: memberHat.toString(),
+      proposerHat: proposerHat.toString(),
+      topHatDotted: String(input.topHatNumber),
+      memberHatDotted: `${input.topHatNumber}.1`,
+      proposerHatDotted: `${input.topHatNumber}.2`,
+    },
+  };
+}
