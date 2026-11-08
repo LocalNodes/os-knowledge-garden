@@ -66,6 +66,9 @@ tests/e2e-live/.cache-synpress/
 /.planning/phases/21-real-safe-reads-balances/e2e-evidence/runs/
 # The chains' vendored contract bytes are tracked (the root vendor/ rule is for Composer)
 !/tests/e2e/fork/vendor/
+# So are the governance vectors' pinned inputs (tests/governance/vendor/SOURCES.md lists each file's source and sha256).
+# Without this exception a plain `git add` drops them and `vectors.mjs --check` fails with ENOENT on a clean checkout.
+!/tests/governance/vendor/
 
 # run-phpunit.sh contrib deprecation opt-in (generated)
 tests/phpunit/.combined-deprecation-ignore.txt

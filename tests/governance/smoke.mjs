@@ -25,6 +25,7 @@ import {
   hexToBigInt,
   http,
   keccak256,
+  nonceManager,
   parseAbi,
   parseEventLogs,
   toHex,
@@ -50,6 +51,8 @@ import {
   sortAndConcat,
   spaceSettings,
 } from './lib/governance.mjs';
+import { COMMIT_AGE_TARGET_OFFSET, waitForChainTime } from './lib/chain-time.mjs';
+import { hubSpaceVerdict } from './lib/hub-space.mjs';
 
 const ANVIL_MNEMONIC = 'test test test test test test test test test test test junk';
 const FORK_RPC = process.env.GOV_FORK_RPC ?? 'http://127.0.0.1:18545';
@@ -93,7 +96,8 @@ async function forkMode() {
   const registrarCode = await pub.getCode({ address: net.ensRegistrar });
   if (!registrarCode || registrarCode === '0x') throw new Error('ENSv2 registrar has no code on this chain; not a Sepolia fork');
 
-  const acct = (i) => mnemonicToAccount(ANVIL_MNEMONIC, { addressIndex: i });
+  // nonceManager: back-to-back sends take their nonces from a local counter seeded from the pending count.
+  const acct = (i) => mnemonicToAccount(ANVIL_MNEMONIC, { addressIndex: i, nonceManager });
   const owner0 = acct(0);
   const owner1 = acct(1);
   const payer = acct(2);
@@ -141,9 +145,8 @@ async function forkMode() {
     functionName: 'makeCommitment',
     args: [label, safe, secret, zeroAddress, zeroAddress, duration, zeroHash],
   });
-  await send(payer, { address: net.ensRegistrar, abi: registrarAbi, functionName: 'commit', args: [commitment] });
-  await pub.request({ method: 'evm_increaseTime', params: [61] });
-  await pub.request({ method: 'evm_mine', params: [] });
+  const commitReceipt = await send(payer, { address: net.ensRegistrar, abi: registrarAbi, functionName: 'commit', args: [commitment] });
+  await waitForCommitAge(pub, commitReceipt, true);
   await send(payer, {
     address: net.ensRegistrar,
     abi: registrarAbi,
@@ -239,6 +242,26 @@ async function settle(read, ok = (v) => v !== undefined && v !== null, tries = 8
   return last;
 }
 
+/**
+ * Hold register() until the chain's own clock is at least 61 s past the commit block's timestamp
+ * (MIN_COMMITMENT_AGE is 60 s, plus 1). A wall-clock sleep is not enough: blocks can be late and a
+ * public RPC can lag. On a fork the clock is moved with evm_increaseTime and evm_mine first, but the
+ * poll of the head block's timestamp is still what decides.
+ */
+async function waitForCommitAge(pub, commitReceipt, onFork) {
+  const commitBlock = await settle(() => pub.getBlock({ blockNumber: commitReceipt.blockNumber }));
+  const target = commitBlock.timestamp + COMMIT_AGE_TARGET_OFFSET;
+  if (onFork) {
+    await pub.request({ method: 'evm_increaseTime', params: [Number(COMMIT_AGE_TARGET_OFFSET)] });
+    await pub.request({ method: 'evm_mine', params: [] });
+  }
+  return waitForChainTime({
+    getHeadTimestamp: async () => (await pub.getBlock({ blockTag: 'latest' })).timestamp,
+    target,
+    timeoutMs: onFork ? 20_000 : 5 * 60_000,
+  });
+}
+
 async function liveMode() {
   const mnemonic = process.env.SMOKE_MNEMONIC;
   const rpc = process.env.SMOKE_RPC_URL;
@@ -261,7 +284,9 @@ async function liveMode() {
     .then((m) => Boolean(m?.forkedNetwork))
     .catch(() => false);
 
-  const acct = (i) => mnemonicToAccount(mnemonic, { addressIndex: i });
+  // nonceManager: after a receipt a lagging RPC can still report the old transaction count, which made
+  // the next send fail with "nonce too low". The manager keeps a local counter instead.
+  const acct = (i) => mnemonicToAccount(mnemonic, { addressIndex: i, nonceManager });
   const owner0 = acct(0);
   const owner1 = acct(1);
   if (owner0.address === owner1.address) throw new Error('accounts 0 and 1 are the same address');
@@ -328,14 +353,9 @@ async function liveMode() {
       functionName: 'makeCommitment',
       args: [label, safe, secret, zeroAddress, zeroAddress, duration, zeroHash],
     });
-    await tx('ens-commit', { address: net.ensRegistrar, abi: registrarAbi, functionName: 'commit', args: [commitment] });
-    if (onFork) {
-      await pub.request({ method: 'evm_increaseTime', params: [61] });
-      await pub.request({ method: 'evm_mine', params: [] });
-    } else {
-      await sleep(61_000);
-      await sleep(5_000); // margin: MIN_COMMITMENT_AGE is 60 s of block time
-    }
+    const commitReceipt = await tx('ens-commit', { address: net.ensRegistrar, abi: registrarAbi, functionName: 'commit', args: [commitment] });
+    const headTime = await waitForCommitAge(pub, commitReceipt, onFork);
+    line(`STEP ens-commit-age head block time ${headTime}`);
     await tx('ens-register', {
       address: net.ensRegistrar,
       abi: registrarAbi,
@@ -431,7 +451,7 @@ async function liveMode() {
       line(`STEP sequencer ${receipt.id ?? body.slice(0, 200)} ipfs ${receipt.ipfs ?? '-'} relayer ${receipt.relayer ?? '-'}`);
 
       at('hub-space');
-      const query = 'query($id:String!){ space(id:$id){ id network admins moderators strategies{ name params } voting{ quorum period } plugins } }';
+      const query = 'query($id:String!){ space(id:$id){ id network admins moderators strategies{ name network params } validation{ name params } voting{ quorum period } plugins } }';
       let space = null;
       const until = Date.now() + 3 * 60_000;
       while (Date.now() < until) {
@@ -449,8 +469,14 @@ async function liveMode() {
       }
       if (!space) throw new Error('the hub did not serve the space within 3 minutes');
       line(`STEP hub-space ${JSON.stringify(space)}`);
-      if (String(space.network) !== String(CHAIN_ID)) throw new Error(`hub network is ${space.network}, expected ${CHAIN_ID}`);
-      if (!Array.isArray(space.admins) || space.admins.length !== 0) throw new Error(`hub admins are ${JSON.stringify(space.admins)}, expected []`);
+      // Everything that was signed must be what the hub stores (strategies and the hat id, validation,
+      // quorum, period, safeSnap, empty admins and moderators), not just the network.
+      const verdict = hubSpaceVerdict(settings, space);
+      if (!verdict.ok) {
+        line(verdict.line);
+        process.exit(1);
+      }
+      line('STEP hub-space-verified the hub serves the signed settings');
     }
     console.log('SMOKE PASS');
   } catch (e) {

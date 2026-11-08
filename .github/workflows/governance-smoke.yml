@@ -28,6 +28,8 @@ concurrency:
 
 jobs:
   governance-smoke:
+    # Dispatch from main only: a run from any other ref would hand the seed to unreviewed workflow code.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
