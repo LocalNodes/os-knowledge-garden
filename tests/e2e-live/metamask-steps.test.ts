@@ -121,7 +121,7 @@ describe('confirmPrompts', () => {
     const log: PromptLog = { clicks: [], warnings: [] };
     await expect(
       confirmPrompts(fakeContext(() => [stuck.page]), EXT, 'rejected', log, { idleMs: 500, timeoutMs: 5_000 }),
-    ).rejects.toThrow('element is not attached to the DOM');
+    ).rejects.toThrow(/^other \(Error\)$/);
     expect(log.clicks).toEqual([]);
   }, 30_000);
 

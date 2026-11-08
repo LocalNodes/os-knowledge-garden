@@ -62,6 +62,53 @@ The seed reaches only the wallet cache-build step. The password reaches the cach
 steps (the test unlocks MetaMask with it). The RPC secret reaches only the
 compose-up step (as the site's `SAFE_RPC_URL_ETHEREUM_SEPOLIA`) and the test step.
 
+**Rule for `SEPOLIA_RPC_URL`:** never set it to a URL whose key isn't the whole secret value. GitHub
+masks only the exact secret value in logs, so the key must not be a part that could be printed on
+its own. If a provider gives a URL plus a separate key, store the whole URL with the key in it as
+the one secret.
+
+### What the public log may contain
+
+The repository and its Actions logs are public. The suite's own output is an allowlist: fixed
+fields, known keys and counts, never free text from MetaMask, the browser console or Drupal.
+- **The failure dump** (`failure-dump.ts`) prints:
+  - a route key (`group_treasury_create`, `group_treasury`, `group_treasury_payment`, `user_login`
+    or `other`);
+  - the receipt panel's state, flags, known-string keys and a count of other characters;
+  - message, console and failed-request counts;
+  - update-deployment answers as HTTP status and enum values;
+  - block numbers as integers, or a category.
+- **MetaMask lines** print the step, the button's test id and a count of warning lines. The prompt
+  text stays in memory for the local recording.
+- **The errors the suite wraps** print as `<category> (<error name>)`, without the original
+  message, which can carry an RPC URL. The categories are `rpc_error`, `timeout`, `user_rejected`,
+  `wallet_closed`, `playwright_timeout` and `other`. The wrapped errors are:
+  - the page's wallet calls (`eth_accounts`, `eth_chainId`, the network switch, the funding send);
+  - the non-close errors in `confirmPrompts`.
+- **The Node-side RPC** (`rpc()`): its errors name the method, `rpc_error` and an HTTP status or
+  JSON-RPC code at most. Its results are checked before use: a balance must be a hex quantity, a
+  present receipt status `0x0` or `0x1` (a missing or null receipt or status means "still pending"
+  and the wait continues), and a printed hash 32 bytes of hex. Any other value is
+  `rpc_error (bad_result)` or `bad_hash`.
+- **Not wrapped:** Playwright's own failures in the helpers and the steps (a locator timeout, an
+  assertion) print as Playwright writes them, with the selector and on-page text. They are covered
+  by the accepted items below.
+- **The watchdog step** prints only the entry id, type, severity, timestamp and a 12-hex hash of the
+  untranslated message template.
+
+These may also appear, accepted by the orchestrator (2026-11-08, after Codex round 2):
+- Playwright's own assertion messages, which quote on-page text the assertion expected or found
+  (for example the receipt panel or the payment panel);
+- the logged on-page balance, a public chain amount;
+- addresses and transaction hashes, which are public chain data;
+- the raw container log tail ("Site log tail" in the workflow).
+
+Why this is accepted:
+- the CI site is a throwaway, destroyed after each run, holding only test content and public chain
+  data;
+- the seed reaches only the wallet cache-build step, which runs no site and no test;
+- GitHub masks exact secret values in every log.
+
 ### Running it on demand
 
 `gh workflow run nightly-wallet-e2e.yml -R LocalNodes/os-knowledge-garden --ref main`, or the
@@ -102,7 +149,8 @@ These are logged as findings, not failures:
   prompt like any other.
 - The site gives SIWE the URI `https://localhost:8080` (derived from `SERVICE_FQDN_OPENSOCIAL`),
   while the CI site is served over plain http. MetaMask may warn about the domain or the URI.
-- Any other MetaMask warning text is printed in the job log and added to the test's annotations.
+- MetaMask warnings are not printed: the log shows only the prompt kind, the button test id and a count
+  of warning lines.
 
 ### Pinned actions
 

@@ -42,7 +42,6 @@ import {
   approvePayment,
   balanceText,
   formatUnits,
-  onScreen,
   openFund,
   paymentPanel,
   paymentStatus,
@@ -53,6 +52,7 @@ import {
   setUpGroupFund,
   type WalletDriver,
 } from '../e2e/helpers/treasury';
+import { blockCategory, blockValue, categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..', '..');
@@ -91,36 +91,97 @@ const FUND_WEI = 2n * 10n ** 14n; // 0.0002 ETH
 const PAY_WEI = 10n ** 14n; // 0.0001 ETH, back to the wallet itself
 const PAY_TEXT = '0.0001';
 
-/** One JSON-RPC call to Ethereum Sepolia from Node (LN_LIVE_RPC_URL; never logged). */
+/**
+ * One JSON-RPC call to Ethereum Sepolia from Node (LN_LIVE_RPC_URL; never logged). Its errors
+ * carry the method, a fixed category and a number at most (Codex round 2): never the provider's
+ * message or the fetch error's, either of which can hold the RPC URL.
+ */
 async function rpc(method: string, params: unknown[]): Promise<unknown> {
   const url = process.env.LN_LIVE_RPC_URL;
   if (!url) throw new Error('LN_LIVE_RPC_URL is not set (the workflow passes the Ethereum Sepolia RPC)');
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-  });
-  if (!res.ok) throw new Error(`${method}: HTTP ${res.status} from the Sepolia RPC`);
-  const body = (await res.json()) as { result?: unknown; error?: { message?: string } };
-  if (body.error) throw new Error(`${method}: ${body.error.message ?? 'RPC error'}`);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+  }
+  catch (e) {
+    throw new Error(`${method}: ${categorized(e).message}`);
+  }
+  if (!res.ok) throw new Error(`${method}: rpc_error (HTTP ${res.status})`);
+  const body = (await res.json().catch(() => null)) as { result?: unknown; error?: { code?: unknown } } | null;
+  if (!body) throw new Error(`${method}: rpc_error (not JSON)`);
+  if (body.error) {
+    const code = Number.isInteger(body.error.code) ? String(body.error.code) : '-';
+    throw new Error(`${method}: rpc_error (code ${code})`);
+  }
   return body.result;
+}
+
+/** Rethrows a wallet or Playwright error as "<category> (<name>)" (failure-dump.ts). */
+const fixed = (e: unknown): never => {
+  throw categorized(e);
+};
+
+/**
+ * Failure probe (21-46, run 42485195245): the latest block as MetaMask reports it to the page
+ * (what ethers' tx.wait() polls) and as the Node-side RPC reports it, twice, 6 s apart. A
+ * MetaMask number that lags or doesn't move while the RPC's does means tx.wait() can't see the
+ * deploy's block. It prints integers, or a fixed category (timeout, rpc_error, no_provider),
+ * never an error message. Each read is bounded at 5 s and its timer cleared; about 16 s at most.
+ */
+async function blockProbe(page: Page): Promise<void> {
+  const within = async <T>(work: Promise<T>, ms: number): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms);
+    });
+    try {
+      return await Promise.race([work, late]);
+    }
+    finally {
+      clearTimeout(timer);
+    }
+  };
+  const read = (work: () => Promise<unknown>) => within(work(), 5_000).then(blockValue, blockCategory);
+  const sample = async () => {
+    const [wallet, node] = await Promise.all([
+      read(() =>
+        page.evaluate(() => {
+          const eth = (window as unknown as { ethereum?: { request(a: unknown): Promise<string> } }).ethereum;
+          if (!eth) throw new Error('no ethereum provider');
+          return eth.request({ method: 'eth_blockNumber' });
+        }).catch((e) => {
+          throw new Error(/ethereum provider/.test(String(e)) ? 'no ethereum provider' : 'rpc error');
+        }),
+      ),
+      read(() => rpc('eth_blockNumber', [])),
+    ]);
+    return `MetaMask=${wallet} RPC=${node}`;
+  };
+  const first = await sample();
+  await new Promise((r) => setTimeout(r, 6_000));
+  console.log(`[live] latest block: ${first}; 6 s later: ${await sample()}`);
 }
 
 /** Ether balance at the latest block (a normal read; no archive state needed). */
 async function balanceWei(address: string): Promise<bigint> {
-  return BigInt((await rpc('eth_getBalance', [address, 'latest'])) as string);
+  // Checked before BigInt (Codex round 3): a malformed result throws "rpc_error (bad_result)".
+  return hexQuantity(await rpc('eth_getBalance', [address, 'latest']));
 }
 
 /** Waits for a transaction's receipt and checks it succeeded. */
 async function waitForReceipt(hash: string, timeoutMs = 300_000): Promise<void> {
   const end = Date.now() + timeoutMs;
   for (;;) {
-    const r = (await rpc('eth_getTransactionReceipt', [hash]).catch(() => null)) as { status?: string } | null;
-    if (r && r.status) {
-      if (r.status !== '0x1') throw new Error(`transaction ${hash} failed on chain (status ${r.status})`);
-      return;
-    }
-    if (Date.now() > end) throw new Error(`no receipt for ${hash} within ${timeoutMs} ms`);
+    // Only 0x0 or 0x1 is read from the status (Codex round 3); the hash prints only if it is one.
+    const outcome = receiptOutcome(await rpc('eth_getTransactionReceipt', [hash]).catch(() => null));
+    if (outcome === 'success') return;
+    if (outcome === 'failed') throw new Error(`transaction ${txHashText(hash)} failed on chain (status 0x0)`);
+    if (outcome === 'bad_result') throw new Error(`transaction ${txHashText(hash)}: rpc_error (bad_result)`);
+    if (Date.now() > end) throw new Error(`no receipt for ${txHashText(hash)} within ${timeoutMs} ms`);
     await new Promise((resolve) => setTimeout(resolve, 5_000));
   }
 }
@@ -185,7 +246,7 @@ async function signInWithMetaMask(page: Page, context: BrowserContext, extension
 
 /** Asks MetaMask, from the site's page, to put this site on Ethereum Sepolia (EIP-3326). */
 async function switchSiteToSepolia(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<string> {
-  const current = await page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' }));
+  const current = await page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' })).catch(fixed);
   if (current === SEPOLIA_HEX) return current;
   let done = false;
   const ask = page
@@ -197,26 +258,37 @@ async function switchSiteToSepolia(page: Page, context: BrowserContext, extensio
         }),
       SEPOLIA_HEX,
     )
+    .catch(fixed)
     .finally(() => { done = true; });
   // MetaMask asks to add Sepolia to the site's networks, or switches without asking if it may.
   await Promise.all([ask, confirmPrompts(context, extensionId, 'switchNetwork', log, { done: () => done, timeoutMs: 120_000 })]);
-  return page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' }));
+  return page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' })).catch(fixed);
 }
 
 /** The wallet's prompts and warnings for the log (copied in spirit from local-anvil.e2e.ts). */
 function reportPrompts(info: TestInfo, step: string, log: PromptLog): void {
   const clicks = log.clicks.map((c) => `${c.kind}: ${c.button}`);
-  console.log(`[live] ${step}: MetaMask clicks ${JSON.stringify(clicks)}; warnings ${JSON.stringify(log.warnings)}`);
-  for (const w of log.warnings) info.annotations.push({ type: 'finding', description: `MetaMask warning (${step}): ${w}` });
+  // Kinds and button test ids are ours; MetaMask's warning text is counted, never printed (the
+  // CI log is public; 21-46 ruling after Codex).
+  console.log(`[live] ${step}: MetaMask clicks ${JSON.stringify(clicks)}; warning lines ${log.warnings.length}`);
+  if (log.warnings.length) info.annotations.push({ type: 'finding', description: `MetaMask showed ${log.warnings.length} warning line(s) (${step})` });
   log.clicks.length = 0;
   log.warnings.length = 0;
 }
 
 test.describe.serial('live Sepolia', () => {
+  // The redacted failure dump (failure-dump.ts): what the site's page said while the test ran.
+  let dump = new FailureDump();
+  test.beforeEach(async ({ page }) => {
+    dump = new FailureDump();
+    dump.watch(page);
+  });
+
   test.afterEach(async ({ page }, info) => {
     if (info.status !== info.expectedStatus) {
-      // The site's own messages only (no wallet page, no secret): the first thing to read in the log.
-      console.log(`[live] failed on ${page.url()}: ${await onScreen(page).catch(() => '(page closed)')}`);
+      // Fixed fields only (failure-dump.ts): no text from the page, the wallet or an RPC provider.
+      await dump.print(page).catch(() => console.log('[live] failure dump: page read failed'));
+      await blockProbe(page).catch(() => console.log('[live] latest block: probe failed'));
     }
   });
 
@@ -235,7 +307,7 @@ test.describe.serial('live Sepolia', () => {
     const wallet = await test.step('the wallet and its network', async () => {
       const accounts = (await page.evaluate(() =>
         (window as unknown as { ethereum: { request(a: unknown): Promise<string[]> } }).ethereum.request({ method: 'eth_accounts' }),
-      )) as string[];
+      ).catch(fixed)) as string[];
       expect(accounts.length, 'MetaMask shares one account with the site').toBeGreaterThan(0);
       const address = toChecksumAddress(accounts[0]);
       const expected = process.env.LN_LIVE_WALLET_ADDRESS;
@@ -274,10 +346,11 @@ test.describe.serial('live Sepolia', () => {
             }),
           { from: wallet, to: safe, value: '0x' + FUND_WEI.toString(16) },
         )
+        .catch(fixed)
         .finally(() => { done = true; });
       const [hash] = await Promise.all([send, confirmPrompts(context, extensionId, 'send', log, { done: () => done, timeoutMs: 180_000 })]);
       reportPrompts(info, 'fund', log);
-      console.log(`[live] funding transaction ${hash}`);
+      console.log(`[live] funding transaction ${txHashText(hash)}`);
       await waitForReceipt(hash as string);
     });
 
