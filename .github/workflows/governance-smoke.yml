@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: governance-smoke
+  group: sepolia-test-wallet
   cancel-in-progress: false
 
 jobs:

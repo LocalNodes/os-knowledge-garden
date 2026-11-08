@@ -1,0 +1,31 @@
+# CI overrides for the nightly live-Sepolia wallet run (21-46).
+#
+# Used only by .github/workflows/nightly-wallet-e2e.yml, on top of the repo's own compose file:
+#   docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml up -d opensocial mariadb solr qdrant
+# Relative paths resolve from the repo root (the first file's directory).
+#
+# Only the opensocial service is changed; mariadb, solr and qdrant stay as the base file has them.
+# The workflow names the services it starts, so any other service in the base file (for example a
+# gas-sponsor relayer whose image isn't published) is never pulled or started.
+services:
+  opensocial:
+    # The image the job built from the checked-out commit (docker/Dockerfile), never a registry one.
+    image: os-knowledge-garden:nightly
+    pull_policy: never
+    ports:
+      # Apache listens on 80 in the container (docker/Dockerfile EXPOSE 80); loopback only.
+      - "127.0.0.1:8080:80"
+    environment:
+      WEB3_ENABLED: "true"
+      DEMO_MODULE: none
+      # SIWE's expected domain and a trusted host (settings.php).
+      SERVICE_FQDN_OPENSOCIAL: localhost:8080
+      # drush --uri in the entrypoint.
+      SERVICE_URL_OPENSOCIAL: http://localhost:8080
+      # Optional: the SEPOLIA_RPC_URL secret, passed by the compose-up step only. Empty means the
+      # registry's public URLs (settings.php, 21-07).
+      SAFE_RPC_URL_ETHEREUM_SEPOLIA: ${SEPOLIA_RPC_URL:-}
+    volumes:
+      # seed-live.php only, read by `drush php:script /opt/e2e-live/seed-live.php`. Not the whole
+      # folder: the job later builds the wallet's MetaMask profile under tests/e2e-live.
+      - ./tests/e2e-live/seed-live.php:/opt/e2e-live/seed-live.php:ro
