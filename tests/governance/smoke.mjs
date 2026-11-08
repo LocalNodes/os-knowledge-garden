@@ -25,7 +25,6 @@ import {
   hexToBigInt,
   http,
   keccak256,
-  nonceManager,
   parseAbi,
   parseEventLogs,
   toHex,
@@ -53,6 +52,7 @@ import {
 } from './lib/governance.mjs';
 import { COMMIT_AGE_TARGET_OFFSET, waitForChainTime } from './lib/chain-time.mjs';
 import { hubSpaceVerdict } from './lib/hub-space.mjs';
+import { createNonceCounter, createSender } from './lib/nonces.mjs';
 
 const ANVIL_MNEMONIC = 'test test test test test test test test test test test junk';
 const FORK_RPC = process.env.GOV_FORK_RPC ?? 'http://127.0.0.1:18545';
@@ -96,14 +96,16 @@ async function forkMode() {
   const registrarCode = await pub.getCode({ address: net.ensRegistrar });
   if (!registrarCode || registrarCode === '0x') throw new Error('ENSv2 registrar has no code on this chain; not a Sepolia fork');
 
-  // nonceManager: back-to-back sends take their nonces from a local counter seeded from the pending count.
-  const acct = (i) => mnemonicToAccount(ANVIL_MNEMONIC, { addressIndex: i, nonceManager });
+  // Our own nonce counter (lib/nonces.mjs): the pending count is read once per account, then every send
+  // gets an explicit nonce from the local counter. viem's nonceManager is not used.
+  const acct = (i) => mnemonicToAccount(ANVIL_MNEMONIC, { addressIndex: i });
   const owner0 = acct(0);
   const owner1 = acct(1);
   const payer = acct(2);
   const wallet = (account) => createWalletClient({ account, chain: sepolia, transport });
+  const sendWithNonce = createSender({ nonces: createNonceCounter(pub), walletFor: wallet });
   const send = async (account, request) => {
-    const hash = await wallet(account).writeContract(request);
+    const hash = await sendWithNonce(account, request);
     const rc = await pub.waitForTransactionReceipt({ hash });
     if (rc.status !== 'success') throw new Error(`transaction reverted: ${request.functionName}`);
     return rc;
@@ -284,16 +286,19 @@ async function liveMode() {
     .then((m) => Boolean(m?.forkedNetwork))
     .catch(() => false);
 
-  // nonceManager: after a receipt a lagging RPC can still report the old transaction count, which made
-  // the next send fail with "nonce too low". The manager keeps a local counter instead.
-  const acct = (i) => mnemonicToAccount(mnemonic, { addressIndex: i, nonceManager });
+  // Our own nonce counter (lib/nonces.mjs): after a receipt a lagging RPC can still report the old
+  // transaction count, which made the next send fail with "nonce too low". The pending count is read
+  // once per account and every send gets an explicit nonce from the local counter. viem's nonceManager
+  // is not used (it only advances once the previous nonce is above zero).
+  const acct = (i) => mnemonicToAccount(mnemonic, { addressIndex: i });
   const owner0 = acct(0);
   const owner1 = acct(1);
   if (owner0.address === owner1.address) throw new Error('accounts 0 and 1 are the same address');
   const wallet = (account) => createWalletClient({ account, chain: sepolia, transport });
   const link = (hash) => (explorerTx ? ` ${explorerTx.replace('{hash}', hash)}` : '');
+  const sendWithNonce = createSender({ nonces: createNonceCounter(pub), walletFor: wallet });
   const tx = async (name, request) => {
-    const hash = await wallet(owner0).writeContract(request);
+    const hash = await sendWithNonce(owner0, request);
     const rc = await pub.waitForTransactionReceipt({ hash });
     if (rc.status !== 'success') throw new Error(`transaction reverted: ${request.functionName}`);
     line(`STEP ${name} ${hash}${link(hash)}`);

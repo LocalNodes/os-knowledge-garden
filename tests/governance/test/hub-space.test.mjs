@@ -126,3 +126,120 @@ test('quorum and period are compared with the signed settings, not with literals
   hub.voting.quorum = 1;
   assert.ok(compareHubSpace(s, hub).some((m) => m.startsWith('voting.quorum')));
 });
+
+// --- safeSnap safes: the whole collection is compared (25-03 review round 2, fix 2) ---------------
+//
+// Rule under test: the hub's safes and the signed safes are compared as a multiset of normalized
+// entries (addresses lower-cased, network as a string, every field the entry carries). Order does not
+// matter. An extra entry, a duplicate, a missing entry and any field difference each fail, and the
+// message says which.
+
+const reality2 = '0x4444444444444444444444444444444444444444';
+const safesOf = (hub) => hub.plugins.safeSnap.safes;
+
+test('an extra, unsigned safeSnap entry (a mainnet one) is rejected and named', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub).push({ network: '1', realityAddress: reality });
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.ok(found[0].startsWith('plugins.safeSnap.safes'), found[0]);
+  assert.match(found[0], /unexpected extra entry/);
+  assert.match(found[0], /"network":"1"/);
+  assert.equal(hubSpaceVerdict(s, hub).ok, false);
+});
+
+test('an extra entry on the same network with another reality address is rejected too', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub).push({ network: '11155111', realityAddress: reality2 });
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /unexpected extra entry/);
+  assert.ok(found[0].includes(reality2));
+});
+
+test('a duplicated entry is rejected', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub).push({ ...safesOf(hub)[0] });
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /unexpected extra entry/);
+});
+
+test('a missing entry is rejected and named, whether the hub has none or another one', () => {
+  const s = signed();
+  s.plugins.safeSnap.safes.push({ network: 11155111, realityAddress: reality2 });
+  const hub = hubFrom(s);
+  hub.plugins.safeSnap.safes = [safesOf(hub)[0]];
+  let found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /missing entry/);
+  assert.ok(found[0].includes(reality2));
+  hub.plugins.safeSnap.safes = [];
+  found = compareHubSpace(s, hub);
+  assert.equal(found.filter((m) => /missing entry/.test(m)).length, 2, JSON.stringify(found));
+});
+
+test('the same safes in another order are accepted (compared as a set, order ignored)', () => {
+  const s = signed();
+  s.plugins.safeSnap.safes.push({ network: 11155111, realityAddress: reality2 });
+  const hub = hubFrom(s);
+  hub.plugins.safeSnap.safes.reverse();
+  assert.deepEqual(compareHubSpace(s, hub), []);
+});
+
+test('a duplicate cannot stand in for a missing entry', () => {
+  const s = signed();
+  s.plugins.safeSnap.safes.push({ network: 11155111, realityAddress: reality2 });
+  const hub = hubFrom(s);
+  hub.plugins.safeSnap.safes = [safesOf(hub)[0], { ...safesOf(hub)[0] }];
+  // The signed reality2 entry is gone and a second copy of the first is in its place; the leftovers are
+  // paired, so the report is one field difference that names the signed value.
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.ok(found[0].startsWith('plugins.safeSnap.safes[1].realityAddress'), found[0]);
+  assert.ok(found[0].includes(reality2), found[0]);
+});
+
+test('a field difference inside an entry is named by field', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub)[0].network = '1';
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /safes\[0\]\.network: expected "11155111", got "1"/);
+});
+
+test('an extra field on a hub entry is a field mismatch, not ignored', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub)[0].hash = '0xabc';
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /safes\[0\]\.hash: expected missing, got "0xabc"/);
+});
+
+test('network as a number or a string, and addresses in any case, are the same entry', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.plugins.safeSnap.safes = [{ network: 11155111, realityAddress: reality.toUpperCase().replace('0X', '0x') }];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+});
+
+test('a safes value that is not an array is one mismatch', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.plugins.safeSnap.safes = { network: '11155111', realityAddress: reality };
+  const found = compareHubSpace(s, hub);
+  assert.ok(found.some((m) => m.startsWith('plugins.safeSnap.safes: expected an array')), JSON.stringify(found));
+});
+
+test('plugins may arrive as JSON text and the safes are still compared in full', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  safesOf(hub).push({ network: '1', realityAddress: reality });
+  hub.plugins = JSON.stringify(hub.plugins);
+  assert.ok(compareHubSpace(s, hub).some((m) => /unexpected extra entry/.test(m)));
+});
