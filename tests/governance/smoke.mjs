@@ -456,7 +456,7 @@ async function liveMode() {
       line(`STEP sequencer ${receipt.id ?? body.slice(0, 200)} ipfs ${receipt.ipfs ?? '-'} relayer ${receipt.relayer ?? '-'}`);
 
       at('hub-space');
-      const query = 'query($id:String!){ space(id:$id){ id network admins moderators strategies{ name network params } validation{ name params } voting{ quorum period } plugins } }';
+      const query = 'query($id:String!){ space(id:$id){ id network admins moderators strategies{ name network params } validation{ name params } voting{ quorum period } plugins members filters{ onlyMembers } treasuries{ name address network } symbol } }';
       let space = null;
       const until = Date.now() + 3 * 60_000;
       while (Date.now() < until) {
@@ -475,7 +475,8 @@ async function liveMode() {
       if (!space) throw new Error('the hub did not serve the space within 3 minutes');
       line(`STEP hub-space ${JSON.stringify(space)}`);
       // Everything that was signed must be what the hub stores (strategies and the hat id, validation,
-      // quorum, period, safeSnap, empty admins and moderators), not just the network.
+      // quorum, period, safeSnap, empty admins and moderators, members and the onlyMembers filter,
+      // treasuries and symbol), not just the network.
       const verdict = hubSpaceVerdict(settings, space);
       if (!verdict.ok) {
         line(verdict.line);

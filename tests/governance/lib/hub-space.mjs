@@ -40,14 +40,15 @@ const show = (v) => (v === undefined ? 'missing' : JSON.stringify(v));
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-/** One safeSnap entry in comparable form: addresses lower-cased, `network` always a string. */
+/** One safeSnap or treasury entry in comparable form: addresses lower-cased, `network` always a string. */
 function safeEntry(entry) {
   const value = normalize(entry);
   return isObject(value) && value.network !== undefined && value.network !== null ? { ...value, network: String(value.network) } : value;
 }
 
 /**
- * Compare the whole safeSnap `safes` collection, not just the signed entries' presence.
+ * Compare a whole collection of entries (the safeSnap `safes`, the `treasuries`), not just the signed
+ * entries' presence. `path` names the collection in every mismatch.
  *
  * Rule: the two collections are compared as a multiset of normalized entries (every field the entry
  * carries, addresses lower-cased, network as a string). Order is ignored. An unsigned extra entry
@@ -56,14 +57,13 @@ function safeEntry(entry) {
  * first; what is left on each side is paired in order to report field differences, and any leftover
  * is reported as missing (signed, not on the hub) or unexpected (on the hub, not signed).
  */
-function compareSafes(wantRaw, gotRaw, out) {
-  const path = 'plugins.safeSnap.safes';
+function compareEntries(path, wantRaw, gotRaw, out) {
   if (gotRaw !== undefined && gotRaw !== null && !Array.isArray(gotRaw)) {
     out.push(`${path}: expected an array, got ${show(gotRaw)}`);
     return;
   }
   const keyOf = (e) => JSON.stringify(sortKeys(e));
-  const want = wantRaw.map((e, index) => ({ index, entry: safeEntry(e) }));
+  const want = (wantRaw ?? []).map((e, index) => ({ index, entry: safeEntry(e) }));
   let spare = (gotRaw ?? []).map((e) => ({ entry: safeEntry(e) }));
   const unmatched = [];
   for (const w of want) {
@@ -86,6 +86,31 @@ function compareSafes(wantRaw, gotRaw, out) {
   }
   for (const w of unmatched) out.push(`${path}: missing entry ${keyOf(w.entry)}`);
   for (const g of spare) out.push(`${path}: unexpected extra entry ${keyOf(g.entry)}`);
+}
+
+/**
+ * Compare the space members as a set of lower-cased addresses.
+ *
+ * Members skip proposal validation, so an unsigned member could post proposals without the Hats score.
+ * Order is ignored; an absent or null list on either side counts as []. A member the hub has and the
+ * settings do not (including a second copy of a signed member) is an unexpected extra, a signed member
+ * the hub lacks is missing, and a hub value that is not an array is one mismatch.
+ */
+function compareMembers(wantRaw, gotRaw, out) {
+  if (gotRaw !== undefined && gotRaw !== null && !Array.isArray(gotRaw)) {
+    out.push(`members: expected an array, got ${show(gotRaw)}`);
+    return;
+  }
+  const lower = (m) => (typeof m === 'string' ? m.toLowerCase() : m);
+  let spare = (gotRaw ?? []).map(lower);
+  const missing = [];
+  for (const w of (Array.isArray(wantRaw) ? wantRaw : []).map(lower)) {
+    const at = spare.indexOf(w);
+    if (at >= 0) spare = spare.filter((_, i) => i !== at);
+    else missing.push(w);
+  }
+  for (const m of missing) out.push(`members: missing member ${show(m)}`);
+  for (const m of spare) out.push(`members: unexpected extra member ${show(m)}`);
 }
 
 /**
@@ -145,8 +170,19 @@ export function compareHubSpace(signedSettings, hubSpace) {
   if (!safeSnap) {
     out.push(`plugins.safeSnap: expected ${show(signedSettings.plugins?.safeSnap)}, got missing`);
   } else {
-    compareSafes(signedSettings.plugins?.safeSnap?.safes ?? [], safeSnap.safes, out);
+    compareEntries('plugins.safeSnap.safes', signedSettings.plugins?.safeSnap?.safes ?? [], safeSnap.safes, out);
   }
+
+  // Members skip proposal validation, and onlyMembers:true would block every proposer, so both must be
+  // exactly what was signed. Unset onlyMembers is false on either side; text "false" is not false.
+  compareMembers(signedSettings.members, hubSpace.members, out);
+  const wantOnly = signedSettings.filters?.onlyMembers ?? false;
+  const gotOnly = hubSpace.filters?.onlyMembers ?? false;
+  if (wantOnly !== gotOnly) out.push(`filters.onlyMembers: expected ${show(wantOnly)}, got ${show(gotOnly)}`);
+
+  // Treasuries and symbol are compared only when the signed settings set them.
+  if (signedSettings.treasuries !== undefined) compareEntries('treasuries', signedSettings.treasuries, hubSpace.treasuries, out);
+  if (signedSettings.symbol !== undefined) expect('symbol', signedSettings.symbol, hubSpace.symbol);
   return out;
 }
 

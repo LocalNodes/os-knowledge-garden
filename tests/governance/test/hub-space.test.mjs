@@ -36,6 +36,10 @@ function hubFrom(settings) {
     validation: { name: copy.validation.name, params: copy.validation.params },
     voting: { quorum: copy.voting.quorum, period: copy.voting.period },
     plugins: copy.plugins,
+    symbol: copy.symbol,
+    members: copy.members,
+    filters: { onlyMembers: copy.filters.onlyMembers },
+    treasuries: copy.treasuries,
   };
 }
 
@@ -242,4 +246,161 @@ test('plugins may arrive as JSON text and the safes are still compared in full',
   safesOf(hub).push({ network: '1', realityAddress: reality });
   hub.plugins = JSON.stringify(hub.plugins);
   assert.ok(compareHubSpace(s, hub).some((m) => /unexpected extra entry/.test(m)));
+});
+
+// --- members, filters, treasuries and symbol (25-03 review round 3) -------------------------------
+//
+// Members skip proposal validation, so an unsigned member could post proposals without the Hats
+// score; onlyMembers:true would block every proposer. Rules under test:
+// - members: a set of lower-cased addresses; order ignored; an extra, a duplicate or a missing
+//   member is a named mismatch; an absent or null list on either side counts as [].
+// - filters.onlyMembers: the signed value (false when unset) must equal the hub value (false when
+//   unset).
+// - treasuries and symbol: compared only when the signed settings set them; treasuries as a
+//   multiset like the safeSnap safes (addresses lower-cased, network as a string).
+
+const member1 = '0x5555555555555555555555555555555555555555';
+const member2 = '0x6666666666666666666666666666666666666666';
+
+test('an extra, unsigned member on the hub is rejected and named', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.members = [member1];
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.ok(found[0].startsWith('members'), found[0]);
+  assert.match(found[0], /unexpected extra member/);
+  assert.ok(found[0].includes(member1), found[0]);
+  assert.equal(hubSpaceVerdict(s, hub).ok, false);
+});
+
+test('a duplicated member on the hub is rejected', () => {
+  const s = signed();
+  s.members = [member1];
+  const hub = hubFrom(s);
+  hub.members = [member1, member1.toUpperCase().replace('0X', '0x')];
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^members: unexpected extra member/);
+});
+
+test('a signed member the hub lacks is rejected and named', () => {
+  const s = signed();
+  s.members = [member1, member2];
+  const hub = hubFrom(s);
+  hub.members = [member1];
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^members: missing member/);
+  assert.ok(found[0].includes(member2), found[0]);
+});
+
+test('the same members in another order and letter case are accepted', () => {
+  const s = signed();
+  s.members = [member1, member2];
+  const hub = hubFrom(s);
+  hub.members = [member2.toUpperCase().replace('0X', '0x'), member1];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+});
+
+test('an absent or null members list counts as empty on either side', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.members = null;
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  delete hub.members;
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  delete s.members;
+  hub.members = [];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  hub.members = [member1];
+  assert.ok(compareHubSpace(s, hub).some((m) => /^members: unexpected extra member/.test(m)));
+});
+
+test('a members value that is not an array is one mismatch', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.members = member1;
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^members: expected an array/);
+});
+
+test('onlyMembers true on the hub against signed false is rejected', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.filters = { onlyMembers: true };
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^filters\.onlyMembers: expected false, got true/);
+});
+
+test('onlyMembers unset on either side counts as false', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.filters = null;
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  hub.filters = {};
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  delete hub.filters;
+  delete s.filters;
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  hub.filters = { onlyMembers: true };
+  assert.ok(compareHubSpace(s, hub).some((m) => m.startsWith('filters.onlyMembers')));
+});
+
+test('onlyMembers as the text "false" is not the boolean false', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.filters = { onlyMembers: 'false' };
+  assert.ok(compareHubSpace(s, hub).some((m) => m.startsWith('filters.onlyMembers')));
+});
+
+test('a treasuries mismatch is rejected when the treasuries were signed', () => {
+  const s = signed();
+  let hub = hubFrom(s);
+  hub.treasuries[0].address = '0x7777777777777777777777777777777777777777';
+  let found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^treasuries\[0\]\.address: expected/);
+
+  hub = hubFrom(s);
+  hub.treasuries.push({ name: 'Other fund', address: member1, network: '11155111' });
+  found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^treasuries: unexpected extra entry/);
+
+  hub = hubFrom(s);
+  hub.treasuries = [];
+  found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^treasuries: missing entry/);
+});
+
+test('treasuries compare with the address in any case and the network as a number or text', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.treasuries = [{ name: 'Group fund', address: safe.toUpperCase().replace('0X', '0x'), network: 11155111 }];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+});
+
+test('a symbol mismatch is rejected when the symbol was signed', () => {
+  const s = signed();
+  const hub = hubFrom(s);
+  hub.symbol = 'OTHER';
+  const found = compareHubSpace(s, hub);
+  assert.equal(found.length, 1, JSON.stringify(found));
+  assert.match(found[0], /^symbol: expected "VOTE", got "OTHER"/);
+  delete hub.symbol;
+  assert.ok(compareHubSpace(s, hub).some((m) => m.startsWith('symbol')));
+});
+
+test('treasuries and symbol that were not signed are ignored', () => {
+  const s = signed();
+  delete s.treasuries;
+  delete s.symbol;
+  const hub = hubFrom(signed());
+  hub.symbol = 'OTHER';
+  hub.treasuries = [{ name: 'Other fund', address: member1, network: '1' }];
+  assert.deepEqual(compareHubSpace(s, hub), []);
 });
