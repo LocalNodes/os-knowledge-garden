@@ -532,5 +532,20 @@ beta9 adds two features to siwe_login and closes two gaps. It is built and revie
 - Tom: TM-59 accept or not. Then the beta9 release, which needs his word.
 - A connect with a real wallet joins Tom's next hands-on batch, with the WaaP check.
 - Once siwe_login requires beta9, safe_smart_accounts drops its copy of the field lock (Phase 21-21).
-- The WaaP connector gets the same chain rule.
+- The WaaP connector gets the same chain rule (done: siwe_login beta9-waap 94f93d0, 2026-11-08).
 - A lint pass (eslint, prettier) was not run; the older phpcs, cspell, eslint and stylelint debt from beta7 is left for its own pass.
+
+## siwe_login beta9-waap: Codex round 1, deferred item (2026-11-08)
+
+- **WaaP on the Wallet tab (Codex round 1, item 2, P2): deferred to beta10.** In 1.0.0-beta9 the WaaP connector only signs people in. Connecting a WaaP wallet to an existing account from the Wallet tab (`/siwe/nonce?purpose=connect`, then `POST /siwe/connect` with the CSRF header) is not wired. The WaaP README says so in one sentence (siwe_login `modules/siwe_login_waap/README.md`, branch beta9-waap). For beta10: offer WaaP as a signer on the Wallet tab through the same connect flow, with the beta9 chain rule and a FunctionalJavascript test on the mocked SDK (`tests/js`).
+
+## siwe_login 1.0.0-beta9 released: follow-ups (2026-11-08)
+
+- **safe_smart_accounts: drop its copy of the wallet-field lock (owner: Phase 25, which owns SSA).** siwe_login 1.0.0-beta9 now forbids editing `user.field_ethereum_address` for everyone (`siwe_login_entity_field_access()`) and hides the widget on every user form (`siwe_login_form_user_form_alter()`). SSA has the same two hooks in `safe_smart_accounts.module` (at `repos/safe_smart_accounts` 4a3ee3f): `safe_smart_accounts_entity_field_access()` and the `field_ethereum_address` part of `safe_smart_accounts_form_user_form_alter()`. To do in the SSA repo, not in fresh3:
+  - Raise SSA's `drupal/siwe_login` constraint from `*` to `^1.0.0-beta9`, so the lock is guaranteed to be there.
+  - Then remove `safe_smart_accounts_entity_field_access()` and the `field_ethereum_address` lines of the form alter. Keep the rest of that alter, the "Shared accounts" note.
+  - Keep, or move into SSA's tests, the assertion that the field can't be edited by hand, because `ReceiptStatusUpdater::ownersMatch()` trusts it.
+  fresh3 itself has no copy (its only references are in `tests/a11y/seed-treasury.php` and `tests/e2e/seed-e2e.php`, which seed the field programmatically).
+- **siwe_login_waap: collect diagnostics only when debug is on (Codex round 4 nit, next beta).** The connector calls `getWaaPIframeDiagnostics()` (through `iframeDiagnostics()`) when the watchdog stops or fires, even with the debug log off; only the logging is guarded. Guard the collection with `debugEnabled(settings)` too. It is harmless today (a read of SDK state), so it doesn't block anything.
+- **siwe_login_waap: prettier on the connector (lint debt).** `js/siwe-login-waap.js` uses single quotes throughout, so core's prettier rule flags the whole file (92 findings at 0f37fc1, 74 at the WaaP merge). Reformat it in one pass of its own, separate from any behaviour change. Its other eslint findings are at or below the merge's counts.
+- **WaaP on the Wallet tab (beta10):** see "siwe_login beta9-waap: Codex round 1, deferred item" above.
