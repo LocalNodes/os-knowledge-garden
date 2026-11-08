@@ -147,8 +147,12 @@ if ($fqdn = getenv('SERVICE_FQDN_OPENSOCIAL')) {
   }
 }
 
-// SIWE chain ID the signed message must carry (default 1, mainnet).
+// SIWE chain the signed message must carry (default 1, mainnet).
+// siwe_login 1.0.0-beta9 reads the allow-list `chain_ids` (first = default)
+// and ignores the legacy `chain_id` when the list is set, so the override
+// must set the list. The legacy key is kept in sync for older code paths.
 if (ctype_digit((string) getenv('SIWE_CHAIN_ID'))) {
+  $config['siwe_login.settings']['chain_ids'] = [(int) getenv('SIWE_CHAIN_ID')];
   $config['siwe_login.settings']['chain_id'] = (int) getenv('SIWE_CHAIN_ID');
 }
 

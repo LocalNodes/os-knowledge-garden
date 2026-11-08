@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aa72a5f7feef0f6b95409f3fa9e2c3cd",
+    "content-hash": "31fcc3e4f0b88b7526ff0911036abd1b",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -7462,17 +7462,17 @@
         },
         {
             "name": "drupal/siwe_login",
-            "version": "1.0.0-beta8",
+            "version": "1.0.0-beta9",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/siwe_login.git",
-                "reference": "1.0.0-beta8"
+                "reference": "1.0.0-beta9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta8.zip",
-                "reference": "1.0.0-beta8",
-                "shasum": "d759568ee440f819462c26bb24d106ce38ce069c"
+                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta9.zip",
+                "reference": "1.0.0-beta9",
+                "shasum": "a90c95f431ae3511019de2d402bcb136b8778504"
             },
             "require": {
                 "drupal/core": "^10 || ^11",
@@ -7486,8 +7486,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-beta8",
-                    "datestamp": "1793933699",
+                    "version": "1.0.0-beta9",
+                    "datestamp": "1794133990",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7514,7 +7514,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/siwe_login"
             },
-            "published-time": "2026-11-06T02:54:39+00:00"
+            "published-time": "2026-11-08T10:31:49+00:00"
         },
         {
             "name": "drupal/smart_trim",
