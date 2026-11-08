@@ -55,6 +55,9 @@ import {
   realityQuestion,
   realityQuestionId,
   registrationTypedData,
+  SAFE_PROXY_CREATION_CODE,
+  SAFE_PROXY_CREATION_CODE_KECCAK,
+  setupBatch,
   uintToHatId,
   safeMessageHash,
   safeMessageTypedData,
@@ -407,6 +410,73 @@ function ensVector() {
   };
 }
 
+// --- setup-batch.json (25-06: the one Safe transaction that builds a Group's governance) -------
+
+const ARBITRATOR_BIN = join(HERE, 'vendor', 'reality', 'Arbitrator.bin');
+
+function setupBatchInput() {
+  const initCode = readFileSync(ARBITRATOR_BIN, 'utf8').trim();
+  if (!/^0x([0-9a-f]{2})+$/.test(initCode)) throw new Error('vendor/reality/Arbitrator.bin is not 0x-prefixed lowercase hex');
+  return {
+    chainId: SEPOLIA,
+    owners: [anvil(0).address, anvil(1).address],
+    threshold: 2,
+    safeSaltNonce: 250601,
+    // Hats top hat number. The fork test sets lastTopHatId to topHatNumber - 1 so the next top hat id is this one.
+    topHatNumber: 5000,
+    arbitratorSalt: keccak256(toHex('gov-vectors.eth/arbitrator')),
+    arbitratorInitCode: initCode,
+    moduleSaltNonce: 6,
+    timeout: 600,
+    cooldown: 300,
+    expiration: 0,
+    bond: '1000000000000000',
+    // RealityModule.setUp does not check that the template exists; the template itself is created per chain (25-07).
+    templateId: 7,
+    groupName: 'Gov Vectors',
+    a: {
+      safeSingletonL2: NET.safeSingletonL2,
+      safeProxyFactory: NET.safeProxyFactory,
+      safeFallbackHandler: NET.safeFallbackHandler,
+      multiSend: NET.multiSend,
+      createCall: NET.createCall,
+      moduleProxyFactory: NET.moduleProxyFactory,
+      realityModuleMastercopy: NET.realityModuleMastercopy,
+      hats: NET.hats,
+      reality: NET.reality,
+    },
+  };
+}
+
+async function setupBatchVector() {
+  const input = setupBatchInput();
+  const batch = setupBatch(input);
+  const signers = [anvil(0), anvil(1)];
+  const entries = [];
+  for (const acct of signers) entries.push({ owner: acct.address, signature: await acct.sign({ hash: batch.safeTxHash }) });
+  const { arbitratorInitCode, ...rest } = input;
+  return {
+    note: 'Keys are anvil public dev keys 0 and 1. Every inner call runs inside the Safe (MultiSend delegatecall), so no address but the Safe ever owns, wears or administers anything. The signatures are plain ecrecover signatures over safeTxHash (v 27 or 28), concatenated in ascending owner order.',
+    inputs: {
+      ...rest,
+      lastTopHatIdBefore: input.topHatNumber - 1,
+      arbitratorInitCodeSha256: sha256(Buffer.from(arbitratorInitCode.slice(2), 'hex')),
+      arbitratorInitCodeBytes: (arbitratorInitCode.length - 2) / 2,
+      arbitratorInitCodeSource: 'tests/governance/vendor/reality/Arbitrator.bin (see vendor/SOURCES.md)',
+    },
+    safeInitializer: batch.safeInitializer,
+    moduleInitializer: batch.moduleInitializer,
+    calls: batch.calls,
+    multiSendPacked: batch.packed,
+    safeTx: batch.safeTx,
+    safeTxHash: batch.safeTxHash,
+    typedData: batch.typedData,
+    signatures: entries,
+    signaturesConcatenated: sortAndConcat(entries),
+    predicted: batch.predicted,
+  };
+}
+
 // --- abi.json (request R1: what SSA's AbiEncoder must learn) --------------------------------
 
 function abiVector() {
@@ -479,6 +549,7 @@ function selfChecks() {
     if (toFunctionSelector(item) !== sel) throw new Error(`selector for ${n} differs from the RESEARCH value`);
   }
   if (toFunctionSelector('deployModule(address,bytes,uint256)') !== '0xf1ab873c') throw new Error('deployModule selector differs');
+  if (keccak256(SAFE_PROXY_CREATION_CODE) !== SAFE_PROXY_CREATION_CODE_KECCAK) throw new Error('SAFE_PROXY_CREATION_CODE does not hash to the value read from the factory');
   if (toFunctionSelector('commit(bytes32)') !== '0xf14fcbc8') throw new Error('commit selector differs');
   if (keccak256(toHex('SafeMessage(bytes message)')) !== SAFE_MSG_TYPEHASH) throw new Error('SAFE_MSG_TYPEHASH is not keccak(SafeMessage(bytes message))');
   // Every label the rule accepts is already ENS-normalized (same string back).
@@ -610,6 +681,7 @@ export const GENERATORS = {
   'hats.json': async () => hatsVector(),
   'multisend.json': async () => multisendVector(),
   'ens.json': async () => ensVector(),
+  'setup-batch.json': setupBatchVector,
   'abi.json': async () => abiVector(),
   'pass-rule.json': async () => passRuleVector(),
 };

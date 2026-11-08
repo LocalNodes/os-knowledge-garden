@@ -1,10 +1,20 @@
 // D-08 smoke run: Safe-signed Snapshot space settings accepted by the Safe's isValidSignature.
 //
 //   node smoke.mjs --fork   anvil fork of Ethereum Sepolia (tests/e2e/fork/fork.sh up ethereum_sepolia)
-//   node smoke.mjs --live   added in 25-03 (live Sepolia, mnemonic from CI secrets only)
+//   node smoke.mjs --live   the same path with account 0 paying, accounts 0 and 1 owning the Safe,
+//                           and the Snapshot sequencer and hub as the last two steps (25-03)
 //
-// Keys here are anvil's public dev keys (the well-known "test test ... junk" mnemonic) and only
-// ever sign on the local fork. Nothing in this file touches a real network.
+// --fork keys are anvil's public dev keys (the well-known "test test ... junk" mnemonic) and only
+// ever sign on the local fork. --live reads its mnemonic from SMOKE_MNEMONIC only (a CI secret on
+// the real run, anvil's public mnemonic when it is pointed at the fork) and never prints it.
+//
+// --live environment (nothing else is read):
+//   SMOKE_MNEMONIC       account 0 pays and owns; account 1 only signs
+//   SMOKE_RPC_URL        Ethereum Sepolia JSON-RPC (a fork URL is fine)
+//   SMOKE_EXPLORER_TX    transaction URL pattern with {hash} (optional; adds a link to STEP lines)
+//   SMOKE_HUB            "off" skips the sequencer POST and the hub read; anything else is on
+//   SMOKE_HAT_ID         dotted Hats id used by the member and proposer strategies (default 3758.1.1)
+// Output lines: STEP <name> <value>, SMOKE PASS, SMOKE FAIL <step>, REFUSED <status> <body>.
 import { randomBytes } from 'node:crypto';
 import {
   createPublicClient,
@@ -16,6 +26,7 @@ import {
   http,
   keccak256,
   parseAbi,
+  parseEventLogs,
   toHex,
   zeroAddress,
   zeroHash,
@@ -28,9 +39,14 @@ import {
   NETWORKS,
   hatIdToUint,
   isValidLabel,
+  predictModuleProxy,
+  realityEthAbi,
+  realityInitializer,
   safeMessageHash,
   safeMessageTypedData,
+  snapshotDomain,
   snapshotHash,
+  snapshotTypes,
   sortAndConcat,
   spaceSettings,
 } from './lib/governance.mjs';
@@ -192,6 +208,258 @@ async function forkMode() {
   console.log(`FORK DRY RUN OK ${safe} ${ensName}`);
 }
 
+// --- live mode ------------------------------------------------------------------------------------
+
+const SEQUENCER = 'https://testnet.seq.snapshot.org/';
+const HUB_GRAPHQL = 'https://testnet.hub.snapshot.org/graphql';
+const DEFAULT_HAT_ID = '3758.1.1'; // the hat score-api's examples.json and 25-RESEARCH verified live
+// zodiac-module-reality src/tasks/defaultTemplate.json (25-RESEARCH Pattern 6, "Template").
+const ZODIAC_DEFAULT_TEMPLATE =
+  '{"title": "Did the Snapshot proposal with the id %s pass the execution of the array of Module transactions with the hash 0x%s? The hash is the keccak of the concatenation of the individual EIP-712 hashes of the Module transactions. If this question was asked before the Snapshot proposal was resolved it should ALWAYS be resolved to INVALID!", "lang": "en", "type": "bool", "category": "DAO proposal"}';
+const templateEventAbi = parseAbi(['event LogNewTemplate(uint256 indexed template_id, address indexed user, string question_text)']);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let LIVE_REDACT = [];
+const redact = (text) => LIVE_REDACT.reduce((t, v) => (v ? t.split(v).join('<redacted>') : t), String(text));
+const line = (text) => console.log(redact(text));
+
+/** Retry a read for a few seconds: a load-balanced public RPC can lag a block behind the receipt. */
+async function settle(read, ok = (v) => v !== undefined && v !== null, tries = 8) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      last = await read();
+      if (ok(last)) return last;
+    } catch (e) {
+      last = undefined;
+      if (i === tries - 1) throw e;
+    }
+    await sleep(3000);
+  }
+  return last;
+}
+
+async function liveMode() {
+  const mnemonic = process.env.SMOKE_MNEMONIC;
+  const rpc = process.env.SMOKE_RPC_URL;
+  if (!mnemonic) throw new Error('SMOKE_MNEMONIC is not set');
+  if (!rpc) throw new Error('SMOKE_RPC_URL is not set');
+  LIVE_REDACT = [mnemonic, rpc];
+  const explorerTx = process.env.SMOKE_EXPLORER_TX ?? '';
+  const hubOn = (process.env.SMOKE_HUB ?? 'on') !== 'off';
+  const hatId = process.env.SMOKE_HAT_ID || DEFAULT_HAT_ID;
+  hatIdToUint(hatId); // throws on a malformed dotted id
+
+  const net = NETWORKS[String(CHAIN_ID)];
+  const transport = http(rpc);
+  const pub = createPublicClient({ chain: sepolia, transport });
+  const chainId = await pub.getChainId();
+  if (chainId !== CHAIN_ID) throw new Error(`RPC reports chain ${chainId}, expected ${CHAIN_ID}`);
+  // On the fork the clock can be moved; on the live chain a real wait is the only way.
+  const onFork = await pub
+    .request({ method: 'anvil_metadata', params: [] })
+    .then((m) => Boolean(m?.forkedNetwork))
+    .catch(() => false);
+
+  const acct = (i) => mnemonicToAccount(mnemonic, { addressIndex: i });
+  const owner0 = acct(0);
+  const owner1 = acct(1);
+  if (owner0.address === owner1.address) throw new Error('accounts 0 and 1 are the same address');
+  const wallet = (account) => createWalletClient({ account, chain: sepolia, transport });
+  const link = (hash) => (explorerTx ? ` ${explorerTx.replace('{hash}', hash)}` : '');
+  const tx = async (name, request) => {
+    const hash = await wallet(owner0).writeContract(request);
+    const rc = await pub.waitForTransactionReceipt({ hash });
+    if (rc.status !== 'success') throw new Error(`transaction reverted: ${request.functionName}`);
+    line(`STEP ${name} ${hash}${link(hash)}`);
+    return rc;
+  };
+
+  let current = 'start';
+  const at = (name) => {
+    current = name;
+  };
+  try {
+    at('balances');
+    const bal0 = await pub.getBalance({ address: owner0.address });
+    const bal1 = await pub.getBalance({ address: owner1.address });
+    line(`STEP owner0 ${owner0.address} balance ${bal0} wei`);
+    line(`STEP owner1 ${owner1.address} balance ${bal1} wei`);
+    if (bal0 === 0n) throw new Error('account 0 holds no ETH; fund it (TA-3) before the live run');
+
+    // 1. Safe 1.4.1, two owners, threshold 2 (account 0 pays).
+    at('safe-deploy');
+    const initializer = encodeFunctionData({
+      abi: safeAbi,
+      functionName: 'setup',
+      args: [[owner0.address, owner1.address], 2n, zeroAddress, '0x', net.safeFallbackHandler, zeroAddress, 0n, zeroAddress],
+    });
+    const saltNonce = hexToBigInt(toHex(randomBytes(16)));
+    const sim = await pub.simulateContract({
+      account: owner0,
+      address: net.safeProxyFactory,
+      abi: factoryAbi,
+      functionName: 'createProxyWithNonce',
+      args: [net.safeSingletonL2, initializer, saltNonce],
+    });
+    const safe = getAddress(sim.result);
+    await tx('safe-deploy', sim.request);
+    at('safe-readback');
+    const owners = await settle(() => pub.readContract({ address: safe, abi: safeAbi, functionName: 'getOwners' }), (v) => v.length > 0);
+    const threshold = await settle(() => pub.readContract({ address: safe, abi: safeAbi, functionName: 'getThreshold' }), (v) => v > 0n);
+    line(`STEP safe-owners ${safe} owners ${owners.join(',')} threshold ${threshold}`);
+    if (threshold !== 2n || owners.length !== 2) throw new Error('Safe set-up wrong: need two owners and threshold 2');
+    const want = new Set([owner0.address, owner1.address]);
+    if (!owners.every((o) => want.has(getAddress(o)))) throw new Error('Safe owners differ from accounts 0 and 1');
+
+    // 2. A Safe-owned ENSv2 name; account 0 pays, the register call itself sets the owner.
+    at('ens-register');
+    const label = `ln-smoke-${randomBytes(3).toString('hex')}`;
+    if (!isValidLabel(label)) throw new Error(`generated label is invalid: ${label}`);
+    const ensName = `${label}.eth`;
+    const secret = toHex(randomBytes(32));
+    const duration = 365n * 24n * 60n * 60n;
+    const funds = 100n * 10n ** 6n;
+    await tx('usdc-mint', { address: net.ensPaymentToken, abi: usdcAbi, functionName: 'mint', args: [owner0.address, funds] });
+    await tx('usdc-approve', { address: net.ensPaymentToken, abi: usdcAbi, functionName: 'approve', args: [net.ensRegistrar, funds] });
+    const commitment = await pub.readContract({
+      address: net.ensRegistrar,
+      abi: registrarAbi,
+      functionName: 'makeCommitment',
+      args: [label, safe, secret, zeroAddress, zeroAddress, duration, zeroHash],
+    });
+    await tx('ens-commit', { address: net.ensRegistrar, abi: registrarAbi, functionName: 'commit', args: [commitment] });
+    if (onFork) {
+      await pub.request({ method: 'evm_increaseTime', params: [61] });
+      await pub.request({ method: 'evm_mine', params: [] });
+    } else {
+      await sleep(61_000);
+      await sleep(5_000); // margin: MIN_COMMITMENT_AGE is 60 s of block time
+    }
+    await tx('ens-register', {
+      address: net.ensRegistrar,
+      abi: registrarAbi,
+      functionName: 'register',
+      args: [label, safe, secret, zeroAddress, zeroAddress, duration, net.ensPaymentToken, zeroHash],
+    });
+    at('ens-owner');
+    const nameOwner = await settle(
+      () => pub.readContract({ address: net.ensUniversalHelper, abi: helperAbi, functionName: 'findExactOwner', args: [toHex(packetToBytes(ensName))] }),
+      (v) => getAddress(v) === safe,
+    );
+    line(`STEP ens-owner ${ensName} owner ${getAddress(nameOwner)}`);
+    if (getAddress(nameOwner) !== safe) throw new Error(`ENS owner is ${nameOwner}, expected the Safe ${safe}`);
+
+    // 3. The Zodiac default question template on Reality 3.0.
+    at('reality-template');
+    const tplSim = await pub.simulateContract({ account: owner0, address: net.reality, abi: realityEthAbi, functionName: 'createTemplate', args: [ZODIAC_DEFAULT_TEMPLATE] });
+    const tplReceipt = await tx('reality-template', tplSim.request);
+    const logs = parseEventLogs({ abi: templateEventAbi, logs: tplReceipt.logs, eventName: 'LogNewTemplate' });
+    if (logs.length !== 1) throw new Error(`expected one LogNewTemplate event, found ${logs.length}`);
+    const templateId = logs[0].args.template_id;
+    line(`STEP reality-template-id ${templateId.toString(10)}`);
+
+    // 4. Settings: hats strategy, quorum 1, period 600, safeSnap with the predicted module address.
+    at('settings');
+    const moduleInit = realityInitializer({
+      owner: safe, avatar: safe, target: safe, oracle: net.reality,
+      timeout: 600, cooldown: 300, expiration: 0, bond: 10n ** 15n, templateId, arbitrator: net.arbitrator,
+    });
+    const realityAddress = predictModuleProxy(net.moduleProxyFactory, net.realityModuleMastercopy, moduleInit, 0n);
+    const settings = spaceSettings({
+      name: label,
+      network: CHAIN_ID,
+      hats: net.hats,
+      memberHatId: hatId,
+      proposerHatId: hatId,
+      period: 600,
+      quorum: 1,
+      safe,
+      realityAddress,
+    });
+    const settingsJson = JSON.stringify(settings);
+    line(`STEP settings ${ensName} hat ${hatId} module ${realityAddress}`);
+
+    // 5. Both owners sign the SafeMessage; the Safe must accept it before anything is posted.
+    at('safe-signatures');
+    const timestamp = Math.floor(Date.now() / 1000);
+    const message = { from: safe, space: ensName, timestamp: BigInt(timestamp), settings: settingsJson };
+    const digest = snapshotHash('Space', message);
+    const typed = safeMessageTypedData(CHAIN_ID, safe, digest);
+    const signed = [];
+    for (const o of [owner0, owner1]) signed.push({ owner: o.address, signature: await o.signTypedData(typed) });
+    const sig = sortAndConcat(signed);
+    at('is-valid-signature');
+    const magic = await settle(
+      () => pub.readContract({ address: safe, abi: safeAbi, functionName: 'isValidSignature', args: [digest, sig] }),
+      (v) => v === ERC1271_MAGIC,
+      3,
+    );
+    line(`STEP is-valid-signature ${magic}`);
+    if (magic !== ERC1271_MAGIC) throw new Error(`isValidSignature returned ${magic}, expected ${ERC1271_MAGIC}`);
+
+    // 6. The sequencer and the hub (skipped when SMOKE_HUB=off).
+    if (!hubOn) {
+      line('STEP hub skipped (SMOKE_HUB=off)');
+    } else {
+      at('sequencer');
+      const envelope = {
+        address: safe,
+        sig,
+        data: {
+          domain: { ...snapshotDomain },
+          types: { Space: snapshotTypes.Space.map((f) => ({ ...f })) },
+          message: { from: safe, space: ensName, timestamp, settings: settingsJson },
+        },
+      };
+      const res = await fetch(SEQUENCER, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(envelope),
+      });
+      const body = await res.text();
+      if (res.status !== 200) {
+        line(`REFUSED ${res.status} ${body.replace(/\s+/g, ' ').slice(0, 2000)}`);
+        process.exit(3);
+      }
+      let receipt = {};
+      try {
+        receipt = JSON.parse(body);
+      } catch {
+        // keep the raw text in the STEP line below
+      }
+      line(`STEP sequencer ${receipt.id ?? body.slice(0, 200)} ipfs ${receipt.ipfs ?? '-'} relayer ${receipt.relayer ?? '-'}`);
+
+      at('hub-space');
+      const query = 'query($id:String!){ space(id:$id){ id network admins moderators strategies{ name params } voting{ quorum period } plugins } }';
+      let space = null;
+      const until = Date.now() + 3 * 60_000;
+      while (Date.now() < until) {
+        const r = await fetch(HUB_GRAPHQL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, variables: { id: ensName } }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (j?.data?.space) {
+          space = j.data.space;
+          break;
+        }
+        await sleep(10_000);
+      }
+      if (!space) throw new Error('the hub did not serve the space within 3 minutes');
+      line(`STEP hub-space ${JSON.stringify(space)}`);
+      if (String(space.network) !== String(CHAIN_ID)) throw new Error(`hub network is ${space.network}, expected ${CHAIN_ID}`);
+      if (!Array.isArray(space.admins) || space.admins.length !== 0) throw new Error(`hub admins are ${JSON.stringify(space.admins)}, expected []`);
+    }
+    console.log('SMOKE PASS');
+  } catch (e) {
+    line(`SMOKE FAIL ${current}`);
+    line(`${e?.name ?? 'Error'}: ${e?.shortMessage ?? e?.message ?? e}`);
+    process.exit(1);
+  }
+}
+
 const mode = process.argv[2];
 if (mode === '--fork') {
   forkMode().catch((e) => {
@@ -199,8 +467,12 @@ if (mode === '--fork') {
     process.exit(1);
   });
 } else if (mode === '--live') {
-  console.error('live mode is added in 25-03');
-  process.exit(2);
+  liveMode().catch((e) => {
+    // Set-up errors before the step tracker exists (missing env, wrong chain). Never the mnemonic.
+    line(`SMOKE FAIL setup`);
+    line(`${e?.name ?? 'Error'}: ${e?.shortMessage ?? e?.message ?? e}`);
+    process.exit(1);
+  });
 } else {
   console.error('usage: node smoke.mjs --fork | --live');
   process.exit(2);
