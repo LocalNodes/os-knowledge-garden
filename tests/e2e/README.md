@@ -101,6 +101,14 @@ fixed in this lane.
 
 - **SIWE.** The signed message names fresh3.test (21-40). Its chain line isn't asserted:
   siwe_login gets an allowed-chain list in Phase 25.
+- **SIWE's nonce limit (fresh3-e2e only).** siwe_login allows 30 sign-in nonces per IP per
+  5 minutes. One whole-suite run on both networks asks for more (34 in about 4 minutes, run
+  20261107T193200Z). So `site/site.sh code` writes
+  `$config['siwe_login.settings']['flood']['nonce_ip_limit'] = 600;` into fresh3-e2e's
+  gitignored settings.local.php (orchestrator ruling, 2026-11-07). It's a runtime override:
+  siwe_login's config, the tracked settings.php and other sites keep 30. Check it with
+  `drush config:get siwe_login.settings flood --include-overridden`. `run.sh all` runs both
+  networks back to back.
 - **No fixture module.** fresh3-e2e never has `safe_smart_accounts_rpc_fixture` on. The
   copy and accessibility checks (21-28, 21-29) use their own site, fresh3-p21-a11y.
 - **Shared host.** desktop-dev runs other lanes' containers. Each new container makes

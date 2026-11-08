@@ -294,6 +294,30 @@ final class CitedAnswersLiveRunner {
   }
 
   /**
+   * Takes ai_agents' progress-status subscriber off for this drush process.
+   *
+   * Since drupal/ai 1.4.11, ai_assistant_api's AgentRunner always turns on
+   * the agent's progress tracking. ai_agents then stores status updates in a
+   * private temp store that needs a started native session, and refuses with
+   * "There is no session for the private temp storage" before the first
+   * model call. A web request has that session (DeepChatApi starts it); a
+   * drush process never does, because Drupal's SessionManager doesn't start
+   * one on the command line. The status updates only feed the chat UI's
+   * progress poller, so the answer path is the same without them.
+   */
+  private function detachAgentStatusUpdates(object $dispatcher): void {
+    $id = 'ai_agents.agent_status_subscriber';
+    if (!\Drupal::hasService($id)) {
+      return;
+    }
+    $subscriber = \Drupal::service($id);
+    foreach ($subscriber::getSubscribedEvents() as $event => $params) {
+      $method = is_array($params) ? $params[0] : $params;
+      $dispatcher->removeListener($event, [$subscriber, $method]);
+    }
+  }
+
+  /**
    * Runs the selected cases; returns the exit code.
    */
   public function run(): int {
@@ -315,6 +339,7 @@ final class CitedAnswersLiveRunner {
 
     $this->resolveSourceKeys();
     $dispatcher = \Drupal::service('event_dispatcher');
+    $this->detachAgentStatusUpdates($dispatcher);
     $dispatcher->addListener(PreGenerateResponseEvent::EVENT_NAME, [$this->capture, 'onPre'], -2000);
     $dispatcher->addListener(PostGenerateResponseEvent::EVENT_NAME, [$this->capture, 'onPost'], -2000);
     $dispatcher->addListener('ai_agents.finished_execution', [$this->capture, 'onFinished'], -2000);

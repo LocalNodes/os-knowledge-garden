@@ -19,9 +19,10 @@ export const SCENARIO_KEY = 'safe_smart_accounts_rpc_fixture.scenario';
 export type Scenario = 'ok' | 'fail' | 'mismatch' | 'token_fail';
 
 export interface Treasury {
-  groups: Record<'filled' | 'old' | 'never' | 'setup' | 'failed' | 'retired' | 'sending' | 'empty', number>;
-  safes: Record<'filled' | 'old' | 'never' | 'setup' | 'failed' | 'retired' | 'sending', number>;
-  payments: Record<'approve' | 'ready' | 'waiting' | 'executed', number>;
+  groups: Record<'filled' | 'old' | 'never' | 'setup' | 'failed' | 'retired' | 'sending' | 'recovery' | 'empty', number>;
+  safes: Record<'filled' | 'old' | 'never' | 'setup' | 'failed' | 'retired' | 'sending' | 'recovery', number>;
+  // failed, ran_failed, replaced and resendable: 21-25 fixes 15 to 19.
+  payments: Record<'approve' | 'ready' | 'waiting' | 'executed' | 'failed' | 'ran_failed' | 'replaced' | 'resendable', number>;
   steward: number;
   member: number;
   personal: number | null;

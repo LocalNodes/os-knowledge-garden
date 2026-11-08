@@ -36,7 +36,7 @@
  * - more_url: the Import landing page.
  */
 #}
-{% macro badge_icon(variant, icon) %}
+{% macro badge_icon(variant, icon = null) %}
   <svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
     {% if icon == 'no-text' %}
       <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 8v5M12 16v.01"/>

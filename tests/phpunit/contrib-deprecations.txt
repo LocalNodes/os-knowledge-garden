@@ -3,6 +3,16 @@
 #   PHPUNIT_IGNORE_CONTRIB_DEPRECATIONS=1 scripts/run-phpunit.sh <path>
 # The runner joins this list with core's .deprecation-ignore.txt.
 # One regex per line (Symfony PHPUnit bridge ignoreFile format).
-# Group 2.3.1 (html/modules/contrib/group), found by Phase 21 plan 21-12 on 2026-11-06:
+# Group 2.3.2 (html/modules/contrib/group), found again by Phase 22.2 plan 22.2-01 on 2026-11-07
+# (first found on 2.3.1 by Phase 21 plan 21-12 on 2026-11-06). Still raised because
+# goalgorilla/open_social 13.1 pins drupal/group 2.3.2 exactly; drop these lines when
+# Open Social moves to Group 3.x:
 %Using a translatable string as a category for field type is deprecated in drupal:10\.2\.0%
 %The "group\.membership_loader" service relies on the deprecated "Drupal\\group\\GroupMembershipLoader" class%
+# drupal/ai (ai_search submodule, html/modules/contrib/ai/modules/ai_search/ai_search.module), found by
+# Phase 22.2 on 2026-11-07: ai_search still implements the procedural hook_search_api_query_alter(),
+# which search_api deprecates, and the notice fires on every Kernel run that executes a search query
+# (SolrIndexDirectlyTest). Anchored to ai_search as the only implementer: if our code ever implements
+# the hook, the function list changes and the notice is no longer ignored. Drop when ai_search moves
+# to the search_api.query_pre_execute event:
+%The deprecated alter hook hook_search_api_query_alter\(\) is implemented in these functions: ai_search_search_api_query_alter\. %

@@ -46,6 +46,10 @@ STATE_DIR="$ROOT/tests/e2e/.state"
 IDENTITY="$STATE_DIR/site-identity-$PROJECT.json"
 WT_MODULES=(safe_smart_accounts group_treasury)
 CLONE_MODULE=siwe_login
+# SIWE nonces per IP per 5 minutes on fresh3-e2e (write_local_settings). One whole-suite run
+# on both networks back to back asked for 36 in about 4 minutes (run 20261107T194300Z, the
+# site's flood table), over the module's 30. 600 leaves ample room without turning it off.
+NONCE_IP_LIMIT=600
 
 die() { echo "site.sh: $*" >&2; exit 1; }
 usage() { echo "usage: site.sh init | code | dir | exec <cmd...>   (LN_SITE_PROJECT=fresh3-e2e|fresh3-p21-a11y)" >&2; exit 2; }
@@ -101,6 +105,10 @@ cmd_init() {
 #   - extension_discovery_scan_tests and localnodes_a11y_ai_deny: Phase 22's a11y
 #     global-setup (tests/a11y/global-setup.ts) refuses a site without both. The deny does
 #     nothing until that setup enables the test-only guard module.
+#   - fresh3-e2e only: SIWE's nonce flood limit per IP, raised from the module's 30 per
+#     5 minutes to NONCE_IP_LIMIT, so tests/e2e/run.sh can run both networks back to back
+#     (orchestrator ruling, 2026-11-07). A runtime override: siwe_login's config, the
+#     tracked settings.php and every other site keep the module's limit.
 write_local_settings() {
   local f="$DIR/html/sites/default/settings.local.php"
   case "$f" in "$DIR"/html/sites/default/settings.local.php) ;; *) die "bad settings path $f" ;; esac
@@ -116,6 +124,14 @@ write_local_settings() {
 $settings['extension_discovery_scan_tests'] = TRUE;
 $settings['localnodes_a11y_ai_deny'] = TRUE;
 PHP
+  if [ "$PROJECT" = fresh3-e2e ]; then
+    cat >> "$f" <<PHP
+
+// fresh3-e2e only: the whole wallet suite signs in more often than SIWE's nonce limit
+// (30 per IP per 5 minutes) allows when both networks run back to back.
+\$config['siwe_login.settings']['flood']['nonce_ip_limit'] = $NONCE_IP_LIMIT;
+PHP
+  fi
   echo "site.sh: wrote the lane-only settings.local.php"
 }
 

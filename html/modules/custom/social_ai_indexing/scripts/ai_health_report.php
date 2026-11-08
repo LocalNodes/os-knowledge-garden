@@ -47,6 +47,31 @@ final class AiHealthReport {
   private const ASSISTANT_P95_MAX_MS = 15000;
   private const SINGLE_REQUEST_MAX_MS = 60000;
   private const OLDEST_PENDING_MAX_S = 3600;
+  /**
+   * 2x the typical tokens per assistant answer (the alert line).
+   *
+   * Re-derived in 22.2-15, when the excerpt cap went from 1,500 to 3,200
+   * characters (PermissionAwareRagTool::EXCERPT_CHARS). 4b's typical
+   * question (8.7k input) is 3 calls with about 5 hits per index, the
+   * source text sent twice (calls 2 and 3), at 4 characters per token.
+   * It assumed every hit filled the cap, as average_pool's whole documents
+   * did. With contextual_chunks a hit is one chunk (at most 1,467 cleaned
+   * characters in the lane's index, about 770 on average), and the cap only
+   * limits how many of one page's hit chunks are joined. So 10 hits give at
+   * most 10 x 1,467 = 14.7k characters of source text, under 4b's 15k at
+   * either cap, and about 7.7k typically: the typical stays at or below
+   * 8.7k and the alert stays at 17k. Measured lane answers: about 1.7k to 4.4k
+   * input tokens per turn (22.2-15 jsonl lines 3-8).
+   *
+   * The per-question cap (verify_cited_answers.php MAX_INPUT_TOKENS,
+   * 20,000) is a sum over the turn's calls. Its worst case at 3,200: call 1
+   * (600), then 10 sources at the full cap (8.2k) seen by calls 2 and 3,
+   * then the last 2 of the 12-source budget (1.7k) seen by call 3, is
+   * about 19.8k at 4 characters per token and about 16.5k at the 4.85 the
+   * lane measured. It reaches that only if every source fills the cap,
+   * which 10 hits per search can't do; ExcerptBudgetTest keeps the sum
+   * under 20,000.
+   */
   private const TYPICAL_INPUT_TOKENS_X2 = 17_000;
   private const TYPICAL_OUTPUT_TOKENS_X2 = 2800;
   private const OVERVIEW_P50_MAX_MS = 5000;

@@ -25,6 +25,102 @@ function localnodes_platform_install() {
   _localnodes_platform_configure_theme_shape();
   // D-27: the site-wide Gemini token ceiling (ai_usage_limits).
   _localnodes_platform_configure_ai_usage_limits();
+  // 22.2 SC2: group affiliation and the customisable "Request to join"
+  // message, on for every community (online-only and place-based).
+  _localnodes_platform_enable_group_features();
+  // 22.2 D-05: keyword search shows new and edited content without cron.
+  _localnodes_platform_index_solr_directly();
+}
+
+/**
+ * Indexes Open Social's two Solr indexes at the end of each save request.
+ *
+ * Phase 22.2 D-05: keyword search should show a new or edited Topic, Event
+ * or other content right away, not after the next cron run. Open Social ships
+ * social_content and social_all with index_directly FALSE, so search_api
+ * only tracks the item and cron indexes it later. With index_directly TRUE,
+ * search_api registers the item with search_api.post_request_indexing, which
+ * sends it to Solr when the request ends. A Solr error there is caught
+ * (SearchApiException) and the item stays tracked for cron, so the save
+ * itself still succeeds.
+ *
+ * Why this lives in hook_install: social_search creates both indexes during
+ * `site:install social`, before `drush en localnodes_platform`, so a
+ * config/install copy would be pre-existing config (CLAUDE.md). The option is
+ * set through the index entity API.
+ *
+ * Why only these two: they are Solr indexes, so indexing at request end costs
+ * one Solr update and no Gemini call. The AI indexes (social_posts,
+ * social_comments) keep their Phase 22 settings, and imports keep deferring
+ * them (ImportBatch::DEFERRED_INDEXES).
+ *
+ * Idempotent: an index that is missing or already has the option is left
+ * alone, so a second call saves nothing.
+ */
+function _localnodes_platform_index_solr_directly() {
+  $storage = \Drupal::entityTypeManager()->getStorage('search_api_index');
+  foreach (['social_content', 'social_all'] as $index_id) {
+    /** @var \Drupal\search_api\IndexInterface|null $index */
+    $index = $storage->load($index_id);
+    if ($index && !$index->getOption('index_directly')) {
+      $index->setOption('index_directly', TRUE)->save();
+    }
+  }
+}
+
+/**
+ * Turns on the two Open Social 13.1 group features that ship switched off.
+ *
+ * Phase 22.2 criterion 2 wants four group features on for every community.
+ * Two already are in Open Social 13.1: custom-link online events and group
+ * managers editing or deleting members' content. This turns on the other two
+ * for flexible_group, the group type every community uses:
+ * - Group affiliation: members can name the group as an affiliation on their
+ *   profile. The feature itself (social_profile.settings
+ *   group_affiliation_status) is on, but 13.1 ships flexible_group with
+ *   third_party_settings.social_profile.affiliation_enabled FALSE, and
+ *   GroupAffiliation::isGroupAffiliationEnabled() needs at least one group
+ *   type with it TRUE (a strict === TRUE check, so the value is a boolean).
+ * - The "Request to join" message: social_group_request.settings
+ *   allow_customize ships empty, so group managers can't set the request
+ *   form's description, default text or required flag. The value is keyed by
+ *   group type id, the same shape GroupRequestSettingsForm saves.
+ *
+ * The labels "Organization" and "Function" on the affiliation fields stay as
+ * Open Social ships them; 22.1's copy pass (PLACE-01) owns the wording.
+ *
+ * Why this lives in hook_install: the group type and the settings object are
+ * created by the Open Social profile before `drush en localnodes_platform`,
+ * so a config/install copy would be pre-existing config (CLAUDE.md). The
+ * group type is changed through the entity API. Its presave hook
+ * (GroupAffiliationGroupTypeHooks) only overrides affiliation_enabled from a
+ * form POST body, and drush has none, so this write stands.
+ *
+ * Idempotent: writes only when a value isn't already TRUE, and keeps the
+ * allow_customize values of other group types.
+ */
+function _localnodes_platform_enable_group_features() {
+  $module_handler = \Drupal::moduleHandler();
+
+  if ($module_handler->moduleExists('social_profile')) {
+    /** @var \Drupal\group\Entity\GroupTypeInterface|null $group_type */
+    $group_type = \Drupal::entityTypeManager()
+      ->getStorage('group_type')
+      ->load('flexible_group');
+    if ($group_type && $group_type->getThirdPartySetting('social_profile', 'affiliation_enabled') !== TRUE) {
+      $group_type->setThirdPartySetting('social_profile', 'affiliation_enabled', TRUE);
+      $group_type->save();
+    }
+  }
+
+  if ($module_handler->moduleExists('social_group_request')) {
+    $config = \Drupal::configFactory()->getEditable('social_group_request.settings');
+    $allow_customize = (array) ($config->get('allow_customize') ?? []);
+    if (empty($allow_customize['flexible_group'])) {
+      $allow_customize['flexible_group'] = TRUE;
+      $config->set('allow_customize', $allow_customize)->save();
+    }
+  }
 }
 
 /**

@@ -196,26 +196,59 @@ final class CurrentTopicAccessTest extends ImportKernelTestBase {
   }
 
   /**
-   * An organizer of G who can't edit A's Topic can't refresh it.
+   * Another organizer of G can edit A's Topic, so B can refresh it.
    *
-   * B has the group's import permission (bulk-create) but no update access
-   * to a Topic A imported: the route is a 403 and the service refuses.
+   * Open Social 13.1 grants group managers "update any group_node:topic
+   * entity" (social_group_flexible_group_update_130020()). The importer
+   * follows Topic update access, so B, a co-organizer with the group's
+   * import permission, may refresh a Topic A imported (ruling 2026-11-07,
+   * phase 22.2). testMemberCannotRefreshOthersTopic() keeps the refusal for
+   * someone who has the import permission but can't edit the Topic.
    */
-  public function testRefreshNeedsUpdateAccess(): void {
+  public function testCoOrganizerCanRefreshOthersTopic(): void {
     [, $item] = $this->importWeb(self::ADDRESS);
     $topic = $this->topicOf($item);
+    $this->assertSame((int) $this->importer->id(), (int) $topic->getOwnerId(), 'Precondition: A owns the Topic');
     $this->assertTrue($this->group->hasPermission('import content into group', $this->colleague), 'Precondition: B may import into G');
+    $this->assertTrue($this->group->hasPermission('update any group_node:topic entity', $this->colleague), 'Precondition: B, a group manager, may edit any Topic in G (13.1)');
     $this->assertTrue($topic->access('view', $this->colleague), 'Precondition: B can view the Topic');
-    $this->assertFalse($topic->access('update', $this->colleague), "Precondition: B can't edit A's Topic");
-    $this->assertTrue($topic->access('update', $this->importer), 'Precondition: A can edit it');
+    $this->assertTrue($topic->access('update', $this->colleague), "B can edit A's Topic");
+
+    $access = $this->container->get('access_manager');
+    $params = ['group' => $this->group->id(), 'topic' => $topic->id()];
+    $this->assertTrue($access->checkNamedRoute('localnodes_import.refresh', $params, $this->importer), 'A can open the refresh');
+    $this->assertTrue($access->checkNamedRoute('localnodes_import.refresh', $params, $this->colleague), 'B can open the refresh');
+
+    $this->setCurrentUser($this->colleague);
+    $this->assertRefreshSucceeds($topic, $this->colleague);
+  }
+
+  /**
+   * Someone who can't edit A's Topic can't refresh it.
+   *
+   * M is a plain member of G. M's role is given the group's import
+   * permission here, so update access to the Topic is the only thing M
+   * lacks: the route is a 403 and the service refuses.
+   */
+  public function testMemberCannotRefreshOthersTopic(): void {
+    $member = $this->createVerifiedUser('garden_member');
+    $this->group->addMember($member);
+    GroupRole::load('flexible_group-member')->grantPermission('import content into group')->save();
+
+    [, $item] = $this->importWeb(self::ADDRESS);
+    $topic = $this->topicOf($item);
+    $this->assertFalse($this->group->hasPermission('update any group_node:topic entity', $member), 'Precondition: M is not a group manager');
+    $this->assertTrue($this->group->hasPermission('import content into group', $member), 'Precondition: M may import into G');
+    $this->assertTrue($topic->access('view', $member), 'Precondition: M can view the Topic');
+    $this->assertFalse($topic->access('update', $member), "Precondition: M can't edit A's Topic");
 
     $access = $this->container->get('access_manager');
     $params = ['group' => $this->group->id(), 'topic' => $topic->id()];
     $this->assertTrue($access->checkNamedRoute('localnodes_import.refresh', $params, $this->importer), 'Positive control: A can open the refresh');
-    $this->assertFalse($access->checkNamedRoute('localnodes_import.refresh', $params, $this->colleague), 'B gets 403 on the refresh route');
+    $this->assertFalse($access->checkNamedRoute('localnodes_import.refresh', $params, $member), 'M gets 403 on the refresh route');
 
-    $this->setCurrentUser($this->colleague);
-    $this->assertRefreshRefused($topic, 'B');
+    $this->setCurrentUser($member);
+    $this->assertRefreshRefused($topic, 'M');
   }
 
   /**
@@ -279,15 +312,26 @@ final class CurrentTopicAccessTest extends ImportKernelTestBase {
 
   /**
    * The Topic gets a new owner during the fetch: A may no longer edit it.
+   *
+   * Open Social 13.1 lets group managers edit any Topic in their group, so
+   * a new owner alone would leave A's access in place. This group's
+   * managers don't have "update any group_node:topic entity" here: A may
+   * edit the Topic only as its owner, and the owner change mid-fetch takes
+   * that away.
    */
   public function testRefreshRefusedWhenOwnerChangesMidFetch(): void {
+    GroupRole::load('flexible_group-group_manager')->revokePermission('update any group_node:topic entity')->save();
     [, $item] = $this->importWeb(self::ADDRESS);
     $nid = (int) $this->topicOf($item)->id();
+    $this->assertTrue($this->reloadNode($nid)->access('update', $this->importer), 'Precondition: A can edit the Topic as its owner');
+    $this->assertFalse($this->reloadNode($nid)->access('update', $this->colleague), "Precondition: B can't edit A's Topic without the \"update any\" permission");
     [$run, $thrown] = $this->refreshWithChangeMidFetch($nid, function () use ($nid): void {
       $this->reloadNode($nid)->setOwnerId((int) $this->colleague->id())->save();
     });
     $this->assertInstanceOf(RefreshNotAllowedException::class, $thrown, 'Refused: A may no longer edit the page');
     $this->assertSame((int) $this->colleague->id(), (int) $this->reloadNode($nid)->getOwnerId(), 'The new owner is kept');
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->assertFalse($this->reloadNode($nid)->access('update', $this->importer), 'A can no longer edit the Topic');
     $this->assertRowRefused($run, 'not_allowed');
   }
 
@@ -359,12 +403,17 @@ final class CurrentTopicAccessTest extends ImportKernelTestBase {
    * A stays an organizer of G (import permission), but only an individual
    * editor role lets A update their own Topics. That role is removed from
    * A's membership in the database during the fetch (merge review R3
-   * item 1).
+   * item 1). Both "update own" and Open Social 13.1's "update any" are
+   * taken from the manager and member roles, so the editor role is the
+   * only edit access A has.
    */
   public function testRefreshRefusedWhenEditorRoleRemovedElsewhere(): void {
     $permission = 'update own group_node:topic entity';
     foreach (['flexible_group-group_manager', 'flexible_group-member'] as $role_id) {
-      GroupRole::load($role_id)->revokePermission($permission)->save();
+      GroupRole::load($role_id)
+        ->revokePermission($permission)
+        ->revokePermission('update any group_node:topic entity')
+        ->save();
     }
     GroupRole::create([
       'id' => 'flexible_group-ln_editor',
@@ -535,6 +584,23 @@ final class CurrentTopicAccessTest extends ImportKernelTestBase {
     $row = reset($rows);
     $result = [$row->get('outcome')->value, $row->get('reason')->value];
     $this->assertSame([ImportItem::OUTCOME_FAILED, 'not_allowed'], $result, "$who: recorded as refused");
+  }
+
+  /**
+   * Refreshes as the account in its own run and checks it went through.
+   */
+  private function assertRefreshSucceeds(NodeInterface $topic, UserInterface $account): void {
+    $who = $account->getAccountName();
+    $revision = (int) $topic->getRevisionId();
+    $requests = count($this->web->requests);
+    $run = $this->createRun(ImportRun::KIND_WEB, $account);
+    $item = $this->container->get('localnodes_import.refresh_from_source')->refresh($topic, $run);
+    $this->assertSame([ImportItem::OUTCOME_REFRESHED, NULL], [$item->get('outcome')->value, $item->get('reason')->value], "$who: recorded as refreshed");
+    $this->assertGreaterThan($requests, count($this->web->requests), "$who: the page is fetched");
+    $stored = $this->reloadNode((int) $topic->id());
+    $this->assertGreaterThan($revision, (int) $stored->getRevisionId(), "$who: a new revision is saved");
+    $this->assertSame((int) $account->id(), (int) $stored->getRevisionUserId(), "$who: the new revision is theirs");
+    $this->assertSame((int) $topic->getOwnerId(), (int) $stored->getOwnerId(), "$who: the owner stays");
   }
 
   /**

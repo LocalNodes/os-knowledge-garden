@@ -9,10 +9,12 @@
 //     anvil drops the transaction from its mempool. A reload notes the block; N blocks later
 //     (the registry entry's drop_after_blocks) a reload offers "Send payment" again with a
 //     plain note, and the second send reaches "Sent".
-//   - lost send hash (fix 17): the /execute posts are blocked, so the send lands but the site
-//     never gets its hash. Once the fund's nonce has moved, the payment page looks for the
-//     Safe's ExecutionSuccess of this payment and shows "Sent" with that transaction, not
-//     "Replaced".
+//   - lost send hash (fixes 17 and 18): the /execute posts are blocked, so the send lands but
+//     the site never gets its hash. Once the fund's nonce has moved, the fund tab's payments
+//     list looks for the Safe's execution of this payment before anyone opens its page (fix
+//     18), so its row says "Sent", not "Waiting for confirmation"; the payment page then shows
+//     "Sent" with that transaction, not "Replaced". (Since fix 18 the list settles it first;
+//     the page's own search, fix 17, is covered by the Kernel tests.)
 //
 // The organizer (dev account 0) and the approver (dev account 1) run a 2-of-2 fund. No chain id
 // or contract address is written here: they come from the run state, the site's registry
@@ -235,7 +237,8 @@ test.describe.serial('lost hashes and dropped sends on the local chain', () => {
   test('lost send hash shows Sent, not Replaced', async ({ context, page }, info) => {
     await flow(run.network, 'lost send hash shows Sent, not Replaced', page, info, async (p, c) => {
       expect(fund, 'the adopted fund').toMatch(/^0x[0-9a-fA-F]{40}$/);
-      const url = await readyPayment(context, page, '0.0002', `E2E lost send hash ${run.runId}`);
+      const description = `E2E lost send hash ${run.runId}`;
+      const url = await readyPayment(context, page, '0.0002', description);
       p.url = url;
       const id = paymentId(url);
       const nonce = safeNonce(run.network, fund);
@@ -267,6 +270,14 @@ test.describe.serial('lost hashes and dropped sends on the local chain', () => {
       await openFund(page, groups.pay);
       await page.waitForTimeout(16_000);
       await refreshBalances(page);
+
+      // Fix 18: the list, before anyone opens the payment's page.
+      const row = page.locator('tr.safe-payment-row', { has: page.getByRole('link', { name: description, exact: true }) });
+      await expect(row).toHaveCount(1);
+      p.listStatus = (await row.locator('.safe-status-badge').innerText()).replace(/\s+/g, ' ').trim();
+      c.rowAfterList = readPayment(id);
+      expect(p.listStatus).toBe('Sent');
+      expect((c.rowAfterList as { status: string }).status).toBe('executed');
 
       await page.goto(url);
       await page.waitForLoadState('load');

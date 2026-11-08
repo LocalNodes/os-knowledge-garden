@@ -16,6 +16,10 @@ vendor/
 /html/sites/example.settings.local.php
 # Local-only settings, included by settings.php when present (lane test sites write theirs).
 /html/sites/*/settings.local.php
+# The config sync directory is tracked only as an empty placeholder (config/sync/README.md
+# says why). Its contents, core's .htaccess and any ad-hoc drush cex output, stay local.
+/config/sync/*
+!/config/sync/README.md
 /html/sites/example.sites.php
 /html/.csslintrc
 /html/.editorconfig

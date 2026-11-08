@@ -6,7 +6,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "goalgorilla/open_social": "~13.0.2",
+        "goalgorilla/open_social": "~13.1.0",
         "php": "^8.3",
         "monolog/monolog": "^2.3.5",
         "drush/drush": "^13.7",
@@ -20,8 +20,8 @@
         "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
         "drupal/siwe_login": "^1.0",
-        "drupal/safe_smart_accounts": "^1.0",
-        "drupal/group_treasury": "^1.0",
+        "drupal/safe_smart_accounts": "^1.0@alpha",
+        "drupal/group_treasury": "^1.0@alpha",
         "kornrunner/keccak": "^1.0",
         "simplito/elliptic-php": "^1.0",
         "brick/math": "^0.17 || ^1.0",
@@ -106,11 +106,12 @@
         },
         "patches-ignore": {
             "goalgorilla/open_social": {
-                "drupal/redirect": {
-                    "Issue #2991423: Redirection issue when interface language is different from content language": "https://www.drupal.org/files/issues/2025-02-19/redirect-interface_language_different_from_content_language_2991423-22.patch"
+                "drupal/simple_oauth": {
+                    "Issue #3574042: Classes should not store references to the config as class properties": "https://multiverse.getopensocial.com/download/patches/223/8ae712b1760019f630bceb6f5ef76ef7c675fbe3f7b18bf02c6ebe4bc895cedd/issue-3574042-classes-should-not-store-references-to-the-config-as-class-properties-6-0-9.patch"
                 }
             }
-        }
+        },
+        "composer-exit-on-patch-failure": true
     },
     "config": {
         "platform": {
@@ -127,15 +128,10 @@
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
         "audit": {
+            "abandoned": "report",
             "ignore": {
-                "SA-CONTRIB-2026-236": "drupal/bootstrap 3.34 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
-                "SA-CONTRIB-2026-113": "drupal/entity 1.6.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
-                "SA-CONTRIB-2026-060": "drupal/paragraphs 1.19.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
-                "SA-CONTRIB-2026-061": "drupal/paragraphs 1.19.0 pinned exactly by goalgorilla/open_social 13.0.x; already locked at this version before this bump; follow-up",
-                "SA-CONTRIB-2026-219": "drupal/gin constrained to ^3.0 by goalgorilla/open_social 13.0.x (fix is 4.1.4+); follow-up",
-                "PKSA-xwpn-zs9j-6wy5": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up",
-                "PKSA-sf9j-1gs7-xzvx": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up",
-                "PKSA-7h5p-prw9-w5nr": "webonyx/graphql-php 14.x, required by drupal/graphql 4.9.0, which goalgorilla/open_social 13.0.x pins exactly; already locked before this bump; follow-up"
+                "SA-CONTRIB-2026-236": "drupal/bootstrap 3.34 pinned exactly by goalgorilla/open_social 13.1.x (fix is 3.45.0); base theme, accepted until Open Social moves",
+                "SA-CONTRIB-2026-219": "drupal/gin constrained to ^3.0 by goalgorilla/open_social 13.1.x (fix is 4.1.4+); admin theme, accepted until Open Social moves"
             }
         }
     }

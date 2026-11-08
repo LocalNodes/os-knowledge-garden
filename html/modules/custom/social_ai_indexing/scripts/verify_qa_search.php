@@ -34,9 +34,17 @@ function log_result(string $test_id, string $description, string $status, string
     'message' => $message,
   ];
   
-  $status_lower = strtolower($status);
-  if (isset($results[$status_lower])) {
-    $results[$status_lower]++;
+  // The counters are named passed/failed/skipped/warn; the status words are
+  // PASS/FAIL/SKIP/WARN. Without this map a FAIL was printed but never counted,
+  // and the script exited 0 with "Failed: 0".
+  $counter = [
+    'pass' => 'passed',
+    'fail' => 'failed',
+    'skip' => 'skipped',
+    'warn' => 'warn',
+  ][strtolower($status)] ?? NULL;
+  if ($counter !== NULL) {
+    $results[$counter]++;
   }
 }
 
@@ -295,13 +303,15 @@ try {
 
 // ============================================================================
 // SRCH-04: JSON API endpoint for search
+// The standalone hybrid_search route was removed in Phase 5 (6b705e9, replaced
+// by the AI Overview endpoint), so this checks the overview route instead.
 // ============================================================================
 print "Testing SRCH-04: JSON API search endpoint...\n";
 
 try {
   // Check if the route exists
   $route_provider = \Drupal::service('router.route_provider');
-  $route = $route_provider->getRouteByName('social_ai_indexing.hybrid_search');
+  $route = $route_provider->getRouteByName('social_ai_indexing.ai_overview');
   
   if ($route) {
     $path = $route->getPath();
@@ -400,6 +410,7 @@ if ($results['failed'] > 0) {
   print "\nVERIFICATION FAILED: {$results['failed']} tests failed\n";
   exit(1);
 } else {
+  // No exit(0) here: drush php:script reports any exit() inside the script as
+  // "terminated abnormally" and returns 1. Falling off the end returns 0.
   print "\nVERIFICATION PASSED: All critical tests passed\n";
-  exit(0);
 }

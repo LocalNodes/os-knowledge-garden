@@ -9,6 +9,7 @@ use Drupal\Core\Site\Settings;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\Tests\localnodes_import\Kernel\Support\AllProfilesModuleExtensionList;
+use Drupal\Tests\localnodes_import\Kernel\Support\AllProfilesSchemaStorage;
 use Drupal\Tests\localnodes_import\Kernel\Support\UploadTestFileSystem;
 use Drupal\Tests\social_ai_indexing\Kernel\GroupAccessKernelTestBase;
 use Drupal\user\Entity\Role;
@@ -60,6 +61,12 @@ abstract class ImportKernelTestBase extends GroupAccessKernelTestBase {
     }
     if ($container->hasDefinition('extension.list.module')) {
       $container->getDefinition('extension.list.module')->setClass(AllProfilesModuleExtensionList::class);
+    }
+    // Same profile filter, schema side: social_group's schema must survive
+    // the installer's container rebuild, or saving the 13.1 group manager
+    // role (third_party_settings.social_group.hubs_filter) fails validation.
+    if ($container->hasDefinition('config.storage.schema')) {
+      $container->getDefinition('config.storage.schema')->setClass(AllProfilesSchemaStorage::class);
     }
   }
 
