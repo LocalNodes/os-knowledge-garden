@@ -25,7 +25,7 @@
  *
  * Skips when the gitignored drupal.org clones are absent.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
@@ -106,6 +106,15 @@ type Opts = {
   updateStatus?: number;
   /** The configuration read fails (before the wallet is asked). */
   configFails?: boolean;
+  /** update-deployment's receipt_status per call, in order; the last repeats. */
+  receiptStatuses?: string[];
+  /**
+   * The page gets the test realm's setTimeout, clearTimeout and Date, so
+   * vi.useFakeTimers() drives group_treasury's re-check schedule (4 s, then
+   * 8 s, within 5 minutes; 21-pending-repoll). Default: a setTimeout stub
+   * that never fires.
+   */
+  realTimers?: boolean;
   /** getCode's answer before any send (default '0x'). */
   codeBeforeSend?: string;
 };
@@ -207,7 +216,9 @@ function harness(steps: Map<string, Step>, opts: Opts = {}) {
       },
     },
     location: { href: '' },
-    setTimeout: () => 0,
+    setTimeout: opts.realTimers ? (fn: () => void, ms: number) => setTimeout(fn, ms) : () => 0,
+    clearTimeout: opts.realTimers ? (id: ReturnType<typeof setTimeout>) => clearTimeout(id) : () => undefined,
+    ...(opts.realTimers ? { Date } : {}),
     CustomEvent: class { constructor(public type: string, public init: unknown) {} },
     fetch: async (url: string, init?: { body?: string }) => {
       if (url.includes('/configuration')) {
@@ -220,7 +231,9 @@ function harness(steps: Map<string, Step>, opts: Opts = {}) {
         calls.push('fetch:update-deployment');
         posted.push(init?.body ? JSON.parse(init.body) : null);
         if (opts.updateStatus && opts.updateStatus !== 200) return json({ error: 'Something went wrong on our side.' }, opts.updateStatus);
-        const status = opts.receiptStatus ?? 'confirmed';
+        const sequence = opts.receiptStatuses;
+        const seen = calls.filter((c) => c === 'fetch:update-deployment').length;
+        const status = sequence ? sequence[Math.min(seen - 1, sequence.length - 1)] : (opts.receiptStatus ?? 'confirmed');
         return json({ success: status !== 'failed', receipt_status: status, safe_address: PREDICTED, status: status === 'confirmed' ? 'active' : 'deploying' });
       }
       throw new Error(`unexpected fetch ${url}`);
@@ -459,11 +472,63 @@ describe.skipIf(!present)('Group deploy: the registry network first (21-22, ruli
     expect((h.ctx.location as { href: string }).href).toBe('');
   });
 
-  it('waits for the public record when the receipt is pending', async () => {
-    const h = await run({ receiptStatus: 'pending' });
-    expect(h.flow.done).toEqual([]);
-    expect(h.flow.waitingForRecord).toHaveLength(1);
-    expect(h.flow.error).toEqual([]);
+  // group_treasury 21-pending-repoll (nightly run 42489172114): a pending receipt is checked
+  // again after 4 s, then every 8 s, for up to 5 minutes. Fake timers drive the real schedule.
+  const updates = (h: { calls: string[] }) => h.calls.filter((c) => c === 'fetch:update-deployment').length;
+  const start = (opts: Opts) => {
+    const h = harness(stepsFromReceiptPanel(GROUP_FORM), { ...opts, realTimers: true });
+    const finished = h.handlers.treasuryCreated({ detail: { safeAccountId: 5, groupId: 7, fundUrl: '/group/7/treasury' } });
+    return { h, finished };
+  };
+
+  it('a pending receipt is asked again after 4 s and 8 s more, then a confirmed answer shows Done once', async () => {
+    vi.useFakeTimers();
+    try {
+      const { h, finished } = start({ receiptStatuses: ['pending', 'pending', 'confirmed'] });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(updates(h)).toBe(1);
+      expect(h.flow.setState.at(-1)).toBe(3);
+      expect(h.flow.done).toEqual([]);
+      expect(h.flow.error).toEqual([]);
+      await vi.advanceTimersByTimeAsync(3_999);
+      expect(updates(h)).toBe(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(updates(h)).toBe(2);
+      expect(h.flow.done).toEqual([]);
+      // The next re-check comes 8 s later, not sooner (Codex round 4): none at 7.999 s.
+      await vi.advanceTimersByTimeAsync(7_999);
+      expect(updates(h)).toBe(2);
+      expect(h.flow.done).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(updates(h)).toBe(3);
+      await finished;
+      expect(h.flow.done).toHaveLength(1);
+      expect(h.flow.done[0]).toMatchObject({ text: 'The group fund is ready.' });
+      expect(h.flow.waitingForRecord).toEqual([]);
+      expect(h.flow.error).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a receipt still pending at the 5-minute limit ends on "waiting", with no error and no timer left', async () => {
+    vi.useFakeTimers();
+    try {
+      const { h, finished } = start({ receiptStatus: 'pending' });
+      await vi.advanceTimersByTimeAsync(300_000);
+      await finished;
+      // The first report, then re-checks at 4 s, 12 s, ... 300 s (4 s + 37 × 8 s).
+      expect(updates(h)).toBe(39);
+      expect(h.flow.waitingForRecord).toHaveLength(1);
+      expect(h.flow.done).toEqual([]);
+      expect(h.flow.error).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    }
+    finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports a failed receipt in plain words', async () => {
@@ -521,11 +586,49 @@ describe.skipIf(!present)('Set-up: no "nothing was sent" once the wallet may hav
     });
 
     it(`${f.name}: a hash, then wait() fails: the hash goes to the site and the page waits`, async () => {
-      const h = await run({ waitThrows: true, receiptStatus: 'pending' });
-      expect(h.posted).toEqual([{ safe_address: PREDICTED, deployment_tx_hash: HASH }]);
-      expect(h.flow.waitingForRecord).toHaveLength(1);
-      expect(h.flow.error).toEqual([]);
-      expect(h.flow.restore).toEqual([]);
+      // The group flow checks a pending report again for up to 5 minutes (21-pending-repoll);
+      // fake timers run that schedule to its end. The personal flow sets no timer.
+      vi.useFakeTimers();
+      try {
+        const h = harness(stepsFromReceiptPanel(f.form), { waitThrows: true, receiptStatus: 'pending', realTimers: true });
+        const finished = h.handlers[f.event]({ detail: f.detail });
+        await vi.advanceTimersByTimeAsync(300_000);
+        await finished;
+        const report = { safe_address: PREDICTED, deployment_tx_hash: HASH };
+        if (f.name === 'group') {
+          // The group flow reports the same hash again on its schedule: the first report plus
+          // re-checks at 4 s, 12 s ... 300 s.
+          expect(h.posted).toEqual(Array(39).fill(report));
+        }
+        else {
+          // The personal flow (safe_smart_accounts) reports once and doesn't re-check.
+          expect(h.posted).toEqual([report]);
+        }
+        expect(h.flow.waitingForRecord).toHaveLength(1);
+        expect(h.flow.error).toEqual([]);
+        expect(h.flow.restore).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+      }
+      finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it(`${f.name}: a hash, then wait() fails, then a later confirmed answer shows Done once`, async () => {
+      vi.useFakeTimers();
+      try {
+        const h = harness(stepsFromReceiptPanel(f.form), { waitThrows: true, receiptStatuses: ['pending', 'confirmed'], realTimers: true });
+        const finished = h.handlers[f.event]({ detail: f.detail });
+        await vi.advanceTimersByTimeAsync(4_000);
+        await finished;
+        // Only the group flow re-checks; the personal flow (safe_smart_accounts) stays on "waiting".
+        expect(h.flow.done).toHaveLength(f.name === 'group' ? 1 : 0);
+        expect(h.flow.error).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+      }
+      finally {
+        vi.useRealTimers();
+      }
     });
 
     it(`${f.name}: a hash the site couldn't record is checked again, never "nothing was sent"`, async () => {
