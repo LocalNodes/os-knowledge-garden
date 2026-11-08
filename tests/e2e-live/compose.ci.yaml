@@ -25,6 +25,11 @@ services:
       # Optional: the SEPOLIA_RPC_URL secret, passed by the compose-up step only. Empty means the
       # registry's public URLs (settings.php, 21-07).
       SAFE_RPC_URL_ETHEREUM_SEPOLIA: ${SEPOLIA_RPC_URL:-}
+      # SIWE signs and checks on Sepolia too, so a sign-in never names chain 1 and a contract-wallet
+      # check (eth_getCode) never reaches a mainnet RPC. settings.php turns SIWE_CHAIN_ID into
+      # siwe_login chain_ids = [11155111] (beta9).
+      SIWE_CHAIN_ID: "11155111"
+      SIWE_CHAIN_RPC_URL: ${SEPOLIA_RPC_URL:-https://eth-sepolia-testnet.api.pocket.network}
     volumes:
       # seed-live.php only, read by `drush php:script /opt/e2e-live/seed-live.php`. Not the whole
       # folder: the job later builds the wallet's MetaMask profile under tests/e2e-live.
