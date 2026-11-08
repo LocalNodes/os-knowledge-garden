@@ -14,6 +14,7 @@
 // steps use MetaMask's own data-testid values from the 13.13.1 bundle. No step reads page
 // state with page.evaluate: LavaMoat's scuttling blocks it on extension pages.
 import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { categorized } from './failure-dump';
 
 /** The wallet's home page, unlocked. */
 export async function openHome(page: Page, extensionId: string, password: string): Promise<void> {
@@ -160,7 +161,8 @@ export async function confirmPrompts(
             gone = true;
             return fallback;
           }
-          throw e;
+          // A fixed category and the error's name only (Codex round 2): never the message.
+          throw categorized(e);
         }
       };
       await on(undefined, () => prompt.waitForLoadState('domcontentloaded'));
@@ -201,10 +203,11 @@ export async function confirmPrompts(
         clicks++;
         last = Date.now();
         log.clicks.push({ kind, button: clicked, text: text.slice(0, 2000) });
-        console.log(`[metamask] ${kind}: clicked ${clicked}; prompt text: ${text.replace(/\s+/g, ' ').slice(0, 600)}`);
-        for (const line of text.split('\n').map((l) => l.trim()).filter((l) => l && WARNING_WORDS.test(l))) {
-          log.warnings.push(`${kind}: ${line}`);
-        }
+        const warned = text.split('\n').map((l) => l.trim()).filter((l) => l && WARNING_WORDS.test(l));
+        for (const line of warned) log.warnings.push(`${kind}: ${line}`);
+        // Fixed fields only: the CI log is public, so MetaMask's own text stays in `log` (21-46
+        // ruling after Codex). The local recording reads it from there.
+        console.log(`[metamask] ${kind}: clicked ${clicked}; warning lines ${warned.length}`);
       }
     } else if (!opts.done && clicks > 0 && Date.now() - last > idleMs) {
       return;

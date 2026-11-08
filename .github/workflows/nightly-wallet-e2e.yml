@@ -136,6 +136,23 @@ jobs:
           LN_LIVE_WALLET_ADDRESS: ${{ vars.SYNPRESS_WALLET_ADDRESS }}
         run: xvfb-run -a npm --prefix tests/e2e-live run e2e
 
+      - name: Site watchdog on failure
+        # The last site log entries for the fund flow, as fixed fields only (21-46; ruling after
+        # Codex: no raw drush output in the public log). Per row: wid, type, severity, timestamp
+        # and the first 12 hex digits of SHA-256 of the untranslated message template, which
+        # never holds the variables. Hash a template from the module source to match it. stderr
+        # is dropped, and only rows of exactly that shape are printed. No secret in this step.
+        if: failure()
+        run: |
+          query="SELECT wid, type, severity, timestamp, LEFT(SHA2(message, 256), 12) FROM watchdog WHERE type IN ('safe_smart_accounts', 'group_treasury') ORDER BY wid DESC LIMIT 20"
+          if out=$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml exec -T opensocial \
+            /var/www/html/vendor/bin/drush -r /var/www/html/html --uri=http://localhost:8080 sql:query "$query" 2>/dev/null); then
+            echo "watchdog (wid type severity timestamp template_sha256_12):"
+            printf '%s\n' "$out" | grep -E '^[0-9]+[[:space:]]+(safe_smart_accounts|group_treasury)[[:space:]]+[0-7][[:space:]]+[0-9]+[[:space:]]+[0-9a-f]{12}$' || echo "(no rows)"
+          else
+            echo "watchdog: query failed"
+          fi
+
       - name: Site log tail
         if: always()
         run: docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml logs --tail 150 opensocial || true
