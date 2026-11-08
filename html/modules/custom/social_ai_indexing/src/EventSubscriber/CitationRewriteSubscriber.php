@@ -75,6 +75,23 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
   public const NO_ANSWER_REASONS = ['no_valid_citations', 'empty_body'];
 
   /**
+   * The reason logged when the model's whole reply is a tool-call echo.
+   *
+   * gemini-3.8-flash sometimes answers with the provider's text for its own
+   * earlier tool-call turn ("Called ai_search_rag_search {...}") instead of
+   * answering (22.2-15; Phase 22 records 129, 174, 180, 198). It is still a
+   * no-answer with the one no-answer copy; the reason only makes it
+   * countable in answer_summary and the health report.
+   */
+  public const REASON_TOOL_CALL_ECHO = 'tool_call_echo';
+
+  /**
+   * One line of a tool-call echo: "Called <tool>" with optional JSON
+   * arguments, or the provider's "Called a tool." for a call it can't name.
+   */
+  private const ECHO_LINE = '/^Called (?:a tool\.|[A-Za-z_][A-Za-z0-9_:\-]*(?:\s+(?:\{.*\}|\[.*\]))?)$/';
+
+  /**
    * The runtime support check; NULL leaves answers unchecked.
    */
   private ?SupportCheck $supportCheck = NULL;
@@ -160,6 +177,7 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
     $in_group = $hint !== NULL && $hint !== '';
 
     $text = $message->getText();
+    $model_text = $text;
     $found = self::countLabels($text);
     $kept = 0;
     $check = ['status' => 'skipped', 'cited' => 0, 'kept' => 0, 'trimmed' => 0, 'dropped' => 0];
@@ -184,6 +202,11 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
         // 4), never the uncited text (22-27 ruling, option A).
         $outcome = 'no_answer';
         $message->setText(CitedAnswer::noRelevantContent($in_group)->toMarkdown());
+        if (self::isToolCallEcho($model_text)) {
+          // Counted apart from an ordinary uncited reply; the reader sees
+          // the same copy.
+          $reason = self::REASON_TOOL_CALL_ECHO;
+        }
       }
       else {
         $outcome = 'fallback';
@@ -221,6 +244,26 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
       '@latency' => $latency,
       '@prompt_hash' => substr(hash('sha256', $event->getSystemPrompt()), 0, 12),
     ] + SupportCheck::logContext($check) + $tally->logContext());
+  }
+
+  /**
+   * Whether a reply is only the provider's wording for tool calls.
+   *
+   * TRUE when every non-empty line is "Called <tool>" with optional JSON
+   * arguments, or "Called a tool."; FALSE for empty text and for any reply
+   * with a line of anything else.
+   */
+  public static function isToolCallEcho(string $text): bool {
+    $lines = array_filter(array_map('trim', preg_split('/\R/', $text) ?: []), static fn (string $line): bool => $line !== '');
+    if ($lines === []) {
+      return FALSE;
+    }
+    foreach ($lines as $line) {
+      if (preg_match(self::ECHO_LINE, $line) !== 1) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**

@@ -151,9 +151,14 @@ final class ImportSearchableVerifier {
 
   /**
    * S5 for Library test: M 21, N 20, no text 1.
+   *
+   * Asked as the organizer: the numbers only count Topics the viewer may see
+   * (8d873ee), and the Library test group is members-only, so drush's
+   * anonymous user would count none.
    */
   private function checkS5(): void {
-    $numbers = \Drupal::service('localnodes_import.search_status')->forGroup((int) $this->seed['groups']['LIB']);
+    $organizer = \Drupal::entityTypeManager()->getStorage('user')->load($this->seed['users']['organizer']);
+    $numbers = \Drupal::service('localnodes_import.search_status')->forGroup((int) $this->seed['groups']['LIB'], $organizer);
     $this->summary['S5 Library test'] = sprintf('%d of %d searchable (no readable text %d, waiting %d)', $numbers['searchable'], $numbers['total'], $numbers['no_text'], $numbers['waiting']);
     $this->check('S5 total (M) is 21', $numbers['total'] === 21, (string) $numbers['total']);
     $this->check('S5 searchable (N) is 20', $numbers['searchable'] === 20, (string) $numbers['searchable']);

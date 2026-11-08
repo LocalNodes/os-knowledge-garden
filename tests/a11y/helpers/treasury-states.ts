@@ -249,6 +249,69 @@ export function stewardStates(o: StateOptions = {}): void {
     });
   });
 
+  // Lost and dropped sends (21-25 fixes 15 to 19), on "A11y Fund Recovery".
+  // seed-treasury.php writes the payments and the key-value marks the
+  // product's chain searches leave; the RPC fixture has no logs or mempool.
+  test.describe('Lost and dropped sends (fixes 15 to 19)', () => {
+    const DROPPED_NOTE = 'The last send of this payment never reached the public record, so nothing was sent. It can be sent again.';
+
+    test('T6 payment: failed after a dropped send (fix 15)', async ({ page }) => {
+      setScenario('ok');
+      forget(t.safes.recovery);
+      await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.failed}`);
+      await expect(page.getByText("This payment didn't go through. No money moved.")).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
+      await audit(page, 'payment', 'failed', SCOPE);
+    });
+
+    test('T6 payment: ran but failed (fix 19)', async ({ page }) => {
+      setScenario('ok');
+      await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.ran_failed}`);
+      await expect(page.getByText("This payment ran but failed, so nothing was sent. Propose it again if it's still needed.")).toBeVisible();
+      await expect(page.getByText("This payment didn't go through.")).toHaveCount(0);
+      await expect(page.getByRole('link', { name: /^See the public record on / })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
+      await audit(page, 'payment', 'ran-but-failed', SCOPE);
+    });
+
+    test('T6 payment: Replaced (fix 17)', async ({ page }) => {
+      setScenario('ok');
+      await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.replaced}`);
+      await expect(page.getByText("Another payment or change from the group fund was sent in its place, so this one can't be sent. Propose it again if it's still needed.")).toBeVisible();
+      await expect(page.getByRole('button', { name: /^(Send|Approve) payment$/ })).toHaveCount(0);
+      await audit(page, 'payment', 'replaced', SCOPE);
+    });
+
+    test('T6 payment: resendable after a dropped send (fix 15)', async ({ page }) => {
+      setScenario('ok');
+      await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.resendable}`);
+      await expect(page.getByText(DROPPED_NOTE)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Send payment' })).toBeVisible();
+      await audit(page, 'payment', 'resendable', SCOPE);
+    });
+
+    test('T1 payments list with the lost-send rows (fix 18)', async ({ page }) => {
+      setScenario('ok');
+      forget(t.safes.recovery);
+      await openFund(page, t.groups.recovery);
+      await expectSuccessfulRead(page);
+      await expect(page.getByText("Didn't go through", { exact: true })).toHaveCount(2);
+      await expect(page.getByText('Replaced', { exact: true })).toHaveCount(1);
+      await expect(page.getByText('Ready to send', { exact: true })).toHaveCount(1);
+      await audit(page, 'treasury', 'recovery-list', SCOPE);
+    });
+
+    test('T7 approval settings: payments list with the lost-send rows (fix 18)', async ({ page }) => {
+      setScenario('ok');
+      await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.recovery}`);
+      await expect(page.getByRole('button', { name: 'Save approval settings' })).toBeVisible();
+      await expect(page.getByText("Didn't go through", { exact: true })).toHaveCount(2);
+      await expect(page.getByText('Replaced', { exact: true })).toHaveCount(1);
+      await expect(page.getByText('Ready to send', { exact: true })).toHaveCount(1);
+      await audit(page, 'approval-settings', 'recovery-list', SCOPE);
+    });
+  });
+
   test.describe('T1 states with nothing to read', () => {
     test('T1 setup not finished (organizer)', async ({ page }) => {
       await page.goto(`/group/${t.groups.setup}/treasury`);
@@ -553,6 +616,26 @@ export function memberStates(o: StateOptions = {}): void {
     await expect(page.getByText('It has enough approvals. An organizer will send it.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
     await audit(page, 'payment', 'member', SCOPE);
+  });
+
+  // Lost and dropped sends (21-25 fixes 15, 17, 18 and 19) as a member.
+  test('T1 member payments list with the lost-send rows', async ({ page }) => {
+    setScenario('ok');
+    forget(t.safes.recovery);
+    await openFund(page, t.groups.recovery);
+    await expectSuccessfulRead(page);
+    await expect(page.getByText("Didn't go through", { exact: true })).toHaveCount(2);
+    await expect(page.getByText('Replaced', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Ready to send', { exact: true })).toHaveCount(1);
+    await audit(page, 'treasury', 'member-recovery-list', SCOPE);
+  });
+
+  test('T6 member payment, resendable after a dropped send', async ({ page }) => {
+    setScenario('ok');
+    await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.resendable}`);
+    await expect(page.getByText('The last send of this payment never reached the public record, so nothing was sent. It can be sent again.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
+    await audit(page, 'payment', 'member-resendable', SCOPE);
   });
 
   test('T8 member shared accounts, empty', async ({ page }) => {

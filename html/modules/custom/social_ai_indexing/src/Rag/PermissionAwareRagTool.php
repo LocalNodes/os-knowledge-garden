@@ -58,8 +58,17 @@ class PermissionAwareRagTool extends RagTool {
 
   /**
    * The most characters of one source's text the LLM receives.
+   *
+   * 3,200 since 22.2-15 (was 1,500; orchestrator ruling 2026-11-07). A
+   * source's excerpt joins its hit chunks in rank order, and 1,500 held only
+   * the top chunk of a page, so the short chunk that answered RQ-01 (ranked
+   * 2nd or 3rd for the question's words) never reached the model. 3,200
+   * holds any two whole chunks (the longest cleaned chunk in the lane's
+   * index is 1,467 characters) and the top three chunks RQ-01 needs (3,069).
+   * The live runner's 20,000 input-token cap per question still holds for a
+   * three-call turn over the full 12-source budget (ExcerptBudgetTest).
    */
-  public const EXCERPT_CHARS = 1500;
+  public const EXCERPT_CHARS = 3200;
 
   /**
    * The most sources labelled in one request.

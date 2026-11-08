@@ -1,33 +1,40 @@
 diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
 --- a/src/Plugin/AiProvider/GeminiProvider.php
 +++ b/src/Plugin/AiProvider/GeminiProvider.php
-@@ -247,6 +247,25 @@
-   public function setAuthentication(mixed $authentication): void {
-     $this->apiKey = $authentication;
-     $this->client = NULL;
-+  }
+@@ -256,6 +256,32 @@
+   }
+ 
+   /**
++   * The text sent for an earlier model turn that only called a tool.
++   *
++   * Gemini refuses an empty text part, so the turn needs some text. It is a
++   * neutral mark, not a description of the call: a turn that read
++   * 'Called ai_search_rag_search {...}' was copied back by gemini-3.8-flash
++   * as its whole final answer. The real functionCall parts can't be sent
++   * instead: Gemini 3 wants each one back with its thought signature, and
++   * the AI module's tool-call objects don't keep it.
++   */
++  public const TOOL_TURN_TEXT = '…';
 +
 +  /**
-+   * Describes a model turn's tool calls, for a turn that has no text.
++   * The text for a model turn that has tool calls and no text.
 +   *
 +   * @param \Drupal\ai\OperationType\Chat\ChatMessage $message
 +   *   A model message.
 +   *
 +   * @return string
-+   *   For example 'Called ai_search_rag_search {"index":"social_posts"}',
-+   *   one line per call. Never empty.
++   *   Always TOOL_TURN_TEXT. Never empty, and never the call's name or
++   *   arguments.
 +   */
 +  protected function describeToolCalls(ChatMessage $message): string {
-+    $calls = [];
-+    foreach ($message->getTools() ?? [] as $tool) {
-+      $function = $tool->getOutputRenderArray()['function'] ?? [];
-+      $calls[] = trim('Called ' . ($function['name'] ?? 'a tool') . ' ' . ($function['arguments'] ?? ''));
-+    }
-+    return $calls ? implode("\n", $calls) : 'Called a tool.';
-   }
- 
-   /**
-@@ -269,6 +288,10 @@
++    return self::TOOL_TURN_TEXT;
++  }
++
++  /**
+    * {@inheritdoc}
+    *
+    * @param array|string|\Drupal\ai\OperationType\Chat\ChatInput $input
+@@ -275,6 +301,10 @@
  
        /** @var \Drupal\ai\OperationType\Chat\ChatMessage $message */
        foreach ($input->getMessages() as $message) {
@@ -38,14 +45,15 @@ diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/Ge
          if ($message->getRole() == 'system') {
            $message->setRole('model');
          }
-@@ -287,8 +310,13 @@
+@@ -293,8 +323,14 @@
            throw new AiResponseErrorException($error_message);
          }
  
 -        // Build the content data.
 -        $content_parts[] = $message->getText();
 +        // Build the content data. A model turn that only called a tool has
-+        // no text, and Gemini rejects an empty text part, so name the call.
++        // no text, and Gemini rejects an empty text part, so it gets a
++        // neutral mark (see TOOL_TURN_TEXT).
 +        $message_text = $message->getText();
 +        if ($message_text === '' && $message->getRole() == 'model') {
 +          $message_text = $this->describeToolCalls($message);

@@ -365,6 +365,15 @@ export async function walkTabOrder(page: Page, { cap = 600 } = {}): Promise<Walk
       break;
     }
     backward.push(stop);
+    // Shift+Tab is done once it reaches the first stop of the forward walk.
+    // Counting only a return to backward[0] is not enough: when the page's
+    // last stop is a control with no data-kbd-id (Open Social 13.1's emoji
+    // picker builds its buttons inside a shadow root after INSTALL ran), that
+    // return never matches, and the walk circles the page twice.
+    if (forward.length && stop.path && stop.path === forward[0].path) {
+      wrappedBack = true;
+      break;
+    }
   }
   return { forward, backward, wrapped, wrappedBack };
 }

@@ -28,6 +28,11 @@ final class ImportBatch {
 
   /**
    * The AI indexes whose post-request indexing is deferred during import.
+   *
+   * Open Social's Solr indexes, social_content and social_all, are
+   * deliberately not deferred (Phase 22.2 D-05): each batch request posts its
+   * one Topic to Solr at request end, which is one Solr update and no Gemini
+   * call, so imported Topics are keyword-searchable at once.
    */
   public const DEFERRED_INDEXES = ['social_posts', 'social_comments'];
 

@@ -22,9 +22,14 @@
  * here are test values on a local site.
  *
  * Prints one machine-readable line, LN_TREASURY={json}, with:
- * - groups: filled, old, never, setup, failed, retired, sending, empty;
+ * - groups: filled, old, never, setup, failed, retired, sending, recovery,
+ *   empty;
  * - safes: the same keys (except empty) => Safe account id;
- * - payments: approve, ready, waiting, executed;
+ * - payments: approve, ready, waiting, executed, and the lost-send states
+ *   of "A11y Fund Recovery" (21-25 fixes 15 to 19): failed, ran_failed,
+ *   replaced, resendable. Their key-value marks are the ones the product
+ *   writes after its chain searches (ReceiptStatusUpdater's collections),
+ *   set here because the RPC fixture has no logs or mempool to search;
  * - steward, member: user ids;
  * - personal: the steward's personal shared account id, or null (none is
  *   seeded: the T4 personal create form needs the steward to have none).
@@ -41,6 +46,7 @@ use Drupal\group\Entity\Group;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
 use Drupal\safe_smart_accounts\Service\ChainSnapshotStore;
+use Drupal\safe_smart_accounts\Service\ReceiptStatusUpdater;
 use Drupal\safe_smart_accounts\Value\Address;
 use Drupal\user\Entity\User;
 use Drupal\user\UserInterface;
@@ -277,6 +283,9 @@ $plan = [
   'failed' => ['A11y Fund Failed', 'ethereum_sepolia', 'error', $owners, 2],
   'retired' => ['A11y Fund Retired', 'retired_net', 'active', $owners, 2],
   'sending' => ['A11y Fund Sending', 'base_sepolia', 'active', $owners, 2],
+  // Lost and dropped sends (21-25 fixes 15 to 19), on a fund of their own so
+  // the other funds' next-in-line payments don't change.
+  'recovery' => ['A11y Fund Recovery', 'ethereum_sepolia', 'active', $owners, 2],
 ];
 foreach ($plan as $key => [$label, $network, $status, $signers, $threshold]) {
   $group = ln_group($label, $steward, $member);
@@ -292,6 +301,7 @@ $groups['empty'] = $garden ? (int) reset($garden)->id() : NULL;
 $storage = \Drupal::entityTypeManager()->getStorage('safe_account');
 $filled = $storage->load($safes['filled']);
 $sending = $storage->load($safes['sending']);
+$recovery = $storage->load($safes['recovery']);
 $now = \Drupal::time()->getRequestTime();
 
 $payments = [
@@ -321,7 +331,49 @@ $payments = [
     'signed_by' => [LN_OWNER_A, LN_OWNER_B],
     'hash' => ln_hash('waiting'),
   ]),
+  // Fix 15: a dropped send whose nonce the Safe moved past with no
+  // execution of it on the public record. Failed, its hash cleared.
+  'failed' => ln_payment($recovery, $steward, 'Banner for the harvest fair', [
+    'nonce' => LN_CHAIN_NONCE - 3,
+    'status' => 'failed',
+    'signed_by' => [LN_OWNER_A, LN_OWNER_B],
+    'value' => '30000000000000000',
+  ]),
+  // Fix 19: the execution search found the Safe ran it and its call failed
+  // (ExecutionFailure). Failed, with the transaction that ran it.
+  'ran_failed' => ln_payment($recovery, $steward, 'Water tank deposit', [
+    'nonce' => LN_CHAIN_NONCE - 2,
+    'status' => 'failed',
+    'signed_by' => [LN_OWNER_A, LN_OWNER_B],
+    'hash' => ln_hash('ran-failed'),
+    'value' => '40000000000000000',
+  ]),
+  // Fix 17: no hash, the Safe moved past its nonce, and the search found no
+  // execution of it. "Replaced".
+  'replaced' => ln_payment($recovery, $steward, 'Printing the seed catalogue', [
+    'nonce' => LN_CHAIN_NONCE - 1,
+    'signed_by' => [LN_OWNER_A],
+    'value' => '15000000000000000',
+  ]),
+  // Fix 15: the last send never reached the public record and the Safe is
+  // still at its nonce. Pending again, hash cleared, "Send payment" back.
+  'resendable' => ln_payment($recovery, $steward, 'Mulch for the orchard', [
+    'nonce' => LN_CHAIN_NONCE,
+    'signed_by' => [LN_OWNER_A, LN_OWNER_B],
+    'value' => '25000000000000000',
+  ]),
 ];
+
+// The marks the product's searches leave (ReceiptStatusUpdater), keyed by
+// payment ID. Rewritten on every run; the payments themselves are found by
+// description.
+$kv = \Drupal::keyValue(ReceiptStatusUpdater::EXECUTION_FAILED_COLLECTION);
+$kv->set((string) $payments['ran_failed'], ['hash' => ln_hash('ran-failed'), 'at' => $now - 1800]);
+\Drupal::keyValue(ReceiptStatusUpdater::REPLACED_COLLECTION)
+  ->set((string) $payments['replaced'], ['at' => $now - 1800, 'to' => 1000]);
+\Drupal::keyValue(ReceiptStatusUpdater::DROPPED_COLLECTION)
+  ->set((string) $payments['resendable'], ['hash' => ln_hash('dropped'), 'at' => $now - 1800]);
+ln_invalidate((int) $recovery->id());
 
 // "A11y Fund Old": last read 3 hours ago, 0.52 ETH and 120 USDC.
 $old = $storage->load($safes['old']);
