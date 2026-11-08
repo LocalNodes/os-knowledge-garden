@@ -4,6 +4,9 @@
   "type": "module",
   "description": "MetaMask (Synpress) suites for Phase 21: a local recording on the 84532 anvil chain (21-45 Task A) and a CI-only live-Sepolia run (Task B). Installed with --ignore-scripts and exact pins; Playwright is the fresh3-work root copy.",
   "scripts": {
+    "list": "node ../../node_modules/@playwright/test/cli.js test -c playwright.config.ts --list",
+    "e2e": "node ../../node_modules/@playwright/test/cli.js test -c playwright.config.ts",
+    "cache": "node cache-live.ts",
     "local": "node ../../node_modules/@playwright/test/cli.js test -c local.config.ts",
     "cache:local": "node cache-local.ts"
   },

@@ -1,0 +1,145 @@
+name: Nightly wallet e2e (live Sepolia)
+
+# Phase 21, plans 21-45 (the suite) and 21-46 (this job): one run a night of real MetaMask against
+# live Ethereum Sepolia. The job builds the site image from the checked-out commit, starts it on
+# http://localhost:8080 with the repo's compose file and tests/e2e-live/compose.ci.yaml, seeds a CI
+# organizer and group, builds the wallet's MetaMask profile, and runs tests/e2e-live's live suite:
+# SIWE sign-in, group fund set-up, funding, propose, approve, send, and a balance read checked
+# against eth_getBalance. See tests/e2e-live/README.md.
+#
+# Schedule and manual dispatch only. No PR or push trigger, so a forked PR can never reach
+# the secrets, and the job runs on main only. The wallet is a throwaway test wallet; its seed lives
+# only in a repository secret.
+# Reads: the wallet's seed secret (the cache-build step only, in its env), the wallet's password
+# secret (the cache-build and test steps only: the test unlocks MetaMask with it),
+# secrets.SEPOLIA_RPC_URL (optional: the compose-up and test steps only; the registry's public RPC
+# is the fallback), vars.SYNPRESS_WALLET_ADDRESS (public). Nothing else.
+# No artifacts are uploaded: no MetaMask profile, no trace, no screenshot, no build record.
+#
+# Concurrency: governance-smoke.yml pays from the same wallet, so both workflows share the group
+# sepolia-test-wallet. A run waits for the other workflow's run to finish rather than sending from
+# the wallet at the same time (two senders could clash on its nonce).
+#
+# The stack is started by naming its services (opensocial and the three it depends on). Any other
+# service in docker-compose.yaml, such as a gas-sponsor relayer, is never pulled or started.
+
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sepolia-test-wallet
+  cancel-in-progress: false
+
+jobs:
+  live-sepolia:
+    # Main only: a dispatch from another ref would hand the seed to unreviewed workflow code.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the site image from this commit (loaded locally, not pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          # No build record artifact and no summary: this job uploads nothing.
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+          DOCKER_BUILD_SUMMARY: 'false'
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          push: false
+          tags: os-knowledge-garden:nightly
+          # Read build-image.yml's layer cache; write none.
+          cache-from: type=gha
+
+      - name: Read the Ethereum Sepolia registry entry
+        id: registry
+        run: |
+          set -euo pipefail
+          f=html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.ethereum_sepolia.yml
+          rpc=$(awk '/^rpc_urls:/ {r=1; next} r && /^[[:space:]]*-/ {gsub(/[\047" ]/, "", $2); print $2; exit}' "$f")
+          case "$rpc" in https://*) ;; *) echo "registry rpc url not found" >&2; exit 1 ;; esac
+          echo "rpc_url=$rpc" >> "$GITHUB_OUTPUT"
+
+      - name: Start the site (only the services this job needs)
+        env:
+          # Optional; compose.ci.yaml passes it to the site as SAFE_RPC_URL_ETHEREUM_SEPOLIA.
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+        run: docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml up -d opensocial mariadb solr qdrant
+
+      - name: Wait for the install (up to 20 minutes)
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 120); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/user/login || true)
+            if [ "$code" = "200" ]; then echo "The site answered 200 after about $((i * 10)) s."; exit 0; fi
+            if [ -z "$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml ps -q --status running opensocial)" ]; then
+              echo "The opensocial container is not running." >&2
+              break
+            fi
+            sleep 10
+          done
+          docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml logs --tail 200 opensocial
+          exit 1
+
+      - name: Seed the CI organizer and group
+        env:
+          WALLET_ADDRESS: ${{ vars.SYNPRESS_WALLET_ADDRESS }}
+        run: |
+          set -euo pipefail
+          out=$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml exec -T opensocial \
+            /var/www/html/vendor/bin/drush -r /var/www/html/html --uri=http://localhost:8080 \
+            php:script /opt/e2e-live/seed-live.php -- "$WALLET_ADDRESS")
+          printf '%s\n' "$out"
+          gid=$(printf '%s\n' "$out" | sed -n 's/^LN_LIVE_GROUP=\([0-9][0-9]*\)$/\1/p')
+          [ -n "$gid" ] || { echo "seed-live.php printed no LN_LIVE_GROUP" >&2; exit 1; }
+          echo "LN_LIVE_GROUP=$gid" >> "$GITHUB_ENV"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install the test packages (lockfiles only, no install scripts)
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm ci --prefix tests/e2e-live --ignore-scripts --legacy-peer-deps
+
+      - name: Install Chromium for the root's pinned Playwright 1.63.0
+        run: node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Build the wallet's MetaMask profile
+        env:
+          SYNPRESS_SEED_PHRASE: ${{ secrets.SYNPRESS_SEED_PHRASE }}
+          SYNPRESS_WALLET_PASSWORD: ${{ secrets.SYNPRESS_WALLET_PASSWORD }}
+        run: xvfb-run -a npm --prefix tests/e2e-live run cache
+
+      - name: Live Sepolia wallet run
+        env:
+          SYNPRESS_WALLET_PASSWORD: ${{ secrets.SYNPRESS_WALLET_PASSWORD }}
+          LN_LIVE_BASE_URL: http://localhost:8080
+          LN_LIVE_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || steps.registry.outputs.rpc_url }}
+          LN_LIVE_WALLET_ADDRESS: ${{ vars.SYNPRESS_WALLET_ADDRESS }}
+        run: xvfb-run -a npm --prefix tests/e2e-live run e2e
+
+      - name: Site log tail
+        if: always()
+        run: docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml logs --tail 150 opensocial || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml down -v --remove-orphans
