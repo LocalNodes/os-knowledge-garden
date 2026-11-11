@@ -1,6 +1,6 @@
-# OS Knowledge Garden
+# LocalNodes
 
-A knowledge management platform built on [Open Social](https://www.drupal.org/project/social) with AI-powered search, embeddings, and related content discovery. Uses Gemini for LLM operations and Qdrant for vector storage.
+A community library with an AI assistant that answers questions using your group's documents and links to its sources, built on [Open Social](https://www.drupal.org/project/social).
 
 ## Run it on a server
 
