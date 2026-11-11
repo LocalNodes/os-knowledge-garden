@@ -276,7 +276,8 @@ final class SiteExportTest extends KernelTestBase {
     $this->assertEqualsCanonicalizing(array_map(fn (string $table): string => $prefix . $table, array_merge($left_out, ['config'])), $seen);
     $sql = gzdecode(file_get_contents($folder . '/database.sql.gz'));
     $this->assertStringContainsString('INSERT INTO `exporttest_content`', $sql);
-    $this->assertMatchesRegularExpression('/INSERT INTO `[a-z0-9_]*config` .*VALUES/', $sql);
+    // On SQLite the test prefix ends with a dot, so the table name may hold one.
+    $this->assertMatchesRegularExpression('/INSERT INTO `[a-z0-9_.]*config` .*VALUES/', $sql);
     $this->assertStringEndsWith("COMMIT;\nSET FOREIGN_KEY_CHECKS=1;\nSET autocommit=1;\n", $sql);
 
     // The manifest names what the job asks for.
