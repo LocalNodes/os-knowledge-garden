@@ -158,7 +158,7 @@ final class LibraryWriterTest extends ImportKernelTestBase {
     $author = $this->createVerifiedUser('zelda_quinterro');
     $html = '<h2>How it works</h2><ul><li>Cook on Mondays</li></ul>'
       . '<p>See <a href="https://example.org/rota">the rota</a>. The heron nests by the north pond.</p>'
-      . '<script>alert("stolen")</script><style>.x{color:red}</style>';
+      . '<script>alert("stolen")</script><style>.x{color:red}</style>'; // raw-color-allow: test input, a style block the library copy must drop
     $node = $this->page('topic', 'Plan - 2025: draft', $html, 'group', $group, [
       'uid' => $author->id(),
       'field_topic_type' => $term->id(),
@@ -190,7 +190,7 @@ final class LibraryWriterTest extends ImportKernelTestBase {
     $this->assertStringContainsString('[the rota](https://example.org/rota)', $text);
     $this->assertStringContainsString('The heron nests by the north pond.', $text);
     $this->assertStringNotContainsString('stolen', $text);
-    $this->assertStringNotContainsString('color:red', $text);
+    $this->assertStringNotContainsString('color:red', $text); // raw-color-allow: test input, a style block the library copy must drop
     $this->assertStringNotContainsString('zelda', $text);
     $this->assertStringNotContainsString('quinterro', $text);
   }
