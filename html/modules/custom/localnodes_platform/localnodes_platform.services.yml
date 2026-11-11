@@ -30,3 +30,9 @@ services:
   localnodes_platform.organizer_activation:
     class: Drupal\localnodes_platform\OrganizerActivation
     arguments: ['@state', '@entity_type.manager', '@?email_factory', '@logger.factory', '@lock']
+  # 22.2 export: drush localnodes:export writes one
+  # archive a community can restore on its own server. key.repository is
+  # optional so Kernel tests without the key module still build a container.
+  localnodes_platform.site_exporter:
+    class: Drupal\localnodes_platform\Export\SiteExporter
+    arguments: ['@database', '@config.factory', '@file_system', '@module_handler', '@extension.list.module', '@?key.repository']

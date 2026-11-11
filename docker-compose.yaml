@@ -28,8 +28,15 @@ services:
       DEMO_MODULE: ${DEMO_MODULE:-localnodes_demo}
       DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
       DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
-      DRUPAL_ADMIN_PASS: ${DRUPAL_ADMIN_PASS:-admin}
+      # Empty (the default) = a random admin password that is never shown; first sign-in is
+      # `drush user:login` (docs/SELF-HOST.md). DRUPAL_ADMIN_EMAIL empty = admin@example.com.
+      DRUPAL_ADMIN_PASS: ${DRUPAL_ADMIN_PASS:-}
+      DRUPAL_ADMIN_EMAIL: ${DRUPAL_ADMIN_EMAIL:-}
       SERVICE_FQDN_OPENSOCIAL: ${SERVICE_FQDN_OPENSOCIAL:-}
+      # The address people open, with its scheme (https://community.example.org). drush uses it
+      # for links in mail the background worker sends; unset, the entrypoint falls back to
+      # https://<first SERVICE_FQDN_OPENSOCIAL entry>, then to http://localhost with a warning.
+      SERVICE_URL_OPENSOCIAL: ${SERVICE_URL_OPENSOCIAL:-}
       # Outbound mail. The app's .env only interpolates ${...} references; a variable
       # must be listed here to reach the container. RESEND_API_KEY feeds the SMTP
       # transport (settings.php) and the welcome mail (entrypoint). MAIL_FROM is the
@@ -86,6 +93,16 @@ services:
       # entrypoint). WORKER_ENABLED=false turns it off; WORKER_INTERVAL is in seconds.
       WORKER_ENABLED: ${WORKER_ENABLED:-true}
       WORKER_INTERVAL: ${WORKER_INTERVAL:-60}
+      # Gas-sponsor relayer (25-09, D-01): this instance's own relayer container, on the compose
+      # network only. gas_sponsor (25-10) reads these in settings.php. The token is the shared
+      # bearer; the relayer's private key never reaches this container. No depends_on on
+      # purpose: a relayer that is down must not keep the site from starting.
+      SPONSOR_RELAYER_URL: ${SPONSOR_RELAYER_URL:-http://gas-sponsor-relayer:8080}
+      SPONSOR_RELAYER_TOKEN: ${SPONSOR_RELAYER_TOKEN:-}
+      # Fee-account low-balance alert floor in wei. Empty keeps gas_sponsor's own default
+      # (NetworkFeeAccountController::DEFAULT_LOW_BALANCE_WEI, 0.02 ETH); settings.php reads
+      # it only when it is all digits.
+      SPONSOR_RELAYER_LOW_BALANCE_WEI: ${SPONSOR_RELAYER_LOW_BALANCE_WEI:-}
     volumes:
       - opensocial-files:/var/www/html/html/sites/default/files
       - opensocial-private:/var/www/private
@@ -101,8 +118,13 @@ services:
       start_period: 300s
 
   mariadb:
-    image: mariadb:10.11
+    # 11.4 LTS: the server makes its own TLS certificate at start, and the app image's 11.x
+    # client verifies it through the account's password (zero-configuration TLS), so drush's
+    # sql commands (the site export) connect over verified TLS with no certificate files.
+    image: mariadb:11.4
     environment:
+      # A volume made by an older MariaDB (10.11 before 22.2) is upgraded in place on start.
+      MARIADB_AUTO_UPGRADE: "1"
       MYSQL_DATABASE: ${DB_NAME:-opensocial}
       MYSQL_USER: ${DB_USER:-opensocial}
       MYSQL_PASSWORD: ${DB_PASSWORD:-changeme}
@@ -110,7 +132,8 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER:-opensocial}", "-p${DB_PASSWORD:-changeme}"]
+      # 11.x images have no mysqladmin; healthcheck.sh uses the image's own healthcheck account.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -151,9 +174,45 @@ services:
       retries: 5
       start_period: 10s
 
+  # One relayer per community (D-01): it pays gas for sponsored governance transactions from its
+  # own key, generated at provisioning (provision-instance.yml) and held only as an env secret
+  # of this service. No ports are published (TM-87): the server binds 0.0.0.0 inside the image,
+  # so it must stay on the compose network, where only the opensocial service calls it.
+  # WEB3_ENABLED is the same variable the opensocial service reads. Off (the default) means the
+  # relayer runs keyless: it ignores the key and answers 503 web3_disabled to everything but
+  # /healthz (25-05). Funding any relayer with real money is the maintainer's call; nothing here does it.
+  # The image is pinned by digest: commit 550c0f2 of github.com/LocalNodes/gas-sponsor-relayer,
+  # built and published by that repo's image workflow. To move to a newer build, take the digest
+  # from that run's summary, check it with `docker buildx imagetools inspect`, and change it here.
+  gas-sponsor-relayer:
+    image: ghcr.io/localnodes/gas-sponsor-relayer@sha256:b9361ab86c9838ef2a2dffe10a51d88d397e0b595284625e4276656c918bd476
+    environment:
+      WEB3_ENABLED: ${WEB3_ENABLED:-false}
+      SPONSOR_RELAYER_PRIVATE_KEY: ${SPONSOR_RELAYER_PRIVATE_KEY:-}
+      SPONSOR_RELAYER_TOKEN: ${SPONSOR_RELAYER_TOKEN:-}
+      SPONSOR_RELAYER_COMMUNITY: ${SERVICE_FQDN_OPENSOCIAL:-}
+      # Spend caps in wei (D-19): 0.05 ETH per rolling 24 hours, 0.5 ETH per UTC month.
+      SPONSOR_RELAYER_CAP_DAY_WEI: ${SPONSOR_RELAYER_CAP_DAY_WEI:-50000000000000000}
+      SPONSOR_RELAYER_CAP_MONTH_WEI: ${SPONSOR_RELAYER_CAP_MONTH_WEI:-500000000000000000}
+      # Empty = the public RPC URLs in the relayer's config/networks.json.
+      SPONSOR_RELAYER_RPC_URL_11155111: ${SPONSOR_RELAYER_RPC_URL_11155111:-}
+      SPONSOR_RELAYER_RPC_URL_84532: ${SPONSOR_RELAYER_RPC_URL_84532:-}
+      # The default database is :memory:; keep the sqlite state (registrations, spend ledger,
+      # pending sends) on the volume so a redeploy loses nothing.
+      SPONSOR_RELAYER_DB: /data/relayer.sqlite
+    volumes:
+      - relayer-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   opensocial-files:
   opensocial-private:
   mariadb-data:
   solr-data:
   qdrant-data:
+  relayer-data:

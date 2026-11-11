@@ -15,15 +15,15 @@
  */
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { loadTokens, resolve as resolveSource } from '../lib/tokens.mjs';
 import * as leaf from '../lib/pairing.mjs';
 import { ACCENT_TEXT_RULES, THRESHOLDS, declaredPairings, pairing } from '../pairings.mjs';
 import { PARTNERS, STYLESHEETS, stylesheetFiles, stylesheetPairings } from '../lib/stylesheet_pairs.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
-const dir = mkdtempSync(join(tmpdir(), 'ln-stylesheet-pairs-test-'));
+const dir = testTmpDir('stylesheet-pairs');
 after(() => rmSync(dir, { recursive: true, force: true }));
 
 const TREE = loadTokens(null);

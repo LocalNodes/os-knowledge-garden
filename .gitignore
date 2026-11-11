@@ -148,3 +148,6 @@ html/sites/default/settings.local.php
 
 # Impeccable local state and critique snapshots (22.1-11); the snapshots are copied into the phase directory instead
 .impeccable/
+
+# Site export archives (drush localnodes:export); they hold private content.
+/exports/

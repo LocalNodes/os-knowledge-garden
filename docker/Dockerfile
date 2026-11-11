@@ -144,6 +144,13 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/worker-loop.sh /usr/local/bin/worker-loop.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/worker-loop.sh
 
+# The commit this image was built from, for drush localnodes:export's
+# manifest (the archive names the image a community restores with). CI passes
+# it (build-image.yml); a local build without it writes no file, and the
+# export falls back to git or leaves the commit empty.
+ARG LOCALNODES_BUILD_COMMIT=""
+RUN if [ -n "$LOCALNODES_BUILD_COMMIT" ]; then echo "$LOCALNODES_BUILD_COMMIT" > /var/www/html/BUILD_COMMIT; fi
+
 EXPOSE 80
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -31,6 +31,7 @@ PID="k3Jx9_Qm-2LpWv7RtYd4Nz"
 SECRET="shared-callback-secret"
 MANIFEST_SITE="Fern Hollow Commons"
 MANIFEST_EMAIL="organizer@fernhollow.example"
+MANIFEST_HOST="reports@host.example"
 # The four community texts (23-33) as base64url JSON, as the manifest carries them (23-34).
 SEED_B64="eyJhYm91dCI6IkZlcm4gSG9sbG93IENvbW1vbnMgaXMgYSBuZWlnaGJvcmhvb2QgZ3JvdXAgdGhhdCBzaGFyZXMgdG9vbHMgYW5kIG1lYWxzLiIsImdyb3VwX2Rlc2NyaXB0aW9uIjoiTmVpZ2hib3JzIG9mIEZlcm4gSG9sbG93IHNoYXJpbmcgdG9vbHMsIG1lYWxzIGFuZCByZXBhaXIgZGF5cy4iLCJhc3Npc3RhbnRfY29udGV4dCI6IkZlcm4gSG9sbG93IENvbW1vbnMgaXMgYSBuZWlnaGJvcmhvb2QgZ3JvdXAgdGhhdCBzaGFyZXMgdG9vbHMgYW5kIHBsYW5zIHJlcGFpciBkYXlzLiIsIndlbGNvbWVfcG9zdCI6IldlbGNvbWUgdG8gRmVybiBIb2xsb3cgQ29tbW9ucy4gU2F5IGhlbGxvIGFuZCB0ZWxsIHVzIHdoYXQgeW91IGNhbiBsZW5kLiJ9"
 TOKEN="$(printf '%s' "$PID" | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)"
@@ -78,7 +79,8 @@ JSON
   : > "$WORK/state/auth.log"
   cat > "$WORK/state/manifest.json" <<JSON
 {"provision_id":"$PID","subdomain":"demo","site_name":"$MANIFEST_SITE","organizer_email":"$MANIFEST_EMAIL",
- "topic_types_b64":"WyJHYXJkZW5zIl0","community_seed":"$SEED_B64","ai_provider":"gemini","ai_key_source":"platform"}
+ "topic_types_b64":"WyJHYXJkZW5zIl0","community_seed":"$SEED_B64","ai_provider":"gemini","ai_key_source":"platform",
+ "host_report_email":"$MANIFEST_HOST"}
 JSON
   : > "$WORK/github_env"
   : > "$WORK/summary.md"
@@ -277,6 +279,21 @@ check "the manifest is read from the pinned origin even when the environment hol
 reset_state; run_step "Fetch provision manifest" ok "${MF[@]}" CALLBACK_SECRET=
 check "an empty callback secret fails with manifest_failed before any request" '[ $RC -ne 0 ] && grep -qx "FAIL_REASON=manifest_failed" "$WORK/github_env" && [ ! -s "$WORK/state/requests.log" ]'
 
+echo "# Fetch provision manifest: the host's report address (23 Q5)"
+reset_state; run_step "Fetch provision manifest" ok "${MF[@]}"
+check "the host report address reaches GITHUB_ENV as HOST_REPORT_EMAIL, masked and never printed otherwise" \
+  '[ $RC -eq 0 ] && [ "$(genv HOST_REPORT_EMAIL)" = "$MANIFEST_HOST" ] && grep -qx "::add-mask::$MANIFEST_HOST" <<<"$OUT" && [ "$(grep -F -- "$MANIFEST_HOST" <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
+reset_state; jq 'del(.host_report_email)' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+run_step "Fetch provision manifest" ok "${MF[@]}"
+check "a manifest without a host report address still passes and leaves HOST_REPORT_EMAIL empty" \
+  '[ $RC -eq 0 ] && [ -z "$(genv HOST_REPORT_EMAIL)" ] && [ "$(genv SITE_NAME)" = "$MANIFEST_SITE" ]'
+for BADHOST in "$(printf 'a@b.example\nBASH_ENV=/tmp/x')" 'a@b.example, c@d.example' 'not-an-address' 'a b@c.example'; do
+  reset_state; jq --arg v "$BADHOST" '.host_report_email = $v' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+  run_step "Fetch provision manifest" ok "${MF[@]}"
+  check "a host report address that is not one plain address ('$(printf '%.12s' "$BADHOST" | tr '\n' ' ')...') fails with manifest_failed and writes nothing" \
+    '[ $RC -ne 0 ] && grep -qx "FAIL_REASON=manifest_failed" "$WORK/github_env" && [ -z "$(genv SITE_NAME)" ] && [ -z "$(genv HOST_REPORT_EMAIL)" ] && ! grep -q BASH_ENV "$WORK/github_env"'
+done
+
 echo "# Fetch provision manifest: the community seed (23-34)"
 for BADSEED in 'abc+def/ghi=' 'has space' 'ev"il' "$(printf 'a\nb')" "$(head -c 16385 /dev/zero | tr '\0' 'A')"; do
   reset_state; jq --arg v "$BADSEED" '.community_seed = $v' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
@@ -325,10 +342,10 @@ reset_state; run_step "Configure environment variables" post409_once "${CONFIG_D
 check "409 from a concurrent create is retried and succeeds" '[ $RC -eq 0 ] && [ "$(stored ORGANIZER_EMAIL)" = o@example.org ]'
 
 # DEMO_MODULE_INPUT=none keeps MAIL_FROM out, and the fixture store holds every key up to the
-# organizer email (and no site name is set), so ORGANIZER_EMAIL is the first missing (POSTed)
-# key
+# relayer key (and no site name is set), so SPONSOR_RELAYER_PRIVATE_KEY (25-09) is the first
+# missing (POSTed) key
 reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" ORGANIZER_EMAIL=o@example.org DEMO_MODULE_INPUT=none SITE_NAME=
-check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* ORGANIZER_EMAIL$" "$WORK/state/requests.log")" -eq 3 ]'
+check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* SPONSOR_RELAYER_PRIVATE_KEY$" "$WORK/state/requests.log")" -eq 3 ]'
 
 echo "# Codex re-check: curl exit status and duplicate deletion"
 reset_state; run_step "Configure environment variables" curl23 "${CONFIG_DEFAULTS[@]}"
@@ -382,7 +399,7 @@ SIGNUP=(DEMO_MODULE_INPUT=none CALLBACK_URL_INPUT=https://cb.test IMAGE_TAG_INPU
   GEMINI_API_KEY_SECRET=platform-gemini-secret RESEND_API_KEY_SECRET=r GEMINI_KEY_TIER_INPUT=paid
   PROVISION_ID_INPUT="$PID" ATTEMPT_INPUT=1 PROVISION_TOKEN="$TOKEN"
   SITE_NAME="$MANIFEST_SITE" ORGANIZER_EMAIL="$MANIFEST_EMAIL" TOPIC_TYPES_B64="$TOPICS_B64" COMMUNITY_SEED_B64="$SEED_B64"
-  AI_PROVIDER=gemini AI_KEY_SOURCE=platform PROVISION_CALLBACK_SECRET_VALUE="$SECRET")
+  AI_PROVIDER=gemini AI_KEY_SOURCE=platform PROVISION_CALLBACK_SECRET_VALUE="$SECRET" HOST_REPORT_EMAIL="$MANIFEST_HOST")
 flagged() {  # flagged KEY -> true when every body sent for KEY carried is_shown_once and is_literal true
   jq -s -e --arg k "$1" '[.[] | select(.key == $k)] | length > 0 and all(.is_shown_once == true and .is_literal == true)' "$WORK/state/bodies.log" >/dev/null
 }
@@ -396,6 +413,7 @@ check "a sign-up run passes and sets PROVISION_ID, PROVISION_ATTEMPT and the per
   '[ $RC -eq 0 ] && [ "$(stored PROVISION_ID)" = "$PID" ] && [ "$(stored PROVISION_ATTEMPT)" = 1 ] && [ "$(stored PROVISION_CALLBACK_TOKEN)" = "$TOKEN" ]'
 check "  ...SITE_NAME, ORGANIZER_EMAIL, LOCALNODES_TOPIC_TYPES (the manifest value as is), AI_PROVIDER and GEMINI_KEY_TIER" \
   '[ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored ORGANIZER_EMAIL)" = "$MANIFEST_EMAIL" ] && [ "$(stored LOCALNODES_TOPIC_TYPES)" = "$TOPICS_B64" ] && [ "$(stored AI_PROVIDER)" = gemini ] && [ "$(stored GEMINI_KEY_TIER)" = paid ]'
+check "  ...HOST_REPORT_EMAIL is stored as the manifest gave it (23 Q5)" '[ "$(stored HOST_REPORT_EMAIL)" = "$MANIFEST_HOST" ]'
 check "  ...LOCALNODES_COMMUNITY_SEED is stored exactly as received, unflagged like the page types (23-34)" \
   '[ "$(stored LOCALNODES_COMMUNITY_SEED)" = "$SEED_B64" ] && ! grep -qF -- "$SEED_B64" <<<"$OUT" && ! grep -qF -- "$SEED_B64" "$WORK/state/requests.log"'
 check "  ...a platform AI key keeps today's repository-secret GEMINI_API_KEY and sets no OpenRouter key" \
@@ -517,7 +535,7 @@ check "update_env sends the secret flag as is_shown_once and is_literal" 'grep -
 check "the workflow never calls update_env for the shared callback secret" '! grep -qx PROVISION_CALLBACK_SECRET <<<"$UPDATE_NAMES"'
 check "the Configure step no longer reads the shared secret" '! step_script "Configure environment variables" | grep -q PROVISION_CALLBACK_SECRET'
 check "every Phase 23 container name is set by update_env" \
-  '[ -z "$(for n in PROVISION_ID PROVISION_ATTEMPT PROVISION_CALLBACK_TOKEN SITE_NAME ORGANIZER_EMAIL LOCALNODES_TOPIC_TYPES LOCALNODES_COMMUNITY_SEED AI_PROVIDER GEMINI_KEY_TIER GEMINI_API_KEY OPENROUTER_API_KEY AI_BACKUP_PROVIDER AI_BACKUP_MODEL; do grep -qx "$n" <<<"$UPDATE_NAMES" || echo "$n"; done)" ]'
+  '[ -z "$(for n in PROVISION_ID PROVISION_ATTEMPT PROVISION_CALLBACK_TOKEN SITE_NAME ORGANIZER_EMAIL LOCALNODES_TOPIC_TYPES LOCALNODES_COMMUNITY_SEED AI_PROVIDER GEMINI_KEY_TIER GEMINI_API_KEY OPENROUTER_API_KEY AI_BACKUP_PROVIDER AI_BACKUP_MODEL HOST_REPORT_EMAIL; do grep -qx "$n" <<<"$UPDATE_NAMES" || echo "$n"; done)" ]'
 
 echo "# Retry reuses its own half-made app (D-15, D-18, Pitfall 5)"
 RETRY=(PROVISION_ID_INPUT="$PID" ATTEMPT_INPUT=2)
@@ -562,7 +580,9 @@ echo "# A reused app keeps its generated secrets (its database already holds the
 seed_old_secrets() {
   reset_state
   jq 'map(if .key == "DB_PASSWORD" then .value = "olddbpass" elif .key == "DB_ROOT_PASSWORD" then .value = "oldrootpass"
-            elif .key == "DRUPAL_HASH_SALT" then .value = "oldsalt" elif .key == "DRUPAL_ADMIN_PASS" and (.is_preview | not) then .value = "oldadminpass" else . end)' \
+            elif .key == "DRUPAL_HASH_SALT" then .value = "oldsalt" elif .key == "DRUPAL_ADMIN_PASS" and (.is_preview | not) then .value = "oldadminpass" else . end)
+      + [{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$(printf 'ab%.0s' $(seq 32))"'","is_preview":false},
+         {"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$(printf 'cd%.0s' $(seq 32))"'","is_preview":false}]' \
     "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 }
 seed_old_secrets; run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2
@@ -573,6 +593,8 @@ sent_only() {  # sent_only KEY VALUE -> every body sent for KEY (and there is on
 }
 check "  ...and the only values sent for them are the held ones (no new secret is ever offered to the app)" \
   'sent_only DB_PASSWORD olddbpass && sent_only DB_ROOT_PASSWORD oldrootpass && sent_only DRUPAL_HASH_SALT oldsalt && sent_only DRUPAL_ADMIN_PASS oldadminpass'
+check "  ...the relayer key and token it holds are kept as well" \
+  'sent_only SPONSOR_RELAYER_PRIVATE_KEY "0x$(printf "ab%.0s" $(seq 32))" && sent_only SPONSOR_RELAYER_TOKEN "$(printf "cd%.0s" $(seq 32))" && [ "$(stored SPONSOR_RELAYER_TOKEN)" = "$(printf "cd%.0s" $(seq 32))" ]'
 check "  ...a kept secret is masked and never printed" \
   '[ "$(grep -F -e olddbpass -e oldrootpass -e oldadminpass -e oldsalt <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
 check "  ...the admin password read-back still passes (it checks the kept value)" 'grep -q "Verified DRUPAL_ADMIN_PASS" <<<"$OUT"'

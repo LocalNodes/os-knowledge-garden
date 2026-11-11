@@ -1,5 +1,7 @@
 # drupal.org Issue: Gemini provider chat_with_tools support and role mapping
 
+Status: draft, not posted (D-09). Nothing here has been filed on drupal.org; "Active" below is the status to choose when it is posted.
+
 ## Issue Metadata
 
 - **Title:** GeminiProvider: add chat_with_tools support, fix role mapping for ai_agents compatibility
@@ -35,7 +37,7 @@ The Gemini provider does not work with the AI Agents module (`ai_agents`) for to
 ### Proposed resolution
 
 - Add `chat_with_tools` to the list of supported operations
-- Map `assistant` → `model` and `tool` → `user` in message role handling
+- Map `assistant` → `model` and `tool` → `user` in message role handling. The mapping is done on copies of the messages, so the caller's `ChatMessage` objects keep their roles (see the follow-up issue "chat() changes the roles of the caller's ChatMessage objects", `patches/issues/gemini-provider-map-roles-on-copies.md`)
 - Handle system prompt from `ChatInput::getSystemPrompt()` with legacy fallback, using `withSystemInstruction()`
 - Return tool calls as `ToolsFunctionOutput` objects instead of executing them internally
 - Use `model` as the role in `ChatMessage` constructor

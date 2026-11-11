@@ -1,0 +1,15 @@
+diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
+--- a/src/Plugin/AiProvider/GeminiProvider.php
++++ b/src/Plugin/AiProvider/GeminiProvider.php
+@@ -308,6 +308,11 @@
+         // carried the texts of all earlier messages too.
+         $content_parts = [];
+ 
++        // The role mapping below must not change the caller's objects: they
++        // are the agent's chat history, and a tool result relabelled as user
++        // hides it from later checks.
++        $message = clone $message;
++
+         if ($message->getRole() == 'system') {
+           $message->setRole('model');
+         }

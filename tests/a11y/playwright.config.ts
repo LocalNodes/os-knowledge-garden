@@ -66,6 +66,8 @@ STEWARD_SPECS.push('governance-keyboard.spec.ts');
 // Results go to the 22.1 folder.
 ANONYMOUS_SPECS.push('safety-help.spec.ts');
 MEMBER_SPECS.push('safety-help.spec.ts');
+// WINDOWS 46: the "Joined" button's computed colours, as the member (who has joined the a11y group).
+MEMBER_SPECS.push('joined-button.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test (22-30). The CLI's
 // --trace flag also works; there's no CLI flag for video.

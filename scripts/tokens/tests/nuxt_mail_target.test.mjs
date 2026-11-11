@@ -19,11 +19,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyRepo } from './helpers/repo_copy.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -56,7 +57,7 @@ function run(script, args, cwd = tmpdir()) {
 
 /** A directory that looks like a Nuxt checkout (it has nuxt.config.ts). Not adopted. */
 function fakeSibling() {
-  const dir = mkdtempSync(join(tmpdir(), 'ln-nuxt-mail-'));
+  const dir = testTmpDir('nuxt-mail');
   writeFileSync(join(dir, 'nuxt.config.ts'), 'export default defineNuxtConfig({})\n');
   return dir;
 }
@@ -230,7 +231,7 @@ test('the generated file present without the import counts as adopted: it is che
 });
 
 test('a missing sibling prints SKIP nuxt-mail (sibling not present), passes, and writes nothing', () => {
-  const absent = join(mkdtempSync(join(tmpdir(), 'ln-nuxt-mail-absent-')), 'no-such-dir');
+  const absent = join(testTmpDir('nuxt-mail-absent'), 'no-such-dir');
   const check = run(build, ['--check', '--sibling', absent]);
   assert.equal(check.code, 0, check.out);
   assert.match(check.out, /^SKIP nuxt-mail \(sibling not present\)/m);
@@ -289,7 +290,7 @@ test('a missing email role is ERROR naming it, exit 1', () => {
 test('--out-dir renders the mail file under _external/localnodes-onboarding whatever the adoption, and the sibling stays untouched', () => {
   for (const dir of [fakeSibling(), wiredSibling()]) {
     const before = readdirSync(dir).sort();
-    const out = mkdtempSync(join(tmpdir(), 'ln-nuxt-mail-out-'));
+    const out = testTmpDir('nuxt-mail-out');
     const r = run(build, ['--out-dir', out, '--sibling', dir]);
     assert.equal(r.code, 0, r.out);
     const file = join(out, '_external', 'localnodes-onboarding', GENERATED_REL);
@@ -324,7 +325,7 @@ const skip = skipReason();
 test('the real mail-copy.ts: its MAIL_COLORS keys and values equal the generated ones, or its committed generated file is byte for byte the output', { skip }, () => {
   const mailCopy = gitShow(MAIL_COPY_REL);
   const wired = /\b(?:from|import)\s*['"]\.\/mail-colors\.generated(?:\.[cm]?[jt]s)?['"]/.test(mailCopy.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''));
-  const out = mkdtempSync(join(tmpdir(), 'ln-nuxt-mail-real-'));
+  const out = testTmpDir('nuxt-mail-real');
   const gen = run(build, ['--out-dir', out, '--sibling', join(out, 'no-sibling')]);
   assert.equal(gen.code, 0, gen.out);
   const generated = readFileSync(join(out, '_external', 'localnodes-onboarding', GENERATED_REL), 'utf8');
@@ -380,7 +381,7 @@ test('check_token_parity.mjs on a sibling that has not adopted the file prints S
 });
 
 test('check_token_parity.mjs prints SKIP nuxt-mail (sibling not present) and passes when the sibling is absent', () => {
-  const absent = join(mkdtempSync(join(tmpdir(), 'ln-nuxt-mail-absent-')), 'no-such-dir');
+  const absent = join(testTmpDir('nuxt-mail-absent'), 'no-such-dir');
   const r = run(parity, ['--sibling', absent]);
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /^SKIP nuxt-mail \(sibling not present\)/m);

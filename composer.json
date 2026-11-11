@@ -20,15 +20,17 @@
         "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
         "drupal/siwe_login": "1.0.0-beta9",
-        "drupal/safe_smart_accounts": "^1.0@alpha",
-        "drupal/group_treasury": "^1.0@alpha",
+        "drupal/safe_smart_accounts": "^1.0.0-alpha3@alpha",
+        "drupal/group_treasury": "^1.0.0-alpha4@alpha",
         "kornrunner/keccak": "^1.0",
         "simplito/elliptic-php": "^1.0",
         "brick/math": "^0.17 || ^1.0",
         "symfony/http-client": "^6.4.50",
         "fivefilters/readability.php": "^3.3",
         "drupal/ai_provider_openrouter": "1.1.9",
-        "drupal/ai_search": "^1.3@alpha"
+        "drupal/ai_search": "^1.3@alpha",
+        "drupal/safe_governance": "^1.0@dev",
+        "drupal/gas_sponsor": "^1.0@dev"
     },
     "require-dev": {
         "drupal/core-dev": "^10.6",
@@ -100,7 +102,8 @@
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch",
                 "Map Gemini API errors (429 quota/rate limit, 401/403, 400, 5xx) to the AI module exception types": "patches/gemini-provider-map-api-errors.patch",
                 "Reset content parts per message in chat(); send a neutral mark for a tool-call turn with no text": "patches/gemini-provider-reset-content-parts.patch",
-                "Add EmbeddingsCollectionInterface (batchEmbedContents) for drupal/ai 1.5 batch embeddings": "patches/gemini-provider-embeddings-collection.patch"
+                "Add EmbeddingsCollectionInterface (batchEmbedContents) for drupal/ai 1.5 batch embeddings": "patches/gemini-provider-embeddings-collection.patch",
+                "Map roles on copies in chat() so the caller's ChatMessage objects keep their roles": "patches/gemini-provider-map-roles-on-copies.patch"
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"

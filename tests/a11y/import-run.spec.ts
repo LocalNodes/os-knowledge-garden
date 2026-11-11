@@ -18,7 +18,7 @@
 //      report "This site blocks automatic imports…" (D-23); import; read the
 //      report;
 //   4. open an imported page and its Source box (S6);
-//   5. on the group's page, open the AI assistant and ask DEMO-SCRIPT's
+//   5. on the group's page, open the LocalNodes LiAIson assistant and ask DEMO-SCRIPT's
 //      first rehearsal question, RQ-01 (S7);
 //   6. extra, not part of the goal: search the site for "bioregionalism" to
 //      show the AI overview (S8).
@@ -96,7 +96,7 @@ test('recorded import run: files, five wiki pages, one question', async ({ page 
     const name = `step-${String(n).padStart(2, '0')}-${screen}`;
     await page.waitForLoadState('domcontentloaded');
     // First what the window shows, as a person sees it; then the whole page.
-    // A full-page shot draws the closed "AI assistant" panel (which sits
+    // A full-page shot draws the closed "LocalNodes LiAIson" panel (which sits
     // below the window) and, by resizing for a moment, makes socialblue
     // close an open tab list, so the window shot is the faithful one.
     await page.screenshot({ path: join(OUT, `${name}-window.png`) });
@@ -233,9 +233,9 @@ test('recorded import run: files, five wiki pages, one question', async ({ page 
 
   // 5. The group's assistant, one DEMO-SCRIPT question.
   await page.goto(`/group/${gid}`);
-  await page.getByRole('button', { name: 'AI assistant' }).click();
+  await page.getByRole('button', { name: 'LocalNodes Liaison, AI' }).click();
   await expect(page.getByText(/^Hi, I'm an AI assistant\./)).toBeVisible();
-  await capture('S7', 'Opened "AI assistant" on the group\'s page.');
+  await capture('S7', 'Opened "LocalNodes LiAIson" on the group\'s page.');
   const box = page.getByRole('textbox', { name: 'Ask a question' });
   await box.click();
   await box.pressSequentially(RQ01_QUESTION);
@@ -256,7 +256,7 @@ test('recorded import run: files, five wiki pages, one question', async ({ page 
 
   // Close the assistant, as a person done with it would (Escape, KB-07).
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'AI assistant' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: 'LocalNodes Liaison, AI' })).toHaveAttribute('aria-expanded', 'false');
 
   // 6. Extra: the search page's AI overview.
   await page.goto('/search/all/bioregionalism');

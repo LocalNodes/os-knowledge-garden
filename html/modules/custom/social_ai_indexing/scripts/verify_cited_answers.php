@@ -46,6 +46,12 @@
  *   --run-index=<n>               Internal: run only planned run n (the
  *                                 child process of the default mode).
  *
+ * E2 has three parts: the reply's role is not 'tool'; the returned message
+ * is the object the rewrite subscriber produced (identity, not a flag) or the
+ * fallback; and RawTextCheck compares the answer with the run's tool outputs
+ * (captured at ai_agents.tool_finished_executed) and the asked questions. The
+ * record holds tool_output_count; a Critical message carries a code only.
+ *
  * Exit 1 on any Critical failure (E1, E2, E3, E10). E5, E11 and E12 are
  * reported, not fatal; a run that errored twice (429/503) is reported as
  * incomplete, not as a failure.
@@ -66,6 +72,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\social_ai_indexing\Citation\CitationInvariants;
 use Drupal\social_ai_indexing\Citation\CitedAnswer;
 use Drupal\social_ai_indexing\Controller\AiOverviewController;
+use Drupal\social_ai_indexing\Eval\RawTextCheck;
 use Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber;
 use Drupal\social_ai_indexing\Service\AiOverviewService;
 use Drupal\user\Entity\User;
@@ -139,12 +146,22 @@ final class LiveRunCapture {
   public array $loops = [];
 
   /**
+   * Readable outputs of the assistant's tool calls in the current run.
+   *
+   * E2 compares the answer with these (RawTextCheck).
+   *
+   * @var list<string>
+   */
+  public array $toolOutputs = [];
+
+  /**
    * Starts a new run.
    */
   public function begin(): void {
     $this->requests = [];
     $this->open = [];
     $this->loops = [];
+    $this->toolOutputs = [];
   }
 
   /**
@@ -221,6 +238,19 @@ final class LiveRunCapture {
   public function onFinished(object $event): void {
     if (method_exists($event, 'getAgentId') && $event->getAgentId() === CitationRewriteSubscriber::AGENT_ID) {
       $this->loops[] = (int) $event->getLoopCount();
+    }
+  }
+
+  /**
+   * Keeps what a group_assistant tool call returned, for E2's content check.
+   */
+  public function onToolFinished(object $event): void {
+    if (!method_exists($event, 'getAgentId') || $event->getAgentId() !== CitationRewriteSubscriber::AGENT_ID) {
+      return;
+    }
+    $tool = method_exists($event, 'getTool') ? $event->getTool() : NULL;
+    if (is_object($tool) && method_exists($tool, 'getReadableOutput')) {
+      $this->toolOutputs[] = (string) $tool->getReadableOutput();
     }
   }
 
@@ -346,6 +376,7 @@ final class CitedAnswersLiveRunner {
     $dispatcher->addListener(PreGenerateResponseEvent::EVENT_NAME, [$this->capture, 'onPre'], -2000);
     $dispatcher->addListener(PostGenerateResponseEvent::EVENT_NAME, [$this->capture, 'onPost'], -2000);
     $dispatcher->addListener('ai_agents.finished_execution', [$this->capture, 'onFinished'], -2000);
+    $dispatcher->addListener('ai_agents.tool_finished_executed', [$this->capture, 'onToolFinished'], -2000);
     \Drupal::service('logger.factory')->addLogger($this->spy);
 
     $by_case = [];
@@ -447,8 +478,10 @@ final class CitedAnswersLiveRunner {
       if (!$mutate) {
         $model_called = TRUE;
         if ($records !== 1) {
-          $this->critical[] = sprintf('%s %s: the child process wrote %d records (expected 1); see its output.', $run['case'], $run['persona'], $records);
-          print $output;
+          // The child's raw output can hold exception or provider error text,
+          // so it is withheld; rerunning that one index shows it to the
+          // operator directly.
+          $this->critical[] = sprintf('%s %s: the child process wrote %d records (expected 1); its output (%d lines) is withheld; rerun with --run-index=%d to see it.', $run['case'], $run['persona'], $records, count(preg_split('/\R/', trim($output))), $index);
           break;
         }
         $last = end($this->records);
@@ -614,7 +647,10 @@ final class CitedAnswersLiveRunner {
         $record['answer'] = $answer;
         $registry = \Drupal::service('social_ai_indexing.source_registry');
         $record['registry'] = $this->registryRecords($registry->all(), $account);
-        $record['rewritten'] = $registry->wasRewritten();
+        // Identity, not the flag: the returned message must be the very
+        // object the subscriber rewrote.
+        $record['rewritten'] = $message instanceof ChatMessage && $registry->rewrittenMessage() === $message;
+        $record['tool_output_count'] = count($this->capture->toolOutputs);
         $record['invariant_violations'] = CitationInvariants::check($answer, $registry);
         $record['citations'] = $this->citations($answer, $registry->all());
         $record['error'] = NULL;
@@ -720,6 +756,7 @@ final class CitedAnswersLiveRunner {
       'answer' => '',
       'role' => NULL,
       'rewritten' => FALSE,
+      'tool_output_count' => 0,
       'outcome' => 'error',
       'fallback' => FALSE,
       'reason' => NULL,
@@ -1039,6 +1076,11 @@ final class CitedAnswersLiveRunner {
       if (!$record['rewritten'] && !$record['fallback']) {
         $fail('E2: the answer was neither rewritten nor replaced by the fallback', TRUE);
       }
+      // E2 by content: the answer must not be a tool output, hold a whole
+      // one, or be the question. Codes only, no text in the message.
+      foreach (RawTextCheck::findings($record['answer'], $this->capture->toolOutputs, $run['questions']) as $code) {
+        $fail('E2: ' . $code, TRUE);
+      }
       foreach (['[R', 'NO_RELEVANT_CONTENT', 'Search result: #', '<<<SOURCE_TEXT'] as $marker) {
         if (str_contains($record['answer'], $marker)) {
           $fail("E9: raw marker '$marker' in the answer", TRUE);
@@ -1239,6 +1281,9 @@ final class CitedAnswersLiveRunner {
 
   /**
    * A short error code for a failed run (class and status, no content).
+   *
+   * The message is read only to derive the status, quota and retry codes; its
+   * text never reaches the console or a record.
    */
   private static function errorCode(\Throwable $e): string {
     $message = $e->getMessage();
@@ -1249,7 +1294,7 @@ final class CitedAnswersLiveRunner {
       $quota .= ' daily_quota';
     }
     $retry = preg_match('/retry in ([0-9.]+)\s*s/i', $message, $r) ? ' retry_in=' . $r[1] . 's' : '';
-    return get_class($e) . ($status ? " $status" : '') . $quota . $retry . ' | ' . mb_substr(preg_replace('/\s+/', ' ', $message), 0, 300);
+    return get_class($e) . ($status ? " $status" : '') . $quota . $retry;
   }
 
   /**

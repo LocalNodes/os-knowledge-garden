@@ -11,3 +11,7 @@ services:
     class: Drupal\localnodes_platform\Drush\Commands\OrganizerCommands
     tags:
       - { name: drush.command }
+  localnodes_platform.export.drush.commands:
+    class: Drupal\localnodes_platform\Drush\Commands\SiteExportCommands
+    tags:
+      - { name: drush.command }

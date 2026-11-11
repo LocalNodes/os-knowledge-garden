@@ -31,6 +31,35 @@ function localnodes_web3_library_info_alter(array &$libraries, $extension) {
 }
 
 /**
+ * Implements hook_mail_alter().
+ *
+ * The organizers' vote-result emails from safe_governance_group (25-25,
+ * V9) end with the generic line "Sent by ‹site name›": that module names
+ * no distribution (D-03). On a LocalNodes site every mail goes out in the
+ * LocalNodes mail template, whose footer under the card reads
+ * "Sent by ‹community› · a community on LocalNodes", once (agreed
+ * wording; 23-13 T-5). So the generic line is taken out here, and the footer of
+ * these emails is the template's. Other mails are left alone.
+ */
+function localnodes_web3_mail_alter(array &$message) {
+  $keys = ['wrong_result', 'escalation', 'daily_mismatch'];
+  if (($message['module'] ?? '') !== 'safe_governance_group' || !in_array($message['key'] ?? '', $keys, TRUE)) {
+    return;
+  }
+  $site = (string) ($message['params']['site'] ?? '');
+  $body = $message['body'] ?? [];
+  if (!is_array($body) || $body === []) {
+    return;
+  }
+  $last = (string) end($body);
+  $footer = (string) t('Sent by @site', ['@site' => $site], ['langcode' => $message['langcode'] ?? NULL]);
+  if ($last === $footer) {
+    array_pop($body);
+    $message['body'] = $body;
+  }
+}
+
+/**
  * Implements hook_safe_smart_accounts_approve_help().
  *
  * "Hacked or phished? Get help" right after "Approve payment", on payments

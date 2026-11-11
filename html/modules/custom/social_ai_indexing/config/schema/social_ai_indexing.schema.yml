@@ -40,3 +40,6 @@ social_ai_indexing.settings:
     embedding_requests_per_minute:
       type: integer
       label: 'Indexing embeddings allowed per minute, counted in texts'
+    assistant_name:
+      type: label
+      label: 'Assistant name shown at the top of the chat (empty uses the default)'

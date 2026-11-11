@@ -11,11 +11,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadTokens, resolve as resolveSource } from '../lib/tokens.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -23,7 +24,7 @@ const build = resolve(repoRoot, 'scripts/tokens/build_tokens.mjs');
 const parity = resolve(repoRoot, 'scripts/check_token_parity.mjs');
 const stockFixture = resolve(repoRoot, 'scripts/tokens/fixtures/stock-socialblue.json');
 
-const sandbox = () => mkdtempSync(join(tmpdir(), 'ln-tokens-test-'));
+const sandbox = () => testTmpDir('tokens');
 
 // Colours these tests expect come from the token source, not from quotes of today's palette, so a palette swap
 // (22.1-09, scripts/tokens/prove_token_swap.sh) keeps them true.

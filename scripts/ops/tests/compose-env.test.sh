@@ -31,8 +31,7 @@ INSTALL="${INSTALL:-$REPO/html/modules/custom/localnodes_platform/localnodes_pla
 PROXIES="${PROXIES:-$REPO/html/sites/default/trusted-proxies.php}"
 
 INTERPOLATION_ONLY="IMAGE_TAG"
-LOCAL_ONLY="SPONSOR_RELAYER_URL SPONSOR_RELAYER_TOKEN SPONSOR_RELAYER_LOW_BALANCE_WEI IS_DDEV_PROJECT DDEV_HOSTNAME LOCALNODES_DEFER_INDEXING"   # DDEV-only, or per-command (entrypoint demo load); never container env
-# The SPONSOR_RELAYER_* reads in settings.php are inert until gas_sponsor and the relayer service ship (Phase 25 HOLD).
+LOCAL_ONLY="IS_DDEV_PROJECT DDEV_HOSTNAME LOCALNODES_DEFER_INDEXING"   # DDEV-only, or per-command (entrypoint demo load); never container env
 
 # The compose file is read with Ruby, or with Python and PyYAML where Ruby is missing.
 env_keys() {  # env_keys SERVICE -> the names in that service's environment block, one per line
@@ -49,6 +48,9 @@ print("\n".join(env.keys() if isinstance(env, dict) else [e.split("=", 1)[0] for
   fi
 }
 ENV_KEYS="$(env_keys opensocial)" || { echo "FAIL - could not parse $COMPOSE"; exit 1; }
+RELAYER_KEYS="$(env_keys gas-sponsor-relayer)" || { echo "FAIL - could not parse $COMPOSE"; exit 1; }
+# Written by the workflow for the relayer container only (25-09): the app container never gets it.
+RELAYER_ONLY="SPONSOR_RELAYER_PRIVATE_KEY"
 
 PASS=0; FAIL=0
 need() {  # need SOURCE KEY
@@ -59,7 +61,11 @@ need() {  # need SOURCE KEY
 for K in $(grep -oE 'update_env "[A-Z0-9_]+"' "$WF" | cut -d'"' -f2 | sort -u); do
   case " $INTERPOLATION_ONLY " in
     *" $K "*) grep -q "\${$K" "$COMPOSE" && PASS=$((PASS + 1)) || { FAIL=$((FAIL + 1)); echo "FAIL - $K not referenced in compose"; } ;;
-    *) need provision-instance.yml "$K" ;;
+    *)
+      case " $RELAYER_ONLY " in
+        *" $K "*) if grep -qx "$K" <<<"$RELAYER_KEYS"; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); echo "FAIL - $K is not in gas-sponsor-relayer.environment"; fi ;;
+        *) need provision-instance.yml "$K" ;;
+      esac ;;
   esac
 done
 for K in $(grep -ohE "getenv\('[A-Z0-9_]+'\)" "$SETTINGS" "$INSTALL" "$PROXIES" | cut -d"'" -f2 | sort -u); do

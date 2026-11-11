@@ -2,6 +2,7 @@ langcode: en
 status: true
 dependencies:
   module:
+    - safe_governance
     - safe_smart_accounts
 id: ethereum_sepolia
 label: 'Ethereum Sepolia'
@@ -27,12 +28,29 @@ contracts:
   safe_l2_singleton: ''
   safe_proxy_factory: '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67'
   fallback_handler: ''
-  reality: ''
-  hats: ''
+  reality: '0xaf33DcB6E8c5c4D9dDF579f53031b514d19449CA'
+  hats: '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137'
   eas: ''
   arbitrator: ''
   daostar: ''
 safe_version: '1.4.1'
+safe_app_short_name: sep
 block_seconds: 12
 drop_after_blocks: 50
 weight: 0
+third_party_settings:
+  safe_governance:
+    multi_send: '0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526'
+    multi_send_call_only: '0x9641d764fc13c8B624c04430C7356C1C7C8102e2'
+    create_call: '0x9b35Af71d77eaf8d7e40252370304687390A1A52'
+    zodiac_module_factory: '0x000000000000aDdB49795b0f9bA5BC298cDda236'
+    zodiac_reality_mastercopy: '0x4e35DA39Fa5893a70A40Ce964F993d891E607cC0'
+    ens_registrar: '0xf633e7FC17e2bbE0D0965D18ec1821dcB754a3d3'
+    ens_payment_token: '0x240b0316Df57887DBBE58b586508b19e633a14aa'
+    ens_universal_helper: '0xd453e5Bdb62CC3beA84341B1e306319C8Ffd7DFe'
+    snapshot_hub: 'https://testnet.hub.snapshot.org/graphql'
+    snapshot_sequencer: 'https://testnet.seq.snapshot.org/'
+    snapshot_app_url: 'https://snapshot.box/#/s-tn:{space}/proposal/{proposal}'
+    snapshot_network_id: '11155111'
+    reality_template_id: '130'
+    name_network: ethereum_sepolia

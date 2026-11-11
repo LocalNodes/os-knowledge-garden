@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +24,7 @@ const repoRoot = resolve(here, '../../..');
 const checker = resolve(repoRoot, 'scripts/tokens/check_contrast.mjs');
 const stockFixture = resolve(repoRoot, 'scripts/tokens/fixtures/stock-socialblue.json');
 
-const sandbox = () => mkdtempSync(join(tmpdir(), 'ln-contrast-test-'));
+const sandbox = () => testTmpDir('contrast');
 
 // The tests that run against the repo's own palette read their expected colours and ratios from the token
 // source instead of quoting them, so swapping the palette (22.1-09, scripts/tokens/prove_token_swap.sh) keeps
@@ -36,7 +36,7 @@ const ratio2 = (fg, bg) => contrast(fg, bg).toFixed(2);
 // Hermetic (WINDOWS 51): the dark-mode tripwire reads a Nuxt checkout, and the default is the live ../localnodes-onboarding,
 // which another lane edits. A run that does not pass its own --nuxt gets a directory with no Nuxt checkout in it, so the
 // tripwire SKIPs. The tripwire's page scan has its own tests below, against fake checkouts.
-const NO_NUXT = mkdtempSync(join(tmpdir(), 'ln-contrast-no-nuxt-'));
+const NO_NUXT = testTmpDir('contrast-no-nuxt');
 
 function run(args) {
   const argv = args.includes('--nuxt') ? args : [...args, '--nuxt', NO_NUXT];
@@ -823,6 +823,7 @@ test('22.1-17: the chat bar ring rules in ln-overrides.css are !important, inset
 // ---------------------------------------------------------------------------
 
 import { copyRepo } from './helpers/repo_copy.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const copyGate = (repo, args = []) => {
   const r = spawnSync(process.execPath, [join(repo, 'scripts/tokens/check_contrast.mjs'), '--nuxt', NO_NUXT, ...args], { cwd: repo, encoding: 'utf8' });
@@ -850,7 +851,7 @@ test('22.1-17: the gate prints no UNMAPPED and no STALE-PARTNER on the repo, and
 });
 
 test('22.1-17 guard: a colour rule that no partner names is UNMAPPED, the line says where to name it, and the run FAILs', () => {
-  const { repo } = copyRepo('ln-contrast-unmapped-');
+  const { repo } = copyRepo('contrast-unmapped');
   edit(repo, IMPORT_CSS, (css) => `${css}\n.localnodes-import-new-thing { color: var(--ln-color-text); }\n`);
   const r = copyGate(repo);
   assert.equal(r.code, 1, r.out);
@@ -862,7 +863,7 @@ test('22.1-17 guard: a colour rule that no partner names is UNMAPPED, the line s
 });
 
 test('22.1-17 guard: a background-only rule that names neither foreground nor boundary is UNMAPPED (review 17-M1)', () => {
-  const { repo } = copyRepo('ln-contrast-bg-only-');
+  const { repo } = copyRepo('contrast-bg-only');
   edit(repo, IMPORT_CSS, (css) => `${css}\n.localnodes-import-new-fill { background: var(--ln-color-primary); }\n`);
   const r = copyGate(repo);
   assert.equal(r.code, 1, r.out);
@@ -874,13 +875,13 @@ test('22.1-17 guard: a background-only rule that names neither foreground nor bo
 const BAR_RULE = /(\.ai-deepchat \.ln-chat-bar \{[^}]*background:) var\(--ln-color-text\);/;
 
 test('22.1-17 / 17-M1: changing only an ancestor\'s CSS background, with the map untouched, fails the gate and names the stale partner', () => {
-  const control = copyRepo('ln-contrast-ancestor-ctl-').repo;
+  const control = copyRepo('contrast-ancestor-ctl').repo;
   assert.match(readFileSync(join(control, DEEPCHAT_CSS), 'utf8'), BAR_RULE, 'the fixture ancestor is the bar rule');
   const ok = copyGate(control);
   assert.equal(ok.code, 0, `the unchanged copy passes: ${ok.out}`);
 
   // A background that would still pass contrast with the amber ring and the white text: only the staleness can fail it.
-  const passing = copyRepo('ln-contrast-ancestor-pass-').repo;
+  const passing = copyRepo('contrast-ancestor-pass').repo;
   edit(passing, DEEPCHAT_CSS, (css) => css.replace(BAR_RULE, '$1 var(--ln-color-primary-strong);'));
   const rPass = copyGate(passing);
   assert.equal(rPass.code, 1, rPass.out);
@@ -891,7 +892,7 @@ test('22.1-17 / 17-M1: changing only an ancestor\'s CSS background, with the map
   assert.match(rPass.out, /RESULT: FAIL \(\d+ STALE-PARTNER\)/);
 
   // A background that fails: the pair is measured on what the CSS now draws, so it FAILs too.
-  const failing = copyRepo('ln-contrast-ancestor-fail-').repo;
+  const failing = copyRepo('contrast-ancestor-fail').repo;
   edit(failing, DEEPCHAT_CSS, (css) => css.replace(BAR_RULE, '$1 var(--ln-color-surface);'));
   const rFail = copyGate(failing);
   assert.equal(rFail.code, 1, rFail.out);
@@ -900,7 +901,7 @@ test('22.1-17 / 17-M1: changing only an ancestor\'s CSS background, with the map
 });
 
 test('22.1-17 / 17-M1 discrimination: the same CSS change passes once the map says the same, so the failure is the map and the CSS disagreeing', () => {
-  const { repo } = copyRepo('ln-contrast-ancestor-agree-');
+  const { repo } = copyRepo('contrast-ancestor-agree');
   edit(repo, DEEPCHAT_CSS, (css) => css.replace(BAR_RULE, '$1 var(--ln-color-primary-strong);'));
   edit(repo, MAP, (js) => js.replace("const barFill = { from: BAR, sheet: 'deepchat', bg: 'text' };", "const barFill = { from: BAR, sheet: 'deepchat', bg: 'primary-strong' };"));
   const r = copyGate(repo);
@@ -909,7 +910,7 @@ test('22.1-17 / 17-M1 discrimination: the same CSS change passes once the map sa
 });
 
 test('22.1-17 guard: a map entry for a selector that left its stylesheet fails the gate with a STALE-PARTNER line naming it', () => {
-  const { repo } = copyRepo('ln-contrast-stale-entry-');
+  const { repo } = copyRepo('contrast-stale-entry');
   edit(repo, DEEPCHAT_CSS, (css) => css.replace('.chat-dropdown-link:hover {', '.chat-dropdown-link:hover-renamed {'));
   const r = copyGate(repo);
   assert.equal(r.code, 1, r.out);

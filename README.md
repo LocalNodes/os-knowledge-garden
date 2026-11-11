@@ -2,14 +2,17 @@
 
 A knowledge management platform built on [Open Social](https://www.drupal.org/project/social) with AI-powered search, embeddings, and related content discovery. Uses Gemini for LLM operations and Qdrant for vector storage.
 
-## Quick Start
+## Run it on a server
+
+To start a community site on your own server with Docker Compose, follow [docs/SELF-HOST.md](docs/SELF-HOST.md). To move an existing LocalNodes site, use the `RESTORE.md` inside its export archive (`drush localnodes:export`).
+
+## Quick Start (for development)
 
 Prerequisites: [DDEV](https://ddev.readthedocs.io/en/stable/users/install/ddev-installation/) and a [Gemini API key](https://aistudio.google.com/apikey) (free tier works).
 
 ```bash
 git clone https://github.com/LocalNodes/os-knowledge-garden.git
 cd os-knowledge-garden
-git checkout feature/localnodes-install-profile
 ddev start
 scripts/install.sh --demo=boulder
 ```
@@ -22,7 +25,7 @@ The install script will:
 5. Optionally install demo content
 6. Index all content (Solr + Qdrant vector embeddings)
 
-Login: `admin` / `admin`
+Sign in with a one-time link: `ddev drush user:login`
 
 ## Demo Content
 

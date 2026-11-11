@@ -6,5 +6,8 @@ package: 'LocalNodes'
 dependencies:
   - siwe_login:siwe_login
   - safe_smart_accounts:safe_smart_accounts
+  - safe_governance:safe_governance
+  - safe_governance:safe_governance_group
+  - gas_sponsor:gas_sponsor
   - group_treasury:group_treasury
   - group_treasury:social_group_treasury

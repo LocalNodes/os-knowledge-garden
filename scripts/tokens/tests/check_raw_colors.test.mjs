@@ -12,11 +12,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyRepo } from './helpers/repo_copy.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -24,7 +25,7 @@ const guard = resolve(repoRoot, 'scripts/tokens/check_raw_colors.mjs');
 
 /** A temp tree: { 'a/b.css': '...' } -> its root dir. */
 function tree(files) {
-  const root = mkdtempSync(join(tmpdir(), 'ln-rawcolor-test-'));
+  const root = testTmpDir('rawcolor');
   for (const [rel, body] of Object.entries(files)) {
     const abs = join(root, rel);
     mkdirSync(dirname(abs), { recursive: true });
@@ -260,7 +261,7 @@ test('the whole of html/modules/custom is clean: every remaining literal is a ra
 
 /** A git repo that holds a copy of this repo's scripts and module, the way the swap proof's worktree does. */
 function gitCopy() {
-  const { repo } = copyRepo('ln-rawcolor-repo-');
+  const { repo } = copyRepo('rawcolor-repo');
   execFileSync('git', ['init', '-q'], { cwd: repo });
   execFileSync('git', ['add', '-A'], { cwd: repo });
   return repo;

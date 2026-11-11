@@ -54,3 +54,15 @@ $settings['localnodes_a11y_ai_deny'] = TRUE;
 ```
 
 On a real site there's no deny and no counter. Never enable the module there.
+
+## The governance specs' test modules
+
+`governance.spec.ts` and its keyboard and screen-reader runs read a site that runs these test-only modules, all hidden and under a module's `tests/modules/`, so Drupal finds them only where `extension_discovery_scan_tests` is on (the lane's gitignored `settings.local.php`; DDEV sets it too):
+
+- `safe_smart_accounts_rpc_fixture`: every Safe read answers from canned data.
+- `safe_governance_chain_fixture`: the governance reads answer from the synthetic facts `seed-governance.php` writes.
+- `safe_governance_hub_fixture`: the voting service.
+- `gas_sponsor_fixture`: the community's network fee account.
+- `safe_governance_arbitrator_fixture` (25-29): a stand-in for the Reality Arbitrator code, so setup "prepare" never downloads the real GPL-3.0 bytecode from GitHub. **`seed-governance.php` enables this one itself** (and fails if it isn't enabled when it finishes), so a run never makes that GET. `arbitrator-fixture.test.ts` (part of `npm test`) guards the wiring.
+
+The live judge is the opposite case: `tests/e2e-live/seed-governance-live.php` never enables the Arbitrator fixture and refuses to run (exit 1) while it is on, because a live run must use the real code. A site that ran the a11y suite is therefore not a site for the judge: use a fresh one, or `drush pm:uninstall safe_governance_arbitrator_fixture`.

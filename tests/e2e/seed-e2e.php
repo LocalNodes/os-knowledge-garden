@@ -63,6 +63,17 @@ if (count($args) !== 3) {
   throw new \RuntimeException('seed-e2e.php needs three addresses: organizer, approver, member.');
 }
 
+// The Reality Arbitrator stand-in (25-29): where safe_governance is on the site, enable
+// safe_governance_arbitrator_fixture so a run that reaches setup "prepare" never downloads the
+// real GPL-3.0 init code from GitHub. It changes no chain read (the RPC fixture is a different
+// module, and global-setup.ts still refuses that one). Test-only and hidden; the lane site finds
+// it because site.sh code writes extension_discovery_scan_tests into settings.local.php. The
+// live judge seed refuses while it is enabled.
+$handler = \Drupal::moduleHandler();
+if ($handler->moduleExists('safe_governance') && !$handler->moduleExists('safe_governance_arbitrator_fixture')) {
+  \Drupal::service('module_installer')->install(['safe_governance_arbitrator_fixture']);
+}
+
 /**
  * Loads or creates a fixture user and links its address.
  */

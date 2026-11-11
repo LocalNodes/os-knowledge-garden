@@ -9,6 +9,7 @@ use Drupal\Component\Serialization\Yaml;
 use Drupal\group_treasury\Service\SafeAppLink;
 use Drupal\localnodes_web3\SiweHelpLink;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
+use Drupal\safe_smart_accounts\Entity\SafeNetworkInterface;
 use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
 use Drupal\safe_smart_accounts\Service\ChainSnapshotStore;
 use Drupal\Tests\safe_smart_accounts\Kernel\SafeKernelTestBase;
@@ -20,10 +21,9 @@ use GuzzleHttp\Middleware;
 /**
  * The "Hacked or phished? Get help" links on Approve and the wallet sign-in.
  *
- * Tom's ruling of 2026-11-09 (22.1-15): someone about to approve a payment,
- * and someone signing in with a wallet, reaches the "Hacked or Phished?"
- * page (/help/hacked-or-phished, localnodes_platform) in one click. The
- * words are the approved 22.1-15-UI-SPEC-PROPOSAL.md rows.
+ * Someone about to approve a payment, and someone signing in with a
+ * wallet, reaches the "Hacked or Phished?" page (/help/hacked-or-phished,
+ * localnodes_platform) in one click. The words are the approved ones.
  *
  * - The payment page: localnodes_web3 implements safe_smart_accounts'
  *   generic hook_safe_smart_accounts_approve_help(), so the link sits right
@@ -108,7 +108,7 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
   }
 
   /**
-   * The payment page: the link right after "Approve payment".
+   * The payment page: the link after "Approve payment" and the signing code.
    */
   public function testPaymentPageLinksTheHelpPage(): void {
     $this->enable('localnodes_platform', 'localnodes_web3');
@@ -119,7 +119,12 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
     $xpath = self::dom($html);
     $approve = $xpath->query('//*[contains(@class, "safe-transaction-sign")]')->item(0);
     $this->assertInstanceOf(\DOMElement::class, $approve);
-    $next = $xpath->query('following-sibling::*[1]', $approve)->item(0);
+    // The Safe's own code sits between the button and the help
+    // links (safe_smart_accounts PaymentHelpLinkTest pins the same order).
+    $code = $xpath->query('following-sibling::*[1]', $approve)->item(0);
+    $this->assertInstanceOf(\DOMElement::class, $code);
+    $this->assertStringContainsString('safe-signing-code-block', $code->getAttribute('class'));
+    $next = $xpath->query('following-sibling::*[1]', $code)->item(0);
     $this->assertInstanceOf(\DOMElement::class, $next);
     $this->assertStringContainsString('safe-approve-help-links', $next->getAttribute('class'));
     $links = $xpath->query('.//a', $next);
@@ -225,17 +230,21 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
    * Every network this module ships gets an "Open in Safe app" link.
    *
    * The help page tells approvers to use the Safe app if this site is down,
-   * and group_treasury's fund card links it only for the chains in
-   * SafeAppLink's map. A shipped network outside that map would silently
-   * have no link (22.1-15, Tom 2026-11-09).
+   * and group_treasury's fund card links it only for a network whose
+   * registry entry has a safe_app_short_name. A shipped network without one
+   * would silently have no link.
    */
   public function testShippedNetworksHaveSafeAppLinks(): void {
     $files = glob(dirname(__DIR__, 3) . '/config/install/safe_smart_accounts.network.*.yml') ?: [];
     $this->assertNotEmpty($files, 'The module ships networks.');
+    $storage = $this->container->get('entity_type.manager')->getStorage('safe_network');
     foreach ($files as $file) {
-      $network = Yaml::decode((string) file_get_contents($file));
-      $this->assertIsInt($network['chain_id'] ?? NULL, basename($file) . ' has a chain id.');
-      $this->assertNotNull(SafeAppLink::url($network['chain_id'], self::OWNER), basename($file) . ' gets a Safe app link.');
+      $values = Yaml::decode((string) file_get_contents($file));
+      $this->assertIsArray($values, basename($file) . ' reads as a mapping.');
+      $network = $storage->create($values);
+      $this->assertInstanceOf(SafeNetworkInterface::class, $network);
+      $this->assertNotSame('', $network->getSafeAppShortName(), basename($file) . ' names its Safe app short name.');
+      $this->assertNotNull(SafeAppLink::url($network, self::OWNER), basename($file) . ' gets a Safe app link.');
     }
   }
 

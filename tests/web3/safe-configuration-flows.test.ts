@@ -56,6 +56,12 @@ type Opts = {
   nonceAfter?: number;
   /** The hash comes back, then wait() throws. */
   waitThrows?: boolean;
+  /**
+   * The answer to the 25-29 send pre-check (a POST to /execute with
+   * {"check": true}, asked right before the wallet is). Default: the
+   * proceed answer, 200 {may_send: true}.
+   */
+  precheckAnswer?: { status: number; body: unknown };
   /** /execute answers this HTTP status (default 200). */
   executeStatus?: number;
   /** The receipt status of each /execute answer in turn (the last repeats). */
@@ -143,6 +149,14 @@ function harness(opts: Opts = {}) {
         calls.push('fetch:status');
         const answer = opts.statusAnswer ?? 500;
         return typeof answer === 'number' ? json(answer, { error: 'Something went wrong on our side.' }) : json(200, answer);
+      }
+      if (url.endsWith('/execute') && init?.body && JSON.parse(init.body).check === true) {
+        // SSA 0dc5af4: the pre-check is its own call. It is not an execute
+        // post, so it stays out of 'fetch:execute' and posted.executeAll.
+        calls.push('fetch:precheck');
+        posted.precheckAll = [...((posted.precheckAll as unknown[]) ?? []), JSON.parse(init.body)];
+        const answer = opts.precheckAnswer ?? { status: 200, body: { may_send: true } };
+        return json(answer.status, answer.body);
       }
       if (url.endsWith('/execute')) {
         calls.push('fetch:execute');
@@ -524,5 +538,48 @@ describe.skipIf(!present)('Approval settings form and source rules (21-24, D-12)
   it('has no dead endpoint, alert(), innerHTML, network literal or loading toast', () => {
     const src = readFileSync(resolve(JS, 'safe-configuration-manager.js'), 'utf8');
     expect(src).not.toMatch(/configuration\/create-transaction|createConfigurationTransaction|alert\(|innerHTML|[Ss]epolia|11155111|etherscan|Drupal\.message\(/);
+  });
+});
+
+describe.skipIf(!present)('Send a configuration change: the server is asked before the wallet (SSA 25-29 pre-check)', () => {
+  const BUSY = 'Another payment from this fund is still being sent. Wait for it to be confirmed, then send this one.';
+
+  it('posts {"check": true} to /execute right before the wallet sends, then goes on', async () => {
+    const h = harness();
+    await h.api.executeConfigurationChange('5', '9');
+    expect(h.posted.precheckAll).toEqual([{ check: true }]);
+    const order = ['fetch:data', 'sdk:isCorrectNetwork', 'fetch:precheck', 'kit:executeTransaction', 'fetch:execute', 'panel:done'].map((c) => h.calls.indexOf(c));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // The pre-check saves nothing: the one real execute post is the hash.
+    expect(h.posted.executeAll).toEqual([{ blockchain_tx_hash: HASH }]);
+  });
+
+  it('a busy 409 stops the send: no wallet send, no hash post, the server\'s sentence shown, button restored', async () => {
+    const button = { hidden: false };
+    const h = harness({ precheckAnswer: { status: 409, body: { error: BUSY } } });
+    await h.api.executeConfigurationChange('5', '9', { button });
+    expect(h.calls).toContain('fetch:precheck');
+    expect(h.calls).not.toContain('kit:executeTransaction');
+    expect(h.calls).not.toContain('tx:wait');
+    expect(h.calls).not.toContain('fetch:execute');
+    expect(h.record.error).toEqual([BUSY]);
+    expect(h.record.done).toEqual([]);
+    expect(h.record.restore).toEqual([true]);
+  });
+
+  it.each([
+    ['a server error', { status: 500, body: { error: 'Something went wrong on our side.' } }],
+    ['a 200 that is not a clear yes', { status: 200, body: { success: true } }],
+    ['a 403', { status: 403, body: {} }],
+  ])('fails closed on %s: the wallet is never asked to send', async (_name, precheckAnswer) => {
+    const button = { hidden: false };
+    const h = harness({ precheckAnswer });
+    await h.api.executeConfigurationChange('5', '9', { button });
+    expect(h.calls).not.toContain('kit:executeTransaction');
+    expect(h.calls).not.toContain('fetch:execute');
+    expect(h.record.error).toHaveLength(1);
+    expect(h.record.done).toEqual([]);
+    expect(h.record.restore).toEqual([true]);
   });
 });

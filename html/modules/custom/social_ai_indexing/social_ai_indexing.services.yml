@@ -49,6 +49,11 @@ services:
   social_ai_indexing.source_registry:
     class: Drupal\social_ai_indexing\Citation\SourceRegistry
 
+  # The chat header's name and its spoken form.
+  social_ai_indexing.assistant_name:
+    class: Drupal\social_ai_indexing\Service\AssistantName
+    arguments: ['@config.factory']
+
   logger.channel.social_ai_indexing:
     parent: logger.channel_base
     arguments: ['social_ai_indexing']
