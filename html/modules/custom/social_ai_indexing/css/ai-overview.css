@@ -4,8 +4,8 @@
  *
  * Tinted card with a 4px primary-colour left rule, 16px/24px padding, 8px
  * radius and a 72ch reading width. Every value comes from the --ln-* tokens
- * (localnodes_platform/css/ln-tokens.css). Colours have no fallback value
- * (22.1-06): a hex fallback would keep the old palette alive after a palette
+ * (localnodes_platform/css/ln-tokens.css). Colours have no fallback value:
+ * a hex fallback would keep the old palette alive after a palette
  * swap, and the token sheet is attached on every socialbase page.
  */
 

@@ -9,8 +9,14 @@
  * - The "Chat options" menu sits next to the header instead of inside it, so
  *   the role="button" header has no focusable descendants (nested-interactive).
  * - The menu button has an accessible name (button-name).
- * - The header takes its accessible name from its visible label ("AI
- *   assistant"), not aria-label "Toggle Chat"; the icons are aria-hidden.
+ * - The header takes its accessible name from its content, not aria-label
+ *   "Toggle Chat"; the icons are aria-hidden. The name is "‹spoken name›,
+ *   AI": the visible name (aria-hidden, "LocalNodes LiAIson" by default)
+ *   is followed by a visually hidden spoken form ("LocalNodes Liaison,"),
+ *   because the stylized name may be spelled out letter by letter. WCAG
+ *   2.5.3 holds: same words, same order, differing in case and a comma.
+ *   The "AI" label is template text on purpose, so no setting removes it
+ *   (EU AI Act Art. 50).
  */
 #}
 {{ attach_library('ai_chatbot/sticky-chatbot') }}
@@ -32,7 +38,9 @@
     <div class="ai-deepchat--header" tabindex="0" role="button" aria-expanded="false">
       <div class="ai-deepchat--label">
         <span class="ai-deepchat--bullet" aria-hidden="true"></span>
-        {{ settings.label }}
+        <span class="ln-assistant-name" aria-hidden="true">{{ settings.label }}</span>
+        <span class="visually-hidden">{{ assistant_spoken_name }},</span>
+        <span class="ln-ai-label">{{ 'AI'|t }}</span>
       </div>
       <span class="toggle-icon" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" viewbox="-1 -1 16 16" height="16" width="16" focusable="false">

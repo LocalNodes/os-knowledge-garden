@@ -19,6 +19,10 @@
  * gas_sponsor_fixture. Page views read the proposal mirror only; nothing
  * here asks the voting service. All addresses are test values.
  *
+ * It also enables safe_governance_arbitrator_fixture (25-29), which hands setup
+ * "prepare" a stand-in for the Reality Arbitrator code, so no spec downloads the
+ * real code from GitHub.
+ *
  * Prints one machine-readable line, LN_GOVERNANCE={json}, with groups,
  * proposals and users (ids) and the fund address.
  */
@@ -273,6 +277,15 @@ function ln_gov_listed(SafeGovernanceInterface $record, ?int $at = NULL, bool $f
   Cache::invalidateTags([ProposalSync::CACHE_TAG_PREFIX . $record->id()]);
 }
 
+// The Reality Arbitrator stand-in (25-29): safe_governance_arbitrator_fixture swaps the
+// Arbitrator code service, so a run that reaches setup "prepare" never downloads the real
+// GPL-3.0 init code from GitHub. Test-only (hidden, under safe_governance's tests/modules),
+// found only where extension_discovery_scan_tests is on, which global-setup.ts requires.
+// The live judge seed (tests/e2e-live/seed-governance-live.php) refuses while it is on.
+if (!\Drupal::moduleHandler()->moduleExists('safe_governance_arbitrator_fixture')) {
+  \Drupal::service('module_installer')->install(['safe_governance_arbitrator_fixture']);
+}
+
 $steward = ln_gov_existing('a11y-steward');
 $member = ln_gov_existing('a11y-member');
 // The steward's linked wallet is the fixture Safe's first owner, so an
@@ -515,6 +528,12 @@ Cache::invalidateTags([
 ]);
 foreach ($groups as $id) {
   Cache::invalidateTags(['group:' . $id]);
+}
+
+// Nothing above may have switched the stand-in off: a seeded site that fetched the real
+// Arbitrator code would make the governance specs depend on GitHub.
+if (!\Drupal::moduleHandler()->moduleExists('safe_governance_arbitrator_fixture')) {
+  throw new \RuntimeException('seed-governance.php: safe_governance_arbitrator_fixture is not enabled after seeding.');
 }
 
 print 'LN_GOVERNANCE=' . json_encode([

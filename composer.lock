@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "611c359726fdff88f563893d06221db6",
+    "content-hash": "c57eb8b40fd115f5da8a53b0174c5f8d",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -4724,6 +4724,55 @@
             "published-time": "2024-09-20T12:29:49+00:00"
         },
         {
+            "name": "drupal/gas_sponsor",
+            "version": "dev-1.0.x",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/gas_sponsor.git",
+                "reference": "5d5aeedadbdfbe7ed0ff35368d9ce2f00b8e64d8"
+            },
+            "require": {
+                "brick/math": "^0.17 || ^1.0",
+                "drupal/core": "^10 || ^11",
+                "drupal/safe_smart_accounts": "*",
+                "php": ">=8.2"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "branch-alias": {
+                    "dev-1.0.x": "1.0.x-dev"
+                },
+                "drupal": {
+                    "version": "1.0.x-dev",
+                    "datestamp": "1794408238",
+                    "security-coverage": {
+                        "status": "not-covered",
+                        "message": "Project has not opted into security advisory coverage!"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Drupal\\gas_sponsor\\": "src/"
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "proofoftom",
+                    "homepage": "https://www.drupal.org/user/2310312"
+                }
+            ],
+            "description": "Pays network fees for a site's on-chain steps through a self-hosted sponsor relayer, asked by intent; shows the fee account's balance and spend limits",
+            "homepage": "https://www.drupal.org/project/gas_sponsor",
+            "support": {
+                "source": "https://git.drupalcode.org/project/gas_sponsor"
+            }
+        },
+        {
             "name": "drupal/gemini_provider",
             "version": "dev-1.x",
             "source": {
@@ -5237,17 +5286,17 @@
         },
         {
             "name": "drupal/group_treasury",
-            "version": "1.0.0-alpha2",
+            "version": "1.0.0-alpha4",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/group_treasury.git",
-                "reference": "1.0.0-alpha2"
+                "reference": "1.0.0-alpha4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha2.zip",
-                "reference": "1.0.0-alpha2",
-                "shasum": "b2cec0da3e23782695a00537c01a8bc46100ae05"
+                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha4.zip",
+                "reference": "1.0.0-alpha4",
+                "shasum": "8ad4e3a76d3fa3d9cee09737b83a9e349c252f57"
             },
             "require": {
                 "drupal/core": "^10",
@@ -5261,8 +5310,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha2",
-                    "datestamp": "1794162314",
+                    "version": "1.0.0-alpha4",
+                    "datestamp": "1794414692",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5289,7 +5338,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/group_treasury"
             },
-            "published-time": "2026-11-08T18:24:53+00:00"
+            "published-time": "2026-11-11T16:31:03+00:00"
         },
         {
             "name": "drupal/hux",
@@ -7488,18 +7537,76 @@
             "published-time": "2026-01-13T16:27:05+00:00"
         },
         {
+            "name": "drupal/safe_governance",
+            "version": "dev-1.0.x",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/safe_governance.git",
+                "reference": "f31d53dc5d735d60d70cc897dcb24bf23b6d09ce"
+            },
+            "require": {
+                "brick/math": "^0.17 || ^1.0",
+                "drupal/core": "^10 || ^11",
+                "drupal/gas_sponsor": "^1.0",
+                "drupal/safe_smart_accounts": "^1.0.0-alpha2",
+                "kornrunner/keccak": "^1.0",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "drupal/group": "^2 || ^3",
+                "drupal/group_treasury": "^1.0.0-alpha3"
+            },
+            "suggest": {
+                "drupal/group_treasury": "Needed by the safe_governance_group submodule (the group's Votes tab and voting setup)."
+            },
+            "type": "drupal-module",
+            "extra": {
+                "branch-alias": {
+                    "dev-1.0.x": "1.0.x-dev"
+                },
+                "drupal": {
+                    "version": "1.0.x-dev",
+                    "datestamp": "1794408260",
+                    "security-coverage": {
+                        "status": "not-covered",
+                        "message": "Project has not opted into security advisory coverage!"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Drupal\\safe_governance\\": "src/"
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "proofoftom",
+                    "homepage": "https://www.drupal.org/user/2310312"
+                }
+            ],
+            "description": "Group voting rules for a Safe account: Snapshot, Zodiac Reality and Hats Protocol, with addresses from the network registry",
+            "homepage": "https://www.drupal.org/project/safe_governance",
+            "support": {
+                "source": "https://git.drupalcode.org/project/safe_governance"
+            }
+        },
+        {
             "name": "drupal/safe_smart_accounts",
-            "version": "1.0.0-alpha1",
+            "version": "1.0.0-alpha3",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_smart_accounts.git",
-                "reference": "1.0.0-alpha1"
+                "reference": "1.0.0-alpha3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha1.zip",
-                "reference": "1.0.0-alpha1",
-                "shasum": "9bc800356395918ee5ab999c346cc9bd9f20d940"
+                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha3.zip",
+                "reference": "1.0.0-alpha3",
+                "shasum": "ce32ec90132e5d146f1ce4b03576f8fa4e853998"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7508,11 +7615,14 @@
                 "kornrunner/keccak": "^1.0",
                 "php": ">=8.2"
             },
+            "require-dev": {
+                "drupal/gas_sponsor": "^1.0"
+            },
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha1",
-                    "datestamp": "1794090028",
+                    "version": "1.0.0-alpha3",
+                    "datestamp": "1794414719",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7539,7 +7649,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_smart_accounts"
             },
-            "published-time": "2026-11-07T22:20:06+00:00"
+            "published-time": "2026-11-11T16:30:38+00:00"
         },
         {
             "name": "drupal/search_api",
@@ -24671,8 +24781,10 @@
         "drupal/ai_search": 15,
         "drupal/ai_usage_limits": 20,
         "drupal/ai_vdb_provider_qdrant": 20,
+        "drupal/gas_sponsor": 20,
         "drupal/gemini_provider": 20,
         "drupal/group_treasury": 15,
+        "drupal/safe_governance": 20,
         "drupal/safe_smart_accounts": 15
     },
     "prefer-stable": true,

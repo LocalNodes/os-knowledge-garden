@@ -69,6 +69,9 @@ const LINK = `${BAR} .chat-dropdown-link`;
 const PAGE = ['surface', 'canvas', 'tint'];
 /** Where a LocalNodes import screen draws: socialblue's body (the canvas) or a white .card. */
 const IMPORT_PAGE = ['canvas', 'surface'];
+/** Around the group page's "Joined" button (WINDOWS 46). */
+const JOINED_AROUND = ['surface', 'canvas'];
+const JOINED_WHY = "the button sits in the group statistics .card (lane site, 2026-11-11: rgb(250, 250, 250), between surface #fff and canvas #f3f3f3, so both bounds are measured)";
 const IMPORT_WHY = "import screens sit on socialblue's body or a white .card (lane site, 2026-11-09: body rgb(243, 243, 243) = canvas, .card rgb(255, 255, 255) = surface)";
 
 const barFill = { from: BAR, sheet: 'deepchat', bg: 'text' };
@@ -134,6 +137,12 @@ export const PARTNERS = {
     '.btn-danger:hover': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
     '.btn-danger:active': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
     '.btn-danger.active': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
+    // WINDOWS 46: the group page's "Joined" button, outlined navy on the surface fill, in every state.
+    '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
+    '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:hover': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
+    '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:focus': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
+    '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:active': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
+    '.hero-footer__cta .btn-group.open > button.btn-accent.dropdown-toggle': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
     '.alert-danger': { ...text(['own'], 'body text on the alert tint of the same rule'), ...border(PAGE, 'the alert sits on the page; its border is measured against the page, not its own tint') },
     '.alert-success': { ...text(['own'], 'body text on the alert tint of the same rule'), ...border(PAGE, 'the alert sits on the page; its border is measured against the page, not its own tint') },
     '.alert-warning': { ...text(['own'], 'body text on the alert tint of the same rule'), ...border(PAGE, 'the alert sits on the page; its border is measured against the page, not its own tint') },

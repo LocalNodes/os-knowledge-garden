@@ -61,6 +61,18 @@ type Opts = {
   nonceAfter?: number;
   /** Only the first N /execute posts fail (500). */
   executeFailCount?: number;
+  /** drupalSettings.safeSmartAccounts.sponsored (R5, 25-15). */
+  sponsored?: boolean;
+  /**
+   * The answer to the 25-29 send pre-check (a POST to /execute with
+   * {"check": true}, asked right before the wallet is). Default: the
+   * proceed answer, 200 {may_send: true}.
+   */
+  precheckAnswer?: { status: number; body: unknown };
+  /** /execute answers in order (the last repeats), instead of the defaults. */
+  executeAnswers?: Array<{ status: number; body: unknown }>;
+  /** /status answers in order (the last repeats). */
+  statusAnswers?: Array<Record<string, unknown>>;
 };
 
 type Button = {
@@ -91,7 +103,7 @@ function makeButton(kind: 'sign' | 'execute'): Button {
 function harness(opts: Opts = {}) {
   const calls: string[] = [];
   const posted: Record<string, unknown> = {};
-  const record: Record<string, unknown[]> = { mount: [], setState: [], done: [], waitingForRecord: [], error: [], inFlight: [], restore: [] };
+  const record: Record<string, unknown[]> = { mount: [], setState: [], done: [], waitingForRecord: [], error: [], inFlight: [], restore: [], timers: [] };
   const focused: string[] = [];
 
   class BrowserProvider {
@@ -139,8 +151,11 @@ function harness(opts: Opts = {}) {
   const ctx: Record<string, any> = {
     console: { log() {}, warn() {}, error() {} },
     Drupal: { behaviors: {}, t, announce() {} },
+    // Waits resolve at once; each delay asked for is recorded.
+    setTimeout: (fn: () => void, ms: number) => { record.timers.push(ms); fn(); return 0; },
     drupalSettings: {
       safeSmartAccounts: {
+        ...(opts.sponsored === undefined ? {} : { sponsored: opts.sponsored }),
         networks: {
           base_sepolia: {
             chainId: 84532,
@@ -169,13 +184,30 @@ function harness(opts: Opts = {}) {
       }
       if (url.endsWith('/status')) {
         calls.push('fetch:status');
+        if (opts.statusAnswers) {
+          const n = calls.filter((c) => c === 'fetch:status').length;
+          return json(200, opts.statusAnswers[Math.min(n - 1, opts.statusAnswers.length - 1)]);
+        }
         const answer = opts.statusAnswer ?? 500;
         return typeof answer === 'number' ? json(answer, { error: 'Something went wrong on our side.' }) : json(200, answer);
+      }
+      if (url.endsWith('/execute') && init?.body && JSON.parse(init.body).check === true) {
+        // SSA 0dc5af4: the pre-check is its own call. It is not an execute
+        // post, so it stays out of 'fetch:execute' and posted.executeAll.
+        calls.push('fetch:precheck');
+        posted.precheckAll = [...((posted.precheckAll as unknown[]) ?? []), JSON.parse(init.body)];
+        const answer = opts.precheckAnswer ?? { status: 200, body: { may_send: true } };
+        return json(answer.status, answer.body);
       }
       if (url.endsWith('/execute')) {
         calls.push('fetch:execute');
         posted.execute = init?.body ? JSON.parse(init.body) : null;
         posted.executeAll = [...(posted.executeAll ?? []), posted.execute];
+        if (opts.executeAnswers) {
+          const n = (posted.executeAll as unknown[]).length;
+          const answer = opts.executeAnswers[Math.min(n - 1, opts.executeAnswers.length - 1)];
+          return json(answer.status, answer.body);
+        }
         if (opts.executeConflict) {
           // Another tab already stored its hash for this payment (21-25 fix 10).
           return json(409, { error: 'This payment was already sent. Wait for the public record to confirm it.' });
@@ -503,6 +535,135 @@ describe.skipIf(!present)('Send: the Safe\'s registry network first (ruling A)',
   });
 });
 
+const SPONSORED_SENDING = 'The community is sending the payment.';
+const sent = (receipt: string) => ({
+  status: 200,
+  body: { success: receipt !== 'failed', receipt_status: receipt, blockchain_tx_hash: HASH, status: receipt === 'confirmed' ? 'executed' : 'pending' },
+});
+
+describe.skipIf(!present)('Send when the community covers sending (R5, 25-15)', () => {
+  it('posts {"sponsored": true}, never asks the wallet, and starts the panel at Sending', async () => {
+    const h = harness({ sponsored: true, signatures: 2, executeAnswers: [sent('confirmed')] });
+    await h.send();
+    expect(h.posted.executeAll).toEqual([{ sponsored: true }]);
+    expect(h.walletCalls()).toEqual([]);
+    expect(h.calls).not.toContain('sdk:isCorrectNetwork');
+    expect(h.calls).not.toContain('sdk:init');
+    // The 'sponsored' panel (SSA 25-29(i)) has no wallet step: Sending,
+    // Waiting for confirmation, Done. It starts at Sending, step 1.
+    expect(h.record.mount).toEqual([expect.objectContaining({ kind: 'sponsored' })]);
+    expect(h.record.setState[0]).toEqual([1, SPONSORED_SENDING]);
+    expect(h.record.setState).toEqual([[1, SPONSORED_SENDING], 2]);
+    expect(h.record.done).toEqual([{
+      text: 'Payment sent.',
+      explorerHref: `https://base-sepolia.blockscout.com/tx/${HASH}`,
+      explorerName: 'Blockscout',
+      shortId: HASH,
+      copyLabel: 'Copy ID for this payment',
+    }]);
+    expect(h.execute.hidden).toBe(true);
+    expect(h.record.restore).toEqual([]);
+  });
+
+  it('without the flag, the kept wallet path runs unchanged', async () => {
+    const h = harness({ sponsored: false, signatures: 2 });
+    await h.send();
+    expect(h.calls).toContain('kit:executeTransaction');
+    expect(h.posted.execute).toEqual({ blockchain_tx_hash: HASH });
+    expect(h.record.setState).toEqual([1, [2, 'Your wallet is sending the payment.'], 3]);
+  });
+
+  it('a sent payment not yet on the record is read again from /status until confirmed', async () => {
+    const h = harness({
+      sponsored: true,
+      signatures: 2,
+      executeAnswers: [sent('pending')],
+      statusAnswers: [
+        { status: 'pending', receipt_status: 'pending', blockchain_tx_hash: HASH },
+        { status: 'executed', receipt_status: 'confirmed', blockchain_tx_hash: HASH },
+      ],
+    });
+    await h.send();
+    expect(h.posted.executeAll).toEqual([{ sponsored: true }]);
+    expect(h.calls.filter((c) => c === 'fetch:status')).toHaveLength(2);
+    expect(h.record.timers.length).toBeGreaterThan(0);
+    // Waiting for confirmation is step 2 of the 'sponsored' panel.
+    expect(h.record.setState).toContainEqual(2);
+    expect(h.walletCalls()).toEqual([]);
+    expect(h.record.done).toHaveLength(1);
+    expect(h.execute.hidden).toBe(true);
+    expect(h.record.restore).toEqual([]);
+  });
+
+  it('stops reading after a while and waits for the record, never offering Send again', async () => {
+    const h = harness({
+      sponsored: true,
+      signatures: 2,
+      executeAnswers: [sent('pending')],
+      statusAnswers: [{ status: 'pending', receipt_status: 'pending', blockchain_tx_hash: HASH }],
+    });
+    await h.send();
+    const reads = h.calls.filter((c) => c === 'fetch:status').length;
+    expect(reads).toBeGreaterThan(1);
+    expect(reads).toBeLessThanOrEqual(30);
+    expect(h.record.waitingForRecord).toEqual([true]);
+    expect(h.record.error).toEqual([]);
+    expect(h.execute.hidden).toBe(true);
+    expect(h.record.restore).toEqual([]);
+  });
+
+  it('a 429 shows the fee-limit copy with the server\'s own time text (D-30) and keeps Send', async () => {
+    const h = harness({
+      sponsored: true,
+      signatures: 2,
+      executeAnswers: [{ status: 429, body: { error: 'ignored', until: '2026-11-09T21:30:00Z', until_text: 'SERVER TIME TEXT' } }],
+    });
+    await h.send();
+    expect(h.record.error).toEqual(["The community's network fee limit is reached. Send it again after SERVER TIME TEXT."]);
+    expect(h.record.restore).toEqual([true]);
+    expect(h.execute.hidden).toBeFalsy();
+    expect(h.walletCalls()).toEqual([]);
+  });
+
+  it('a refusal shows the server\'s fixed sentence and keeps Send', async () => {
+    for (const status of [400, 403, 422, 503]) {
+      const h = harness({ sponsored: true, signatures: 2, executeAnswers: [{ status, body: { error: `Refused ${status}.` } }] });
+      await h.send();
+      expect(h.record.error).toEqual([`Refused ${status}.`]);
+      expect(h.record.restore).toEqual([true]);
+      expect(h.record.done).toEqual([]);
+    }
+  });
+
+  it('a 409 means it was already sent: the row is read again, Send never comes back', async () => {
+    const h = harness({
+      sponsored: true,
+      signatures: 2,
+      executeAnswers: [{ status: 409, body: { error: 'This payment was already sent. Wait for the public record to confirm it.' } }],
+      statusAnswers: [{ status: 'executed', receipt_status: null, blockchain_tx_hash: OTHER_HASH }],
+    });
+    await h.send();
+    expect(h.walletCalls()).toEqual([]);
+    expect(h.posted.executeAll).toEqual([{ sponsored: true }]);
+    expect(h.record.done).toEqual([expect.objectContaining({ text: 'Payment sent.', shortId: OTHER_HASH })]);
+    expect(h.record.restore).toEqual([]);
+    expect(h.execute.hidden).toBe(true);
+  });
+
+  it('a server error may come after the send: Send stays hidden and the page is to be reloaded', async () => {
+    const h = harness({ sponsored: true, signatures: 2, executeAnswers: [{ status: 500, body: { error: 'Something went wrong on our side.' } }] });
+    await h.send();
+    expect(h.record.error).toEqual(['Something went wrong on our side. Reload this page to see whether the payment was sent.']);
+    expect(h.record.restore).toEqual([]);
+    expect(h.execute.hidden).toBe(true);
+  });
+
+  it('never formats a date itself', () => {
+    const src = readFileSync(resolve(JS, 'transaction-manager.js'), 'utf8');
+    expect(src).not.toMatch(/new Date\(|toLocale|Intl\.DateTimeFormat/);
+  });
+});
+
 describe.skipIf(!present)('Payment page focus and source rules', () => {
   it('moves focus to the propose success sentence once', () => {
     const h = harness();
@@ -512,5 +673,53 @@ describe.skipIf(!present)('Payment page focus and source rules', () => {
   it('has no alert(), innerHTML, network literal or loading toast', () => {
     const src = readFileSync(resolve(JS, 'transaction-manager.js'), 'utf8');
     expect(src).not.toMatch(/alert\(|innerHTML|[Ss]epolia|11155111|etherscan|Drupal\.message\(/);
+  });
+});
+
+describe.skipIf(!present)('Send: the server is asked before the wallet (SSA 25-29 pre-check)', () => {
+  const BUSY = 'Another payment from this fund is still being sent. Wait for it to be confirmed, then send this one.';
+
+  it('posts {"check": true} to /execute right before the wallet sends, then goes on', async () => {
+    const h = harness({ signatures: 2 });
+    await h.send();
+    expect(h.posted.precheckAll).toEqual([{ check: true }]);
+    const order = ['fetch:data', 'sdk:isCorrectNetwork', 'fetch:precheck', 'kit:executeTransaction', 'fetch:execute', 'panel:done'].map((c) => h.calls.indexOf(c));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // The pre-check saves nothing: the one real execute post is the hash.
+    expect(h.posted.executeAll).toEqual([{ blockchain_tx_hash: HASH }]);
+  });
+
+  it('a busy 409 stops the send: no wallet send, no hash post, the server\'s sentence shown, button restored', async () => {
+    const h = harness({ signatures: 2, precheckAnswer: { status: 409, body: { error: BUSY } } });
+    await h.send();
+    expect(h.calls).toContain('fetch:precheck');
+    expect(h.calls).not.toContain('kit:executeTransaction');
+    expect(h.calls).not.toContain('tx:wait');
+    expect(h.calls).not.toContain('fetch:execute');
+    expect(h.record.error).toEqual([BUSY]);
+    expect(h.record.done).toEqual([]);
+    expect(h.record.restore).toEqual([true]);
+  });
+
+  it.each([
+    ['a server error', { status: 500, body: { error: 'Something went wrong on our side.' } }],
+    ['a 200 that is not a clear yes', { status: 200, body: { success: true } }],
+    ['a 403', { status: 403, body: {} }],
+  ])('fails closed on %s: the wallet is never asked to send', async (_name, precheckAnswer) => {
+    const h = harness({ signatures: 2, precheckAnswer });
+    await h.send();
+    expect(h.calls).not.toContain('kit:executeTransaction');
+    expect(h.calls).not.toContain('fetch:execute');
+    expect(h.record.error).toHaveLength(1);
+    expect(h.record.done).toEqual([]);
+    expect(h.record.restore).toEqual([true]);
+  });
+
+  it('a community-covered send does not use the wallet, so it asks no pre-check', async () => {
+    const h = harness({ sponsored: true, signatures: 2, executeAnswers: [{ status: 200, body: { success: true, receipt_status: 'confirmed', blockchain_tx_hash: HASH, status: 'executed' } }] });
+    await h.send();
+    expect(h.calls).not.toContain('fetch:precheck');
+    expect(h.posted.executeAll).toEqual([{ sponsored: true }]);
   });
 });

@@ -87,14 +87,49 @@ test.describe('S7 chat', () => {
     }
   });
 
-  test('closed: the "AI assistant" header shows while collapsed', async ({ page }) => {
+  test('closed: the "LocalNodes LiAIson" header and its "AI" label show while collapsed', async ({ page }) => {
     await page.goto(`/group/${groupId()}/stream`);
     await expect(header(page)).toBeVisible();
-    await expect(header(page)).toHaveAccessibleName('AI assistant');
+    // The shipped default name, spoken as "LocalNodes Liaison, AI".
+    await expect(header(page)).toHaveAccessibleName('LocalNodes Liaison, AI');
+    await expect(header(page).locator('.ln-assistant-name')).toHaveText('LocalNodes LiAIson');
+    await expect(header(page).locator('.ln-ai-label')).toBeVisible();
+    await expect(header(page).locator('.ln-ai-label')).toHaveText('AI');
     await expect(header(page)).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('.chat-element')).toHaveClass(/chat-collapsed/);
     await checkA11y(page, 'S7', 'closed', SCOPE);
     expect(guard!.seen, 'no AI request just from loading the page').toEqual([]);
+  });
+
+  test('closed: the name is not cut off on a desktop window', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/group/${groupId()}/stream`);
+    const name = header(page).locator('.ln-assistant-name');
+    await expect(name).toBeVisible();
+    const m = await name.evaluate((el) => ({
+      scrollW: el.scrollWidth,
+      clientW: el.clientWidth,
+      scrollH: el.scrollHeight,
+      clientH: el.clientHeight,
+    }));
+    // Whole: nothing is clipped sideways, and none of its lines is cut off
+    // below (the desktop name may wrap onto a second line).
+    expect(m.scrollW, 'the default name is not cut sideways at 1280px').toBeLessThanOrEqual(m.clientW);
+    expect(m.scrollH, 'the default name is not cut off below at 1280px').toBeLessThanOrEqual(m.clientH);
+  });
+
+  test('closed: the launcher and its "AI" label stay inside a 320px window', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(`/group/${groupId()}/stream`);
+    await expect(header(page)).toBeVisible();
+    const launcher = await page.locator('.ai-deepchat .ln-chat-bar').boundingBox();
+    const label = await header(page).locator('.ln-ai-label').boundingBox();
+    expect(launcher, 'launcher has a box').not.toBeNull();
+    expect(label, 'AI label has a box').not.toBeNull();
+    expect(launcher!.x).toBeGreaterThanOrEqual(0);
+    expect(launcher!.x + launcher!.width).toBeLessThanOrEqual(320);
+    expect(label!.x).toBeGreaterThanOrEqual(0);
+    expect(label!.x + label!.width).toBeLessThanOrEqual(320);
   });
 
   test('open: first message states what it answers from and that it can be wrong', async ({ page }) => {

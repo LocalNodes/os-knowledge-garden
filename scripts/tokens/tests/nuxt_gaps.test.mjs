@@ -12,11 +12,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KNOWN_NUXT_GAPS, judge } from '../lib/nuxt_gaps.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const script = resolve(here, '../lib/nuxt_gaps.mjs');
@@ -148,7 +148,7 @@ test('with an empty list the same mail failure is a NEW FAILURE: the deleted ent
 /* ---- the CLI the proof calls ---- */
 
 function cli(before, after, editCount) {
-  const dir = mkdtempSync(join(tmpdir(), 'ln-gaps-'));
+  const dir = testTmpDir('gaps');
   writeFileSync(join(dir, 'before.json'), JSON.stringify(before));
   writeFileSync(join(dir, 'after.json'), JSON.stringify(after));
   const args = [script, join(dir, 'before.json'), join(dir, 'after.json')];

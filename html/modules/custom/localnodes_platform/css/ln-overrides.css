@@ -32,6 +32,23 @@
   color: var(--ln-color-on-danger);
 }
 
+/* The group page's "Joined" button (WINDOWS 46). Open Social's join template
+   paints the joined state's toggle (a <button>; the "Join" call to action is an
+   <a> and keeps btn-accent) with socialblue's solid highlight fill. BRAND.md
+   section 5: the highlight colour is never a button. Ruled 2026-11-11: an
+   outlined navy button, the same in every state. */
+.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle,
+.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:hover,
+.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:focus,
+.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:active,
+.hero-footer__cta .btn-group.open > button.btn-accent.dropdown-toggle {
+  background-color: var(--ln-color-surface);
+  background-image: none;
+  border: 2px solid var(--ln-color-primary-strong);
+  color: var(--ln-color-primary-strong);
+  box-shadow: none;
+}
+
 /* Alerts: body text colour on a status tint, status-coloured border. */
 .alert-danger {
   background-color: var(--ln-color-danger-bg);
@@ -172,7 +189,7 @@ html:has(.ai-deepchat.chat-container) {
   color: var(--ln-color-text-muted);
 }
 
-/* Header: the community's own name as text (22.1-07, Tom's card 2). The
+/* Header: the community's own name as text. The
    branding block prints it in the navbar, which is dark (navbar-bg), so the
    text is the on-primary white. The long-name guard keeps the navbar's single
    row: past 280px the name is cut with an ellipsis, not wrapped. */

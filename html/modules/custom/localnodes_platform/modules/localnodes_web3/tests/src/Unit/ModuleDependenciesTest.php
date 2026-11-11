@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\localnodes_web3\Unit;
+
+use Drupal\Component\Serialization\Yaml;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * What WEB3_ENABLED=true turns on, through localnodes_web3's dependencies.
+ *
+ * The entrypoint enables localnodes_web3 alone when WEB3_ENABLED=true, so
+ * everything a web3 site needs comes in through its .info.yml. The Votes tab
+ * lives in safe_governance's submodule safe_governance_group, so
+ * localnodes_web3 depends on it too;
+ * without it a web3 site has group funds but no Votes tab.
+ *
+ * Kernel tests can't check this: they enable localnodes_web3 without its
+ * dependencies, which pull in Open Social.
+ *
+ * @group localnodes_web3
+ */
+final class ModuleDependenciesTest extends TestCase {
+
+  /**
+   * The modules a web3 site needs, as project:module.
+   */
+  private const EXPECTED = [
+    'siwe_login:siwe_login',
+    'safe_smart_accounts:safe_smart_accounts',
+    'safe_governance:safe_governance',
+    'safe_governance:safe_governance_group',
+    'gas_sponsor:gas_sponsor',
+    'group_treasury:group_treasury',
+    'group_treasury:social_group_treasury',
+  ];
+
+  /**
+   * WEB3_ENABLED alone gives a site the Votes tab.
+   */
+  public function testVotesTabComesWithWeb3(): void {
+    $this->assertContains('safe_governance:safe_governance_group', $this->dependencies(), 'localnodes_web3 must enable safe_governance_group, the Votes tab (25-27 Q3).');
+  }
+
+  /**
+   * Every web3 module is declared, each once, and nothing else.
+   */
+  public function testDependenciesAreExactlyTheWeb3Stack(): void {
+    $dependencies = $this->dependencies();
+    $this->assertSame(array_unique($dependencies), $dependencies, 'No dependency is listed twice.');
+    $this->assertEqualsCanonicalizing(self::EXPECTED, $dependencies);
+  }
+
+  /**
+   * The dependencies localnodes_web3.info.yml declares.
+   *
+   * @return string[]
+   *   The project:module entries.
+   */
+  private function dependencies(): array {
+    $info = Yaml::decode((string) file_get_contents(dirname(__DIR__, 3) . '/localnodes_web3.info.yml'));
+    $this->assertIsArray($info);
+    $this->assertIsArray($info['dependencies'] ?? NULL);
+    return array_values($info['dependencies']);
+  }
+
+}

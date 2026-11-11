@@ -111,10 +111,13 @@ CURL
   printf '#!/bin/sh\necho "APACHE STARTED"\n' > "$t/bin/apache2-foreground"
   # mariadb: the empty-database check. Answers the table count (users_table = 1
   # table, other_tables = 3 more); logs its argv and whether the password came
-  # through MYSQL_PWD (never argv).
+  # through a defaults file (never argv, never MYSQL_PWD: the 11.x client then
+  # skips the server certificate check).
   cat > "$t/bin/mariadb" <<'DB'
 #!/bin/sh
-echo "$* PWD_ENV=${MYSQL_PWD:+set}" >> "$SITE/dbcalls"
+pf=no
+case "$1" in --defaults-extra-file=*) grep -q '^password=.' "${1#--defaults-extra-file=}" && pf=set ;; esac
+echo "$* PWD_ENV=${MYSQL_PWD:+set} PWD_FILE=$pf" >> "$SITE/dbcalls"
 [ "${FAIL_DB_QUERY:-0}" = 1 ] && { echo "ERROR 2002: Can't connect" >&2; exit 1; }
 n=0; [ -f "$SITE/users_table" ] && n=$((n + 1))
 # A query that asks only about `users` gets only that; any other gets all tables.
@@ -600,7 +603,7 @@ check "entrypoint: the pair check comes before install-state detection (the firs
 # 9. Empty-database guard before site:install.
 t="$(new_site)"
 rc="$(run_ep "$t")"
-check "empty DB: installs; password via MYSQL_PWD, not argv" "0 1 yes no" "$rc $(calls "$t" "site:install") $(grep -q 'PWD_ENV=set' "$t/dbcalls" && echo yes || echo no) $(grep -qE -- ' -p|--password' "$t/dbcalls" && echo yes || echo no)"
+check "empty DB: installs; password via a defaults file, not argv or MYSQL_PWD" "0 1 yes no no" "$rc $(calls "$t" "site:install") $(grep -q 'PWD_FILE=set' "$t/dbcalls" && echo yes || echo no) $(grep -q 'PWD_ENV=set' "$t/dbcalls" && echo yes || echo no) $(grep -qE -- ' -p|--password' "$t/dbcalls" && echo yes || echo no)"
 t="$(new_site)"; touch "$t/installed" "$t/users_table"; echo 18 > "$t/nodes"
 rc="$(run_ep "$t" FAIL_BOOTSTRAP=1)"
 check "bootstrap fails on a live DB: refuses site:install, stops" "yes 0" "$([ "$rc" != 0 ] && echo yes || echo no) $(calls "$t" "site:install")"

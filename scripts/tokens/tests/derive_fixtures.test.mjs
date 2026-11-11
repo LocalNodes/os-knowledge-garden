@@ -12,17 +12,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyRepo } from './helpers/repo_copy.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
 const FIXTURES_ROOT = resolve(repoRoot, 'scripts/tokens/fixtures');
 const DERIVER_REL = 'scripts/tokens/derive_socialblue_pairings.mjs';
-const sandbox = () => mkdtempSync(join(tmpdir(), 'ln-derive-fixtures-'));
+const sandbox = () => testTmpDir('derive-fixtures');
 
 const run = (cwdRepo, args) => {
   const r = spawnSync(process.execPath, [join(cwdRepo, DERIVER_REL), ...args], { cwd: tmpdir(), encoding: 'utf8' });
@@ -68,7 +69,7 @@ test('the fixtures are committed: color.inc, the three stylesheets and a SOURCES
 });
 
 test('CI shape (no theme installed): --check runs on the fixtures, passes, and does not SKIP', () => {
-  const { repo } = copyRepo('ln-derive-ci-');
+  const { repo } = copyRepo('derive-ci');
   assert.ok(!existsSync(join(repo, 'html/profiles')), 'the copy has no Open Social');
   const r = run(repo, ['--check']);
   assert.equal(r.code, 0, r.out);
@@ -77,7 +78,7 @@ test('CI shape (no theme installed): --check runs on the fixtures, passes, and d
 });
 
 test('CI shape: a hand edit that deletes a pair from socialblue-pairings.json fails --check', () => {
-  const { repo } = copyRepo('ln-derive-ci-');
+  const { repo } = copyRepo('derive-ci');
   const json = join(repo, 'scripts/tokens/socialblue-pairings.json');
   const doc = JSON.parse(readFileSync(json, 'utf8'));
   assert.ok(doc.pairings.length > 10, 'precondition: the committed file has pairings to delete');
@@ -89,7 +90,7 @@ test('CI shape: a hand edit that deletes a pair from socialblue-pairings.json fa
 });
 
 test('CI shape: with the fixtures missing too, --check fails loudly rather than passing on nothing', () => {
-  const { repo } = copyRepo('ln-derive-ci-');
+  const { repo } = copyRepo('derive-ci');
   const dir = fixturesDir(join(repo, 'scripts/tokens/fixtures'));
   assert.ok(dir, 'precondition: the copy has fixtures');
   rmSync(dir, { recursive: true, force: true });

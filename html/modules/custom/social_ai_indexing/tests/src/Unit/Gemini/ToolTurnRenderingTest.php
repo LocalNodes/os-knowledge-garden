@@ -75,15 +75,60 @@ final class ToolTurnRenderingTest extends UnitTestCase {
   }
 
   /**
-   * Runs chat() on a three-turn input and returns the request's contents.
+   * chat() maps roles on copies: the caller's messages keep their roles.
+   *
+   * The messages are ai_agents' chat history. Mapping tool to user in place
+   * hid a tool result from every later role check.
+   * Gemini still gets model and user: a system message in the list goes out
+   * as a model turn, like an assistant message, and a tool result as user.
+   */
+  public function testOriginalMessagesKeepTheirRoles(): void {
+    $system = new ChatMessage('system', 'You answer from the sources.');
+    $question = new ChatMessage('user', 'What does bioregionalism organize life around?');
+    $tool_turn = $this->toolCallTurn();
+    $tool_result = new ChatMessage('tool', 'Search results. [R1] Bioregionalism');
+
+    $contents = $this->sentContents(new ChatInput([$system, $question, $tool_turn, $tool_result]));
+
+    $this->assertSame(
+      ['model', 'user', 'model', 'user'],
+      array_column($contents, 'role'),
+      'Gemini gets model and user only.',
+    );
+    $this->assertSame('system', $system->getRole(), 'The system message keeps its role.');
+    $this->assertSame('user', $question->getRole());
+    $this->assertSame('assistant', $tool_turn->getRole(), 'The assistant message keeps its role.');
+    $this->assertSame('tool', $tool_result->getRole(), 'The tool result is still a tool result.');
+  }
+
+  /**
+   * Builds an assistant message that only calls a tool.
+   */
+  private function toolCallTurn(): ChatMessage {
+    $tool_turn = new ChatMessage('assistant', '');
+    $tool_turn->setTools([
+      new ToolsFunctionOutput(new ToolsFunctionInput('ai_search_rag_search'), 'gemini_tool_1', [
+        'index' => 'social_posts',
+        'search_string' => 'bioregionalism',
+      ]),
+    ]);
+    return $tool_turn;
+  }
+
+  /**
+   * Runs chat() on an input and returns the request's contents.
    *
    * The Gemini client gets a transporter that records the request and
    * stops, so nothing leaves the machine.
    *
+   * @param \Drupal\ai\OperationType\Chat\ChatInput|null $input
+   *   The input to send. NULL builds a three-turn input: a user question, a
+   *   tool-call-only model turn and a tool result.
+   *
    * @return list<array{role: string, parts: list<array<string, mixed>>}>
    *   The "contents" of the generateContent request.
    */
-  private function sentContents(): array {
+  private function sentContents(?ChatInput $input = NULL): array {
     $captured = NULL;
     $transporter = $this->createMock(TransporterContract::class);
     $transporter->method('request')->willReturnCallback(static function ($request) use (&$captured): never {
@@ -95,16 +140,9 @@ final class ToolTurnRenderingTest extends UnitTestCase {
     $client = new \ReflectionProperty(GeminiProvider::class, 'client');
     $client->setValue($provider, new Client($transporter));
 
-    $tool_turn = new ChatMessage('assistant', '');
-    $tool_turn->setTools([
-      new ToolsFunctionOutput(new ToolsFunctionInput('ai_search_rag_search'), 'gemini_tool_1', [
-        'index' => 'social_posts',
-        'search_string' => 'bioregionalism',
-      ]),
-    ]);
-    $input = new ChatInput([
+    $input ??= new ChatInput([
       new ChatMessage('user', 'What does bioregionalism organize life around?'),
-      $tool_turn,
+      $this->toolCallTurn(),
       new ChatMessage('tool', 'Search results. [R1] Bioregionalism'),
     ]);
 

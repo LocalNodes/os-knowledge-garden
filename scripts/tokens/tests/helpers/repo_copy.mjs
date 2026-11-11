@@ -4,12 +4,12 @@
  *
  * <root>/fresh3 holds scripts/, the localnodes_platform module and the css of the two modules whose stylesheets the
  * gate reads (22.1-17); <root> is where a sibling checkout such as ../localnodes-onboarding would be. The scripts find their own repo root from their location, so a script run
- * from the copy reads and writes the copy only. The copy is removed when the test process exits.
+ * from the copy reads and writes the copy only. The copy is removed after the test file's tests (helpers/tmp_dir.mjs).
  */
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { testTmpDir } from './tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
@@ -21,10 +21,10 @@ const PARTS = [
   'html/modules/custom/social_ai_indexing/css',
 ];
 
-export function copyRepo(prefix = 'ln-repo-copy-') {
-  const root = mkdtempSync(join(tmpdir(), prefix));
+/** `name` names the temp directory (ln-<name>-test-XXXXXX, helpers/tmp_dir.mjs), which removes it after the file's tests. */
+export function copyRepo(name = 'repo-copy') {
+  const root = testTmpDir(name);
   const repo = join(root, 'fresh3');
   for (const part of PARTS) cpSync(join(repoRoot, part), join(repo, part), { recursive: true });
-  process.on('exit', () => rmSync(root, { recursive: true, force: true }));
   return { root, repo };
 }

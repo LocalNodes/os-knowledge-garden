@@ -190,10 +190,12 @@ jobs:
           PROVIDER="$(field ai_provider)"
           KEY_SOURCE="$(field ai_key_source)"
           AI_KEY_VALUE="$(field ai_key)"
+          # The host's address for members' page reports (23 Q5); empty when the sign-up app has none.
+          HOST_REPORT="$(field host_report_email)"
 
           # One line only: ::add-mask:: masks a single line, and a newline would also let a
           # value start a new $GITHUB_ENV entry.
-          for v in "$SITE" "$EMAIL" "$AI_KEY_VALUE" "$COMMUNITY_SEED"; do
+          for v in "$SITE" "$EMAIL" "$AI_KEY_VALUE" "$COMMUNITY_SEED" "$HOST_REPORT"; do
             case "$v" in *$'\n'*|*$'\r'*) manifest_failed "The manifest holds a multi-line value." ;; esac
           done
           [ -n "$SITE" ] && [ -n "$EMAIL" ] || manifest_failed "The manifest lacks the site name or the organizer address."
@@ -203,6 +205,10 @@ jobs:
           [[ "$COMMUNITY_SEED" =~ ^[A-Za-z0-9_-]*$ ]] && [ "${#COMMUNITY_SEED}" -le 16384 ] || manifest_failed "The manifest community seed is not base64url or is too long."
           [[ "$PROVIDER" =~ ^(gemini|openrouter)$ ]] || manifest_failed "The manifest names an unknown AI provider."
           [[ "$KEY_SOURCE" =~ ^(platform|organizer)$ ]] || manifest_failed "The manifest names an unknown AI key source."
+          # One plain address or nothing: no spaces, commas, semicolons, angle brackets or quotes.
+          if [ -n "$HOST_REPORT" ]; then
+            [[ "$HOST_REPORT" =~ ^[^[:space:],\;\<\>\"@]+@[^[:space:],\;\<\>\"@]+$ ]] || manifest_failed "The manifest host report address is not one plain address."
+          fi
 
           # Mask first; only then does any value go anywhere else.
           echo "::add-mask::$SITE"
@@ -214,6 +220,9 @@ jobs:
           if [ -n "$AI_KEY_VALUE" ]; then
             echo "::add-mask::$AI_KEY_VALUE"
           fi
+          if [ -n "$HOST_REPORT" ]; then
+            echo "::add-mask::$HOST_REPORT"
+          fi
 
           # $GITHUB_ENV heredoc form with a random delimiter, so a value cannot end its own entry
           DELIM="ghadelim_$(openssl rand -hex 16)"
@@ -224,6 +233,7 @@ jobs:
           put_env COMMUNITY_SEED_B64 "$COMMUNITY_SEED"
           put_env AI_PROVIDER "$PROVIDER"
           put_env AI_KEY_SOURCE "$KEY_SOURCE"
+          put_env HOST_REPORT_EMAIL "$HOST_REPORT"
           if [ -n "$AI_KEY_VALUE" ]; then
             put_env AI_KEY "$AI_KEY_VALUE"
           fi
@@ -621,10 +631,35 @@ jobs:
           update_env "DRUPAL_HASH_SALT" "$HASH_SALT"
           unset DB_PASS DB_ROOT_PASS HASH_SALT
 
+          # This instance's own gas-sponsor relayer (25-09, D-01, GAS-01): a fresh sending key and
+          # a fresh bearer token, made here and never shown. K is the key (0x plus 64 hex) and T
+          # the token (64 hex). Both are masked before anything else uses them, stored only as
+          # Coolify env vars (the relayer container reads the key, the app container only the
+          # token), and unset straight after. Neither is echoed, written to a file or put in
+          # Drupal config. The relayer's address is shown to stewards on the Network fee account
+          # page; funding it with real money is the maintainer's call, and this step funds nothing.
+          # (a reused app keeps the pair it holds, so the address stewards were shown stays the same)
+          K="$(pick_secret SPONSOR_RELAYER_PRIVATE_KEY "0x$(openssl rand -hex 32)" "")"
+          T="$(pick_secret SPONSOR_RELAYER_TOKEN "$(openssl rand -hex 32)" "")"
+          if [ "${#K}" -ne 66 ] || [ "${#T}" -ne 64 ]; then
+            echo "::error::Could not generate the relayer key and token."
+            exit 1
+          fi
+          echo "::add-mask::$K"
+          echo "::add-mask::${K#0x}"
+          echo "::add-mask::$T"
+          update_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
+          update_env "SPONSOR_RELAYER_TOKEN" "$T"
+          unset K T
+
           # Organizer provisioning env vars (entrypoint handles user creation + email)
           if [ -n "$ORGANIZER_EMAIL" ]; then
             update_env "ORGANIZER_EMAIL" "$ORGANIZER_EMAIL"
             update_env "ORGANIZER_NAME" "$SITE_NAME"
+          fi
+          # Members' page reports go to the host (23 Q5); a run without one leaves the site's default.
+          if [ -n "${HOST_REPORT_EMAIL:-}" ]; then
+            update_env "HOST_REPORT_EMAIL" "$HOST_REPORT_EMAIL"
           fi
           # The site reports back to the pinned origin only, never to the raw input; a manual
           # run reports to nobody.

@@ -153,4 +153,4 @@ fi
 echo ""
 echo "=== Install complete ==="
 echo "Site: $(ddev describe -j 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin)["raw"]["primary_url"])' 2>/dev/null || echo 'https://$(ddev describe --json-output | jq -r .raw.hostname)')"
-echo "Login: admin / admin"
+echo "Sign in: ddev drush user:login"

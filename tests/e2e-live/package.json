@@ -8,7 +8,9 @@
     "e2e": "node ../../node_modules/@playwright/test/cli.js test -c playwright.config.ts",
     "cache": "node cache-live.ts",
     "local": "node ../../node_modules/@playwright/test/cli.js test -c local.config.ts",
-    "cache:local": "node cache-local.ts"
+    "cache:local": "node cache-local.ts",
+    "judge": "node ../../node_modules/@playwright/test/cli.js test -c governance.config.ts",
+    "cache:governance": "node cache-governance.ts"
   },
   "devDependencies": {
     "@synthetixio/synpress": "4.1.2",

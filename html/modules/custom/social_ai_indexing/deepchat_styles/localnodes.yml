@@ -1,6 +1,6 @@
 # LocalNodes DeepChat style (UI-SPEC Part 8 S7, Part 1 tokens).
 #
-# No colour literal lives here (22.1-06). Every colour is a var(--ln-color-*)
+# No colour literal lives here. Every colour is a var(--ln-color-*)
 # reference to the token source (localnodes_platform/tokens/localnodes.tokens.json,
 # targets.deepchat), so the chat changes with the palette:
 #   --ln-color-primary         submit button;  --ln-color-primary-strong  its hover and pressed
@@ -9,7 +9,7 @@
 #   --ln-color-border-control  input border;   --ln-color-divider         hairlines
 #   --ln-color-surface         window, bubble; --ln-color-canvas          user bubble, stop hover
 # Custom properties inherit into DeepChat's shadow root, so these resolve there
-# (spike recorded in 22.1-06-SUMMARY.md). Do not add a hex, rgb() or named colour:
+# (checked in a spike). Do not add a hex, rgb() or named colour:
 # scripts/tokens/check_raw_colors.mjs fails the build on one.
 # The window border is four border-top/right/bottom/left values, not one `border:`:
 # a shorthand holding var() reads back empty, and DeepChat then paints its own

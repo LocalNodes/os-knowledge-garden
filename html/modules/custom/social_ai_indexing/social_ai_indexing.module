@@ -6,6 +6,10 @@
  */
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
+use Drupal\block\BlockInterface;
 use Drupal\file\FileInterface;
 use Drupal\social_ai_indexing\Plugin\VdbProvider\ThrottledQdrantProvider;
 use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
@@ -137,11 +141,23 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
   // (module:social_ai_indexing:localnodes.yml); nothing is hard-coded here.
   $variables['#attached']['library'][] = 'social_ai_indexing/deepchat';
 
+  // The header's name. The block's
+  // own label ("AI assistant") is replaced: the default is "LocalNodes
+  // LiAIson" on every site, or the name set on Site information. The
+  // template prints the visible name (aria-hidden), the spoken name
+  // (visually hidden) and the "AI" label, which is template text so no
+  // setting removes it.
+  /** @var \Drupal\social_ai_indexing\Service\AssistantName $assistant_name */
+  $assistant_name = \Drupal::service('social_ai_indexing.assistant_name');
+  $variables['settings']['label'] = $assistant_name->label();
+  $variables['assistant_spoken_name'] = $assistant_name->spokenLabel();
+  $variables['#cache']['tags'] = Cache::mergeTags($variables['#cache']['tags'] ?? [], $assistant_name->cacheTags());
+
   // Not set here: DeepChat 'names'. DeepChatFormBlock passes bot_name to
   // DeepChat only in toolbar placement, and in the floating panel a name
   // column beside every message squeezes the answer to a few words a line.
-  // The always-visible header label and the first message carry the AI
-  // disclosure instead (UI-SPEC S7, EU AI Act Art. 50).
+  // The always-visible header (name and AI label) and the first message
+  // carry the AI disclosure instead (EU AI Act Art. 50).
   //
   // The template prints every value inside single-quoted attributes, so
   // encode with Json::encode() (it escapes apostrophes, as
@@ -205,4 +221,65 @@ function social_ai_indexing_page_attachments(array &$attachments) {
  */
 function social_ai_indexing_file_delete(FileInterface $file): void {
   \Drupal::service('social_ai_indexing.file_text_store')->delete((int) $file->id());
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for the Site information form.
+ *
+ * Adds the "Assistant name" field directly under "Site name". Empty means
+ * the default, "LocalNodes LiAIson". No permission and no route are added:
+ * the form already has its own access (administrators, and site managers
+ * through Open Social's
+ * 'administer social site configuration').
+ */
+function social_ai_indexing_form_system_site_information_settings_alter(array &$form, FormStateInterface $form_state): void {
+  $stored = \Drupal::config('social_ai_indexing.settings')->get('assistant_name');
+  $field = [
+    '#type' => 'textfield',
+    '#title' => t('Assistant name'),
+    '#description' => t('The name at the top of the chat. Leave it empty to use "LocalNodes LiAIson". An "AI" label always shows next to it.'),
+    '#maxlength' => 40,
+    '#default_value' => is_string($stored) ? $stored : '',
+  ];
+
+  // Place the field right after site_name: rebuild the children in key order.
+  $details = $form['site_information'] ?? [];
+  $form['site_information'] = [];
+  foreach ($details as $key => $value) {
+    $form['site_information'][$key] = $value;
+    if ($key === 'site_name') {
+      $form['site_information']['assistant_name'] = $field;
+    }
+  }
+  if (!isset($form['site_information']['assistant_name'])) {
+    $form['site_information']['assistant_name'] = $field;
+  }
+  $form['#submit'][] = 'social_ai_indexing_site_information_submit';
+}
+
+/**
+ * Submit handler: saves the assistant name, spaces at the ends removed.
+ */
+function social_ai_indexing_site_information_submit(array &$form, FormStateInterface $form_state): void {
+  \Drupal::configFactory()->getEditable('social_ai_indexing.settings')
+    ->set('assistant_name', trim((string) $form_state->getValue('assistant_name')))
+    ->save();
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for the block form.
+ *
+ * The chat header's name comes from Site information, not from the DeepChat
+ * block's Title. One line under the Title field says so.
+ */
+function social_ai_indexing_form_block_form_alter(array &$form, FormStateInterface $form_state): void {
+  $form_object = $form_state->getFormObject();
+  $block = method_exists($form_object, 'getEntity') ? $form_object->getEntity() : NULL;
+  if (!$block instanceof BlockInterface || $block->getPluginId() !== 'ai_deepchat_block') {
+    return;
+  }
+  $link = Link::createFromRoute(t('Site information'), 'system.site_information_settings')->toString();
+  $form['settings']['label']['#description'] = t('The name at the top of the chat is set on @site_information (Assistant name).', [
+    '@site_information' => $link,
+  ]);
 }

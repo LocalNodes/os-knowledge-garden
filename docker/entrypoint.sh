@@ -1,7 +1,31 @@
 #!/bin/bash
 set -e
 
-SITE_URI="${SERVICE_URL_OPENSOCIAL:-http://localhost}"
+# The site's address, for every drush call: links in mail the worker sends
+# (cron, queues) and the provision callback use it. SERVICE_URL_OPENSOCIAL
+# (https://community.example.org) comes first; without it, the first domain in
+# SERVICE_FQDN_OPENSOCIAL, with https:// when it has no scheme (Coolify can
+# list several, comma-separated). localhost only when neither is set.
+site_uri() {
+  local url="${SERVICE_URL_OPENSOCIAL:-}" fqdn="${SERVICE_FQDN_OPENSOCIAL:-}"
+  url="${url%%,*}"; url="${url// /}"
+  if [ -n "$url" ]; then
+    printf '%s' "${url%/}"; return
+  fi
+  fqdn="${fqdn%%,*}"; fqdn="${fqdn// /}"
+  if [ -n "$fqdn" ]; then
+    case "$fqdn" in
+      *://*) printf '%s' "${fqdn%/}" ;;
+      *) printf 'https://%s' "${fqdn%/}" ;;
+    esac
+    return
+  fi
+  printf 'http://localhost'
+}
+SITE_URI="$(site_uri)"
+if [ "$SITE_URI" = "http://localhost" ]; then
+  echo "WARNING: SERVICE_URL_OPENSOCIAL is not set, so links in mail the site sends in the background will point to http://localhost. Set it in .env (docs/SELF-HOST.md, step 2)." >&2
+fi
 DRUSH="${LOCALNODES_DRUSH:-/var/www/html/vendor/bin/drush} -r /var/www/html/html --uri=$SITE_URI"
 
 # --- Auto-generate hash salt if using default sentinel value ---
@@ -391,7 +415,10 @@ if [ "$INSTALLED" = false ]; then
   # the check itself fails, or any table exists, stop so the container retries
   # (and a human looks).
   # Test: scripts/ops/tests/install-resume.test.sh
-  if ! DB_TABLES="$(MYSQL_PWD="${DB_PASSWORD:-changeme}" mariadb -h "${DB_HOST:-mariadb}" -P "${DB_PORT:-3306}" -u "${DB_USER:-opensocial}" -N -B \
+  # The password goes in a defaults file, not MYSQL_PWD: with MYSQL_PWD the
+  # 11.x client counts the login as passwordless and turns off the check of
+  # the server's certificate (MariaDB 11.4 zero-configuration TLS).
+  if ! DB_TABLES="$(mariadb --defaults-extra-file=<(printf '[client]\npassword=%s\n' "${DB_PASSWORD:-changeme}") -h "${DB_HOST:-mariadb}" -P "${DB_PORT:-3306}" -u "${DB_USER:-opensocial}" -N -B \
       -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()" "${DB_NAME:-opensocial}")"; then
     echo "ERROR: Drupal did not bootstrap and the empty-database check failed; not installing. Stopping so the container retries."
     exit 1
@@ -404,11 +431,20 @@ if [ "$INSTALLED" = false ]; then
 
   echo "=== FRESH INSTALL ==="
 
+  # No default admin password. When none is set (or it is the old "admin"),
+  # the account gets a random one that is never printed; the first sign-in
+  # is a one-time link from `drush user:login` (docs/SELF-HOST.md).
+  ADMIN_PASS="${DRUPAL_ADMIN_PASS:-}"
+  if [ -z "$ADMIN_PASS" ] || [ "$ADMIN_PASS" = "admin" ]; then
+    ADMIN_PASS="$(openssl rand -hex 24)"
+    echo "No DRUPAL_ADMIN_PASS set: the admin account gets a random password (not shown). Sign in with: drush user:login"
+  fi
+
   # Install Open Social
   $DRUSH site:install social \
     --site-name="${DRUPAL_SITE_NAME:-LocalNodes}" \
     --account-name="${DRUPAL_ADMIN_USER:-admin}" \
-    --account-pass="${DRUPAL_ADMIN_PASS:-admin}" \
+    --account-pass="$ADMIN_PASS" \
     --account-mail="${DRUPAL_ADMIN_EMAIL:-admin@example.com}" \
     --db-url="mysql://${DB_USER:-opensocial}:${DB_PASSWORD:-changeme}@${DB_HOST:-mariadb}:${DB_PORT:-3306}/${DB_NAME:-opensocial}" \
     install_configure_form.enable_update_status_emails=NULL \

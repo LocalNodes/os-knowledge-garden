@@ -5,6 +5,8 @@
  * Install/uninstall hooks for the LocalNodes Web3 submodule.
  */
 
+use Drupal\user\Entity\Role;
+
 /**
  * Implements hook_install().
  *
@@ -12,14 +14,78 @@
  * config/install directory only; nothing here writes chain data. Per-instance
  * RPC overrides for those entries are $config overrides in settings.php.
  *
- * The one value set here is the SIWE login RPC default, replacing the upstream
- * placeholder with Pocket Network's free, keyless public portal
+ * The one config value set here is the SIWE login RPC default, replacing the
+ * upstream placeholder with Pocket Network's free, keyless public portal
  * (https://docs.pocket.network/foundation/api-portal/). It is only a default:
  * operators override it per instance via the ETHEREUM_PROVIDER_URL env var
  * ($config override in settings.php) or the module admin UI. Idempotent.
+ *
+ * It also lets site managers see the network fee account: gas_sponsor's
+ * 'view network fee account', the steward page for the community's sponsor
+ * relayer. The grant is made here at install, never in an update hook or
+ * the entrypoint. Idempotent.
+ *
+ * Finally it lets the community's sponsor send fully approved group
+ * payments (safe_smart_accounts.settings:sponsored_execution, R5, D-22).
+ * safe_smart_accounts ships that setting off and doesn't depend on
+ * gas_sponsor, so the distribution turns it on here. Idempotent.
+ *
+ * Last, it gives safe_governance the platform's name. That contrib module
+ * is generic: its outside-payment note reads the name from
+ * safe_governance.settings:platform_name and says "this site" while the
+ * setting is empty, so the distribution sets its own name here. A name the
+ * site already chose is kept. Idempotent.
  */
 function localnodes_web3_install() {
   _localnodes_web3_configure_siwe_rpc_default();
+  _localnodes_web3_grant_network_fee_permission();
+  _localnodes_web3_enable_sponsored_execution();
+  _localnodes_web3_set_governance_platform_name();
+}
+
+/**
+ * Turns on sponsored sending of group payments when gas_sponsor is enabled.
+ *
+ * Does nothing without gas_sponsor, or when the setting is already on.
+ */
+function _localnodes_web3_enable_sponsored_execution(): void {
+  if (!\Drupal::moduleHandler()->moduleExists('gas_sponsor')) {
+    return;
+  }
+  $settings = \Drupal::configFactory()->getEditable('safe_smart_accounts.settings');
+  if ($settings->get('sponsored_execution') !== TRUE) {
+    $settings->set('sponsored_execution', TRUE)->save(TRUE);
+  }
+}
+
+/**
+ * Sets the platform name safe_governance shows to LocalNodes when none is set.
+ *
+ * Does nothing without safe_governance, or when the site already has a name.
+ */
+function _localnodes_web3_set_governance_platform_name(): void {
+  if (!\Drupal::moduleHandler()->moduleExists('safe_governance')) {
+    return;
+  }
+  $settings = \Drupal::configFactory()->getEditable('safe_governance.settings');
+  if ((string) $settings->get('platform_name') === '') {
+    $settings->set('platform_name', 'LocalNodes')->save(TRUE);
+  }
+}
+
+/**
+ * Grants 'view network fee account' to the site manager role.
+ *
+ * Open Social's sitemanager role looks after the site, so it sees the
+ * account that pays the community's network fees. Does nothing when the
+ * role doesn't exist. Idempotent.
+ */
+function _localnodes_web3_grant_network_fee_permission(): void {
+  $role = Role::load('sitemanager');
+  if ($role === NULL || $role->hasPermission('view network fee account')) {
+    return;
+  }
+  $role->grantPermission('view network fee account')->save();
 }
 
 /**

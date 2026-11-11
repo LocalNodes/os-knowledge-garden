@@ -1,0 +1,212 @@
+name: Governance judge (live Sepolia)
+
+# Phase 25, plan 25-27: the live judge for group governance (criteria 4 to 7). On demand only. The
+# job builds the site image from the checked-out commit and the gas-sponsor relayer from the commit
+# the run names, starts both with docker-compose.yaml, tests/e2e-live/compose.ci.yaml and
+# tests/e2e-live/compose.governance.yaml, seeds the CI organizer, approver, member and group, builds
+# the CI test-operator wallet's MetaMask profile (accounts 1 to 3), and runs
+# tests/e2e-live/governance-judge.e2e.ts: group fund, voting setup, member approval, a payment
+# proposal, two votes and the payment carried out by the group's vote, with every governance step
+# paid by the CI relayer. See tests/e2e-live/README.md, "The governance judge".
+#
+# Manual dispatch only, from main only: no schedule, no PR or push trigger, so a forked PR can
+# never reach the secrets. The wallet is a throwaway test wallet (D-02: never a personal wallet).
+# Reads (each in its step's env only, never at job level and never inline in a script):
+#   the wallet's seed secret: the cache-build step only (25-27 Q1 (b), TM-143; as 21-46);
+#   the wallet's password secret: the cache-build and judge steps (the judge unlocks MetaMask);
+#   the CI relayer key secret: the compose-up step only;
+#   secrets.SEPOLIA_RPC_URL (optional): the compose-up and judge steps;
+#   vars.SYNPRESS_WALLET_ADDRESS (public): the judge step, checked against account 1.
+# No artifacts are uploaded. The job summary gets only HASH, RECORD and CAPTURE lines (transaction
+# hashes, addresses and the testnet sequencer's own refusal words) and the relayer's public
+# GET /status fields.
+#
+# Concurrency: account 1 is the same wallet nightly-wallet-e2e.yml and governance-smoke.yml pay
+# from, so this workflow joins their group sepolia-test-wallet (two senders could clash on its
+# nonce). The judge needs about 40 minutes; the job's limit is 90.
+
+on:
+  workflow_dispatch:
+    inputs:
+      relayer_repo:
+        description: The relayer's GitHub repository, owner/name (the TA-5 route; 25-28 fills it)
+        required: true
+        type: string
+      relayer_sha:
+        description: The relayer commit to build, a full 40-character SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sepolia-test-wallet
+  cancel-in-progress: false
+
+jobs:
+  governance-judge:
+    # Main only: a dispatch from another ref would hand the secrets to unreviewed workflow code.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check the relayer inputs
+        env:
+          RELAYER_REPO: ${{ inputs.relayer_repo }}
+          RELAYER_SHA: ${{ inputs.relayer_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELAYER_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "relayer_repo must be owner/name" >&2; exit 1; }
+          [[ "$RELAYER_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "relayer_sha must be a full 40-character lowercase SHA" >&2; exit 1; }
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the site image from this commit (loaded locally, not pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+          DOCKER_BUILD_SUMMARY: 'false'
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          push: false
+          tags: os-knowledge-garden:nightly
+          cache-from: type=gha
+
+      # After the site image build, so the relayer's files never enter the site's build context.
+      - name: Checkout the relayer at the named commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.relayer_repo }}
+          ref: ${{ inputs.relayer_sha }}
+          path: .relayer-src
+          persist-credentials: false
+
+      - name: Read the Ethereum Sepolia registry entry
+        id: registry
+        run: |
+          set -euo pipefail
+          f=html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.ethereum_sepolia.yml
+          rpc=$(awk '/^rpc_urls:/ {r=1; next} r && /^[[:space:]]*-/ {gsub(/[\047" ]/, "", $2); print $2; exit}' "$f")
+          case "$rpc" in https://*) ;; *) echo "registry rpc url not found" >&2; exit 1 ;; esac
+          echo "rpc_url=$rpc" >> "$GITHUB_OUTPUT"
+
+      - name: Start the site and the relayer
+        env:
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+          SPONSOR_RELAYER_PRIVATE_KEY_CI: ${{ secrets.SPONSOR_RELAYER_PRIVATE_KEY_CI }}
+        run: |
+          set -euo pipefail
+          [ -f .relayer-src/Dockerfile ] || { echo "the relayer checkout has no Dockerfile" >&2; exit 1; }
+          # The bearer the site and the relayer share: made for this run, masked, never a secret.
+          token=$(openssl rand -hex 32)
+          echo "::add-mask::$token"
+          echo "SPONSOR_RELAYER_TOKEN_CI=$token" >> "$GITHUB_ENV"
+          export SPONSOR_RELAYER_TOKEN_CI="$token"
+          docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml \
+            up -d --build opensocial mariadb solr qdrant gas-sponsor-relayer
+
+      - name: Wait for the install (up to 20 minutes)
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 120); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/user/login || true)
+            if [ "$code" = "200" ]; then echo "The site answered 200 after about $((i * 10)) s."; exit 0; fi
+            if [ -z "$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml ps -q --status running opensocial)" ]; then
+              echo "The opensocial container is not running." >&2
+              break
+            fi
+            sleep 10
+          done
+          docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml logs --tail 200 opensocial
+          exit 1
+
+      - name: Read the relayer's address
+        run: |
+          set -euo pipefail
+          status=$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml \
+            exec -T gas-sponsor-relayer wget -qO- --header "Authorization: Bearer $SPONSOR_RELAYER_TOKEN_CI" http://127.0.0.1:8080/status)
+          configured=$(printf '%s' "$status" | jq -r '.configured')
+          address=$(printf '%s' "$status" | jq -r '.address')
+          [ "$configured" = "true" ] || { echo "the relayer is not configured (key or WEB3_ENABLED)" >&2; exit 1; }
+          [[ "$address" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "the relayer reported no address" >&2; exit 1; }
+          echo "The CI relayer is $address."
+          echo "LN_LIVE_RELAYER_ADDRESS=$address" >> "$GITHUB_ENV"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install the test packages (lockfiles only, no install scripts)
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm ci --prefix tests/e2e-live --ignore-scripts --legacy-peer-deps
+
+      - name: Install Chromium for the root's pinned Playwright 1.63.0
+        run: node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Build the wallet's MetaMask profile (accounts 1 to 3)
+        env:
+          SYNPRESS_SEED_PHRASE: ${{ secrets.SYNPRESS_SEED_PHRASE }}
+          SYNPRESS_WALLET_PASSWORD: ${{ secrets.SYNPRESS_WALLET_PASSWORD }}
+        run: xvfb-run -a npm --prefix tests/e2e-live run cache:governance
+
+      - name: Seed the CI organizer, approver, member and group
+        run: |
+          set -euo pipefail
+          out=$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml exec -T opensocial \
+            /var/www/html/vendor/bin/drush -r /var/www/html/html --uri=http://localhost:8080 \
+            php:script /opt/e2e-live/seed-governance-live.php -- "$LN_ACCOUNT_1" "$LN_ACCOUNT_3")
+          login=$(printf '%s\n' "$out" | sed -n 's/^LN_LIVE_MEMBER_LOGIN=\(.*\)$/\1/p')
+          [ -n "$login" ] || { echo "the seed printed no member login link" >&2; exit 1; }
+          echo "::add-mask::$login"
+          # Everything but the login link, which is a credential for this throwaway site.
+          printf '%s\n' "$out" | grep -v '^LN_LIVE_MEMBER_LOGIN='
+          gid=$(printf '%s\n' "$out" | sed -n 's/^LN_LIVE_GROUP=\([0-9][0-9]*\)$/\1/p')
+          uid=$(printf '%s\n' "$out" | sed -n 's/^LN_LIVE_MEMBER_UID=\([0-9][0-9]*\)$/\1/p')
+          [ -n "$gid" ] && [ -n "$uid" ] || { echo "the seed printed no group or member" >&2; exit 1; }
+          { echo "LN_LIVE_GROUP=$gid"; echo "LN_LIVE_MEMBER_UID=$uid"; echo "LN_LIVE_MEMBER_LOGIN=$login"; } >> "$GITHUB_ENV"
+
+      - name: Governance judge
+        env:
+          SYNPRESS_WALLET_PASSWORD: ${{ secrets.SYNPRESS_WALLET_PASSWORD }}
+          LN_LIVE_BASE_URL: http://localhost:8080
+          LN_LIVE_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || steps.registry.outputs.rpc_url }}
+          LN_LIVE_WALLET_ADDRESS: ${{ vars.SYNPRESS_WALLET_ADDRESS }}
+        run: |
+          set -euo pipefail
+          xvfb-run -a npm --prefix tests/e2e-live run judge 2>&1 | tee "$RUNNER_TEMP/judge-output.txt"
+
+      - name: Hashes, records and captures to the job summary
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            echo "## Governance judge"
+            echo
+            echo '```'
+            grep -E '^(HASH [a-z0-9_]+ 0x[0-9a-f]{64}|RECORD [a-z0-9_]+ (0x[0-9a-fA-F]{40}( 0x[0-9a-fA-F]{40})*|\[\]|not the fund|[0-9]+)|CAPTURE [a-z0-9_]+ [ -~]{1,240})$' "$RUNNER_TEMP/judge-output.txt" 2>/dev/null || echo "(no lines)"
+            echo '```'
+            echo
+            echo "### Relayer GET /status"
+            echo
+            echo '```'
+            docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml \
+              exec -T gas-sponsor-relayer wget -qO- --header "Authorization: Bearer ${SPONSOR_RELAYER_TOKEN_CI:-}" http://127.0.0.1:8080/status 2>/dev/null \
+              | jq '{configured, address, community, chains, groups: [.groups[]? | {chainId, safe, space, module}]}' 2>/dev/null || echo "(status unreadable)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml down -v --remove-orphans

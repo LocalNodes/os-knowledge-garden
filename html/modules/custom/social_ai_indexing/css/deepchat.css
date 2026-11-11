@@ -4,7 +4,7 @@
  *
  * The template puts the "Chat options" menu beside the role="button" header
  * (not inside it), so this bar gives both one dark strip. Colours are the
- * --ln-* tokens (22.1-06; no colour literal lives here): the strip is
+ * --ln-* tokens (no colour literal lives here): the strip is
  * --ln-color-text, the focus ring on it is --ln-color-focus-on-dark, the menu
  * items are --ln-color-surface and --ln-color-canvas. The ring is inset
  * because the fixed chat container clips anything outside it.
@@ -59,11 +59,14 @@
 }
 
 /*
- * Closed, the launcher is only as wide as the "AI assistant" header and its
+ * Closed, the launcher is only as wide as the assistant-name header and its
  * icon, at the window's right edge. The
  * 322px-wide closed bar covered the AI overview's Sources links on the
  * search page (22-30, Codex review). The panel itself is inert and out of
  * view while closed (deepchat-links.js), so its width doesn't matter then.
+ * The name is the site's own (Site information), so it can be long:
+ * .ln-assistant-name below caps it and cuts it with an ellipsis, and the
+ * "AI" label never shrinks.
  */
 .ai-deepchat.chat-container.chat-collapsed {
   left: auto;
@@ -97,4 +100,55 @@
 /* "Chat options" (Clear History) only applies to an open chat. */
 .ai-deepchat.chat-container.chat-collapsed .chat-dropdown {
   display: none;
+}
+
+/*
+ * The header name (EU AI Act Art. 50): the visible
+ * assistant name, then an "AI" label that is always there. A site can rename
+ * the assistant (Site information), so the name is capped and ends in an
+ * ellipsis rather than pushing the launcher off a narrow window or over page
+ * links; the label is never squeezed. The full name stays in the accessible
+ * name (visually-hidden span in the template), so the cap hides nothing from
+ * a screen reader.
+ *
+ * Desktop cap: 6.5rem wide, up to two lines. The closed bar must stay clear
+ * of the AI overview's Sources links at 1280px (overview.spec.ts): a
+ * one-line cap that clears them (about 6rem) would cut the default
+ * "LocalNodes LiAIson" to "LocalNodes L...", so the default wraps after
+ * "LocalNodes" and shows whole. Phone cap: 11rem on one line, which shows
+ * the default whole at 320px (about 142px at the phone's 14px type).
+ */
+.ai-deepchat .ai-deepchat--label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.ai-deepchat .ln-assistant-name {
+  min-width: 0;
+  max-width: 6.5rem;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+@media (max-width: 767px) {
+  .ai-deepchat .ln-assistant-name {
+    max-width: 11rem;
+    overflow-wrap: normal;
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+.ai-deepchat .ln-ai-label {
+  flex: none;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: var(--ln-radius-control, 6px);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
 }

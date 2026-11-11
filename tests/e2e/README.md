@@ -111,6 +111,11 @@ fixed in this lane.
   networks back to back.
 - **No fixture module.** fresh3-e2e never has `safe_smart_accounts_rpc_fixture` on. The
   copy and accessibility checks (21-28, 21-29) use their own site, fresh3-p21-a11y.
+- **Arbitrator stand-in (25-29).** The wallet suite never reaches governance setup. Where
+  `safe_governance` is on the site, `seed-e2e.php` still enables the test-only
+  `safe_governance_arbitrator_fixture`, so nothing here can download the real Arbitrator code from
+  GitHub. It changes no chain read, and is not the RPC fixture above. The live judge
+  (`tests/e2e-live/`) must run without it and refuses to start while it is enabled.
 - **Shared host.** desktop-dev runs other lanes' containers. Each new container makes
   Chromium abort requests in flight with `net::ERR_NETWORK_CHANGED`. The helpers retry page
   loads, link follows and the SIWE sign-in once, and list each retry in the results file.

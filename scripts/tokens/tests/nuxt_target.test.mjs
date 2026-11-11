@@ -11,11 +11,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyRepo } from './helpers/repo_copy.mjs';
+import { testTmpDir } from './helpers/tmp_dir.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -35,7 +36,7 @@ function run(script, args, cwd = tmpdir()) {
 
 /** A directory that looks like a Nuxt checkout (it has nuxt.config.ts). */
 function fakeSibling() {
-  const dir = mkdtempSync(join(tmpdir(), 'ln-nuxt-sibling-'));
+  const dir = testTmpDir('nuxt-sibling');
   writeFileSync(join(dir, 'nuxt.config.ts'), 'export default defineNuxtConfig({})\n');
   return dir;
 }
@@ -156,7 +157,7 @@ test('a plain run rewrites a hand-edited Nuxt file back to the source values', (
 });
 
 test('a missing sibling prints SKIP nuxt, passes, and writes nothing', () => {
-  const absent = join(mkdtempSync(join(tmpdir(), 'ln-nuxt-absent-')), 'no-such-dir');
+  const absent = join(testTmpDir('nuxt-absent'), 'no-such-dir');
   const check = run(build, ['--check', '--sibling', absent]);
   assert.equal(check.code, 0, check.out);
   assert.match(check.out, /SKIP nuxt \(sibling not present\)/);
@@ -168,7 +169,7 @@ test('a missing sibling prints SKIP nuxt, passes, and writes nothing', () => {
 });
 
 test('an existing directory that is not a Nuxt checkout counts as absent', () => {
-  const empty = mkdtempSync(join(tmpdir(), 'ln-nuxt-empty-'));
+  const empty = testTmpDir('nuxt-empty');
   const r = run(build, ['--check', '--sibling', empty]);
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /SKIP nuxt \(sibling not present\)/);
@@ -198,7 +199,7 @@ test('a palette swap reaches the Nuxt file: the primary and the radius follow th
 
 test('--out-dir mirrors the Nuxt file under _external/localnodes-onboarding and never touches the sibling', () => {
   const dir = fakeSibling();
-  const out = mkdtempSync(join(tmpdir(), 'ln-nuxt-out-'));
+  const out = testTmpDir('nuxt-out');
   assert.equal(run(build, ['--out-dir', out, '--sibling', dir]).code, 0);
   assert.ok(existsSync(join(out, '_external', 'localnodes-onboarding', GENERATED_REL)));
   assert.equal(existsSync(join(dir, 'app')), false, 'the sibling stays untouched');
@@ -241,7 +242,7 @@ test('check_token_parity.mjs --nuxt exits 1 on a hand-written Nuxt stylesheet th
 });
 
 test('check_token_parity.mjs prints SKIP nuxt and passes when the sibling is absent', () => {
-  const absent = join(mkdtempSync(join(tmpdir(), 'ln-nuxt-absent-')), 'no-such-dir');
+  const absent = join(testTmpDir('nuxt-absent'), 'no-such-dir');
   const r = run(parity, ['--sibling', absent, '--nuxt', join(absent, GENERATED_REL)]);
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /SKIP nuxt \(sibling not present\)/);
@@ -256,7 +257,7 @@ test('check_token_parity.mjs exits 1 on a missing Nuxt file when the sibling is 
 });
 
 test('every file the generator mirrors under --out-dir still starts with GENERATED', () => {
-  const out = mkdtempSync(join(tmpdir(), 'ln-nuxt-head-'));
+  const out = testTmpDir('nuxt-head');
   assert.equal(run(build, ['--out-dir', out, '--sibling', fakeSibling()]).code, 0);
   const walk = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [join(d, n)]));
   for (const p of walk(out)) assert.match(readFileSync(p, 'utf8').split('\n').slice(0, 6).join('\n'), /GENERATED/, p);
