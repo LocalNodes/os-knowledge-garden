@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\social_ai_indexing\Kernel;
 
 use Drupal\Core\Logger\RfcLogLevel;
+use Drupal\ai\Exception\AiRateLimitException;
+use Drupal\ai\Exception\AiResponseErrorException;
+use Drupal\ai\OperationType\Chat\ChatInput;
+use Drupal\ai\OperationType\Chat\ChatMessage;
 use Drupal\social_ai_indexing\Citation\CitedAnswer;
 use Drupal\social_ai_indexing_test\EventSubscriber\ScriptedLlmSubscriber;
 use Drupal\social_ai_indexing_test\Logger\SpyLogger;
@@ -155,6 +159,101 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
     $this->assertTrue($second['rewritten']);
     $this->assertSame(CitedAnswer::NO_ANSWER_GROUP, $second['answer'], 'The stale [R3] maps to nothing: no valid citation, so the no-answer copy.');
     $this->assertSame([], $this->guardReasons());
+  }
+
+  /**
+   * The answer call after a search fails: the person gets the fallback copy.
+   *
+   * ai_agents dispatches the finished event with a throwaway assistant
+   * message when the provider call throws, and AgentRunner then returns the
+   * last history message: here the raw tool result.
+   */
+  public function testFailedAnswerCallAfterSearchIsReplaced(): void {
+    $question = 'What do the notes say?';
+    $run = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), $question, [
+      self::searchTurn('social_posts', $question),
+      static function (): never {
+        throw new AiRateLimitException('PROVIDER-ERR-7Q2 429 quota exceeded');
+      },
+    ]);
+
+    $this->assertCount(2, $run['inputs'], 'Precondition: the search ran, then the answer call failed.');
+    $this->assertStringContainsString('tool: ', $run['inputs'][1], 'Precondition: the second call was given the tool result.');
+    $this->assertStringContainsString('<<<SOURCE_TEXT', $run['inputs'][1], 'Precondition: the tool result holds fenced excerpts.');
+    $this->assertStringContainsString(self::ZQ7_BODY, $run['inputs'][1], 'Precondition: the member can see the G-MO excerpt.');
+    $this->assertTrue($run['rewritten'], 'Precondition: the subscriber rewrote the throwaway message, which sets the flag.');
+
+    $this->assertFailedCallReplyIsFallback($run, [$question]);
+  }
+
+  /**
+   * The first chat call fails: the asker's own question is not the answer.
+   */
+  public function testFailedFirstCallDoesNotEchoTheQuestion(): void {
+    $question = 'What does QX5-ASKER-CANARY say about the notes?';
+    $run = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), $question, [
+      static function (): never {
+        throw new AiResponseErrorException('PROVIDER-ERR-7Q2 503 unavailable');
+      },
+    ]);
+
+    $this->assertCount(1, $run['inputs'], 'Precondition: only the first call was made.');
+    $this->assertStringContainsString('QX5-ASKER-CANARY', $run['inputs'][0], 'Precondition: the question reached the model.');
+    $this->assertTrue($run['rewritten'], 'Precondition: the subscriber rewrote the throwaway message, which sets the flag.');
+
+    $this->assertFailedCallReplyIsFallback($run, [$question, 'QX5-ASKER-CANARY']);
+  }
+
+  /**
+   * A tool message whose role was changed in place still can't get out.
+   *
+   * The guard checks which object is returned, not its role (our Gemini
+   * patch changes tool messages to user in place today).
+   */
+  public function testRoleMutatedToolMessageIsReplaced(): void {
+    $question = 'What do the notes say?';
+    $mutated = 0;
+    $run = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), $question, [
+      self::searchTurn('social_posts', $question),
+      static function (ChatInput $input) use (&$mutated): never {
+        foreach ($input->getMessages() as $message) {
+          if ($message instanceof ChatMessage && $message->getRole() === 'tool') {
+            $message->setRole('user');
+            $mutated++;
+          }
+        }
+        throw new AiResponseErrorException('PROVIDER-ERR-7Q2 503 unavailable');
+      },
+    ]);
+
+    $this->assertGreaterThanOrEqual(1, $mutated, 'Precondition: a tool message was there to change.');
+    $this->assertTrue($run['rewritten'], 'Precondition: the subscriber rewrote the throwaway message, which sets the flag.');
+
+    $this->assertFailedCallReplyIsFallback($run, [$question]);
+  }
+
+  /**
+   * Shared leak assertions for a failed chat call.
+   *
+   * @param array $run
+   *   The askAssistant() result.
+   * @param list<string> $question_texts
+   *   Question text that must not come back as the answer.
+   */
+  private function assertFailedCallReplyIsFallback(array $run, array $question_texts): void {
+    $this->assertSame(CitedAnswer::fallbackMarkdown(), $run['answer'], 'The fixed fallback copy, nothing else.');
+    $this->assertSame('assistant', $run['role']);
+    $forbidden = [self::ZQ7_BODY, '<<<SOURCE_TEXT', 'SOURCE_TEXT>>>', '[R1]', 'PROVIDER-ERR-7Q2', ...$question_texts];
+    foreach ($forbidden as $text) {
+      $this->assertStringNotContainsString($text, $run['answer']);
+    }
+    $this->assertSame(['rewrite_not_returned'], $this->guardReasons());
+    foreach ($this->spy()->records() as $record) {
+      $flat = SpyLogger::flatten($record);
+      foreach (['PROVIDER-ERR-7Q2', 'QX5-ASKER-CANARY', self::ZQ7_BODY] as $canary) {
+        $this->assertStringNotContainsString($canary, $flat, 'No log record on channel ' . $record['channel'] . ' carries provider, question or excerpt text.');
+      }
+    }
   }
 
   /**

@@ -1,0 +1,252 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for LocalNodes OpenRouter.
+ *
+ * Installing this module turns a site into an OpenRouter site (ONB-07, D-21):
+ * every chat user (the default chat providers, the group assistant, the
+ * citation support check and the search server's chat model) and the
+ * embeddings switch to OpenRouter with the fixed models of the orchestrator's
+ * 23-06 model ruling of 2026-11-08, read from localnodes_openrouter.settings.
+ * The entrypoint enables the module when AI_PROVIDER=openrouter (23-27).
+ */
+
+declare(strict_types=1);
+
+/**
+ * The Gemini chat model a default site ships with (localnodes_platform).
+ */
+const LOCALNODES_OPENROUTER_GEMINI_CHAT = 'models/gemini-3.8-flash';
+
+/**
+ * The Gemini embedding model a default site ships with (localnodes_platform).
+ */
+const LOCALNODES_OPENROUTER_GEMINI_EMBEDDINGS = 'models/gemini-embedding-2';
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_openrouter_install(): void {
+  _localnodes_openrouter_configure_ai();
+}
+
+/**
+ * Implements hook_requirements().
+ *
+ * The status report shows whether every OpenRouter model in use has a
+ * ZDR-only provider pin (orchestrator ruling, 2026-11-08). A model without
+ * one still gets zero data retention and data collection denied on every
+ * request, but any ZDR endpoint may serve it, including one that keeps data
+ * for abuse checks; the organizer should see that.
+ */
+function localnodes_openrouter_requirements(string $phase): array {
+  if ($phase !== 'runtime') {
+    return [];
+  }
+  $unpinned = _localnodes_openrouter_unpinned_models();
+  if ($unpinned === []) {
+    return [
+      'localnodes_openrouter_pins' => [
+        'title' => t('OpenRouter privacy pins'),
+        'value' => t('Every OpenRouter model in use is pinned to hosts that keep nothing.'),
+        'severity' => REQUIREMENT_OK,
+      ],
+    ];
+  }
+  return [
+    'localnodes_openrouter_pins' => [
+      'title' => t('OpenRouter privacy pins'),
+      'value' => t('Some OpenRouter models are not pinned to hosts that keep nothing.'),
+      'description' => t('These OpenRouter models have no zero-retention host list in localnodes_openrouter.settings: @models. Their requests still ask for zero data retention and refuse data collection, but any zero-retention host may serve them, including one that keeps data for abuse checks. Add a host list for each one, or switch back to the site\'s fixed models.', [
+        '@models' => implode(', ', $unpinned),
+      ]),
+      'severity' => REQUIREMENT_WARNING,
+    ],
+  ];
+}
+
+/**
+ * Switches the site's AI to OpenRouter with the fixed models.
+ *
+ * Idempotent. A value is changed only while it still equals the default a
+ * LocalNodes site ships with; provider and model change together or not at
+ * all, so a value an operator set is left alone. base_url is not touched:
+ * settings.php sets it from OPENROUTER_BASE_URL (23-08).
+ */
+function _localnodes_openrouter_configure_ai(): void {
+  $config_factory = \Drupal::configFactory();
+  $settings = $config_factory->get('localnodes_openrouter.settings');
+  $chat = (string) $settings->get('chat_model');
+  $backup = (string) $settings->get('backup_chat_model');
+  $embed = (string) $settings->get('embedding_model');
+  $size = (int) $settings->get('vector_size');
+
+  // The provider module: the key and the fixed models.
+  $openrouter = $config_factory->getEditable('ai_provider_openrouter.settings');
+  $changed = FALSE;
+  if ((string) $openrouter->get('api_key') === '') {
+    $openrouter->set('api_key', 'openrouter_api_key');
+    $changed = TRUE;
+  }
+  if (empty($openrouter->get('enabled_models'))) {
+    $openrouter->set('enabled_models', array_values(array_unique([$chat, $backup, $embed])));
+    $changed = TRUE;
+  }
+  if ($openrouter->get('streaming') === NULL) {
+    $openrouter->set('streaming', FALSE);
+    $changed = TRUE;
+  }
+  if ($changed) {
+    $openrouter->save(TRUE);
+  }
+
+  // The default providers: chat family and embeddings to OpenRouter; the
+  // Gemini-only image, speech and vision defaults removed (an OpenRouter
+  // site's content must not go to Gemini, D-21; the fixed chat models are
+  // used for text only).
+  $ai = $config_factory->getEditable('ai.settings');
+  $defaults = $ai->get('default_providers') ?? [];
+  $before = $defaults;
+  foreach (['chat', 'chat_with_complex_json', 'chat_with_structured_response', 'chat_with_tools'] as $operation) {
+    if (_localnodes_openrouter_is_gemini_default($defaults[$operation] ?? NULL, LOCALNODES_OPENROUTER_GEMINI_CHAT)) {
+      $defaults[$operation] = ['provider_id' => 'openrouter', 'model_id' => $chat];
+    }
+  }
+  if (_localnodes_openrouter_is_gemini_default($defaults['embeddings'] ?? NULL, LOCALNODES_OPENROUTER_GEMINI_EMBEDDINGS)) {
+    $defaults['embeddings'] = ['provider_id' => 'openrouter', 'model_id' => $embed];
+  }
+  foreach (['chat_with_image_vision', 'speech_to_text', 'text_to_image'] as $operation) {
+    if (($defaults[$operation]['provider_id'] ?? NULL) === 'gemini') {
+      unset($defaults[$operation]);
+    }
+  }
+  if ($defaults !== $before) {
+    $ai->set('default_providers', $defaults)->save(TRUE);
+  }
+
+  // The group assistant.
+  $assistant = $config_factory->getEditable('ai_assistant_api.ai_assistant.group_assistant');
+  if (!$assistant->isNew()
+    && $assistant->get('llm_provider') === 'gemini'
+    && $assistant->get('llm_model') === LOCALNODES_OPENROUTER_GEMINI_CHAT) {
+    $assistant->set('llm_provider', 'openrouter')->set('llm_model', $chat)->save(TRUE);
+  }
+
+  // The citation support check: a Gemini check would send an OpenRouter
+  // site's sentences and excerpts to Gemini (D-21).
+  $indexing = $config_factory->getEditable('social_ai_indexing.settings');
+  if (!$indexing->isNew()
+    && $indexing->get('support_check.provider') === 'gemini'
+    && $indexing->get('support_check.model') === LOCALNODES_OPENROUTER_GEMINI_CHAT) {
+    $indexing->set('support_check.provider', 'openrouter')->set('support_check.model', $chat)->save(TRUE);
+  }
+
+  // The search server: its chat model and the embeddings engine at the
+  // fixed vector size.
+  $server = $config_factory->getEditable('search_api.server.ai_knowledge_garden');
+  if (!$server->isNew()) {
+    $backend = $server->get('backend_config') ?? [];
+    $was = $backend;
+    if (($backend['chat_model'] ?? NULL) === 'gemini__' . LOCALNODES_OPENROUTER_GEMINI_CHAT) {
+      $backend['chat_model'] = 'openrouter__' . $chat;
+    }
+    if (($backend['embeddings_engine'] ?? NULL) === 'gemini__' . LOCALNODES_OPENROUTER_GEMINI_EMBEDDINGS) {
+      $backend['embeddings_engine'] = 'openrouter__' . $embed;
+      $backend['embeddings_engine_configuration']['set_dimensions'] = TRUE;
+      $backend['embeddings_engine_configuration']['dimensions'] = $size;
+    }
+    if ($backend !== $was) {
+      $server->set('backend_config', $backend)->save(TRUE);
+    }
+  }
+
+  _localnodes_openrouter_configure_usage_ceiling();
+}
+
+/**
+ * Gives OpenRouter the same site-wide token ceiling as Gemini (D-27).
+ *
+ * ai_usage_limits refuses every call to a provider that has recorded usage
+ * but has no limit entry, so without this an OpenRouter site stops after its
+ * first answer. The ceiling is copied from the Gemini entry
+ * localnodes_platform sets (30,000,000 tokens per 30-day window unless an
+ * operator changed it). Only written while providers.openrouter is absent,
+ * so an operator's value survives.
+ */
+function _localnodes_openrouter_configure_usage_ceiling(): void {
+  $limits = \Drupal::configFactory()->getEditable('ai_usage_limits.settings');
+  if ($limits->isNew() || $limits->get('providers.openrouter') !== NULL) {
+    return;
+  }
+  $ceiling = $limits->get('providers.gemini');
+  if (!is_array($ceiling)) {
+    $limit = 30000000;
+    $ceiling = [
+      'enable_limits' => TRUE,
+      'input_token_usage' => $limit,
+      'output_token_usage' => $limit,
+      'total_token_usage' => $limit,
+      'cached_token_usage' => $limit,
+      'reasoning_token_usage' => $limit,
+    ];
+  }
+  $limits->set('providers.openrouter', $ceiling)->save(TRUE);
+}
+
+/**
+ * Whether a default provider entry is the shipped Gemini one.
+ */
+function _localnodes_openrouter_is_gemini_default(mixed $entry, string $model): bool {
+  return is_array($entry)
+    && ($entry['provider_id'] ?? NULL) === 'gemini'
+    && ($entry['model_id'] ?? NULL) === $model;
+}
+
+/**
+ * Returns the OpenRouter models in use that have no ZDR-only pin.
+ *
+ * @return list<string>
+ *   Model ids, sorted.
+ */
+function _localnodes_openrouter_unpinned_models(): array {
+  $config_factory = \Drupal::configFactory();
+  $settings = $config_factory->get('localnodes_openrouter.settings');
+
+  $models = [
+    (string) $settings->get('chat_model'),
+    (string) $settings->get('backup_chat_model'),
+    (string) $settings->get('embedding_model'),
+  ];
+  foreach ($config_factory->get('ai.settings')->get('default_providers') ?? [] as $default) {
+    if (is_array($default) && ($default['provider_id'] ?? NULL) === 'openrouter') {
+      $models[] = (string) ($default['model_id'] ?? '');
+    }
+  }
+  $assistant = $config_factory->get('ai_assistant_api.ai_assistant.group_assistant');
+  if ($assistant->get('llm_provider') === 'openrouter') {
+    $models[] = (string) $assistant->get('llm_model');
+  }
+  $indexing = $config_factory->get('social_ai_indexing.settings');
+  if ($indexing->get('support_check.provider') === 'openrouter') {
+    $models[] = (string) $indexing->get('support_check.model');
+  }
+  $backend = $config_factory->get('search_api.server.ai_knowledge_garden')->get('backend_config') ?? [];
+  foreach (['chat_model', 'embeddings_engine'] as $field) {
+    $value = (string) ($backend[$field] ?? '');
+    if (str_starts_with($value, 'openrouter__')) {
+      $models[] = substr($value, strlen('openrouter__'));
+    }
+  }
+
+  $pinned = [];
+  foreach ($settings->get('provider_pins') ?? [] as $entry) {
+    if (is_array($entry) && (!empty($entry['only']) || !empty($entry['ignore']))) {
+      $pinned[(string) ($entry['model'] ?? '')] = TRUE;
+    }
+  }
+
+  $unpinned = array_values(array_unique(array_filter($models, static fn (string $model): bool => $model !== '' && !isset($pinned[$model]))));
+  sort($unpinned);
+  return $unpinned;
+}

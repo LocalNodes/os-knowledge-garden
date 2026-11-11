@@ -52,6 +52,18 @@ class ImportItem extends ContentEntityBase implements EntityChangedInterface {
   public const OUTCOME_DELETED = 'deleted';
 
   /**
+   * Outcomes that make a Topic an imported page (Source box, report link).
+   *
+   * Duplicate and failed rows can name a Topic too, but don't make it
+   * imported.
+   */
+  public const IMPORTED_OUTCOMES = [
+    self::OUTCOME_IMPORTED,
+    self::OUTCOME_NOT_SEARCHABLE,
+    self::OUTCOME_REFRESHED,
+  ];
+
+  /**
    * The id of the group the source was imported into.
    */
   public function getGroupId(): ?int {

@@ -14,7 +14,7 @@ namespace Drupal\social_ai_indexing\Citation;
  * the registry only (T-22-18). Every regex failure fails closed.
  *
  * The rewriter does not mark the registry; its caller (the 22-16 subscriber)
- * calls SourceRegistry::markRewritten().
+ * calls SourceRegistry::markRewritten(), passing the message it rewrote.
  */
 final class CitationRewriter {
 

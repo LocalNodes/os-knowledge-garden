@@ -15,7 +15,7 @@ dependencies:
   - ai:ai
   - ai_agents:ai_agents
   - ai:ai_chatbot
-  - ai:ai_search
+  - ai_search:ai_search
   - ai:ai_assistant_api
   - ai_file_to_text:ai_file_to_text
   - ai_vdb_provider_qdrant:ai_vdb_provider_qdrant

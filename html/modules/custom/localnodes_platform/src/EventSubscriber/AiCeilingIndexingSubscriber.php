@@ -32,10 +32,11 @@ use Symfony\Component\HttpKernel\KernelEvents;
  *   The VDB providers delete an item's old vectors before embedding it, so
  *   a run stopped later would leave edited content out of vector search
  *   until the reset.
- * - During a run, an embeddings call to a provider at its ceiling (a run
- *   that crossed it) is stopped first (priority 50). Calls outside an index run are
- * left to ai_usage_limits; their callers catch its exception (hybrid
- * search's vector leg, related content, the RAG tool, the overview).
+ * - During a run, an embeddings call (single or batch) to a provider at its
+ *   ceiling (a run that crossed it) is stopped first (priority 50). Calls
+ *   outside an index run are left to ai_usage_limits; their callers catch its
+ *   exception (hybrid search's vector leg, related content, the RAG tool, the
+ *   overview).
  *
  * The ceiling test is ai_usage_limits' own (CheckTokenUsageSubscriber): a
  * counter with usage whose limit is missing or lower.
@@ -52,6 +53,15 @@ final class AiCeilingIndexingSubscriber implements EventSubscriberInterface {
     'cached_token_usage',
     'reasoning_token_usage',
   ];
+
+  /**
+   * The operation types that embed text during an index run.
+   *
+   * 'embeddings_collection' is the batch call: a provider that implements
+   * EmbeddingsCollectionInterface (gemini_provider since 22.2-11) sends all
+   * chunks of an item in one request.
+   */
+  private const EMBEDDING_OPERATIONS = ['embeddings', 'embeddings_collection'];
 
   /**
    * The exception message search_api logs (no content).
@@ -121,7 +131,7 @@ final class AiCeilingIndexingSubscriber implements EventSubscriberInterface {
    * @throws \Drupal\search_api\SearchApiException
    */
   public function onPreGenerate(PreGenerateResponseEvent $event): void {
-    if ($this->indexingDepth === 0 || $event->getOperationType() !== 'embeddings') {
+    if ($this->indexingDepth === 0 || !in_array($event->getOperationType(), self::EMBEDDING_OPERATIONS, TRUE)) {
       return;
     }
     if (!$this->atCeiling($event->getProviderId())) {

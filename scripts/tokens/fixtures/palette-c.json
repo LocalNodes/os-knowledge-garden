@@ -1,0 +1,127 @@
+{
+  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: option C, the provisional teal (Tailwind v3.4.17 teal and amber). Values copied from .planning/brand/CANVAS-BRIEF.md (section 3: the option C column). Deep-merged over localnodes.tokens.json by the swap proof; it sets the brand and accent scales, the socialblue chrome fields, the roles that point at them and the one socialblue field that is not a reference. It also sets targets.nuxt.light.--ui-bg-accented to neutral 100: with this palette's primary on Nuxt UI's default accented fill (neutral 200) the pair is under 4.5:1 (CANVAS-BRIEF.md section 4, summary per option: A 4.07, C 4.31), the 'override --ui-bg-accented' route that section names.",
+  "primitive": {
+    "color": {
+      "brand": {
+        "50": {
+          "$value": "#f0fdfa"
+        },
+        "100": {
+          "$value": "#ccfbf1"
+        },
+        "200": {
+          "$value": "#99f6e4"
+        },
+        "300": {
+          "$value": "#5eead4"
+        },
+        "400": {
+          "$value": "#2dd4bf"
+        },
+        "500": {
+          "$value": "#14b8a6"
+        },
+        "600": {
+          "$value": "#0d9488"
+        },
+        "700": {
+          "$value": "#0f766e"
+        },
+        "800": {
+          "$value": "#115e59"
+        },
+        "900": {
+          "$value": "#134e4a"
+        },
+        "950": {
+          "$value": "#042f2e"
+        }
+      },
+      "accent": {
+        "50": {
+          "$value": "#fffbeb"
+        },
+        "100": {
+          "$value": "#fef3c7"
+        },
+        "200": {
+          "$value": "#fde68a"
+        },
+        "300": {
+          "$value": "#fcd34d"
+        },
+        "400": {
+          "$value": "#fbbf24"
+        },
+        "500": {
+          "$value": "#f59e0b"
+        },
+        "600": {
+          "$value": "#d97706"
+        },
+        "700": {
+          "$value": "#b45309"
+        },
+        "800": {
+          "$value": "#92400e"
+        },
+        "900": {
+          "$value": "#78350f"
+        },
+        "950": {
+          "$value": "#451a03"
+        }
+      },
+      "chrome": {
+        "navbar-bg": {
+          "$value": "#27272a"
+        },
+        "navbar-active-bg": {
+          "$value": "#18181b"
+        },
+        "navbar-sec-bg": {
+          "$value": "#0b4d48"
+        },
+        "navbar-sec-text": {
+          "$value": "#f9f9f9"
+        },
+        "line2-bg": {
+          "$value": "#042f2e"
+        },
+        "line2-text": {
+          "$value": "#fffff1"
+        },
+        "line2-active-text": {
+          "$value": "#0a3f3b"
+        }
+      }
+    }
+  },
+  "semantic": {
+    "primary": {
+      "$value": "{primitive.color.brand.700}"
+    },
+    "primary-strong": {
+      "$value": "{primitive.color.brand.900}"
+    },
+    "link": {
+      "$value": "{primitive.color.brand.800}"
+    },
+    "highlight": {
+      "$value": "{primitive.color.accent.400}"
+    },
+    "tint": {
+      "$value": "#f0fdfa"
+    }
+  },
+  "targets": {
+    "socialblue": {
+      "navbar-active-text": "#f4f4f5"
+    },
+    "nuxt": {
+      "light": {
+        "--ui-bg-accented": "{primitive.color.neutral.100}"
+      }
+    }
+  }
+}

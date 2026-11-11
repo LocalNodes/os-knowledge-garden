@@ -54,7 +54,16 @@ trait AgentLoopTrait {
     $this->assertSame(2, $this->indexAllItems($comments), 'Every comment fixture is indexed.');
     $this->mirrorCommentPayloads();
     $this->resetSourceRegistry();
+    $this->setUpAgentConfig();
+  }
 
+  /**
+   * Installs the shipped agent and assistant config (echoai as the provider).
+   *
+   * Split from setUpAgentLoop() so a test that already has its own search
+   * stack (GuardrailAttachTest) can add the agent without a second one.
+   */
+  protected function setUpAgentConfig(): void {
     $this->installConfig(['ai_agents']);
     $this->installShippedConfigFrom('social_ai_indexing', 'config/optional', ['ai_agents.ai_agent.group_assistant']);
     $this->installShippedConfigFrom('localnodes_platform', 'config/install', ['ai_assistant_api.ai_assistant.group_assistant'], static function (array $data): array {

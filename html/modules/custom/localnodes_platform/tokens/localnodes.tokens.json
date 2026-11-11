@@ -1,0 +1,362 @@
+{
+  "$schema": "localnodes tokens v1 (DTCG-style: $value leaves, {a.b.c} references)",
+  "$description": "The one LocalNodes token source (22.1-03, DES-01, D-03, D-08). Hand-edited. Run `node scripts/tokens/build_tokens.mjs` after any change; `--check` fails when a generated file differs. Three layers: primitive (raw values), semantic (what a value is for), targets (which product field or custom property takes which semantic value). Colour values come from .planning/brand/BRAND.md section 12 (Tom, 2026-11-06). Names are roles (brand, accent, neutral), never hues: a palette swap changes values only.",
+  "primitive": {
+    "color": {
+      "brand": {
+        "$description": "Palette B, the darker Open Social blue (Tom, 2026-11-06, card P). Shades 50-600 and 950 are the 11-shade scale BRAND.md section 12 lists; 700/800/900 are the socialblue primary, link and secondary.",
+        "50": { "$value": "#f0f9ff", "$type": "color" },
+        "100": { "$value": "#e0f2fe", "$type": "color" },
+        "200": { "$value": "#bae6fd", "$type": "color" },
+        "300": { "$value": "#7dd3fc", "$type": "color" },
+        "400": { "$value": "#38bdf8", "$type": "color" },
+        "500": { "$value": "#0ea5e9", "$type": "color" },
+        "600": { "$value": "#0284c7", "$type": "color" },
+        "700": { "$value": "#176c93", "$type": "color" },
+        "800": { "$value": "#145f82", "$type": "color" },
+        "900": { "$value": "#0f4f6d", "$type": "color" },
+        "950": { "$value": "#082f49", "$type": "color" }
+      },
+      "accent": {
+        "$description": "The highlight scale. 400 is socialblue's own #ffc142, so the Drupal accent and the Nuxt badge colour are one value.",
+        "50": { "$value": "#fffbeb", "$type": "color" },
+        "100": { "$value": "#fef3c7", "$type": "color" },
+        "200": { "$value": "#fde68a", "$type": "color" },
+        "300": { "$value": "#fcd34d", "$type": "color" },
+        "400": { "$value": "#ffc142", "$type": "color" },
+        "500": { "$value": "#f59e0b", "$type": "color" },
+        "600": { "$value": "#d97706", "$type": "color" },
+        "700": { "$value": "#b45309", "$type": "color" },
+        "800": { "$value": "#92400e", "$type": "color" },
+        "900": { "$value": "#78350f", "$type": "color" },
+        "950": { "$value": "#451a03", "$type": "color" }
+      },
+      "neutral": {
+        "$description": "Shared neutrals (BRAND.md section 12 'Shared tokens'). The 50-950 scale is the grey scale the Nuxt site uses today (BRAND.md: 'Tailwind zinc for now; 22.1-08 replaces it with a token-defined neutral scale'); the named values are the Drupal and Nuxt roles.",
+        "50": { "$value": "#fafafa", "$type": "color" },
+        "100": { "$value": "#f4f4f5", "$type": "color" },
+        "200": { "$value": "#e4e4e7", "$type": "color" },
+        "300": { "$value": "#d4d4d8", "$type": "color" },
+        "400": { "$value": "#a1a1aa", "$type": "color" },
+        "500": { "$value": "#71717a", "$type": "color" },
+        "600": { "$value": "#52525b", "$type": "color" },
+        "700": { "$value": "#3f3f46", "$type": "color" },
+        "800": { "$value": "#27272a", "$type": "color" },
+        "900": { "$value": "#18181b", "$type": "color" },
+        "950": { "$value": "#09090b", "$type": "color" },
+        "text": { "$value": "#343434", "$type": "color" },
+        "muted": { "$value": "#555555", "$type": "color" },
+        "border": { "$value": "#8a8a8a", "$type": "color" },
+        "divider": { "$value": "#e6e6e6", "$type": "color" },
+        "canvas": { "$value": "#f3f3f3", "$type": "color" },
+        "white": { "$value": "#ffffff", "$type": "color" },
+        "tint": { "$value": "#f2f5f9", "$type": "color" }
+      },
+      "chrome": {
+        "$description": "socialblue's navigation fields that palette B keeps at their stock values (BRAND.md section 12), plus the section navbar background B changes.",
+        "navbar-bg": { "$value": "#333333", "$type": "color" },
+        "navbar-active-bg": { "$value": "#1f1f1f", "$type": "color" },
+        "navbar-sec-bg": { "$value": "#1d749a", "$type": "color" },
+        "navbar-sec-text": { "$value": "#f9f9f9", "$type": "color" },
+        "line2-bg": { "$value": "#004494", "$type": "color" },
+        "line2-text": { "$value": "#fffff1", "$type": "color" },
+        "line2-active-text": { "$value": "#002f67", "$type": "color" }
+      },
+      "status": {
+        "danger": { "$value": "#b42318", "$type": "color" },
+        "danger-bg": { "$value": "#fef3f2", "$type": "color" },
+        "danger-strong": {
+          "$value": "#991e14",
+          "$type": "color",
+          "$description": "The hover colour of a destructive button. It is what the old color-mix(in srgb, danger 85%, black 15%) rule computed: each channel of #b42318 times 0.85, rounded (153, 29.75, 20.4 -> 153, 30, 20)."
+        },
+        "success": { "$value": "#1e6b2e", "$type": "color" },
+        "success-bg": { "$value": "#ecfdf3", "$type": "color" },
+        "warning-text": { "$value": "#8a5a00", "$type": "color" },
+        "warning-bg": { "$value": "#fffbeb", "$type": "color" },
+        "danger-on-dark": { "$value": "#f87171", "$type": "color" },
+        "success-on-dark": { "$value": "#4ade80", "$type": "color" },
+        "warning-on-dark": { "$value": "#fbbf24", "$type": "color" }
+      }
+    },
+    "font": {
+      "sans": { "$value": "'Montserrat', system-ui, sans-serif", "$type": "fontFamily" },
+      "mono": { "$value": "Menlo, Monaco, Consolas, \"Courier New\", monospace", "$type": "fontFamily" }
+    },
+    "size": {
+      "body": { "$value": "16px", "$type": "dimension" },
+      "label": { "$value": "14px", "$type": "dimension" },
+      "heading": { "$value": "20px", "$type": "dimension" },
+      "display": { "$value": "28px", "$type": "dimension" },
+      "hero": { "$value": "48px", "$type": "dimension" },
+      "hero-small": { "$value": "36px", "$type": "dimension" }
+    },
+    "weight": {
+      "regular": { "$value": 400, "$type": "fontWeight" },
+      "strong": { "$value": 600, "$type": "fontWeight" }
+    },
+    "line-height": {
+      "body": { "$value": 1.5, "$type": "number" },
+      "heading": { "$value": 1.2, "$type": "number" },
+      "hero": { "$value": 1.15, "$type": "number" }
+    },
+    "space": {
+      "xs": { "$value": "4px", "$type": "dimension" },
+      "sm": { "$value": "8px", "$type": "dimension" },
+      "md": { "$value": "16px", "$type": "dimension" },
+      "lg": { "$value": "24px", "$type": "dimension" },
+      "xl": { "$value": "32px", "$type": "dimension" },
+      "2xl": { "$value": "48px", "$type": "dimension" },
+      "3xl": { "$value": "64px", "$type": "dimension" }
+    },
+    "radius": {
+      "control": { "$value": "6px", "$type": "dimension" },
+      "card": { "$value": "8px", "$type": "dimension" },
+      "pill": { "$value": "999px", "$type": "dimension" }
+    },
+    "motion": {
+      "duration": {
+        "fast": { "$value": "150ms", "$type": "duration" },
+        "progress": { "$value": "200ms", "$type": "duration" }
+      },
+      "easing": {
+        "standard": { "$value": "ease-out", "$type": "cubicBezier" }
+      }
+    },
+    "layout": {
+      "chat-clearance": {
+        "$value": "96px",
+        "$type": "dimension",
+        "$description": "Floating DeepChat toggle clearance (WCAG 2.2 SC 2.4.11)."
+      }
+    }
+  },
+  "semantic": {
+    "primary": { "$value": "{primitive.color.brand.700}" },
+    "primary-strong": { "$value": "{primitive.color.brand.900}" },
+    "link": { "$value": "{primitive.color.brand.800}" },
+    "highlight": { "$value": "{primitive.color.accent.400}" },
+    "on-highlight": { "$value": "{primitive.color.neutral.text}" },
+    "text": { "$value": "{primitive.color.neutral.text}" },
+    "text-muted": { "$value": "{primitive.color.neutral.muted}" },
+    "border-control": { "$value": "{primitive.color.neutral.border}" },
+    "divider": {
+      "$value": "{primitive.color.neutral.divider}",
+      "decorative": true,
+      "$description": "Decorative separators only, never a control's only boundary (22-UI-SPEC Part 1; BRAND.md section 5), so it carries no contrast pairing."
+    },
+    "surface": { "$value": "{primitive.color.neutral.white}" },
+    "canvas": { "$value": "{primitive.color.neutral.canvas}" },
+    "tint": { "$value": "{primitive.color.neutral.tint}" },
+    "danger": { "$value": "{primitive.color.status.danger}" },
+    "danger-bg": { "$value": "{primitive.color.status.danger-bg}" },
+    "danger-strong": { "$value": "{primitive.color.status.danger-strong}" },
+    "success": { "$value": "{primitive.color.status.success}" },
+    "success-bg": { "$value": "{primitive.color.status.success-bg}" },
+    "warning-text": { "$value": "{primitive.color.status.warning-text}" },
+    "warning-bg": { "$value": "{primitive.color.status.warning-bg}" },
+    "focus": { "$value": "{semantic.primary}" },
+    "focus-on-dark": { "$value": "{semantic.highlight}" },
+    "on-primary": { "$value": "{primitive.color.neutral.white}" },
+    "on-danger": { "$value": "{primitive.color.neutral.white}" },
+    "dark": {
+      "$description": "Nuxt UI's .dark role values. The sign-up site's task pages are all light; these serve the landing page's dark bands only (BRAND.md section 5). Since 22.1-12 the page, text, muted text, button text and primary roles are the approved semantic.band values (Tom, card 7); the answer card (band.answer-card) is drawn with the ln-brand-900 palette utility, because pointing --ui-bg-elevated at it would put the primary and error text roles under 4.5:1 on that fill (P9).",
+      "primary": { "$value": "{semantic.band.button}" },
+      "secondary": { "$value": "{primitive.color.accent.400}" },
+      "text": { "$value": "{semantic.band.text}" },
+      "text-muted": { "$value": "{semantic.band.text-muted}" },
+      "text-toned": { "$value": "{primitive.color.neutral.300}" },
+      "text-dimmed": {
+        "$value": "{primitive.color.neutral.400}",
+        "$description": "Nuxt UI's own dark dimmed text is the 500 neutral (4.12:1 on the page, fails 4.5:1); the 400 neutral passes (CANVAS-BRIEF section 4, P9)."
+      },
+      "text-highlighted": { "$value": "{primitive.color.neutral.white}" },
+      "text-inverted": { "$value": "{semantic.band.button-text}" },
+      "bg": { "$value": "{semantic.band.bg}" },
+      "bg-muted": { "$value": "{primitive.color.neutral.900}" },
+      "bg-elevated": { "$value": "{primitive.color.neutral.800}" },
+      "bg-accented": { "$value": "{primitive.color.neutral.700}" },
+      "border": {
+        "$value": "{primitive.color.neutral.800}",
+        "decorative": true,
+        "reason": "Nuxt UI's --ui-border draws a hairline between sections on the dark page. Like the light divider it is never a control's only boundary (the input outline is border-accented, which has its own 3:1 pairing), so it carries no contrast pairing."
+      },
+      "border-accented": {
+        "$value": "{primitive.color.neutral.400}",
+        "$description": "main.css set the 700 neutral here (1.91:1 on the zinc page, fails 3:1); CANVAS-BRIEF section 4 P9 proposed the 500 neutral. On the approved band blue (22.1-12) the 500 neutral is 2.87:1 and fails 3:1, so the 400 neutral is used."
+      },
+      "error": { "$value": "{primitive.color.status.danger-on-dark}" },
+      "success": { "$value": "{primitive.color.status.success-on-dark}" },
+      "warning": { "$value": "{primitive.color.status.warning-on-dark}" }
+    },
+    "band": {
+      "$description": "The landing page's dark hero band (Tom, 2026-11-06, card 7): BRAND.md section 5 'Dark mode' roles, every pairing measured in CANVAS-BRIEF section 4 'Option B dark band'.",
+      "bg": { "$value": "{primitive.color.brand.950}" },
+      "text": { "$value": "{primitive.color.neutral.white}" },
+      "text-muted": { "$value": "{primitive.color.brand.200}" },
+      "link": { "$value": "{primitive.color.brand.400}" },
+      "button": { "$value": "{primitive.color.brand.400}" },
+      "button-text": { "$value": "{primitive.color.brand.950}" },
+      "focus": { "$value": "{primitive.color.accent.400}" },
+      "answer-card": { "$value": "{primitive.color.brand.900}" },
+      "answer-card-text": { "$value": "{primitive.color.brand.50}" },
+      "source-chip": { "$value": "{primitive.color.brand.100}" },
+      "source-chip-text": { "$value": "{primitive.color.brand.950}" },
+      "coming-chip": { "$value": "{primitive.color.accent.400}" },
+      "coming-chip-text": { "$value": "{primitive.color.neutral.text}" },
+      "search-field": { "$value": "{primitive.color.neutral.white}" },
+      "search-text": { "$value": "{primitive.color.neutral.text}" },
+      "search-placeholder": { "$value": "{primitive.color.neutral.muted}" }
+    }
+  },
+  "targets": {
+    "socialblue": {
+      "$description": "The 15 fields of socialblue/color/color.inc, in that order. Rendered into config/optional/color.theme.socialblue.yml.",
+      "brand-primary": "{semantic.primary}",
+      "brand-secondary": "{semantic.primary-strong}",
+      "brand-accent": "{semantic.highlight}",
+      "brand-accent-text": "{semantic.on-highlight}",
+      "brand-link": "{semantic.link}",
+      "navbar-bg": "{primitive.color.chrome.navbar-bg}",
+      "navbar-text": "{primitive.color.neutral.white}",
+      "navbar-active-bg": "{primitive.color.chrome.navbar-active-bg}",
+      "navbar-active-text": "{semantic.canvas}",
+      "navbar-sec-bg": "{primitive.color.chrome.navbar-sec-bg}",
+      "navbar-sec-text": "{primitive.color.chrome.navbar-sec-text}",
+      "second-line-navbar-bg": "{primitive.color.chrome.line2-bg}",
+      "second-line-navbar-text": "{primitive.color.chrome.line2-text}",
+      "second-line-navbar-active-bg": "{semantic.tint}",
+      "second-line-navbar-active-text": "{primitive.color.chrome.line2-active-text}"
+    },
+    "drupal-css": {
+      "$description": "Every --ln-* custom property on :root in css/ln-tokens.css. Names are the ones Phase 22's CSS already reads; on-primary, on-danger and danger-strong are new in 22.1-03.",
+      "--ln-color-primary": "{semantic.primary}",
+      "--ln-color-primary-strong": "{semantic.primary-strong}",
+      "--ln-color-link": "{semantic.link}",
+      "--ln-color-highlight": "{semantic.highlight}",
+      "--ln-color-on-highlight": "{semantic.on-highlight}",
+      "--ln-color-text": "{semantic.text}",
+      "--ln-color-text-muted": "{semantic.text-muted}",
+      "--ln-color-border-control": "{semantic.border-control}",
+      "--ln-color-divider": "{semantic.divider}",
+      "--ln-color-surface": "{semantic.surface}",
+      "--ln-color-canvas": "{semantic.canvas}",
+      "--ln-color-tint": "{semantic.tint}",
+      "--ln-color-danger": "{semantic.danger}",
+      "--ln-color-danger-bg": "{semantic.danger-bg}",
+      "--ln-color-success": "{semantic.success}",
+      "--ln-color-success-bg": "{semantic.success-bg}",
+      "--ln-color-warning-text": "{semantic.warning-text}",
+      "--ln-color-warning-bg": "{semantic.warning-bg}",
+      "--ln-color-focus": "{semantic.focus}",
+      "--ln-color-focus-on-dark": "{semantic.focus-on-dark}",
+      "--ln-color-on-primary": "{semantic.on-primary}",
+      "--ln-color-on-danger": "{semantic.on-danger}",
+      "--ln-color-danger-strong": "{semantic.danger-strong}",
+      "--ln-space-xs": "{primitive.space.xs}",
+      "--ln-space-sm": "{primitive.space.sm}",
+      "--ln-space-md": "{primitive.space.md}",
+      "--ln-space-lg": "{primitive.space.lg}",
+      "--ln-space-xl": "{primitive.space.xl}",
+      "--ln-space-2xl": "{primitive.space.2xl}",
+      "--ln-space-3xl": "{primitive.space.3xl}",
+      "--ln-radius-control": "{primitive.radius.control}",
+      "--ln-radius-card": "{primitive.radius.card}",
+      "--ln-radius-pill": "{primitive.radius.pill}",
+      "--ln-font-sans": "{primitive.font.sans}",
+      "--ln-font-mono": "{primitive.font.mono}",
+      "--ln-chat-clearance": "{primitive.layout.chat-clearance}"
+    },
+    "nuxt": {
+      "$description": "Nuxt UI --ui-* roles for the sign-up site (22.1-08 renders them). Light is the task pages; dark and band serve the landing page.",
+      "dark-mode-rendered": {
+        "$value": false,
+        "$description": "Is Nuxt dark mode rendered as a page theme? false today (22.1-08: the sign-up pages are light; the dark bands never reach --ui-bg-accented). While false, check_contrast.mjs EXCLUDES three dark pairs that fail on --ui-bg-accented (pairings.mjs EXCLUDED). Set it to true when a dark theme ships and the gate fails until those pairs pass. Not a colour and not generated into any file."
+      },
+      "light": {
+        "--ui-primary": "{semantic.primary}",
+        "--ui-secondary": "{semantic.highlight}",
+        "--ui-text": "{semantic.text}",
+        "--ui-text-muted": "{semantic.text-muted}",
+        "--ui-text-toned": "{primitive.color.neutral.600}",
+        "--ui-text-dimmed": "{semantic.text-muted}",
+        "--ui-text-highlighted": "{primitive.color.neutral.900}",
+        "--ui-text-inverted": "{semantic.on-primary}",
+        "--ui-bg": "{semantic.surface}",
+        "--ui-bg-muted": "{semantic.canvas}",
+        "--ui-bg-elevated": "{primitive.color.neutral.100}",
+        "--ui-bg-accented": "{primitive.color.neutral.200}",
+        "--ui-border": "{semantic.divider}",
+        "--ui-border-accented": "{semantic.border-control}",
+        "--ui-error": "{semantic.danger}",
+        "--ui-success": "{semantic.success}",
+        "--ui-warning": "{semantic.warning-text}",
+        "--ui-radius": "{primitive.radius.control}"
+      },
+      "dark": {
+        "--ui-primary": "{semantic.dark.primary}",
+        "--ui-secondary": "{semantic.dark.secondary}",
+        "--ui-text": "{semantic.dark.text}",
+        "--ui-text-muted": "{semantic.dark.text-muted}",
+        "--ui-text-toned": "{semantic.dark.text-toned}",
+        "--ui-text-dimmed": "{semantic.dark.text-dimmed}",
+        "--ui-text-highlighted": "{semantic.dark.text-highlighted}",
+        "--ui-text-inverted": "{semantic.dark.text-inverted}",
+        "--ui-bg": "{semantic.dark.bg}",
+        "--ui-bg-muted": "{semantic.dark.bg-muted}",
+        "--ui-bg-elevated": "{semantic.dark.bg-elevated}",
+        "--ui-bg-accented": "{semantic.dark.bg-accented}",
+        "--ui-border": "{semantic.dark.border}",
+        "--ui-border-accented": "{semantic.dark.border-accented}",
+        "--ui-error": "{semantic.dark.error}",
+        "--ui-success": "{semantic.dark.success}",
+        "--ui-warning": "{semantic.dark.warning}"
+      },
+      "band": {
+        "bg": "{semantic.band.bg}",
+        "text": "{semantic.band.text}",
+        "text-muted": "{semantic.band.text-muted}",
+        "link": "{semantic.band.link}",
+        "button": "{semantic.band.button}",
+        "button-text": "{semantic.band.button-text}",
+        "focus": "{semantic.band.focus}",
+        "answer-card": "{semantic.band.answer-card}",
+        "answer-card-text": "{semantic.band.answer-card-text}",
+        "source-chip": "{semantic.band.source-chip}",
+        "source-chip-text": "{semantic.band.source-chip-text}",
+        "coming-chip": "{semantic.band.coming-chip}",
+        "coming-chip-text": "{semantic.band.coming-chip-text}",
+        "search-field": "{semantic.band.search-field}",
+        "search-text": "{semantic.band.search-text}",
+        "search-placeholder": "{semantic.band.search-placeholder}"
+      }
+    },
+    "email": {
+      "$description": "Roles for the one LocalNodes mail template (BRAND.md section 9; 22.1-07 reads them).",
+      "body": "{semantic.canvas}",
+      "card": "{semantic.surface}",
+      "heading": "{semantic.text}",
+      "text": "{semantic.text}",
+      "link": "{semantic.link}",
+      "button": "{semantic.primary}",
+      "button-text": "{semantic.on-primary}",
+      "button-hover": "{semantic.primary-strong}",
+      "divider": "{semantic.divider}",
+      "footer-text": "{semantic.text-muted}",
+      "footer-bg": "{semantic.canvas}"
+    },
+    "deepchat": {
+      "$description": "Roles the DeepChat style file (social_ai_indexing deepchat_styles/localnodes.yml) uses. The file reads them as the matching var(--ln-color-*) custom properties, which inherit into DeepChat's shadow DOM (22.1-06 spike); each role is the same semantic colour as the Drupal property of that name, so the contrast gate's P10 pairings measure what the chat shows.",
+      "submit": "{semantic.primary}",
+      "submit-hover": "{semantic.primary-strong}",
+      "link": "{semantic.link}",
+      "focus": "{semantic.focus}",
+      "text": "{semantic.text}",
+      "text-muted": "{semantic.text-muted}",
+      "border-control": "{semantic.border-control}",
+      "divider": "{semantic.divider}",
+      "surface": "{semantic.surface}",
+      "canvas": "{semantic.canvas}"
+    }
+  }
+}

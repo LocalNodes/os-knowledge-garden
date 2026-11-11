@@ -1,0 +1,30 @@
+services:
+  # D-21 / ONB-07: every OpenRouter request goes out with zero data retention
+  # and the model's ZDR-only endpoint pin (localnodes_openrouter.settings).
+  localnodes_openrouter.private_client:
+    class: Drupal\localnodes_openrouter\PrivateOpenRouterClient
+    decorates: ai_provider_openrouter.client
+    public: true
+    arguments:
+      - '@config.factory'
+      - '@key.repository'
+      - '@logger.channel.ai_provider_openrouter'
+      - '@http_client'
+      - '@cache.default'
+      - '@logger.channel.localnodes_openrouter'
+
+  logger.channel.localnodes_openrouter:
+    class: Drupal\Core\Logger\LoggerChannel
+    factory: ['@logger.factory', 'get']
+    arguments: ['localnodes_openrouter']
+
+  # Output cap per caller tag, as Gemini's calls get (orchestrator's answer
+  # to the 23-16 gate miss, 2026-11-08), and a low reasoning effort for the
+  # models in localnodes_openrouter.settings low_reasoning_models (23-16
+  # follow-up, 2026-11-08).
+  localnodes_openrouter.request_config_subscriber:
+    class: Drupal\localnodes_openrouter\EventSubscriber\OpenRouterRequestConfigSubscriber
+    arguments:
+      - '@config.factory'
+    tags:
+      - { name: event_subscriber }

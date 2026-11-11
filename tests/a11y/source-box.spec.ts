@@ -62,7 +62,16 @@ test.describe('S6 Source box', () => {
     await expect(quote).toBeVisible();
     await expect(quote).toHaveCSS('border-left-width', '4px');
     await expect(quote).toHaveCSS('border-left-color', 'rgb(138, 138, 138)');
-    await expect(box).toHaveCSS('border-left-color', 'rgb(15, 118, 110)');
+    // The Source box's rule is the primary colour token, whatever the palette (22.1-06): read the token from the page
+    // instead of a hex copied into the spec. The token must exist. With it undefined, a probe and the box's border both
+    // fall back to the inherited text colour and would match each other (22.1 review, WR-05), so the border is also
+    // asserted to be drawn.
+    const token = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ln-color-primary').trim());
+    expect(token, '--ln-color-primary is defined on the page (the tokens stylesheet is attached)').toMatch(/^#[0-9a-f]{6}$/i);
+    const [red, green, blue] = [1, 3, 5].map((at) => parseInt(token.slice(at, at + 2), 16));
+    await expect(box).toHaveCSS('border-left-width', '4px');
+    await expect(box).toHaveCSS('border-left-style', 'solid');
+    await expect(box).toHaveCSS('border-left-color', `rgb(${red}, ${green}, ${blue})`);
 
     await checkA11y(page, 'S6', 'web', SCOPE);
   });

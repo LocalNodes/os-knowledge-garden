@@ -1,0 +1,17 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - ai.ai_guardrail.localnodes_input_length
+  enforced:
+    module:
+      - social_ai_indexing
+id: localnodes_ai_requests
+label: 'LocalNodes AI requests'
+description: 'Guardrails for the AI overview and the group assistant agent. Attached by AiOverviewService and by the group_assistant agent.'
+stop_threshold: 1
+pre_generate_guardrails:
+  plugin_id:
+    - localnodes_input_length
+post_generate_guardrails:
+  plugin_id: {  }

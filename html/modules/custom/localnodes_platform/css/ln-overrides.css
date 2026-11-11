@@ -1,0 +1,323 @@
+/**
+ * @file
+ * WCAG AA overrides for socialblue (DES-01, 22-UI-SPEC Part 1). Hand-written.
+ *
+ * Why this file exists: socialblue compiles its status colours ($brand-danger,
+ * -success, -warning, -info) into its own CSS, where the colour scheme
+ * (drupal/color) can't reach them, so a few selectors have to be re-pointed.
+ * Everything else stays stock socialblue.
+ *
+ * It holds NO colour literal. Every colour is a var(--ln-*) from the generated
+ * css/ln-tokens.css, so a palette swap is a token change and never edits this
+ * file (D-03, D-09). scripts/tokens/tests checks that.
+ *
+ * Load order: socialblue's own CSS, then ln-tokens.css, then this file
+ * (localnodes_platform/tokens library, weights 900 and 901; see
+ * localnodes_platform_css_alter(), which moves both into the theme group).
+ */
+
+/* Buttons: stock .btn-danger is a light red, 3.96:1 with white text. */
+.btn-danger,
+.btn-danger:focus,
+.btn-danger.focus {
+  background-color: var(--ln-color-danger);
+  border-color: var(--ln-color-danger);
+  color: var(--ln-color-on-danger);
+}
+.btn-danger:hover,
+.btn-danger:active,
+.btn-danger.active {
+  background-color: var(--ln-color-danger-strong);
+  border-color: var(--ln-color-danger-strong);
+  color: var(--ln-color-on-danger);
+}
+
+/* Alerts: body text colour on a status tint, status-coloured border. */
+.alert-danger {
+  background-color: var(--ln-color-danger-bg);
+  border-color: var(--ln-color-danger);
+  color: var(--ln-color-text);
+}
+.alert-success {
+  background-color: var(--ln-color-success-bg);
+  border-color: var(--ln-color-success);
+  color: var(--ln-color-text);
+}
+.alert-warning {
+  background-color: var(--ln-color-warning-bg);
+  border-color: var(--ln-color-warning-text);
+  color: var(--ln-color-text);
+}
+.alert-info {
+  background-color: var(--ln-color-tint);
+  border-color: var(--ln-color-primary);
+  color: var(--ln-color-text);
+}
+.alert-danger .alert-link,
+.alert-success .alert-link,
+.alert-warning .alert-link,
+.alert-info .alert-link {
+  color: var(--ln-color-link);
+}
+
+/* Badges (22-UI-SPEC Part 4, status badge variants). */
+.badge-danger {
+  background-color: var(--ln-color-danger-bg);
+  color: var(--ln-color-danger);
+}
+.badge-success {
+  background-color: var(--ln-color-success-bg);
+  color: var(--ln-color-success);
+}
+.badge-warning {
+  background-color: var(--ln-color-highlight);
+  color: var(--ln-color-on-highlight);
+}
+.badge-info {
+  background-color: var(--ln-color-canvas);
+  border: 1px solid var(--ln-color-border-control);
+  color: var(--ln-color-text-muted);
+}
+
+/* Status text and form errors. */
+.text-danger {
+  color: var(--ln-color-danger);
+}
+.text-success {
+  color: var(--ln-color-success);
+}
+.has-error .help-block {
+  color: var(--ln-color-danger);
+}
+.has-error .form-control {
+  border-color: var(--ln-color-danger);
+}
+
+/* Focus ring: 2px solid, 2px offset, keyboard focus only. !important because
+   socialbase removes the outline with higher-specificity rules
+   (.btn:not(.btn-link):focus, .form-control:focus, .navbar-toggle:focus,
+   .badge a:focus all set outline: 0), and the ring must survive all of them. */
+:focus-visible {
+  outline: 2px solid var(--ln-color-focus) !important;
+  outline-offset: 2px !important;
+}
+.navbar-default :focus-visible,
+.navbar-secondary :focus-visible,
+.navbar-second-line :focus-visible {
+  outline-color: var(--ln-color-focus-on-dark) !important;
+}
+
+/* DeepChat bar focus rings (22.1-17; review 17-H1, WR-06). deepchat.css asks
+   for an inset ring on the bar's two controls and the menu links, but the
+   global rule above is !important, so it won: the controls drew the blue
+   --ln-color-focus outside the dark bar (about 2.1:1 on it), where the fixed
+   chat container can also clip it. These !important rules win instead. The two
+   controls take --ln-color-focus-on-dark, inset (7.68:1 on the bar). The menu
+   links keep --ln-color-focus, which is right on their white and canvas fills
+   (the amber would be 1.6:1 there), and go inset to stay inside the menu.
+   scripts/tokens/lib/stylesheet_pairs.mjs measures what these rules render;
+   the old ring rule in deepchat.css is dead weight its owner can drop. */
+.ai-deepchat .ln-chat-bar .ai-deepchat--header:focus-visible,
+.ai-deepchat .ln-chat-bar .chat-dropdown-button:focus-visible {
+  outline-color: var(--ln-color-focus-on-dark) !important;
+  outline-offset: -4px !important;
+}
+.ai-deepchat .ln-chat-bar .chat-dropdown-link:focus-visible {
+  outline-offset: -4px !important;
+}
+
+/* The DeepChat bar's header text (WR-06). Contrib ai_chatbot's sticky-chatbot.css
+   colours it with a literal white, which a palette swap cannot reach; the
+   on-primary token is the same white. It sits on the bar fill, --ln-color-text
+   (deepchat.css), 12.45:1. */
+.ai-deepchat .ln-chat-bar .ai-deepchat--header {
+  color: var(--ln-color-on-primary);
+}
+
+/* Focus not hidden (SC 2.4.11, 22-30 KB-03): when Tab or Shift+Tab scrolls a
+   control into view, keep it clear of socialblue's fixed 50px top bar and of
+   the floating "AI assistant" bar at the bottom. */
+html {
+  scroll-padding-top: 66px;
+}
+html:has(.ai-deepchat.chat-container) {
+  scroll-padding-bottom: var(--ln-chat-clearance);
+}
+
+/* The group tab bar's overflow (22-30 KB-08). group-tabs.js puts a button
+   named "More group pages" inside socialblue's caret, which draws the arrow
+   with its borders and has no size of its own: the button is a 44px target
+   centred on the arrow, transparent so the arrow shows through. */
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more {
+  position: absolute;
+  top: -22px;
+  left: -16px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more::after {
+  content: none;
+}
+/* socialblue draws the list's links in a light grey on white (2.8:1). The
+   muted text token is 7.46:1 on white (WCAG 1.4.3). The doubled class outranks
+   socialblue's ".socialblue--sky .navbar-secondary …" without !important. */
+.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a,
+.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a:hover,
+.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a:focus {
+  color: var(--ln-color-text-muted);
+}
+
+/* Header: the community's own name as text (22.1-07, Tom's card 2). The
+   branding block prints it in the navbar, which is dark (navbar-bg), so the
+   text is the on-primary white. The long-name guard keeps the navbar's single
+   row: past 280px the name is cut with an ellipsis, not wrapped. */
+.navbar-brand .ln-site-name {
+  color: var(--ln-color-on-primary);
+  font-family: var(--ln-font-sans);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  max-width: 280px;
+  overflow: hidden;
+  padding: 0 var(--ln-space-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.navbar-brand:hover .ln-site-name,
+.navbar-brand:focus .ln-site-name {
+  text-decoration: underline;
+}
+
+/* Footer: "community · a community on LocalNodes · Open source" (22.1-07,
+   Tom's card 11). socialblue paints .site-footer in brand-secondary, a dark
+   blue; the on-primary white is 8.9:1 on it. Links are underlined so colour is
+   never their only cue. */
+.ln-site-footer {
+  color: var(--ln-color-on-primary);
+  font-family: var(--ln-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+.ln-site-footer p {
+  margin: 0;
+}
+.ln-site-footer a {
+  color: var(--ln-color-on-primary);
+  text-decoration: underline;
+}
+.ln-site-footer__name {
+  font-weight: 600;
+}
+.ln-site-footer__mark {
+  height: 16px;
+  margin: 0 var(--ln-space-xs);
+  vertical-align: -3px;
+  width: 16px;
+}
+
+/* The accent is a fill, never text (CANVAS-BRIEF "Forbidden uses"; 22.1-05, Q2).
+   socialblue's stock theme paints its brand-accent (the amber) as the text or
+   icon colour of nine hover, focus and active states, 1.46 to 1.62:1 on the
+   light surfaces. Each rule below is socialblue's own selector, word for word,
+   set to the text role instead, so it has the same specificity and wins by load
+   order. The accent stays a fill: the amber bars (::before) and the icon disc
+   that those states draw are not touched. scripts/tokens/pairings.mjs lists the
+   nine selectors (ACCENT_TEXT_RULES) and measures what is set here. */
+.card__featured-items .teaser__info svg:hover, .card__featured-items .teaser__info svg:focus, .card__featured-items .teaser__info svg:active {
+  color: var(--ln-color-text);
+  fill: var(--ln-color-text);
+}
+.course__navigation .course_nav-title:hover, .course__navigation .course_nav-title:active, .course__navigation .course_nav-title:focus {
+  color: var(--ln-color-text);
+}
+.course__navigation .course_nav-toggle:hover, .course__navigation .course_nav-toggle:active, .course__navigation .course_nav-toggle:focus {
+  color: var(--ln-color-text);
+}
+.course__navigation .course_nav-toggle:hover svg, .course__navigation .course_nav-toggle:active svg, .course__navigation .course_nav-toggle:focus svg {
+  fill: var(--ln-color-text);
+}
+.phase.phase-past .phase-past--icon .checkmark-icon {
+  fill: var(--ln-color-text);
+}
+.phase .teaser__tag a:hover, .phase .teaser__tag a:active, .phase .teaser__tag a:focus {
+  color: var(--ln-color-text);
+}
+.phase .hero__banner-static .hero__tag a:hover, .phase .hero__banner-static .hero__tag a:active, .phase .hero__banner-static .hero__tag a:focus {
+  color: var(--ln-color-text);
+}
+.socialblue--sky .card--views__sidebar .card__actionbar .btn:hover, .socialblue--sky .card--views__sidebar .card__actionbar .btn:active, .socialblue--sky .card--views__sidebar .card__actionbar .btn:focus {
+  color: var(--ln-color-text);
+}
+.socialblue--sky .paragraph--featured .field--name-field-featured-link a:hover, .socialblue--sky .paragraph--featured .field--name-field-featured-link a:active, .socialblue--sky .paragraph--featured .field--name-field-featured-link a:focus {
+  color: var(--ln-color-text);
+}
+
+/* Motion: honour the OS "reduce motion" preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Keep the floating DeepChat toggle off the last focusable control. */
+body:has(.ai-deepchat.chat-container) .main-container {
+  padding-bottom: var(--ln-chat-clearance);
+}
+
+/* Placeholder text and the small meta lines (published date, post date) are 2.8:1 and 4.48:1 on white in
+   stock socialbase (a light grey and a mid grey); the muted text token is 7.46:1
+   (WCAG 1.4.3). On the post and comment boxes the placeholder is the only
+   prompt, so a low-vision member could not read it (22.1-11, S6 and S7). */
+.form-control::placeholder,
+form .form-control::placeholder {
+  color: var(--ln-color-text-muted);
+  opacity: 1;
+}
+.metainfo__authorname,
+.metainfo__published-date,
+.post-date,
+.post-date a {
+  color: var(--ln-color-text-muted);
+}
+
+/* Sortable table headers (WINDOWS 45, 22.1-10). socialblue's generated
+   brand.css draws the sort icon as a data-URI background whose stroke is the
+   stock primary (URL-encoded); the colour module does not rewrite
+   hex inside a data URI. In the browser that stroke never painted: socialbase's
+   ".table th.sortable a::after" is more specific and draws the same shape in
+   black at 40% opacity, a grey 3:1 mark. The icon is now drawn from the
+   primary token on purpose, matching the header link beside it, at full
+   opacity (the 40% version of the primary would be 2.2:1, under the 3:1
+   non-text bar). It is a mask over a plain background, so the colour is the
+   token and a palette swap reaches it; currentColor in the mask is only an
+   alpha shape and paints nothing. The doubled selector matches socialbase's
+   specificity and wins by load order. */
+.table th a::after,
+.table th.sortable a::after {
+  background-color: var(--ln-color-primary);
+  background-image: none;
+  opacity: 1;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 12h14M3 6h18M3 18h10' fill='none' stroke='currentColor' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 12h14M3 6h18M3 18h10' fill='none' stroke='currentColor' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* The import alert's left bar (22.1-17, review WR-06, Q14). import.css draws the
+   4px bar in the accent (--ln-color-highlight), 1.62:1 on white and 1.46:1 on the
+   canvas, under the 3:1 of SC 1.4.11. The accent is a fill, never a status mark
+   (CANVAS-BRIEF "Forbidden uses"), so the bar takes the warning-text role, 5.9:1
+   on white. The doubled class outranks import.css's single class without
+   !important; the gate measures what this rule renders (OVERRIDDEN). */
+.localnodes-import-alert.localnodes-import-alert {
+  border-left-color: var(--ln-color-warning-text);
+}

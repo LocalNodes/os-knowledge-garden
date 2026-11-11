@@ -1,5 +1,5 @@
 diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
-index 65896af..c1030c3 100644
+index 65896af..bdd99ab 100644
 --- a/src/Plugin/AiProvider/GeminiProvider.php
 +++ b/src/Plugin/AiProvider/GeminiProvider.php
 @@ -7,7 +7,12 @@ namespace Drupal\gemini_provider\Plugin\AiProvider;
@@ -59,7 +59,7 @@ index 65896af..c1030c3 100644
      }
  
      return new EmbeddingsOutput($response->embedding->values, $response->toArray(), []);
-@@ -798,4 +813,92 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
+@@ -798,4 +813,132 @@ class GeminiProvider extends AiProviderClientBase implements ChatInterface, Embe
      return FALSE;
    }
  
@@ -87,6 +87,13 @@ index 65896af..c1030c3 100644
 +    // per-minute limits clear in seconds. Anything that is not clearly
 +    // per-day is a rate limit, the friendlier "try again shortly".
 +    if ($code === 429 || $status === 'RESOURCE_EXHAUSTED') {
++      // Gemini says how long to wait in google.rpc.RetryInfo. The seconds go
++      // on the end of the message ("retry_after=37") so a caller that only
++      // sees the exception, such as the indexing backoff, can honour them.
++      $retry_after = static::retryAfterSeconds($e);
++      if ($retry_after !== NULL) {
++        $message .= ' retry_after=' . $retry_after;
++      }
 +      return static::isPerDayLimit($e)
 +        ? new AiQuotaException($message, $code, $e)
 +        : new AiRateLimitException($message, $code, $e);
@@ -101,6 +108,39 @@ index 65896af..c1030c3 100644
 +      return new AiRequestErrorException($message, $code, $e);
 +    }
 +    return $e;
++  }
++
++  /**
++   * The wait Gemini asks for, in whole seconds, from google.rpc.RetryInfo.
++   *
++   * The error details can hold an entry whose @type ends in
++   * "google.rpc.RetryInfo" with a retryDelay such as "37s" or "37.5s" (a JSON
++   * duration, always in seconds). A fraction is rounded up.
++   *
++   * @param \Gemini\Exceptions\ErrorException $e
++   *   The Gemini client exception.
++   *
++   * @return int|null
++   *   The seconds, or NULL when the error carries no usable delay.
++   */
++  protected static function retryAfterSeconds(GeminiErrorException $e): ?int {
++    $details = [];
++    try {
++      $contents = (new \ReflectionProperty(GeminiErrorException::class, 'contents'))->getValue($e);
++      $details = is_array($contents['details'] ?? NULL) ? $contents['details'] : [];
++    }
++    catch (\Throwable) {
++      // As in isPerDayLimit(): no details, no delay.
++    }
++    foreach ($details as $detail) {
++      if (!is_array($detail) || !str_ends_with((string) ($detail['@type'] ?? ''), 'google.rpc.RetryInfo')) {
++        continue;
++      }
++      if (preg_match('/^(\d+(?:\.\d+)?)s$/', (string) ($detail['retryDelay'] ?? ''), $matches)) {
++        return (int) ceil((float) $matches[1]);
++      }
++    }
++    return NULL;
 +  }
 +
 +  /**

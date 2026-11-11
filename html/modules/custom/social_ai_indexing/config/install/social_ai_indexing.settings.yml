@@ -23,3 +23,8 @@ support_check:
   model: models/gemini-3.8-flash
   # HTTP timeout for the check call, in seconds.
   timeout: 8
+# Indexing embeddings per minute, counted in texts (a batch of N texts is N).
+# Gemini's free tier allows about 100 requests a minute; 60 leaves room.
+# Drush and cron wait for the window to free; a web request never waits and
+# leaves the items tracked for cron. A value below 1 turns the throttle off.
+embedding_requests_per_minute: 60

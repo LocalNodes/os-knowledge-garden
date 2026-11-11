@@ -1,0 +1,44 @@
+localnodes_openrouter.settings:
+  type: config_object
+  label: 'LocalNodes OpenRouter settings'
+  mapping:
+    chat_model:
+      type: string
+      label: 'Chat model'
+    backup_chat_model:
+      type: string
+      label: 'Backup chat model'
+    embedding_model:
+      type: string
+      label: 'Embedding model'
+    vector_size:
+      type: integer
+      label: 'Search vector size'
+    provider_pins:
+      type: sequence
+      label: 'ZDR-only provider pins per model'
+      sequence:
+        type: mapping
+        label: 'Pin'
+        mapping:
+          model:
+            type: string
+            label: 'Model id'
+          only:
+            type: sequence
+            label: 'Allowed endpoint tags (provider.only)'
+            sequence:
+              type: string
+              label: 'Endpoint tag'
+          ignore:
+            type: sequence
+            label: 'Ignored endpoint tags (provider.ignore)'
+            sequence:
+              type: string
+              label: 'Endpoint tag'
+    low_reasoning_models:
+      type: sequence
+      label: 'Models sent a low reasoning effort on capped calls'
+      sequence:
+        type: string
+        label: 'Model id'

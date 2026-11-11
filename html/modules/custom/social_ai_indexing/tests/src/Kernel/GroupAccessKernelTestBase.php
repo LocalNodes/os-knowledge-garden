@@ -133,6 +133,12 @@ abstract class GroupAccessKernelTestBase extends KernelTestBase {
     $this->installEntitySchema('flagging');
     $this->installEntitySchema('search_api_task');
     $this->installSchema('search_api', ['search_api_item']);
+    // The standalone ai_search (1.3.x) adds its chunk-tracking columns to
+    // search_api_item in hook_install(), and its backend reads them. A Kernel
+    // test enables the module without running that hook, so run it here, as a
+    // real install does once the table exists.
+    \Drupal::moduleHandler()->loadInclude('ai_search', 'install');
+    ai_search_install();
 
     $this->installConfig(['system', 'field', 'filter', 'text', 'node', 'comment', 'user', 'group', 'search_api']);
 

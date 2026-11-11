@@ -1,0 +1,620 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\localnodes_import\Kernel;
+
+use Drupal\Core\Form\FormState;
+use Drupal\Core\Logger\RfcLogLevel;
+use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_import\Entity\ImportItem;
+use Drupal\localnodes_import\Entity\ImportRun;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
+use Drupal\symfony_mailer_test\MailerTestTrait;
+use Drupal\user\UserInterface;
+use Symfony\Component\HttpFoundation\ParameterBag;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+/**
+ * "Report a problem with this page" and the takedown (ONB-05, D-25).
+ *
+ * Every case runs through the real forms, the real routes' access checks and
+ * the real mail manager. symfony_mailer_test forces the null transport and
+ * keeps each message, so no mail leaves the test. The reporter is anonymous
+ * everywhere: a rights holder is usually not a member.
+ *
+ * Copy comes from the approved 23-UI-SPEC.md, sections 10 and 11 and the
+ * "Report notification" mail table.
+ *
+ * @group phase23
+ * @group localnodes_import
+ */
+final class ReportProblemTest extends ImportKernelTestBase {
+
+  use MailerTestTrait;
+
+  private const REPORT_FORM = 'Drupal\localnodes_import\Form\ReportProblemForm';
+
+  private const TAKEDOWN_FORM = 'Drupal\localnodes_import\Form\TakedownConfirmForm';
+
+  private const COMMUNITY = 'Repair Collective';
+
+  private const HOST = 'host.reports@mail.localnodes.xyz';
+
+  private const REPORTER = 'rights.holder@mail.localnodes.xyz';
+
+  private const PAGE_TITLE = 'Watershed commons primer';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = ['dblog', 'symfony_mailer', 'symfony_mailer_test'];
+
+  /**
+   * {@inheritdoc}
+   *
+   * The stub mail theme has no schema for the bootstrap settings the real
+   * themes carry (same reason as the 22.1-07 mail tests).
+   */
+  protected $strictConfigSchema = FALSE;
+
+  private GroupInterface $group;
+
+  private NodeInterface $topic;
+
+  private UserInterface $steward;
+
+  private UserInterface $organizer;
+
+  private UserInterface $member;
+
+  /**
+   * {@inheritdoc}
+   *
+   * The module installer logs while it installs the importer, so the
+   * watchdog table must exist before that.
+   */
+  protected function setUpBeforeImporter(): void {
+    $this->installSchema('dblog', ['watchdog']);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $this->installConfig(['system', 'filter', 'symfony_mailer']);
+    $this->container->get('theme_installer')->install(['localnodes_stock_email_test']);
+    $this->config('system.theme')->set('default', 'localnodes_stock_email_test')->save();
+    $this->config('system.site')->set('name', self::COMMUNITY)->set('mail', 'noreply@mail.localnodes.xyz')->save();
+    $this->setSetting('localnodes_host_report_email', self::HOST);
+
+    $this->steward = $this->createAccount('site_steward', 'steward@mail.localnodes.xyz', ['sitemanager', 'verified']);
+    $this->group = $this->createFlexibleGroup('Repair circle');
+    $this->organizer = $this->createAccount('circle_organizer', 'organizer@mail.localnodes.xyz', ['verified']);
+    $this->addManager($this->group, $this->organizer);
+    $this->member = $this->createAccount('plain_member', 'member@mail.localnodes.xyz', ['verified']);
+    $this->addMember($this->group, $this->member);
+
+    $this->topic = $this->importedTopic($this->group, self::PAGE_TITLE);
+    $this->setCurrentUser($this->anonymous());
+  }
+
+  /**
+   * The whole path: link, anonymous report, mail to all three, takedown.
+   */
+  public function testReportReachesStewardOrganizerAndHostThenTakedownUnpublishes(): void {
+    // The Source box of an imported page carries the link.
+    $html = $this->renderFull($this->topic);
+    $this->assertStringContainsString('href="/node/' . $this->topic->id() . '/report-problem"', $html);
+    $this->assertStringContainsString('Report a problem with this page', $html);
+
+    // An anonymous visitor reports it.
+    [, $state] = $this->submitReport($this->topic, [
+      'reason' => 'owner',
+      'details' => 'I wrote this and nobody asked me.',
+      'contact_email' => self::REPORTER,
+    ]);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+
+    // One mail per person: the steward, the group's organizers, the host.
+    // The account that created the group is its manager too (Group gives the
+    // creator the manager role), so it is a recipient.
+    $mails = $this->sentMails();
+    $this->assertEqualsCanonicalizing(
+      ['steward@mail.localnodes.xyz', 'organizer@mail.localnodes.xyz', $this->siteOwner->getEmail(), self::HOST],
+      array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $mails),
+      'The steward, the group organizers and the host each get the report',
+    );
+    $this->assertNotContains('member@mail.localnodes.xyz', array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $mails));
+
+    $takedown = '/node/' . $this->topic->id() . '/takedown';
+    foreach ($mails as $mail) {
+      $this->assertSame('A page was reported on ' . self::COMMUNITY, $mail->getSubject());
+      $body = $this->plain((string) $mail->getHtmlBody());
+      $this->assertStringContainsString('Someone reported ' . self::PAGE_TITLE, $body);
+      $this->assertStringContainsString("I own this and didn't agree to it being shared", $body);
+      $this->assertStringContainsString('I wrote this and nobody asked me.', $body);
+      $this->assertStringContainsString(self::REPORTER, $body, 'The contact address is inside the mail');
+      $this->assertStringContainsString('Review the page', $body);
+      $this->assertStringContainsString('Unpublish this page', $body);
+      // The two links, as absolute addresses in the markup.
+      $html = (string) $mail->getHtmlBody();
+      $this->assertMatchesRegularExpression('#href="https?://[^"/]+' . preg_quote($takedown, '#') . '"#', $html, 'The link to the takedown page');
+      $this->assertMatchesRegularExpression('#href="https?://[^"/]+/node/' . $this->topic->id() . '"#', $html, 'The link to the page');
+    }
+
+    // The thank-you comes as a status message and a redirect to its own page.
+    $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
+    $this->assertContains("Thanks. We've sent your report to this site's organizers and to the host.", $messages);
+    $state->setProgrammed(FALSE);
+    $this->assertSame('localnodes_import.report_sent', $state->getRedirect()->getRouteName());
+
+    // Takedown: the group's organizer may; a plain member and a stranger may not.
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $this->topic, $this->organizer), 'The group organizer may take the page down');
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $this->topic, $this->steward), 'A site manager may');
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $this->topic, $this->member), 'A plain member gets 403');
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $this->topic, $this->anonymous()), 'Anonymous gets 403');
+    $this->assertTrue($this->routeAccess('localnodes_import.report_problem', $this->topic, $this->anonymous()), 'Anyone may report');
+
+    $this->setCurrentUser($this->organizer);
+    $this->assertTrue($this->topic->access('view', $this->anonymous()), 'Visible before the takedown');
+    [, $state] = $this->submitTakedown($this->topic);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+
+    $node = $this->reloadNode((int) $this->topic->id());
+    $this->assertFalse($node->isPublished(), 'The page is unpublished');
+    $this->assertNotNull($node, 'Nothing was deleted');
+    $this->assertFalse($node->access('view', $this->anonymous()), 'An anonymous visitor cannot see the page now');
+    $this->assertFalse($node->access('view', $this->member), 'Nor a member');
+    $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
+    $this->assertContains(self::PAGE_TITLE . ' is unpublished. To publish it again, edit the page and turn Published back on.', $messages);
+  }
+
+  /**
+   * The takedown confirmation's words, in the approved order.
+   */
+  public function testTakedownConfirmationCopy(): void {
+    $this->setCurrentUser($this->organizer);
+    $form = $this->buildTakedown($this->topic);
+    $this->assertSame('Unpublish ' . self::PAGE_TITLE . '?', (string) $form['#title']);
+    $this->assertSame("This hides the page from everyone except people who can edit it. Nothing is deleted. You can publish it again from the page's edit form.", (string) $form['description']['#markup']);
+    $this->assertSame('Unpublish this page', (string) $form['actions']['submit']['#value']);
+    $this->assertSame('danger', $form['actions']['submit']['#button_type']);
+    $this->assertSame('Keep page published', (string) $form['actions']['cancel']['#title']);
+    $this->assertSame('autofocus', $form['actions']['cancel']['#attributes']['autofocus'] ?? NULL, 'The safe choice gets initial focus');
+    $this->assertSame('/node/' . $this->topic->id(), $form['actions']['cancel']['#url']->toString(), 'Keeping it goes back to the page');
+  }
+
+  /**
+   * The report form's copy: title, legend, four reasons, optional fields.
+   */
+  public function testReportFormCopy(): void {
+    $form = $this->buildReport($this->topic);
+    $this->assertSame('radios', $form['reason']['#type']);
+    $this->assertSame("What's the problem?", (string) $form['reason']['#title']);
+    $this->assertSame([
+      "I own this and didn't agree to it being shared",
+      "It shares someone's personal information",
+      "It's wrong or harmful",
+      'Something else',
+    ], array_values(array_map('strval', $form['reason']['#options'])));
+    $this->assertEmpty($form['reason']['#default_value'] ?? NULL, 'No radio is pre-selected');
+    $this->assertSame('Details (optional)', (string) $form['details']['#title']);
+    $this->assertSame("Say what's wrong and, if you can, where on the page. Up to 2,000 characters.", (string) $form['details']['#description']);
+    $this->assertSame('Your email (optional)', (string) $form['contact_email']['#title']);
+    $this->assertSame("Add it if you'd like a reply. The organizers and the host will see it.", (string) $form['contact_email']['#description']);
+    $this->assertSame('Send report', (string) $form['actions']['submit']['#value']);
+    $this->assertStringContainsString("Tell us what's wrong with " . self::PAGE_TITLE . '.', (string) $form['intro']['#markup']);
+  }
+
+  /**
+   * Choosing no reason, too much text or a bad address sends nothing.
+   */
+  public function testValidationMessagesAndNothingSent(): void {
+    [, $state] = $this->submitReport($this->topic, ['details' => 'x']);
+    $this->assertSame(['reason' => 'Choose what the problem is.'], array_map('strval', $state->getErrors()));
+
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => str_repeat('a', 2001)]);
+    $this->assertSame(['details' => 'Shorten the details to 2,000 characters or fewer.'], array_map('strval', $state->getErrors()));
+
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'contact_email' => 'not an address']);
+    $this->assertSame(['contact_email' => "This isn't an email address. Check it has an @ and a domain, like name@example.org."], array_map('strval', $state->getErrors()));
+
+    // Exactly 2,000 characters is fine.
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => str_repeat('a', 2000)]);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $this->assertCount(4, $this->sentMails(), 'Only the valid report went out (four people)');
+  }
+
+  /**
+   * A reason alone is a complete report: no details, no address.
+   */
+  public function testReasonOnlyReportIsAccepted(): void {
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'harmful']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $mails = $this->sentMails();
+    $this->assertCount(4, $mails);
+    $body = $this->plain((string) $mails[0]->getHtmlBody());
+    $this->assertStringContainsString("Reason: It's wrong or harmful", $body);
+    $this->assertStringContainsString('Details: none', $body);
+    $this->assertStringNotContainsString('Their email', $body, 'No address was given, so none is shown');
+  }
+
+  /**
+   * Two reports about the same page are two separate reports.
+   */
+  public function testDuplicateReportsAreDeliveredSeparately(): void {
+    $this->submitReport($this->topic, ['reason' => 'owner', 'details' => 'First report text.']);
+    $first = $this->sentMails();
+    $this->submitReport($this->topic, ['reason' => 'other', 'details' => 'Second report text.']);
+    $second = $this->sentMails();
+    $this->assertCount(4, $first);
+    $this->assertCount(4, $second);
+    foreach ($first as $mail) {
+      $this->assertStringContainsString('First report text.', (string) $mail->getHtmlBody());
+      $this->assertStringNotContainsString('Second report text.', (string) $mail->getHtmlBody());
+    }
+    foreach ($second as $mail) {
+      $this->assertStringContainsString('Second report text.', (string) $mail->getHtmlBody());
+    }
+    $this->assertCount(2, $this->watchdog('A problem was reported'), 'One log record per report');
+  }
+
+  /**
+   * More than 5 reports an hour from one connection are refused, unsent.
+   */
+  public function testFloodLimitStopsTheSixthReport(): void {
+    for ($i = 1; $i <= 5; $i++) {
+      [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => "Report $i"]);
+      $this->assertSame([], array_map('strval', $state->getErrors()), "Report $i is accepted");
+      $this->assertCount(4, $this->sentMails());
+    }
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => 'Report 6']);
+    $this->assertSame(['flood' => 'Too many reports from this connection. Wait a while, then try again.'], array_map('strval', $state->getErrors()));
+    $this->assertSame([], $this->sentMails(), 'Nothing is sent over the limit');
+    $this->assertCount(5, $this->watchdog('A problem was reported'), 'Nor logged');
+
+    // The form itself says so, above the fields, before anyone types.
+    $form = $this->buildReport($this->topic);
+    $this->assertSame('alert', $form['flood_alert']['#attributes']['role'] ?? NULL);
+    $this->assertSame('Too many reports from this connection. Wait a while, then try again.', (string) $form['flood_alert']['#value']);
+  }
+
+  /**
+   * A filled honeypot gets the normal thank-you and nothing is sent.
+   */
+  public function testHoneypotDropsTheReportSilently(): void {
+    $before = $this->container->get('messenger')->messagesByType('status');
+    [$form, $state] = $this->submitReport($this->topic, ['reason' => 'owner', 'website' => 'https://spam.example']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $this->assertSame([], $this->sentMails(), 'Nothing is sent');
+    $this->assertSame([], $this->watchdog('A problem was reported'), 'Nothing is logged');
+    // The same reply a real report gets, so a bot learns nothing.
+    $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
+    $this->assertContains("Thanks. We've sent your report to this site's organizers and to the host.", $messages);
+    $state->setProgrammed(FALSE);
+    $this->assertSame('localnodes_import.report_sent', $state->getRedirect()->getRouteName());
+    $this->assertSame([], $before);
+
+    // The trap is hidden from sight and from assistive technology.
+    $this->assertSame('true', $form['trap']['#attributes']['aria-hidden']);
+    $this->assertContains('visually-hidden', $form['trap']['#attributes']['class']);
+    $this->assertSame('-1', $form['trap']['website']['#attributes']['tabindex']);
+    $this->assertSame('off', $form['trap']['website']['#attributes']['autocomplete']);
+  }
+
+  /**
+   * Taking down a page that is already unpublished changes nothing.
+   */
+  public function testTakedownOfAnAlreadyUnpublishedPageChangesNothing(): void {
+    $this->topic->setUnpublished()->save();
+    $revision = (int) $this->reloadNode((int) $this->topic->id())->getRevisionId();
+    $this->setCurrentUser($this->organizer);
+
+    $form = $this->buildTakedown($this->reloadNode((int) $this->topic->id()));
+    $this->assertSame('This page is already unpublished.', (string) $form['already']['#value']);
+    $this->assertArrayNotHasKey('submit', $form['actions'], 'No button that would do nothing');
+
+    $this->submitTakedown($this->reloadNode((int) $this->topic->id()));
+    $node = $this->reloadNode((int) $this->topic->id());
+    $this->assertFalse($node->isPublished());
+    $this->assertSame($revision, (int) $node->getRevisionId(), 'No new revision was made');
+    $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
+    $this->assertContains('This page is already unpublished.', $messages);
+    $this->assertSame([], $this->watchdog('Page @nid was unpublished'), 'Nothing was logged as a takedown');
+  }
+
+  /**
+   * A page in no group is reported to the site managers and the host only.
+   */
+  public function testPageInNoGroupGoesToStewardsAndHost(): void {
+    $loose = $this->importedTopic(NULL, 'A page with no group');
+    [, $state] = $this->submitReport($loose, ['reason' => 'owner']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $to = array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $this->sentMails());
+    $this->assertEqualsCanonicalizing(['steward@mail.localnodes.xyz', self::HOST], $to);
+
+    // The steward can still take it down, with no group to ask.
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $loose, $this->steward));
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $loose, $this->organizer), 'A group organizer has no say over a page outside the group');
+  }
+
+  /**
+   * With no host address the stewards still get the report; one warning.
+   */
+  public function testNoHostSettingStillMailsStewardsAndWarnsOnce(): void {
+    $this->setSetting('localnodes_host_report_email', '');
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'owner', 'contact_email' => self::REPORTER]);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $to = array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $this->sentMails());
+    $this->assertEqualsCanonicalizing(['steward@mail.localnodes.xyz', 'organizer@mail.localnodes.xyz', $this->siteOwner->getEmail()], $to);
+
+    $warnings = $this->watchdog('No host address is set');
+    $this->assertCount(1, $warnings, 'One warning');
+    $this->assertSame(RfcLogLevel::WARNING, (int) $warnings[0]->severity);
+    $this->assertSame((int) $this->topic->id(), (int) unserialize($warnings[0]->variables, ['allowed_classes' => FALSE])['@nid'], 'It names the page by id');
+    $this->assertDoesNotMatchRegularExpression('/[\w.+-]+@[\w-]+\.\w/', (string) $warnings[0]->message . $warnings[0]->variables, 'It names no address');
+  }
+
+  /**
+   * Only imported pages have the link and the report route.
+   */
+  public function testNonImportedPageHasNoLinkAndNoReportRoute(): void {
+    $plain = $this->createGroupTopic($this->group, 'A page someone wrote', '<p>Written here.</p>', 'public');
+    $this->assertStringNotContainsString('report-problem', $this->renderFull($plain));
+    $this->assertStringNotContainsString('Report a problem', $this->renderFull($plain));
+
+    foreach ([
+      fn () => $this->buildReport($plain),
+      fn () => $this->buildTakedown($plain),
+    ] as $build) {
+      $this->setCurrentUser($this->steward);
+      try {
+        $build();
+        $this->fail('Expected a 404');
+      }
+      catch (NotFoundHttpException) {
+        $this->addToAssertionCount(1);
+      }
+    }
+    $controller = $this->container->get('class_resolver')->getInstanceFromDefinition('\Drupal\localnodes_import\Controller\ReportSentController');
+    $this->expectException(NotFoundHttpException::class);
+    $controller->view($plain);
+  }
+
+  /**
+   * The log holds the page's id and the reason's key, never the reporter's words.
+   */
+  public function testTheLogNeverHoldsTheReportersAddressOrWords(): void {
+    $this->submitReport($this->topic, [
+      'reason' => 'personal_info',
+      'details' => 'Distinctive details phrase 7731.',
+      'contact_email' => self::REPORTER,
+    ]);
+    $this->setCurrentUser($this->organizer);
+    $this->submitTakedown($this->topic);
+
+    $rows = $this->watchdog('');
+    $this->assertNotEmpty($rows);
+    foreach ($rows as $row) {
+      $text = $row->message . ' ' . $row->variables;
+      $this->assertStringNotContainsString(self::REPORTER, $text, 'No log record holds the reporter\'s address');
+      $this->assertStringNotContainsString('rights.holder', $text);
+      $this->assertStringNotContainsString('7731', $text, 'Nor the details');
+    }
+    $report = $this->watchdog('A problem was reported');
+    $this->assertCount(1, $report);
+    $variables = unserialize($report[0]->variables, ['allowed_classes' => FALSE]);
+    $this->assertSame(['@nid' => (int) $this->topic->id(), '@reason' => 'personal_info'], $variables, 'The id and the reason key, nothing else');
+    $takedown = $this->watchdog('Page @nid was unpublished');
+    $this->assertCount(1, $takedown);
+    $this->assertSame(['@nid' => (int) $this->topic->id(), '@uid' => (int) $this->organizer->id()], unserialize($takedown[0]->variables, ['allowed_classes' => FALSE]), 'Who and which page');
+  }
+
+  /**
+   * What a reporter types is plain text in the mail, never markup.
+   */
+  public function testReporterTextIsEscapedInTheMail(): void {
+    $this->submitReport($this->topic, [
+      'reason' => 'other',
+      'details' => '<script>alert(1)</script><b>bold</b>',
+      'contact_email' => self::REPORTER,
+    ]);
+    $mails = $this->sentMails();
+    $this->assertCount(4, $mails);
+    $html = (string) $mails[0]->getHtmlBody();
+    $this->assertStringNotContainsString('<script>', $html);
+    $this->assertStringNotContainsString('<b>bold</b>', $html);
+    $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+  }
+
+  /**
+   * Reads the log records whose message starts with the text.
+   *
+   * @return object[]
+   *   watchdog rows, oldest first.
+   */
+  private function watchdog(string $starts_with): array {
+    $rows = $this->container->get('database')->select('watchdog', 'w')
+      ->fields('w')
+      ->condition('type', 'localnodes_import')
+      ->orderBy('wid')
+      ->execute()
+      ->fetchAll();
+    return array_values(array_filter($rows, fn ($row) => str_starts_with((string) $row->message, $starts_with)));
+  }
+
+  /**
+   * Creates an active account with an explicit address.
+   *
+   * @param string[] $roles
+   *   Role ids.
+   */
+  private function createAccount(string $name, string $mail, array $roles): UserInterface {
+    $account = $this->createUser([], $name, FALSE, ['roles' => $roles, 'mail' => $mail, 'status' => 1]);
+    return $this->container->get('entity_type.manager')->getStorage('user')->load($account->id());
+  }
+
+  /**
+   * Creates a published Topic in the group that the importer says it imported.
+   */
+  private function importedTopic(?GroupInterface $group, string $title): NodeInterface {
+    if ($group !== NULL) {
+      $topic = $this->createGroupTopic($group, $title, '<p>Body.</p>', 'public');
+    }
+    else {
+      $topic = Node::create(['type' => 'topic', 'title' => $title, 'body' => ['value' => '<p>Body.</p>', 'format' => 'plain_text'], 'field_content_visibility' => 'public', 'uid' => $this->siteOwner->id(), 'status' => NodeInterface::PUBLISHED]);
+      $topic->save();
+    }
+    $manager = $this->container->get('entity_type.manager');
+    $run = $manager->getStorage('localnodes_import_run')->create([
+      'gid' => $group?->id() ?? 0,
+      'uid' => $this->steward->id(),
+      'kind' => ImportRun::KIND_FILES,
+      'status' => ImportRun::STATUS_FINISHED,
+      'visibility' => 'public',
+      'rights_confirmed_by' => $this->steward->id(),
+      'rights_confirmed_at' => 1000,
+    ]);
+    $run->save();
+    $manager->getStorage('localnodes_import_item')->create([
+      'run' => $run->id(),
+      'gid' => $group?->id() ?? 0,
+      'source_name' => 'primer.pdf',
+      'outcome' => ImportItem::OUTCOME_IMPORTED,
+      'nid' => $topic->id(),
+    ])->save();
+    return $topic;
+  }
+
+  /**
+   * Renders a Topic's full view as HTML.
+   */
+  private function renderFull(NodeInterface $node): string {
+    $manager = $this->container->get('entity_type.manager');
+    $manager->getStorage('node')->resetCache();
+    $node = $manager->getStorage('node')->load($node->id());
+    $build = $manager->getViewBuilder('node')->view($node, 'full');
+    return (string) $this->container->get('renderer')->renderInIsolation($build);
+  }
+
+  /**
+   * A fresh copy of a node.
+   */
+  private function reloadNode(int $nid): NodeInterface {
+    $storage = $this->container->get('entity_type.manager')->getStorage('node');
+    $storage->resetCache([$nid]);
+    return $storage->load($nid);
+  }
+
+  /**
+   * Every mail sent since the last call.
+   *
+   * @return \Drupal\symfony_mailer\EmailInterface[]
+   *   In the order they were sent.
+   */
+  private function sentMails(): array {
+    return $this->container->get('symfony_mailer.test')->getEmails();
+  }
+
+  /**
+   * A mail body as text: tags gone, entities decoded, spaces collapsed.
+   */
+  private function plain(string $html): string {
+    return trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags(str_replace('>', '> ', $html)), ENT_QUOTES)));
+  }
+
+  /**
+   * Whether a route's access check lets the account in.
+   */
+  private function routeAccess(string $route, NodeInterface $node, $account): bool {
+    return $this->container->get('access_manager')->checkNamedRoute($route, ['topic' => $node->id()], $account);
+  }
+
+  /**
+   * Pushes a routed request for one of the two routes.
+   */
+  private function routedRequest(string $route, NodeInterface $node, string $method): void {
+    $paths = [
+      'localnodes_import.report_problem' => '/node/' . $node->id() . '/report-problem',
+      'localnodes_import.takedown' => '/node/' . $node->id() . '/takedown',
+    ];
+    $request = Request::create($paths[$route], $method);
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route);
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $this->container->get('router.route_provider')->getRouteByName($route));
+    $request->attributes->set('topic', $node);
+    $request->attributes->set('_raw_variables', new ParameterBag(['topic' => (string) $node->id()]));
+    $this->container->get('request_stack')->push($request);
+  }
+
+  /**
+   * The report form as first shown.
+   */
+  private function buildReport(NodeInterface $node): array {
+    $this->routedRequest('localnodes_import.report_problem', $node, 'GET');
+    $state = (new FormState())->addBuildInfo('args', [$node]);
+    return $this->container->get('form_builder')->buildForm(self::REPORT_FORM, $state);
+  }
+
+  /**
+   * The takedown confirmation as first shown.
+   */
+  private function buildTakedown(NodeInterface $node): array {
+    $this->routedRequest('localnodes_import.takedown', $node, 'GET');
+    $state = (new FormState())->addBuildInfo('args', [$node]);
+    return $this->container->get('form_builder')->buildForm(self::TAKEDOWN_FORM, $state);
+  }
+
+  /**
+   * A programmed submission of the report form.
+   *
+   * @return array{0: array, 1: \Drupal\Core\Form\FormStateInterface}
+   *   The built form and its state.
+   */
+  private function submitReport(NodeInterface $node, array $values): array {
+    $this->routedRequest('localnodes_import.report_problem', $node, 'POST');
+    return $this->submitProgrammed(self::REPORT_FORM, $node, $values);
+  }
+
+  /**
+   * A programmed submission of the takedown confirmation.
+   *
+   * @return array{0: array, 1: \Drupal\Core\Form\FormStateInterface}
+   *   The built form and its state.
+   */
+  private function submitTakedown(NodeInterface $node): array {
+    $this->routedRequest('localnodes_import.takedown', $node, 'POST');
+    return $this->submitProgrammed(self::TAKEDOWN_FORM, $node, []);
+  }
+
+  /**
+   * Builds, validates and submits a form the way a POST would.
+   *
+   * @return array{0: array, 1: \Drupal\Core\Form\FormStateInterface}
+   *   The built form and its state.
+   */
+  private function submitProgrammed(string $class, NodeInterface $node, array $values): array {
+    $builder = $this->container->get('form_builder');
+    $state = (new FormState())->setValues($values);
+    $state->addBuildInfo('args', [$node]);
+    $state->setUserInput($values);
+    $state->setProgrammed();
+    $state->setRequestMethod('POST');
+    $form_id = $builder->getFormId($class, $state);
+    $form = $builder->retrieveForm($form_id, $state);
+    $state->setSubmitted();
+    $state->setValidationEnforced();
+    $state->clearErrors();
+    $builder->prepareForm($form_id, $form, $state);
+    $builder->processForm($form_id, $form, $state);
+    return [$form, $state];
+  }
+
+}

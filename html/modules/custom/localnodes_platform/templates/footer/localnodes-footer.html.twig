@@ -1,0 +1,35 @@
+{#
+/**
+ * @file
+ * The community site's footer line (22.1-07, Tom's card 11).
+ *
+ * "‹community› · a community on LocalNodes · Open source · Site terms ·
+ * Hacked or phished?", with the small node mark before "LocalNodes". The mark
+ * is decorative (the text beside it names LocalNodes), so its alt text is
+ * empty. "Site terms" was added by 23-26, "Hacked or phished?" by 22.1-15.
+ *
+ * Variables:
+ * - site_name: The community's name (system.site).
+ * - repository_url: Where "Open source" points.
+ * - terms_url: The site terms page, /terms (23-26).
+ * - help_url: The "Hacked or Phished?" help page, /help/hacked-or-phished
+ *   (22.1-15).
+ * - mark_url: The reversed node mark, for the footer's dark background.
+ *
+ * Everything printed is autoescaped; the site name is editable by site
+ * managers, so never add a raw-output filter here.
+ */
+#}
+<div class="ln-site-footer">
+  <p>
+    <span class="ln-site-footer__name">{{ site_name }}</span>
+    <span aria-hidden="true">&middot;</span>
+    {% trans %}a community on{% endtrans %} <img class="ln-site-footer__mark" src="{{ mark_url }}" alt="" width="16" height="16"> LocalNodes
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ repository_url }}" rel="noopener">{% trans %}Open source{% endtrans %}</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ terms_url }}">{% trans %}Site terms{% endtrans %}</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ help_url }}">{% trans %}Hacked or phished?{% endtrans %}</a>
+  </p>
+</div>

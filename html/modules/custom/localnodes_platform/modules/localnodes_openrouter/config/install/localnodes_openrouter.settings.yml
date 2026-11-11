@@ -1,0 +1,81 @@
+# Fixed models and vector size of an OpenRouter site (orchestrator's 23-06
+# model ruling, 2026-11-08, as amended the same day after the citation gate:
+# mistral-small-2603 primary, 23-06-SUMMARY.md; and after the wider model
+# gate: glm-5.3 backup in place of gpt-oss-120b, the orchestrator's
+# model-gate answer (B), 23-MODEL-GATE.md). Set once at install; changing
+# the embedding model or the vector size later means re-indexing the site.
+# The backup must equal OPENROUTER_BACKUP_MODEL in
+# .github/workflows/provision-instance.yml (change both together).
+chat_model: mistralai/mistral-small-2603
+backup_chat_model: z-ai/glm-5.3
+embedding_model: openai/text-embedding-3-large
+vector_size: 3072
+# ZDR-only endpoint pins per fixed model (D-21, 23-06 ruling item 5). Every
+# request to openrouter.ai for one of these models is sent with
+# provider.only set to this list (endpoint tags, read live from OpenRouter's
+# /models/{id}/endpoints and /endpoints/zdr: on the ZDR list,
+# safety_retention not true, and for chat models listing "tools"). Read the
+# list again when OpenRouter's endpoints change (23-21 runbook).
+#
+# Chat pins narrowed on 2026-11-08 (model-gate answer (C)): OpenRouter
+# spreads calls over every host in the list at that host's own price, so
+# only the cheapest hosts are kept. Rule: status 0, sorted by the cost of a
+# gate run's token mix (85K in, 20K out); take hosts in that order until
+# the list spans two providers. Prices per 1M tokens, in / out, and every
+# pin proven live (each host and the list HTTP 200, a bogus only 404) in
+# 23-MODEL-GATE.md, "Pins (narrowed 2026-11-08)".
+provider_pins:
+  # Mistral is the only ZDR provider: all three of its endpoints
+  # ($0.15/$0.60, $0.165/$0.66, $0.165/$0.66).
+  - model: mistralai/mistral-small-2603
+    only:
+      - mistral/eu
+      - mistral/us
+      - mistral/zdr
+    ignore: []
+  # The backup. Wafer twice ($0.07/$1.40, $0.179/$1.40), then Reka
+  # ($0.14/$2.10) as the second provider.
+  - model: z-ai/glm-5.3
+    only:
+      - wafer/us
+      - wafer/fp4
+      - reka
+    ignore: []
+  # Listed for low reasoning effort below; no longer shipped as a role.
+  # PrimeIntellect ($0.018/$0.067), Near AI ($0.03/$0.15).
+  - model: openai/gpt-oss-120b
+    only:
+      - primeintellect/fp4
+      - near-ai/fp4
+    ignore: []
+  - model: openai/text-embedding-3-large
+    only:
+      - azure
+    ignore: []
+# Models whose capped calls (group assistant, overview, support check) go out
+# with reasoning {"effort": "low"} (23-16 follow-up, 2026-11-08). A model is
+# listed only when OpenRouter's /models gives "low" in its
+# reasoning.supported_efforts AND a live check showed the effort lowers its
+# reasoning tokens. openai/gpt-oss-120b: 449, 337 and 432 reasoning tokens
+# with no field against 196, 173 and 195 with low (same synthetic prompt,
+# all served by Crusoe). It is no longer the backup but stays listed: the
+# entry is harmless, and a site that picks it gets the cut. Not listed:
+# - mistralai/mistral-small-2603, the primary: it reasons only when asked
+#   (efforts high and none). OpenRouter maps an effort a model lacks to the
+#   nearest one it has, and "low" switched reasoning on: 0 reasoning tokens
+#   with no field, 361 with low.
+# - z-ai/glm-5.3 (the backup) and z-ai/glm-5.3-flash: they list "low", but
+#   the live check showed no drop (glm-5.3 on wafer/us: 317 and 272 with no
+#   field, 867 and 894 with low; glm-5.3-flash varied by host). Two or three
+#   pairs on one prompt, so not a measurement of the models, but no
+#   evidence that low bounds their reasoning either. The backup's capped
+#   calls are bounded by max_tokens only.
+# - deepseek/deepseek-v4-flash and deepseek-v4-pro: no "low" in /models
+#   (v4-flash lists xhigh, high and none).
+# - qwen/qwen3.8-27b: lists "low" (default xhigh), but the live check
+#   (2026-11-08, 3 pairs, its narrowed pin, max_tokens 2048; qualifying
+#   meant low lower in every pair) showed no cut: 252, 189 and 244
+#   reasoning tokens with no field against 199, 205 and 243 with low.
+# Add a model only after the same check.
+low_reasoning_models:
+  - openai/gpt-oss-120b

@@ -1,0 +1,135 @@
+{#
+/**
+ * @file
+ *
+ * Default theme implementation for profiles.
+ *
+ * Available variables:
+ * - content: Items for the content of the profile.
+ *   Use 'content' to print them all, or print a subset such as
+ *   'content.title'. Use the following code to exclude the
+ *   printing of a given child element:
+ *   @code
+ *   {{ content|without('title') }}
+ *   @endcode
+ * - attributes: HTML attributes for the wrapper.
+ * - profile: The profile object.
+ * - url: The profile URL.
+ *
+ * @ingroup themeable
+ *
+ * LocalNodes copy of Open Social 13.1's socialbase
+ * profile--profile--teaser.html.twig, rendered through the suggestion
+ * profile__profile__teaser__localnodes
+ * (localnodes_platform_theme_suggestions_profile_alter()). The only change is
+ * tabindex="-1" on the two profile links inside aria-hidden (the avatar link
+ * and the "Profile: <name>" icon link), so neither is a keyboard stop that
+ * assistive technology is told to ignore (axe aria-hidden-focus). The title
+ * link still names the member, and a mouse click on the avatar or the icon
+ * still opens the profile. Upstream draft:
+ * patches/issues/socialbase-profile-teaser-aria-hidden-focusable.md.
+ */
+#}
+
+{{ attach_library('socialbase/teaser')}}
+
+<div class="card teaser">
+
+  {% block card_image %}
+    <div class="teaser__image" aria-hidden="true">
+      <a href="{{ profile_home }}" tabindex="-1">
+        {{ content.field_profile_image }}
+      </a>
+    </div>
+  {% endblock %}
+
+  {% block card_teaser_type %}
+    <a href="{{ profile_home }}" aria-hidden="true" tabindex="-1" title="{% trans %}Profile: &nbsp;{% endtrans %}{{- profile_name|render|striptags|trim -}} {{- profile_name_extra|render|striptags|trim -}}">
+      <div class="teaser__teaser-type">
+        <svg class="teaser__teaser-type-icon">
+          <title>{% trans %}Profile: &nbsp;{% endtrans %}{{- profile_name|render|striptags|trim -}} {{- profile_name_extra|render|striptags|trim -}}</title>
+          <use xlink:href="#icon-account_circle"></use>
+        </svg>
+      </div>
+    </a>
+  {% endblock %}
+
+  <div class="teaser__body">
+    <div class="teaser__content">
+
+      {% block card_title %}
+        <h4 class="teaser__title">
+         <a href="{{ profile_home }}">
+           {{ profile_name }} {{ profile_name_extra }}
+          </a>
+        </h4>
+      {% endblock %}
+
+      {% block card_body %}
+        {% if content.primary_affiliation_function|render or content.primary_affiliation_name|render %}
+          <div class="teaser__content-line">
+            <svg class="teaser__content-type-icon">
+              <title>{% trans %}User function and organization{% endtrans %}</title>
+              <use xlink:href="#icon-business_center"></use>
+            </svg>
+            <span class="teaser__content-text">
+              {% if content.primary_affiliation_function|render and content.primary_affiliation_name|render %}
+                {{ '@affiliation_function at @affiliation_name'|t({'@affiliation_function': content.primary_affiliation_function|render, '@affiliation_name': content.primary_affiliation_name|render}) }}
+              {% elseif content.primary_affiliation_function|render %}
+                {{ content.primary_affiliation_function }}
+              {% else %}
+                {{ content.primary_affiliation_name }}
+              {% endif %}
+          </span>
+          </div>
+        {% endif %}
+
+        {% if content.field_profile_summary|render %}
+          {{ content.field_profile_summary }}
+        {% else %}
+          {{ content.field_profile_self_introduction }}
+        {% endif %}
+
+        {% if content.field_profile_profile_tag['#items'] or badges %}
+          <div class="teaser__content--badges" style="margin-bottom: 5px;">
+            {% for badge in badges %}
+              {% set badge_classes = badge.classes|merge(['badge']) %}
+              <div{{ attributes.addClass(badge_classes) }}>{{ badge.label }}</div>
+            {% endfor %}
+            {% for item in content.field_profile_profile_tag['#items'] %}
+              <div class="badge badge-default">{{ item.entity.label }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endblock %}
+    </div>
+
+    <div class="card__actionbar">
+      {% block card_actionbar %}
+        {% if content.flag_follow_user and following_enabled %}
+          {{ content.flag_follow_user }}
+        {% endif %}
+
+        {% set follow_user_attributes = create_attribute() %}
+        {% set follow_user_classes = [ content.flag_follow_user ? 'btn btn-default' : 'card__link' ] %}
+        <a href="{{ profile_contact_url }}" {{ follow_user_attributes.addClass(follow_user_classes) }}>
+          {% if profile_contact_label == 'private_message' %}
+            {% if content.flag_follow_user %}
+              {% trans %}Message{% endtrans %}
+            {% else %}
+              {% trans %}Private message{% endtrans %}
+            {% endif %}
+          {% else %}
+            {% trans %}View profile{% endtrans %}
+          {% endif %}
+        </a>
+
+        {% if not content.flag_follow_user %}
+          <a href="{{ profile_stream_url }}" class="card__link hidden-for-phone-only">
+            {% trans %}View activities{% endtrans %}
+          </a>
+        {% endif %}
+      {% endblock %}
+    </div>
+  </div>
+</div>

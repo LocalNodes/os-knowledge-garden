@@ -176,8 +176,11 @@ final class LiveRunCapture {
       $record['system_prompt'] = (string) $input->getSystemPrompt();
       $config = $event->getConfiguration();
       $record['config'] = [
-        'maxOutputTokens' => $config['maxOutputTokens'] ?? NULL,
-        'thinking' => isset($config['thinkingConfig']) ? 'set' : NULL,
+        // Gemini's output cap is maxOutputTokens; an OpenAI-style provider
+        // such as OpenRouter (23-16) sends max_tokens and reasoning_effort,
+        // or, since the 23-16 follow-up, OpenRouter's reasoning.effort.
+        'maxOutputTokens' => $config['maxOutputTokens'] ?? $config['max_tokens'] ?? NULL,
+        'thinking' => isset($config['thinkingConfig']) ? 'set' : (isset($config['reasoning']['effort']) ? (string) $config['reasoning']['effort'] : (isset($config['reasoning_effort']) ? (string) $config['reasoning_effort'] : NULL)),
         'temperature' => array_key_exists('temperature', $config) ? $config['temperature'] : 'absent',
         'topP' => array_key_exists('topP', $config) ? $config['topP'] : 'absent',
         'topK' => array_key_exists('topK', $config) ? $config['topK'] : 'absent',
@@ -767,7 +770,7 @@ final class CitedAnswersLiveRunner {
       foreach (['input', 'output', 'reasoning'] as $key) {
         $record['tokens'][$key] += (int) ($tokens[$key] ?? 0);
       }
-      $chat_calls[] = ['tags' => array_values($request['tags']), 'config' => $request['config'] ?? NULL, 'tokens' => $tokens];
+      $chat_calls[] = ['tags' => array_values($request['tags']), 'config' => $request['config'] ?? NULL, 'tokens' => $tokens, 'model' => $request['model'] ?? NULL];
       if (in_array('ai_agents_group_assistant', $request['tags'], TRUE) || $record['door'] === 'answer') {
         $last_output = (string) ($request['output_text'] ?? $last_output);
       }

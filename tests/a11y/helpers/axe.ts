@@ -5,7 +5,9 @@
 //     screen's own region (options.include) so pre-existing theme and
 //     DeepChat violations outside it don't mask the screen's result,
 //   - saves the full results JSON to
-//     .planning/phases/22-document-importer-cited-group-answers/a11y/axe-<screen>-<state>.json,
+//     .planning/phases/22-document-importer-cited-group-answers/a11y/axe-<screen>-<state>.json
+//     (or, with options.resultsDir, to that folder: Phase 23 specs pass
+//     PHASE23_RESULTS_DIR),
 //   - fails the test on any serious or critical violation.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -31,9 +33,24 @@ export const RESULTS_DIR = process.env.LN_A11Y_RESULTS_DIR
     'a11y',
   );
 
+// Phase 23's results folder (23-13, D-24). Phase 23 specs pass it as
+// options.resultsDir; Phase 22's specs keep the default above.
+export const PHASE23_RESULTS_DIR = join(
+  HERE,
+  '..',
+  '..',
+  '..',
+  '.planning',
+  'phases',
+  '23-self-serve-onboarding',
+  'a11y',
+);
+
 export interface CheckA11yOptions {
   include?: string[];
   exclude?: string[];
+  /** Folder for the results JSON. Defaults to RESULTS_DIR (Phase 22's). */
+  resultsDir?: string;
 }
 
 export async function checkA11y(page: Page, screen: string, state: string, options: CheckA11yOptions = {}) {
@@ -46,9 +63,10 @@ export async function checkA11y(page: Page, screen: string, state: string, optio
   }
   const results = await builder.analyze();
 
-  mkdirSync(RESULTS_DIR, { recursive: true });
+  const resultsDir = options.resultsDir ?? RESULTS_DIR;
+  mkdirSync(resultsDir, { recursive: true });
   writeFileSync(
-    join(RESULTS_DIR, `axe-${screen}-${state}.json`),
+    join(resultsDir, `axe-${screen}-${state}.json`),
     JSON.stringify(results, null, 2) + '\n',
   );
 

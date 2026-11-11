@@ -10,8 +10,8 @@
         "php": "^8.3",
         "monolog/monolog": "^2.3.5",
         "drush/drush": "^13.7",
-        "drupal/ai": "~1.4.11",
-        "drupal/ai_agents": "dev-1.3.x",
+        "drupal/ai": "~1.5.2",
+        "drupal/ai_agents": "~1.3.5",
         "drupal/key": "^1.19",
         "drupal/ai_usage_limits": "dev-1.0.x",
         "drupal/ai_file_to_text": "^1.0",
@@ -26,10 +26,13 @@
         "simplito/elliptic-php": "^1.0",
         "brick/math": "^0.17 || ^1.0",
         "symfony/http-client": "^6.4.50",
-        "fivefilters/readability.php": "^3.3"
+        "fivefilters/readability.php": "^3.3",
+        "drupal/ai_provider_openrouter": "1.1.9",
+        "drupal/ai_search": "^1.3@alpha"
     },
     "require-dev": {
-        "drupal/core-dev": "^10.6"
+        "drupal/core-dev": "^10.6",
+        "drupal/upgrade_status": "^4.3"
     },
     "repositories": [
         {
@@ -87,21 +90,23 @@
         },
         "patches": {
             "drupal/ai": {
-                "DeepChat: pass verbose_mode setting in API request body": "patches/ai-deepchat-verbose-mode-passthrough.patch",
-                "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch",
                 "AI Chatbot: return provider errors as a handled chat error (HTTP 200), not 500": "patches/ai-chatbot-provider-error-200.patch"
+            },
+            "drupal/ai_search": {
+                "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch",
+                "Rethrow rate-limit, quota and provider 5xx errors instead of dropping the chunk; keep an item tracked when the VDB client did not finish it": "patches/ai-search-rethrow-provider-limits.patch"
             },
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch",
                 "Map Gemini API errors (429 quota/rate limit, 401/403, 400, 5xx) to the AI module exception types": "patches/gemini-provider-map-api-errors.patch",
-                "Reset content parts per message in chat(); name the call on an empty tool-call turn": "patches/gemini-provider-reset-content-parts.patch"
+                "Reset content parts per message in chat(); send a neutral mark for a tool-call turn with no text": "patches/gemini-provider-reset-content-parts.patch",
+                "Add EmbeddingsCollectionInterface (batchEmbedContents) for drupal/ai 1.5 batch embeddings": "patches/gemini-provider-embeddings-collection.patch"
             },
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
             },
             "drupal/ai_vdb_provider_qdrant": {
-                "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch",
-                "Fix filters type hint: accept array from prepareFilters in vectorSearch/querySearch": "patches/qdrant-provider-fix-filters-type-hint.patch"
+                "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"
             }
         },
         "patches-ignore": {

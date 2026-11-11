@@ -64,7 +64,7 @@ final class RestrictedFormatTest extends ImportKernelTestBase {
     $clean = (new HtmlSanitizer())->sanitize($this->injectionPage(), 'https://evil.example/skill-share');
     $this->assertClean($clean, 'The sanitised E8 page');
     // The content of removed elements goes too, not just their tags.
-    $this->assertStringNotContainsString('background: #000', $clean, 'Style rules are not left behind as text');
+    $this->assertStringNotContainsString('background: #000', $clean, 'Style rules are not left behind as text'); // raw-color-allow: test input, the style rule the sanitiser must remove
     $this->assertStringNotContainsString('void 0', $clean, 'Script and handler code is not left behind as text');
     $this->assertStringNotContainsString('<!--', $clean, 'Comments are removed');
     // The readable text stays: it is data, and the answer pipeline fences it.

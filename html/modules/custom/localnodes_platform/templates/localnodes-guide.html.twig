@@ -1,0 +1,71 @@
+{#
+/**
+ * @file
+ * The organizer guide (23-13, 23-UI-SPEC section 8). The words are the
+ * approved copy, word for word.
+ *
+ * The h1 is the page title ("Organizer Guide", the route's title), so this
+ * template has none. Reading width is 72ch (css/localnodes-guide.css). Each
+ * of the five steps is an h2 inside the numbered list; the T-4 sections come
+ * after it, outside the list.
+ *
+ * Available variables:
+ * - show_fund: Whether to print "Your group's fund" (the site has
+ *   localnodes_web3 on).
+ * - show_fees: Whether to print "Network fees" (same condition).
+ * - group_link: "one group", a link to the group list or plain text.
+ * - import_link: "Import tab", a link to the first group's Import tab or
+ *   plain text.
+ * - fund_link: "Open the Fund tab", a link to the first group's Fund tab or
+ *   plain text.
+ *
+ * Link text names where the link goes, never "here".
+ */
+#}
+<div class="localnodes-guide">
+  <p class="localnodes-guide__intro">{% trans %}This guide takes you from your sign-in link to your first answer with sources.{% endtrans %}</p>
+
+  <ol class="localnodes-guide__steps">
+    <li>
+      <h2>{% trans %}Set your password{% endtrans %}</h2>
+      <p>{% trans %}Open the sign-in link in your welcome email. It brings you to your site and asks you to choose a password. Choose one and save it. You're signed in.{% endtrans %}</p>
+    </li>
+    <li>
+      <h2>{% trans %}Open your group{% endtrans %}</h2>
+      <p>{% trans %}Your community already has {{ group_link }}, named after it. Open it from the menu. You can rename it, or make more groups, whenever you like.{% endtrans %}</p>
+    </li>
+    <li>
+      <h2>{% trans %}Upload your first files{% endtrans %}</h2>
+      <p>{% trans %}In your group, open the {{ import_link }} and choose Upload files. Choose your files, tick the box that says you have the right to share them, and press the Import button.{% endtrans %}</p>
+    </li>
+    <li>
+      <h2>{% trans %}Wait for search to catch up{% endtrans %}</h2>
+      <p>{% trans %}The Search status panel on the Import tab shows how many of your pages are searchable, for example "18 of 21". Search catches up in the background, usually within a few minutes. You can leave the page.{% endtrans %}</p>
+    </li>
+    <li>
+      <h2>{% trans %}Ask the AI assistant a question{% endtrans %}</h2>
+      <p>{% trans %}Open the AI assistant and ask something your files answer. The answer shows numbered sources. Open one to check it. When you see Sources under an answer, you got your first cited answer.{% endtrans %}</p>
+    </li>
+  </ol>
+
+  {% if show_fund %}
+    <section class="localnodes-guide__section" aria-labelledby="localnodes-guide-fund">
+      <h2 id="localnodes-guide-fund">{% trans %}Your group's fund{% endtrans %}</h2>
+      <p>{% trans %}Each group can have a fund: money the group holds together. A group organizer sets it up from the group's Fund tab. Money leaves the fund only when members vote for it and enough of them agree. {{ fund_link }} to set it up.{% endtrans %}</p>
+    </section>
+  {% endif %}
+
+  {% if show_fees %}
+    <section class="localnodes-guide__section" aria-labelledby="localnodes-guide-fees">
+      <h2 id="localnodes-guide-fees">{% trans %}Network fees{% endtrans %}</h2>
+      <p>{% trans %}Some actions in a fund, such as a vote, have a small network fee. Your community pays these fees, so members never do.{% endtrans %}</p>
+    </section>
+  {% endif %}
+
+  <section class="localnodes-guide__section" aria-labelledby="localnodes-guide-assistant">
+    <h2 id="localnodes-guide-assistant">{% trans %}Using the assistant{% endtrans %}</h2>
+    <p>{% trans %}Ask the assistant about anything in your community's files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". Every answer lists its sources, so you can check it. It only sees what you're allowed to see: two people asking the same question can get different answers. It can't change anything on the site yet, and it can't see your email or other websites.{% endtrans %}</p>
+  </section>
+
+  <p class="localnodes-guide__help">{% trans %}Stuck? Use Get help in the footer.{% endtrans %}</p>
+</div>

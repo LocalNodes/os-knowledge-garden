@@ -7,6 +7,7 @@
 
 use Drupal\Component\Serialization\Json;
 use Drupal\file\FileInterface;
+use Drupal\social_ai_indexing\Plugin\VdbProvider\ThrottledQdrantProvider;
 use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
 
 /**
@@ -29,6 +30,23 @@ use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
 function social_ai_indexing_ai_function_call_info_alter(array &$definitions): void {
   if (isset($definitions['ai_search:rag_search'])) {
     $definitions['ai_search:rag_search']['class'] = PermissionAwareRagTool::class;
+  }
+}
+
+/**
+ * Implements hook_ai_vdb_provider_info_alter().
+ *
+ * Swaps the class behind the 'qdrant' VDB plugin for ThrottledQdrantProvider
+ * (D-07). The stock QdrantProvider::indexItems() deletes a batch's old points
+ * before it embeds anything, so one Gemini 503 in the middle of a batch left
+ * the batch with no vectors at all (live, 22-26: Qdrant went from 106 points
+ * to 48). The swap changes the class only: the plugin id and the server
+ * config that names 'qdrant' stay as they are. A class swap also survives a
+ * move of the qdrant provider's commit without a patch reroll.
+ */
+function social_ai_indexing_ai_vdb_provider_info_alter(array &$definitions): void {
+  if (isset($definitions['qdrant'])) {
+    $definitions['qdrant']['class'] = ThrottledQdrantProvider::class;
   }
 }
 

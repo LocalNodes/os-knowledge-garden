@@ -1,0 +1,60 @@
+name: Design tokens
+
+# Fails the build when the brand tokens drift or a colour escapes them (Phase 22.1:
+# D-03, D-08, D-09): a generated file that no longer matches the token source, a
+# colour pairing under WCAG 2.2 AA, a raw colour literal in html/modules/custom,
+# derived socialblue pairings out of date, or a failing token test.
+#
+# Every step is a dependency-free Node script (no package install, no secret, no
+# network beyond checkout). What needs a sibling checkout or Open Social's contrib
+# files prints SKIP and passes here, and is covered by the local runs and by the
+# Nuxt repo's own tests:
+#   - build_tokens.mjs --check and check_token_parity.mjs: both Nuxt targets, the stylesheet
+#     (nuxt) and the mail colours (nuxt-mail), print SKIP because the Nuxt checkout
+#     (../localnodes-onboarding) is not present
+#   - derive_socialblue_pairings.mjs --check does NOT skip (WR-02): with socialblue not installed it derives
+#     from the committed stock stylesheets in scripts/tokens/fixtures/socialblue-<version>/ and compares
+#     socialblue-pairings.json to that. When Open Social moves, refresh the fixtures in the same change.
+#   - check_contrast.mjs: the dark-mode tripwire scan of the Nuxt pages is skipped;
+#     the token-source flag still guards
+#   - the tests that read socialblue's stylesheets skip themselves
+#   - the palette-swap proof's tests (prove_token_swap.test.mjs) skip themselves: the proof needs the Nuxt
+#     repo and its node_modules next to this checkout; its fixture tests still run
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  design-tokens:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Generated token files match the token source
+        run: node scripts/tokens/build_tokens.mjs --check
+
+      - name: Contrast gate (WCAG 2.2 AA)
+        run: node scripts/tokens/check_contrast.mjs
+
+      - name: No raw colours in custom modules
+        run: node scripts/tokens/check_raw_colors.mjs
+
+      - name: Derived socialblue pairings are current
+        run: node scripts/tokens/derive_socialblue_pairings.mjs --check
+
+      - name: Token parity (socialblue scheme, Drupal custom properties)
+        run: node scripts/check_token_parity.mjs
+
+      - name: Token tests
+        run: node --test scripts/tokens/tests/*.test.mjs

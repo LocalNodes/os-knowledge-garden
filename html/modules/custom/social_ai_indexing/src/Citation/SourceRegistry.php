@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\social_ai_indexing\Citation;
 
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\ai\OperationType\Chat\ChatMessage;
 
 /**
  * Request-wide registry: one label per entity across indexes and tool calls.
@@ -22,9 +23,12 @@ final class SourceRegistry {
   private array $sources = [];
 
   /**
-   * Whether the final answer has been rewritten.
+   * The message object the subscriber rewrote, if any.
+   *
+   * Kept as a reference, never as an object id: ids are reused after
+   * garbage collection.
    */
-  private bool $rewritten = FALSE;
+  private ?ChatMessage $rewrittenMessage = NULL;
 
   /**
    * Excerpts shown to the model, by source key (the support check's input).
@@ -98,26 +102,40 @@ final class SourceRegistry {
   }
 
   /**
-   * Records that the final answer went through the rewriter.
+   * Records the message object that went through the rewriter.
+   *
+   * The object matters, not just the fact: on a failed chat call, ai_agents'
+   * finished event carries a throwaway message that is not the one
+   * AgentRunner returns, so CitationGuardAgentRunner compares identity.
    */
-  public function markRewritten(): void {
-    $this->rewritten = TRUE;
+  public function markRewritten(ChatMessage $message): void {
+    $this->rewrittenMessage = $message;
   }
 
   /**
-   * Whether the final answer went through the rewriter.
+   * Whether a message went through the rewriter.
+   *
+   * This says a rewrite happened, not that the person receives it; use
+   * rewrittenMessage() to check what is returned.
    */
   public function wasRewritten(): bool {
-    return $this->rewritten;
+    return $this->rewrittenMessage !== NULL;
   }
 
   /**
-   * Empties the registry and clears the rewritten flag.
+   * The message object the subscriber rewrote, or NULL if none was.
+   */
+  public function rewrittenMessage(): ?ChatMessage {
+    return $this->rewrittenMessage;
+  }
+
+  /**
+   * Empties the registry and forgets the rewritten message.
    */
   public function reset(): void {
     $this->sources = [];
     $this->excerpts = [];
-    $this->rewritten = FALSE;
+    $this->rewrittenMessage = NULL;
   }
 
 }

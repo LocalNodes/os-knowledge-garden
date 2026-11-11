@@ -31,6 +31,14 @@ function groupId(): string {
   return gid!;
 }
 
+/** The body drupal/ai 1.5's block JavaScript posts to /api/deepchat. */
+interface ChatRequestBody {
+  chat_processor_plugin?: string;
+  plugin_configuration?: { assistant_id?: string; verbose_mode?: boolean; [key: string]: unknown };
+  verbose_mode?: unknown;
+  messages?: { role: string; text: string }[];
+}
+
 const header = (page: Page) => page.locator('.ai-deepchat--header');
 const chat = (page: Page) => page.locator('deep-chat');
 
@@ -51,6 +59,8 @@ async function ask(page: Page, question: string) {
 test.describe('S7 chat', () => {
   let guard: AiGuard | undefined;
   let asked: string[];
+  // The JSON body of each POST /api/deepchat the shipped block's JavaScript made.
+  let posted: ChatRequestBody[];
   test.beforeEach(({}, testInfo) => {
     guard = undefined;
     test.skip(testInfo.project.name !== 'member', 'S7 chat states run as the member');
@@ -58,9 +68,11 @@ test.describe('S7 chat', () => {
 
   test.beforeEach(async ({ page }) => {
     asked = [];
+    posted = [];
     guard = await guardAi(page, async (route, request, fulfil) => {
       if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/deepchat') {
-        const body = request.postDataJSON() as { messages?: { role: string; text: string }[] };
+        const body = request.postDataJSON() as ChatRequestBody;
+        posted.push(body);
         asked.push(body?.messages?.filter((m) => m.role === 'user').pop()?.text ?? '');
         await fulfil(CHAT_RQ01_RESPONSE);
         return;
@@ -101,6 +113,18 @@ test.describe('S7 chat', () => {
     await expect(markers.first()).toBeVisible({ timeout: 15_000 });
     expect(guard!.fulfilled, 'the answer came from the canned route').toHaveLength(1);
     expect(asked, 'the question sent is RQ-01').toEqual([RQ01_QUESTION]);
+
+    // 22.2-07: the shipped 1.5 block names its chat processor and the group
+    // assistant in the request it makes. Without chat_processor_plugin the
+    // server answers 400 (smoke-instance.sh builds the same body from the
+    // rendered block settings). Verbose mode travels inside plugin_configuration,
+    // not at the top level, so ai-deepchat-verbose-mode-passthrough.patch has
+    // nothing left to add.
+    expect(posted, 'one request reached the canned route').toHaveLength(1);
+    expect(posted[0].chat_processor_plugin, 'the request names a chat processor plugin').toBe('ai_assistant_api_processor');
+    expect(posted[0].plugin_configuration?.assistant_id, 'plugin_configuration names the group assistant').toBe('group_assistant');
+    expect(posted[0].plugin_configuration, 'verbose_mode rides in plugin_configuration').toHaveProperty('verbose_mode');
+    expect(posted[0], 'no top-level verbose_mode').not.toHaveProperty('verbose_mode');
 
     // Every inline marker: visible "[n]", accessible name "Source n: title",
     // root-relative href, same tab.

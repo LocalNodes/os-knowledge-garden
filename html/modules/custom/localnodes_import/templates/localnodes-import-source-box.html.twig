@@ -31,6 +31,8 @@
  * - preview: TRUE on S3's preview of the first address (22-30): nothing has
  *   been imported yet, so the change note and the dates, which say what
  *   happened, are left out.
+ * - report_url: The address of "Report a problem with this page" (23-05,
+ *   ONB-05), set on imported pages only; the link is there when it is set.
  * - no_text: For a page whose file has no readable text, the report's reason
  *   ("This looks like a scanned PDF…"), carried onto the page (22-30), or
  *   NULL.
@@ -74,5 +76,8 @@
         {{ 'Refreshed from source @date'|t({'@date': refreshed}) }}
       {%- endif -%}
     </p>
+  {% endif %}
+  {% if report_url %}
+    <p class="localnodes-import-source__report"><a href="{{ report_url }}">{{ 'Report a problem with this page'|t }}</a></p>
   {% endif %}
 </section>

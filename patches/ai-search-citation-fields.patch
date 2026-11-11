@@ -1,13 +1,11 @@
-diff --git a/modules/ai_search/src/Plugin/AiFunctionCall/RagTool.php b/modules/ai_search/src/Plugin/AiFunctionCall/RagTool.php
-index 60598489..b21bfa32 100644
---- a/modules/ai_search/src/Plugin/AiFunctionCall/RagTool.php
-+++ b/modules/ai_search/src/Plugin/AiFunctionCall/RagTool.php
-@@ -137,7 +137,22 @@ class RagTool extends FunctionCallBase implements StructuredExecutableFunctionCa
-         if ($min_score > $result->getScore()) {
+diff --git a/src/Plugin/AiFunctionCall/RagTool.php b/src/Plugin/AiFunctionCall/RagTool.php
+--- a/src/Plugin/AiFunctionCall/RagTool.php
++++ b/src/Plugin/AiFunctionCall/RagTool.php
+@@ -142,7 +142,21 @@
            continue;
          }
--        $end_results[] = "Search result: #$i:\n```\n" . $result->getExtraData('content') . "\n```\n\n";
-+        $content = $result->getExtraData('content');
+         $content = (string) $result->getExtraData('content');
+-        $end_results[] = "Search result: #$i:\n```\n" . $content . "\n```\n\n";
 +        $citation_url = $result->getExtraData('citation_url') ?: '';
 +        $citation_title = $result->getExtraData('citation_title') ?: '';
 +        $citation_type = $result->getExtraData('citation_type') ?: '';
@@ -23,14 +21,13 @@ index 60598489..b21bfa32 100644
 +        }
 +        $result_text .= "\n";
 +        $end_results[] = $result_text;
-         $i++;
-       }
-     }
-diff --git a/modules/ai_search/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php b/modules/ai_search/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
-index bafa9af5..a01e88b7 100644
---- a/modules/ai_search/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
-+++ b/modules/ai_search/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
-@@ -467,7 +467,7 @@ class SearchApiAiSearchBackend extends AiSearchBackendPluginBase implements Plug
+         [$entityType, $entityId, $langcode] = $this->parseDrupalEntityId((string) $result->getExtraData('drupal_entity_id'));
+         $this->results[] = [
+           'entity_type' => $entityType,
+diff --git a/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php b/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
+--- a/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
++++ b/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
+@@ -609,7 +609,7 @@
      // Prepare params.
      $params = [
        'collection_name' => $this->configuration['database_settings']['collection'],

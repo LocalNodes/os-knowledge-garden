@@ -37,3 +37,6 @@ social_ai_indexing.settings:
         timeout:
           type: integer
           label: 'HTTP timeout for the check call, in seconds'
+    embedding_requests_per_minute:
+      type: integer
+      label: 'Indexing embeddings allowed per minute, counted in texts'

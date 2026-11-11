@@ -1,0 +1,24 @@
+# The community site's footer line (22.1-07, Tom's card 11). Optional config:
+# it installs once socialblue is installed, so a site that builds the theme
+# after this module still gets it. Replaces social_footer's powered-by block,
+# which _localnodes_platform_configure_branding() switches off.
+langcode: en
+status: true
+dependencies:
+  module:
+    - localnodes_platform
+  theme:
+    - socialblue
+id: socialblue_localnodes_footer
+theme: socialblue
+region: footer
+weight: -28
+provider: null
+plugin: localnodes_footer
+settings:
+  id: localnodes_footer
+  label: 'LocalNodes footer'
+  label_display: '0'
+  provider: localnodes_platform
+  repository_url: 'https://github.com/LocalNodes/os-knowledge-garden'
+visibility: {  }

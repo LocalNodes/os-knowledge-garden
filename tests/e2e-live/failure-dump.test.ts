@@ -227,3 +227,36 @@ describe('RPC result checks', () => {
   });
 });
 
+// Run 3 (42489172114) counted one pageerror with nothing more to go on. The dump now names each
+// page error by its allowlisted error name, with the panel state when it happened.
+describe('page errors', () => {
+  it('prints the allowlisted name and the panel state, never the message', () => {
+    const dump = new FailureDump();
+    dump.pageError(Object.assign(new TypeError('Cannot read properties of undefined (reading x)'), {}), '3');
+    dump.pageError(new Error('boom'), null);
+    dump.pageError('not an error', 'x');
+    for (const h of HOSTILE) dump.pageError(Object.assign(new Error(h), { name: h.slice(0, 30) }), h);
+    const out = dump.lines().join('\n');
+    expect(out).toContain(`pageerrors=${HOSTILE.length + 3}`);
+    expect(out).toContain('pageerror: name=TypeError panel_state=3');
+    expect(out).toContain('pageerror: name=Error panel_state=-');
+    expect(out).toContain('pageerror: name=unknown panel_state=other');
+    expect(out).not.toContain('Cannot read');
+    noTrace(out);
+    for (const h of HOSTILE) {
+      const one = new FailureDump();
+      one.pageError(Object.assign(new Error(h), { name: h.slice(0, 30) }), h);
+      expect(one.lines()).toContain('pageerror: name=Error panel_state=other');
+      noTrace(one.lines().join('\n'));
+    }
+  });
+
+  it('lists at most 5 page errors by name', () => {
+    const dump = new FailureDump();
+    for (let i = 0; i < 9; i++) dump.pageError(new RangeError('x'), '2');
+    const out = dump.lines();
+    expect(out.filter((l) => l.startsWith('pageerror: ')).length).toBe(5);
+    expect(out.join('\n')).toContain('pageerrors=9');
+  });
+});
+

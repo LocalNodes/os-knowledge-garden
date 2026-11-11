@@ -1,0 +1,316 @@
+name: Tear Down LocalNodes Instance
+
+# Deletes one sign-up's Coolify application, with its volumes, when the sign-up app asks.
+#
+# D-18 note (Tom, 2026-11-08; 23-CONTEXT.md, 23-RULINGS-1108.md "afternoon", answers 2 and 4):
+# automated deletion of a Coolify app is allowed in exactly two cases, a sign-up whose first
+# payment was not made (a declined card, or a 3DS confirmation not made in time; B-1) and a
+# sign-up whose build failed twice (its half-built app). Every other delete stays Tom's call.
+#
+# The sign-up app's address is pinned (review fix, 2026-11-09; 23-REVIEWS.md item 1). The
+# callback_url input must equal SIGNUP_ORIGIN below, character for character, or the run is
+# refused before any request: no token is derived, nothing is asked, nothing is deleted and no
+# result is posted (a foreign host is not a safe place to report to). Every request to the
+# sign-up app then goes to SIGNUP_ORIGIN itself, never to the input. Otherwise whoever can
+# dispatch this workflow could name a host of their own, receive the per-provision bearer and
+# approve the delete of a paid site. It is a fixed literal in this file, not a repository
+# variable: changing it takes a reviewed commit, and scripts/ops/tests/teardown-workflow.test.sh
+# checks it against the callback_url that localnodes-onboarding's dispatcher sends
+# (server/utils/github.ts, dispatchTeardownWorkflow).
+#
+# Two guards, both required, because deleting volumes cannot be undone:
+#   1. The sign-up app confirms the case first: GET {SIGNUP_ORIGIN}/api/teardown-check with the
+#      per-provision bearer must answer 200 with {"teardown": true}. Anything else, or no
+#      answer, deletes nothing. A live, paid site carries its tag too, so the tag alone would
+#      let a mistaken dispatch delete a paying community.
+#   2. The tag: only an app whose description is exactly ln-provision:{provision_id} is
+#      deleted. provision-instance.yml ("Create Coolify application") sets that description on
+#      every app it creates. Any app on {subdomain}.localnodes.xyz that is untagged or tagged
+#      for another sign-up, or a second app with this tag, refuses the run; the chosen app is
+#      re-read right before the DELETE and must still carry the tag.
+#   3. The sign-up app is asked again (23-43, T-23-195): after the tag re-read and immediately
+#      before the DELETE, GET {SIGNUP_ORIGIN}/api/teardown-check is repeated with the same
+#      bearer. A sign-up that changed since the first answer (paid in the meantime, say) gets
+#      anything but 200 {"teardown": true}, and the run stops as refused with nothing deleted.
+#
+# Every curl is bounded (23-43): 10 s to connect and 30 s in all (10 s in all for each delete
+# poll), so a stalled Coolify or sign-up app call cannot eat the 15-minute job and with it
+# the result report.
+#
+# The result (deleted, gone, refused or failed) goes back to the sign-up app once, on success
+# and on failure: POST {SIGNUP_ORIGIN}/api/teardown-result. It never fails the run itself.
+#
+# Every workflow input and secret reaches the shell through env: only and is expanded as a
+# quoted variable. No ${{ }} expression appears inside a run: block, so an input is data, never
+# shell source. The run page of this public repo shows inputs and the step summary, so no input
+# carries personal data or a payment detail (there is deliberately no "reason" input). The
+# per-provision token is masked before its first use and no response body is ever printed.
+# scripts/ops/tests/teardown-workflow.test.sh enforces all of this against a fake Coolify.
+
+on:
+  workflow_dispatch:
+    inputs:
+      subdomain:
+        description: 'Subdomain of the site to remove (e.g., "portland" for portland.localnodes.xyz). No personal data'
+        required: true
+        type: string
+      provision_id:
+        description: 'Opaque sign-up id (22 url-safe characters). Only the app tagged ln-provision:{provision_id} can be removed. No personal data'
+        required: true
+        type: string
+      callback_url:
+        description: 'Base URL of the sign-up app. Must be exactly https://localnodes.xyz (pinned as SIGNUP_ORIGIN); any other value is refused before any request. No path, no personal data'
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: teardown-${{ inputs.provision_id }}
+  cancel-in-progress: false
+
+env:
+  COOLIFY_API: https://coolify.localnodes.xyz/api/v1
+  # The only sign-up app this workflow trusts: an allow-list of one (see the header).
+  SIGNUP_ORIGIN: https://localnodes.xyz
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+    steps:
+      - name: Validate inputs
+        env:
+          SUBDOMAIN_INPUT: ${{ inputs.subdomain }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+        run: |
+          refuse() {
+            echo "::error::$1"
+            echo "RESULT=refused" >> "$GITHUB_ENV"
+            exit 1
+          }
+          # The same rules as provision-instance.yml "Validate inputs". Bash =~ tests the whole
+          # string, so a multi-line value cannot pass and then inject lines into $GITHUB_ENV.
+          if [[ ! "$PROVISION_ID_INPUT" =~ ^[A-Za-z0-9_-]{22}$ ]]; then
+            refuse "Invalid provision_id. Expected 22 characters: letters, digits, hyphen, underscore."
+          fi
+          # https only: the per-provision token travels as a bearer
+          if [[ ! "$CALLBACK_URL_INPUT" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$ ]]; then
+            refuse "callback_url must be an https base URL (no path)."
+          fi
+          # Pinned: exactly the sign-up app's origin, compared as a whole string, so another
+          # host, a longer or shorter host, a port or a different case is refused. Before
+          # REPORT_OK, so a foreign host gets no token and no result post either.
+          if [ "$CALLBACK_URL_INPUT" != "$SIGNUP_ORIGIN" ]; then
+            refuse "callback_url is not the sign-up app's pinned origin. Nothing was asked or deleted."
+          fi
+          # From here on the result may be reported: the id and the address are both checked.
+          echo "REPORT_OK=true" >> "$GITHUB_ENV"
+          if [[ ! "$SUBDOMAIN_INPUT" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+            refuse "Invalid subdomain. Use lowercase letters, numbers, and hyphens only."
+          fi
+          for reserved in www api coolify mail smtp; do
+            if [ "$SUBDOMAIN_INPUT" = "$reserved" ]; then
+              refuse "Subdomain '$SUBDOMAIN_INPUT' is reserved."
+            fi
+          done
+          echo "SUBDOMAIN=$SUBDOMAIN_INPUT" >> "$GITHUB_ENV"
+          echo "FQDN=${SUBDOMAIN_INPUT}.localnodes.xyz" >> "$GITHUB_ENV"
+          echo "PROVISION_ID=$PROVISION_ID_INPUT" >> "$GITHUB_ENV"
+          echo "TAG=ln-provision:$PROVISION_ID_INPUT" >> "$GITHUB_ENV"
+
+      - name: Confirm with the sign-up app
+        # The sign-up app answers yes only for a sign-up in one of the two approved cases with
+        # no paying subscription (23-37). If it is down, nothing is deleted.
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+        run: |
+          refuse() {
+            echo "::error::$1"
+            echo "RESULT=refused" >> "$GITHUB_ENV"
+            exit 1
+          }
+          [ -n "$CALLBACK_SECRET" ] || refuse "PROVISION_CALLBACK_SECRET is not set for this repository."
+
+          # Per-provision bearer: hex HMAC-SHA256 of the id, keyed by the shared secret. The
+          # secret itself is never sent anywhere. Masked before anything else touches it.
+          TOKEN="$(printf '%s' "$PROVISION_ID_INPUT" | openssl dgst -sha256 -hmac "$CALLBACK_SECRET" -r | cut -d' ' -f1)"
+          echo "::add-mask::${TOKEN}"
+          [[ "$TOKEN" =~ ^[0-9a-f]{64}$ ]] || refuse "Could not derive the per-provision token."
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+          # The body goes to a file that is never printed; only the HTTP code is shown.
+          BODY_FILE="$(mktemp)"
+          CODE="$(curl -sS --connect-timeout 10 --max-time 30 -o "$BODY_FILE" -w '%{http_code}' \
+                  "$SIGNUP_ORIGIN/api/teardown-check?provision_id=$PROVISION_ID_INPUT" \
+                  -H "Authorization: Bearer $TOKEN" \
+                  -H "Accept: application/json" 2>/dev/null)" || CODE="000"
+          if [ "$CODE" != "200" ]; then
+            rm -f "$BODY_FILE"
+            refuse "The sign-up app did not confirm the teardown (HTTP $CODE). Nothing was deleted."
+          fi
+          if ! jq -e '.teardown == true' "$BODY_FILE" >/dev/null 2>&1; then
+            rm -f "$BODY_FILE"
+            refuse "The sign-up app did not confirm the teardown (HTTP 200 without teardown true). Nothing was deleted."
+          fi
+          rm -f "$BODY_FILE"
+          echo "The sign-up app confirmed the teardown."
+
+      - name: Find the tagged app
+        run: |
+          stop() {  # stop WORD MESSAGE
+            echo "::error::$2"
+            echo "RESULT=$1" >> "$GITHUB_ENV"
+            exit 1
+          }
+          APPS_FILE="$(mktemp)"
+          curl -sS --fail-with-body --connect-timeout 10 --max-time 30 -o "$APPS_FILE" "$COOLIFY_API/applications" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Accept: application/json" 2>/dev/null \
+            || stop failed "Could not list the Coolify applications. Nothing was deleted."
+          # Fail closed: a list that is not a JSON array must not read as "nothing there".
+          jq -e 'type == "array"' "$APPS_FILE" >/dev/null 2>&1 \
+            || stop failed "The Coolify application list could not be read. Nothing was deleted."
+
+          # ON_FQDN: every app whose domains mention the FQDN, as a substring (a format surprise
+          # then blocks instead of slipping through). TAGGED: every app whose description is
+          # exactly this sign-up's tag, on any domain (a half-made app may lack its domain).
+          ON_FQDN_FOREIGN="$(jq --arg fqdn "$FQDN" --arg tag "$TAG" '[.[]
+            | select(.docker_compose_domains != null)
+            | select((.docker_compose_domains | tostring) | contains($fqdn))
+            | select(.description != $tag)] | length' "$APPS_FILE")"
+          TAGGED_UUIDS="$(jq -r --arg tag "$TAG" '[.[] | select(.description == $tag) | .uuid | tostring] | join(" ")' "$APPS_FILE")"
+          TAGGED_COUNT="$(jq --arg tag "$TAG" '[.[] | select(.description == $tag)] | length' "$APPS_FILE")"
+          rm -f "$APPS_FILE"
+
+          if [ "$ON_FQDN_FOREIGN" -gt 0 ]; then
+            stop refused "An app on $FQDN is untagged or belongs to another sign-up. Nothing was deleted; this needs a person (D-18)."
+          fi
+          if [ "$TAGGED_COUNT" -gt 1 ]; then
+            stop refused "$TAGGED_COUNT apps carry this sign-up's tag. Nothing was deleted; this needs a person (D-18)."
+          fi
+          if [ "$TAGGED_COUNT" -eq 0 ]; then
+            echo "No app on $FQDN and none tagged for this sign-up: already gone."
+            echo "RESULT=gone" >> "$GITHUB_ENV"
+            echo "SKIP_DELETE=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          APP_UUID="$TAGGED_UUIDS"
+          [[ "$APP_UUID" =~ ^[A-Za-z0-9]+$ ]] || stop refused "The tagged app's uuid is not plain letters and digits. Nothing was deleted."
+          echo "APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
+          echo "Found this sign-up's app: $APP_UUID"
+
+      - name: Delete the app and its volumes
+        if: env.SKIP_DELETE != 'true'
+        run: |
+          stop() {  # stop WORD MESSAGE
+            echo "::error::$2"
+            echo "RESULT=$1" >> "$GITHUB_ENV"
+            exit 1
+          }
+          BODY_FILE="$(mktemp)"
+          # Re-read right before the DELETE: a list that changed under the run cannot point the
+          # delete at another app.
+          CODE="$(curl -sS --connect-timeout 10 --max-time 30 -o "$BODY_FILE" -w '%{http_code}' "$COOLIFY_API/applications/$APP_UUID" \
+                  -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                  -H "Accept: application/json" 2>/dev/null)" || CODE="000"
+          [ "$CODE" = "200" ] || stop failed "Could not re-read app $APP_UUID (HTTP $CODE). Nothing was deleted."
+          jq -e --arg tag "$TAG" '.description == $tag' "$BODY_FILE" >/dev/null 2>&1 \
+            || stop refused "App $APP_UUID no longer carries this sign-up's tag. Nothing was deleted."
+
+          # Ask the sign-up app again, immediately before the DELETE (guard 3 in the header): the
+          # first answer may be minutes old. Same bearer (TOKEN, masked in the confirmation step),
+          # same rule: only HTTP 200 with teardown true goes on; anything else is refused.
+          CODE="$(curl -sS --connect-timeout 10 --max-time 30 -o "$BODY_FILE" -w '%{http_code}' \
+                  "$SIGNUP_ORIGIN/api/teardown-check?provision_id=$PROVISION_ID" \
+                  -H "Authorization: Bearer $TOKEN" \
+                  -H "Accept: application/json" 2>/dev/null)" || CODE="000"
+          [ "$CODE" = "200" ] \
+            || stop refused "The sign-up app did not confirm the teardown again (HTTP $CODE). Nothing was deleted."
+          jq -e '.teardown == true' "$BODY_FILE" >/dev/null 2>&1 \
+            || stop refused "The sign-up app did not confirm the teardown again (HTTP 200 without teardown true). Nothing was deleted."
+
+          # Configurations, volumes, docker leftovers and networks all go with the app.
+          CODE="$(curl -sS --connect-timeout 10 --max-time 30 -o "$BODY_FILE" -w '%{http_code}' -X DELETE \
+                  "$COOLIFY_API/applications/$APP_UUID?delete_configurations=true&delete_volumes=true&docker_cleanup=true&delete_connected_networks=true" \
+                  -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                  -H "Accept: application/json" 2>/dev/null)" || CODE="000"
+          [ "$CODE" = "200" ] || stop failed "Coolify did not accept the delete of $APP_UUID (HTTP $CODE)."
+          echo "Delete of $APP_UUID queued; waiting until Coolify no longer knows it (up to 3 min)."
+
+          # Coolify queues the delete: poll every 10 s, at most 18 times.
+          for i in $(seq 1 18); do
+            sleep 10
+            CODE="$(curl -sS --connect-timeout 10 --max-time 10 -o "$BODY_FILE" -w '%{http_code}' "$COOLIFY_API/applications/$APP_UUID" \
+                    -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                    -H "Accept: application/json" 2>/dev/null)" || CODE="000"
+            echo "  [$((i * 10))s] GET /applications/$APP_UUID -> HTTP $CODE"
+            if [ "$CODE" = "404" ]; then
+              rm -f "$BODY_FILE"
+              echo "RESULT=deleted" >> "$GITHUB_ENV"
+              echo "App $APP_UUID and its volumes are deleted."
+              exit 0
+            fi
+          done
+          rm -f "$BODY_FILE"
+          stop failed "App $APP_UUID was still there after 3 min."
+
+      - name: Report the result
+        if: always()
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+        run: |
+          # Exactly one word from the contract goes out; anything else (or nothing) is failed.
+          WORD="${RESULT:-failed}"
+          case "$WORD" in
+            deleted|gone|refused|failed) ;;
+            *) WORD=failed ;;
+          esac
+          # Never post for an id, or after a callback_url, that failed validation (a foreign
+          # callback_url is never reported to, not even at the pinned origin). The run page
+          # shows the refusal instead.
+          if [ "${REPORT_OK:-}" != "true" ]; then
+            echo "Result not reported: provision_id or callback_url failed validation; result was $WORD"
+            exit 0
+          fi
+          # The token normally exists already (confirmation step). A run that stopped before it
+          # derives it here from the secret, masked first.
+          BEARER="${TOKEN:-}"
+          if [ -z "$BEARER" ] && [ -n "$CALLBACK_SECRET" ]; then
+            BEARER="$(printf '%s' "$PROVISION_ID_INPUT" | openssl dgst -sha256 -hmac "$CALLBACK_SECRET" -r | cut -d' ' -f1)"
+            echo "::add-mask::${BEARER}"
+          fi
+          if [ -z "$BEARER" ]; then
+            echo "Warning: no token for the result callback (non-fatal); result was $WORD"
+            exit 0
+          fi
+          jq -n --arg pid "$PROVISION_ID_INPUT" --arg result "$WORD" '{provision_id: $pid, result: $result}' \
+            | curl -sf --connect-timeout 10 --max-time 30 -o /dev/null -X POST "$SIGNUP_ORIGIN/api/teardown-result" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $BEARER" \
+              --data-binary @- 2>/dev/null || echo "Warning: result callback failed (non-fatal)"
+          echo "Result reported: $WORD"
+
+      - name: Summary
+        if: always()
+        run: |
+          # Public run page: no person's address, no token, no payment detail. Only values this
+          # workflow validated itself.
+          WORD="${RESULT:-failed}"
+          case "$WORD" in
+            deleted|gone|refused|failed) ;;
+            *) WORD=failed ;;
+          esac
+          {
+            printf '## LocalNodes Instance Teardown\n\n'
+            printf '| | |\n|---|---|\n'
+            printf '| **Subdomain** | %s |\n' "${SUBDOMAIN:-(invalid input)}"
+            printf '| **Provision id** | `%s` |\n' "${PROVISION_ID:-(invalid input)}"
+            printf '| **Coolify UUID** | `%s` |\n' "${APP_UUID:-none}"
+            printf '| **Result** | %s |\n' "$WORD"
+          } >> "$GITHUB_STEP_SUMMARY"

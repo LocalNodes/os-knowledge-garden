@@ -121,6 +121,39 @@ if ($resend_key = getenv('RESEND_API_KEY')) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 23 per-instance values, env only (set per instance by the runbook or by
+// provision-instance.yml; docker-compose.yaml lists each one). Each is set only
+// when the variable is non-empty, so an unset one leaves the module default.
+// - HOST_REPORT_EMAIL: the host's address for "Report a problem" mails
+//   (read by localnodes_import's report form).
+// - AI_BACKUP_PROVIDER / AI_BACKUP_MODEL: the chat-only failover backup that
+//   AiFailoverSubscriber reads from localnodes_ai_backup (provider, model).
+// - OPENROUTER_BASE_URL: the OpenRouter provider's base_url, to point it at
+//   another OpenAI-compatible gateway. http(s) URLs only. Inert while the
+//   ai_provider_openrouter module is absent.
+// ---------------------------------------------------------------------------
+if (($host_report_email = trim((string) getenv('HOST_REPORT_EMAIL'))) !== '') {
+  $settings['localnodes_host_report_email'] = $host_report_email;
+}
+foreach (['provider' => 'AI_BACKUP_PROVIDER', 'model' => 'AI_BACKUP_MODEL'] as $backup_key => $backup_env) {
+  if (($backup_value = trim((string) getenv($backup_env))) !== '') {
+    $settings['localnodes_ai_backup'][$backup_key] = $backup_value;
+  }
+}
+if (($openrouter_base_url = trim((string) getenv('OPENROUTER_BASE_URL'))) !== '' && preg_match('#^https?://#i', $openrouter_base_url)) {
+  $config['ai_provider_openrouter.settings']['base_url'] = $openrouter_base_url;
+}
+unset($host_report_email, $backup_key, $backup_env, $backup_value, $openrouter_base_url);
+
+// Sign-up identity (23-35): the activation route compares the bearer with
+// callback_token (hash_equals). Empty on demo and manual instances, where the
+// route answers 404. Never exported to config, never shown on a page.
+$settings['localnodes_provision'] = [
+  'id' => (string) (getenv('PROVISION_ID') ?: ''),
+  'callback_token' => (string) (getenv('PROVISION_CALLBACK_TOKEN') ?: ''),
+];
+
+// ---------------------------------------------------------------------------
 // SIWE domain/URI override (instance-specific, derived from FQDN).
 // SERVICE_FQDN_OPENSOCIAL may list several domains, comma-separated (Coolify
 // does this when an app has more than one domain). Each entry is normalised:
@@ -186,6 +219,26 @@ if ($safe_rpc_ethereum_sepolia = getenv('SAFE_RPC_URL_ETHEREUM_SEPOLIA')) {
 }
 if ($safe_rpc_base_sepolia = getenv('SAFE_RPC_URL_BASE_SEPOLIA')) {
   $settings['safe_rpc_urls']['base_sepolia'] = [$safe_rpc_base_sepolia];
+}
+
+// ---------------------------------------------------------------------------
+// Network fee sponsor (optional, gas_sponsor; D-01).
+// gas_sponsor asks the community's relayer container to pay network fees.
+// The relayer's URL and its bearer token come from the environment only:
+// they are settings, never config, so they never appear in a config export.
+// The relayer's sending key stays in the relayer container and never reaches
+// Drupal. With the URL or the token unset, gas_sponsor reports that no
+// network fee account is set up. The low-balance floor, when set, is the
+// same whole number of wei the relayer uses for its own low-balance alert.
+// ---------------------------------------------------------------------------
+if (($sponsor_relayer_url = trim((string) getenv('SPONSOR_RELAYER_URL'))) !== '') {
+  $settings['gas_sponsor']['relayer_url'] = $sponsor_relayer_url;
+}
+if (($sponsor_relayer_token = trim((string) getenv('SPONSOR_RELAYER_TOKEN'))) !== '') {
+  $settings['gas_sponsor']['relayer_token'] = $sponsor_relayer_token;
+}
+if (ctype_digit($sponsor_low_balance_wei = trim((string) getenv('SPONSOR_RELAYER_LOW_BALANCE_WEI')))) {
+  $settings['gas_sponsor']['low_balance_wei'] = $sponsor_low_balance_wei;
 }
 
 // ---------------------------------------------------------------------------

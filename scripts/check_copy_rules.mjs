@@ -9,6 +9,10 @@
  *   html/modules/custom/social_ai_indexing/src/Citation/CitedAnswer.php
  *     (the no-answer and fallback copy, AI-SPEC E9 "server-owned copy")
  *   html/modules/custom/localnodes_platform/config/install/block.block.socialblue_aideepchatchatbot.yml
+ *   html/modules/custom/localnodes_platform/{templates,src/Controller,src/Plugin/EmailBuilder}
+ *     (Phase 23, 23-13: the organizer guide, the welcome mail and the other
+ *     pages the module ships; the report form's copy is already covered under
+ *     localnodes_import/src)
  * and only the strings a person reads there:
  *   - Twig: text between tags, {{ '…'|t }} literals, {% trans %} bodies, and
  *     the aria-label, title, alt, placeholder and value attributes. Comments
@@ -55,6 +59,11 @@ const DEFAULT_PATHS = [
   custom('social_ai_indexing/deepchat_styles'),
   custom('social_ai_indexing/src/Citation/CitedAnswer.php'),
   custom('localnodes_platform/config/install/block.block.socialblue_aideepchatchatbot.yml'),
+  // Phase 23 (23-13, D-22, PLACE-01): the module's templates (guide, mail
+  // wrapper and bodies, footer), controllers and mail builders.
+  custom('localnodes_platform/templates'),
+  custom('localnodes_platform/src/Controller'),
+  custom('localnodes_platform/src/Plugin/EmailBuilder'),
 ];
 
 const PLACE = /\b(your town|your area|local residents|near you|neighbou?rs)\b/i;

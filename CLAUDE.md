@@ -2,61 +2,63 @@
 
 ## What This Is
 
-A Drupal-based install profile/distribution built on Open Social. This is pre-launch baseline development — there are no real production sites yet. Every deployed instance is throwaway.
+A Drupal install profile/distribution built on Open Social, for LocalNodes community sites. It is pre-launch: no real production sites exist yet, and every deployed instance is throwaway.
 
-## Config Management Philosophy
+## Whose code this is
 
-**We are building a distribution, not maintaining live sites.**
+- **Ours:** everything under `html/modules/custom/`, the `docker/` and `scripts/` directories, and the web3 modules we maintain (`siwe_login`, `safe_smart_accounts` and `group_treasury` on drupal.org; `safe_governance` and `gas_sponsor`, not yet published). When you are already changing a piece of our code and find a nearby problem in it, fix it and say so in your summary. Keep a diff that moves money or publishes a release to what its plan says, because every extra change there costs another review round.
+- **Someone else's:** Drupal core, Open Social and every other contrib module. Change them only through a patch in `patches/` (wired in `composer.json`), with a matching draft issue in `patches/issues/<name>.md` so the fix can go upstream.
 
-- `config/install/` and `config/optional/` in modules are the source of truth
-- Fresh installs must work out of the box with correct configuration
-- **Do NOT use `hook_update_N()`** for config changes — there are no existing installs to migrate
-- **Do NOT add `drush config:set` hacks to `docker/entrypoint.sh`** — fix config at the source (a module `hook_install()` is the right place for install-time config, e.g. `localnodes_platform_install()`)
-- **Do NOT run `drush deploy` / `config:import` (cim).** There is no `config/sync` export: the old one was removed (commit `66e9201`), and `config/sync/` now holds only a placeholder README so settings.php's path exists on a fresh checkout (22.2, D-23). Never commit exported YAML there. The removed export was a one-off export from a single dev site, so its site UUID and per-entity UUIDs never matched a fresh `site:install`, and cim aborted (`Site UUID … does not match` + `Entities exist … must be deleted`). For a distribution provisioned fresh per instance, config belongs in module install dirs, not a sync export. `drush cex` can still produce an ad-hoc dev diff, but never commit it back as a deploy mechanism.
-- The entrypoint handles infrastructure only: wait for services, detect install state, run site-install, enable modules, load demo content, index search
+## Config Management
 
-### When config changes are needed:
+We are building a distribution, not maintaining live sites. A fresh install has to come up with the right configuration and nothing else has to be migrated.
 
-1. Update the YAML in the module's `config/install/` or `config/optional/`
-2. Deploy fresh (delete volumes / recreate apps on Coolify)
-3. The install process picks up the new config automatically
+- `config/install/` and `config/optional/` in modules are the source of truth.
+- Install-time config that YAML cannot express goes in a module's `hook_install()`, for example `localnodes_platform_install()`.
+- Don't write `hook_update_N()` for config changes. There are no existing installs to migrate, so an update hook is code that never runs.
+- Don't add `drush config:set` lines to `docker/entrypoint.sh`. A fix there hides a wrong default in the module; fix the module.
+- Don't run `drush deploy` or `config:import` (cim), and don't commit exported YAML to `config/sync/`. That directory holds only a placeholder README so the path in settings.php exists. The old export (removed in `66e9201`) came from one dev site, so its site UUID and entity UUIDs never matched a fresh `site:install`, and cim aborted on every new instance (`Site UUID … does not match`, `Entities exist … must be deleted`). `drush cex` is still fine for an ad-hoc diff while developing.
 
-### Future (post-launch):
+### To change config
 
-Once real sites exist, config changes to existing installs will need one of:
-- `hook_update_N()` in the appropriate module
-- Composer patches submitted upstream to drupal.org
-- Config split for per-instance differences
+1. Update the YAML in the module's `config/install/` or `config/optional/`.
+2. Deploy fresh (delete the volumes, or recreate the app on Coolify).
+3. The install picks up the new config.
 
-Until then, keep it clean.
+### After launch
+
+Once real sites exist, a config change to an existing install will need one of: `hook_update_N()` in the right module, a composer patch submitted upstream, or config split for per-instance differences. Until a real site exists, none of these.
 
 ## Entrypoint (`docker/entrypoint.sh`)
 
-The entrypoint should only contain:
+The entrypoint handles infrastructure only:
+
 - Service readiness checks (MariaDB, Solr, Qdrant)
-- Qdrant collection provisioning (infrastructure, not app config)
-- Install state detection and `drush site:install`
+- Qdrant collection provisioning
+- Install-state detection and `drush site:install`
 - Module enablement and demo content loading
 - File permission fixes for mounted volumes
-- Solr/vector indexing
+- Solr and vector indexing
 
-Install/redeploy flow (no cim):
-- **Fresh install:** `site:install social` → `drush en localnodes_platform` → `drush cr` (module `config/install` is applied on enable; no `drush deploy`).
-- **Existing install (redeploy):** `drush updatedb -y && drush cr` — DB updates + cache rebuild only, **never** `config:import`. Safe for boulder/portland on redeploy.
-- **Optional Web3:** the `localnodes_web3` submodule (SIWE login, Safe smart accounts, group treasuries) is enabled only when `WEB3_ENABLED=true` (default off). Its RPC defaults to Pocket Network's keyless public portal; override per-instance with `ETHEREUM_PROVIDER_URL`.
+App configuration (permissions, system prompts, block placement and the like) belongs in module config, not here.
 
-Anything that's app configuration (permissions, system prompts, block placement, etc.) belongs in module config YAMLs, not the entrypoint. Existing entrypoint bandaids (like `role:perm:add`) should be moved upstream when possible.
+Install and redeploy flow:
+
+- **Fresh install:** `site:install social` → `drush en localnodes_platform` → `drush cr`. Module `config/install` is applied on enable.
+- **Existing install (redeploy):** `drush updatedb -y && drush cr`. Database updates and a cache rebuild only, with no config import, so a redeploy is safe for a running instance.
+- **Optional Web3:** the `localnodes_web3` submodule is enabled only when `WEB3_ENABLED=true` (default off). Its RPC defaults to Pocket Network's keyless public portal; override per instance with `ETHEREUM_PROVIDER_URL`.
 
 ## Deployment
 
-- Single Docker image for all instances; `DEMO_MODULE` env var selects content at runtime
+- One Docker image for all instances; the `DEMO_MODULE` env var selects content at runtime.
 - Coolify project UUID: `n0sc0wcog8k4kkc48k0k0wo0`
 - Server UUID: `q4okokcg8occ88w00c4kg0sw`
-- To apply config changes: deploy fresh (wipe DB volumes)
+- To apply config changes, deploy fresh (wipe the DB volumes).
 
 ## Key Modules
 
-- `localnodes_platform` — AI config, block placement, Solr/Qdrant overrides, Resend SMTP transport (all via `config/install` + `localnodes_platform_install()`)
-- `localnodes_platform/modules/localnodes_web3` — Optional Web3 stack (SIWE, Safe accounts, group treasuries); opt-in via `WEB3_ENABLED`
-- `social_ai_indexing` — Search indexing, RAG, chatbot, AI overview
-- `localnodes_demo` / `boulder_demo` — Instance-specific demo content
+- `localnodes_platform` — AI config, block placement, Solr/Qdrant overrides, Resend SMTP transport (all through `config/install` and `localnodes_platform_install()`)
+- `localnodes_platform/modules/localnodes_web3` — the optional Web3 stack, opt-in through `WEB3_ENABLED`: wallet and email sign-in (`siwe_login`), Safe smart accounts, group treasuries, group governance (`safe_governance`) and gas sponsoring (`gas_sponsor`)
+- `social_ai_indexing` — search indexing, RAG, the chatbot, the AI overview
+- `localnodes_import` — the document importer
+- `localnodes_demo` / `boulder_demo` / `portland_demo` — instance-specific demo content

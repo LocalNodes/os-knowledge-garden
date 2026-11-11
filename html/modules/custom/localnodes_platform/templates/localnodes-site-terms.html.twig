@@ -1,0 +1,61 @@
+{#
+/**
+ * @file
+ * The site terms at /terms (23-26, ONB-05, D-25).
+ *
+ * The words are 23-UI-SPEC section 9, word for word: the intro, six h2
+ * sections, then the version line. The h1 "Site Terms" is the route title,
+ * which Open Social's title block prints, so this template has none.
+ *
+ * This is a draft that a lawyer reviews before the first real pilot (23-23).
+ * When you change any words here, also change
+ * SiteTermsController::TERMS_CHANGED to the day of the change; the version
+ * line is generated from it, and SiteTermsTest fails until both move
+ * together.
+ *
+ * Variables:
+ * - site_name: The community's name (system.site). Autoescaped; site
+ *   managers can edit it, so never add a raw-output filter here.
+ * - version_date: TERMS_CHANGED, formatted for display ("November 8, 2026").
+ */
+#}
+<div class="localnodes-site-terms">
+  <p>{% trans %}These are the rules for using {{ site_name }}'s site. They apply to everyone with an account.{% endtrans %}</p>
+
+  <section aria-labelledby="localnodes-terms-who">
+    <h2 id="localnodes-terms-who">{% trans %}Who runs this site{% endtrans %}</h2>
+    <p>{% trans %}{{ site_name }} is run by its organizers. LocalNodes hosts the site.{% endtrans %}</p>
+  </section>
+
+  <section aria-labelledby="localnodes-terms-share">
+    <h2 id="localnodes-terms-share">{% trans %}What you can share{% endtrans %}</h2>
+    <p>{% trans %}Share only what you have the right to share: your own words, openly licensed work, or work you have permission to use. When you import files or web pages, you confirm you have that right.{% endtrans %}</p>
+  </section>
+
+  <section aria-labelledby="localnodes-terms-takedown">
+    <h2 id="localnodes-terms-takedown">{% trans %}Taking content down{% endtrans %}</h2>
+    <p>{% trans %}If someone tells us a page shouldn't be here, the organizers or the host can unpublish it. Use "Report a problem with this page" on any imported page.{% endtrans %}</p>
+  </section>
+
+  <section aria-labelledby="localnodes-terms-ai">
+    <h2 id="localnodes-terms-ai">{% trans %}The AI assistant{% endtrans %}</h2>
+    <p>{% trans %}The AI assistant and the AI overview write answers from pages on this site. They can be wrong. Check the sources they show.{% endtrans %}</p>
+  </section>
+
+  <section aria-labelledby="localnodes-terms-data">
+    <h2 id="localnodes-terms-data">{% trans %}Your personal data{% endtrans %}</h2>
+    <ul>
+      <li>{% trans %}What this site keeps: your account (name, email and password), what you post and upload, and, if you connect one, your wallet's public address.{% endtrans %}</li>
+      <li>{% trans %}Who can see it: organizers and site managers can see your account details. Your posts follow each group's visibility settings. Other members can't see your email unless you choose to show it on your profile.{% endtrans %}</li>
+      <li>{% trans %}The AI assistant: when you ask it something, your question and the pages it uses are sent to this community's AI provider to write the answer. They aren't used to train AI models.{% endtrans %}</li>
+      <li>{% trans %}Leaving: you can delete your account from your account settings (Cancel account), or ask the site's organizers or <a href="mailto:hello@localnodes.xyz">hello@localnodes.xyz</a> to remove your data.{% endtrans %}</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="localnodes-terms-changes">
+    <h2 id="localnodes-terms-changes">{% trans %}Changes{% endtrans %}</h2>
+    <p>{% trans %}If these terms change, we'll ask you to agree to the new version.{% endtrans %}</p>
+  </section>
+
+  <p class="localnodes-site-terms__version">{% trans %}Draft for review, {{ version_date }}{% endtrans %}</p>
+</div>

@@ -3,16 +3,17 @@
  * Chat header bar for the LocalNodes ai-deepchat template (UI-SPEC S7).
  *
  * The template puts the "Chat options" menu beside the role="button" header
- * (not inside it), so this bar gives both one dark strip. Colours are UI-SPEC
- * Part 1 tokens: navbar-bg #27272a, white text, amber #fbbf24 focus ring on
- * dark surfaces. The ring is inset because the fixed chat container clips
- * anything outside it.
+ * (not inside it), so this bar gives both one dark strip. Colours are the
+ * --ln-* tokens (22.1-06; no colour literal lives here): the strip is
+ * --ln-color-text, the focus ring on it is --ln-color-focus-on-dark, the menu
+ * items are --ln-color-surface and --ln-color-canvas. The ring is inset
+ * because the fixed chat container clips anything outside it.
  */
 .ai-deepchat .ln-chat-bar {
   display: flex;
   align-items: stretch;
   border-radius: 8px 8px 0 0;
-  background: #27272a;
+  background: var(--ln-color-text);
 }
 
 .ai-deepchat .ln-chat-bar .ai-deepchat--header {
@@ -20,7 +21,7 @@
   min-height: 44px;
   border: none;
   border-radius: 0 8px 0 0;
-  background: #27272a;
+  background: var(--ln-color-text);
 }
 
 .ai-deepchat .ln-chat-bar .chat-dropdown-button {
@@ -37,7 +38,7 @@
 .ai-deepchat .ln-chat-bar .ai-deepchat--header:focus-visible,
 .ai-deepchat .ln-chat-bar .chat-dropdown-button:focus-visible,
 .ai-deepchat .ln-chat-bar .chat-dropdown-link:focus-visible {
-  outline: 2px solid #fbbf24;
+  outline: 2px solid var(--ln-color-focus-on-dark);
   outline-offset: -4px;
 }
 
@@ -46,15 +47,15 @@
   min-height: 44px;
   text-align: left;
   border: none;
-  background: #ffffff;
-  color: #343434;
+  background: var(--ln-color-surface);
+  color: var(--ln-color-text);
   font: inherit;
   cursor: pointer;
 }
 
 .ai-deepchat .ln-chat-bar .chat-dropdown-link:hover {
-  background: #f3f3f3;
-  color: #343434;
+  background: var(--ln-color-canvas);
+  color: var(--ln-color-text);
 }
 
 /*

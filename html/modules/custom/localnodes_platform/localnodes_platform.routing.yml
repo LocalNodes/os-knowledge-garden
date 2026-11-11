@@ -1,0 +1,47 @@
+# The organizer guide (23-13, ONB-03). Shipped with the module so every
+# community site has it. Signed-in people only (T-23-42): "access content"
+# alone would let an anonymous visitor read it on a public site.
+localnodes_platform.guide:
+  path: '/guide'
+  defaults:
+    _controller: '\Drupal\localnodes_platform\Controller\GuideController::page'
+    _title: 'Organizer Guide'
+  requirements:
+    _permission: 'access content'
+    _user_is_logged_in: 'TRUE'
+
+# The site terms (23-26, ONB-05, D-25). Shipped with the module so every
+# community site has them. Open to everyone: a visitor reads them before
+# agreeing on the register form, so no permission is asked for.
+localnodes_platform.terms:
+  path: '/terms'
+  defaults:
+    _controller: '\Drupal\localnodes_platform\Controller\SiteTermsController::page'
+    _title: 'Site Terms'
+  requirements:
+    _access: 'TRUE'
+
+# What to do when you were tricked or your wallet was taken over, and how to
+# reach the group's money if this site is down (Tom's ruling, 2026-11-09;
+# 22.1-15). Shipped with the module so every community site has it. Open to
+# everyone: someone locked out of their account must still be able to read it.
+localnodes_platform.safety_help:
+  path: '/help/hacked-or-phished'
+  defaults:
+    _controller: '\Drupal\localnodes_platform\Controller\SafetyHelpController::page'
+    _title: 'Hacked or Phished?'
+  requirements:
+    _access: 'TRUE'
+
+# Called once by the sign-up app after the first payment (23-35, B-1). The
+# bearer is checked in the controller before anything is read; a site with no
+# PROVISION_CALLBACK_TOKEN answers 404. POST only, never cached.
+localnodes_platform.activate:
+  path: '/localnodes/activate'
+  defaults:
+    _controller: '\Drupal\localnodes_platform\Controller\ActivationController::activate'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE

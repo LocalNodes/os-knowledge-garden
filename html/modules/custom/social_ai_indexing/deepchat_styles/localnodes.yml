@@ -1,17 +1,24 @@
 # LocalNodes DeepChat style (UI-SPEC Part 8 S7, Part 1 tokens).
 #
-# Every colour here is a token from the UI-SPEC Part 1 table:
-#   #0f766e primary (submit button, focus ring)
-#   #134e4a primary-strong (submit hover and pressed)
-#   #115e59 link
-#   #343434 text, #555555 text-muted
-#   #8a8a8a border-control (input border), #e6e6e6 divider
-#   #ffffff surface, #f3f3f3 canvas (user bubble)
+# No colour literal lives here (22.1-06). Every colour is a var(--ln-color-*)
+# reference to the token source (localnodes_platform/tokens/localnodes.tokens.json,
+# targets.deepchat), so the chat changes with the palette:
+#   --ln-color-primary         submit button;  --ln-color-primary-strong  its hover and pressed
+#   --ln-color-focus           focus ring;     --ln-color-link            links in a bubble
+#   --ln-color-text            text;           --ln-color-text-muted      placeholder, pulse
+#   --ln-color-border-control  input border;   --ln-color-divider         hairlines
+#   --ln-color-surface         window, bubble; --ln-color-canvas          user bubble, stop hover
+# Custom properties inherit into DeepChat's shadow root, so these resolve there
+# (spike recorded in 22.1-06-SUMMARY.md). Do not add a hex, rgb() or named colour:
+# scripts/tokens/check_raw_colors.mjs fails the build on one.
+# The window border is four border-top/right/bottom/left values, not one `border:`:
+# a shorthand holding var() reads back empty, and DeepChat then paints its own
+# #cacaca border over it (it fills any side whose value is empty).
 # Selected with style_file: 'module:social_ai_indexing:localnodes.yml'
 # (discovered through social_ai_indexing_ai_chatbot_style_modules_alter()).
 name: LocalNodes
 parameters:
-  style: "border-radius: 8px; border: 1px solid #e6e6e6; background-color: #ffffff; color: #343434; font-family: Montserrat, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-size: 16px; line-height: 1.5;"
+  style: "border-radius: 8px; border-top: 1px solid var(--ln-color-divider); border-right: 1px solid var(--ln-color-divider); border-bottom: 1px solid var(--ln-color-divider); border-left: 1px solid var(--ln-color-divider); background-color: var(--ln-color-surface); color: var(--ln-color-text); font-family: Montserrat, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-size: 16px; line-height: 1.5;"
   messageStyles:
     default:
       shared:
@@ -19,41 +26,41 @@ parameters:
           maxWidth: "100%"
           fontSize: "16px"
           lineHeight: "1.5"
-          color: "#343434"
+          color: "var(--ln-color-text)"
           marginTop: "8px"
           marginBottom: "8px"
       user:
         bubble:
-          backgroundColor: "#f3f3f3"
-          color: "#343434"
+          backgroundColor: "var(--ln-color-canvas)"
+          color: "var(--ln-color-text)"
       ai:
         outerContainer:
-          backgroundColor: "#ffffff"
-          borderTop: "1px solid #e6e6e6"
+          backgroundColor: "var(--ln-color-surface)"
+          borderTop: "1px solid var(--ln-color-divider)"
         bubble:
-          backgroundColor: "#ffffff"
-          color: "#343434"
+          backgroundColor: "var(--ln-color-surface)"
+          color: "var(--ln-color-text)"
     error:
       bubble:
-        backgroundColor: "#ffffff"
-        color: "#343434"
+        backgroundColor: "var(--ln-color-surface)"
+        color: "var(--ln-color-text)"
   textInput:
     placeholder:
       text: "Ask a question"
       style:
-        color: "#555555"
+        color: "var(--ln-color-text-muted)"
     styles:
       container:
-        backgroundColor: "#ffffff"
-        border: "1px solid #8a8a8a"
+        backgroundColor: "var(--ln-color-surface)"
+        border: "1px solid var(--ln-color-border-control)"
         borderRadius: "6px"
-        color: "#343434"
+        color: "var(--ln-color-text)"
       text:
         fontSize: "16px"
         lineHeight: "1.5"
-        color: "#343434"
+        color: "var(--ln-color-text)"
       focus:
-        outline: "2px solid #0f766e"
+        outline: "2px solid var(--ln-color-focus)"
         outlineOffset: "2px"
   avatars:
     default:
@@ -63,12 +70,12 @@ parameters:
   # ln-* classes; every colour and size lives here.
   auxiliaryStyle: |
     @keyframes pulse-color {
-      0%   { color: #555555; }
-      50%  { color: #8a8a8a; }
-      100% { color: #555555; }
+      0%   { color: var(--ln-color-text-muted); }
+      50%  { color: var(--ln-color-border-control); }
+      100% { color: var(--ln-color-text-muted); }
     }
     .message-bubble a {
-      color: #115e59;
+      color: var(--ln-color-link);
       text-decoration: underline;
     }
     .message-bubble strong {
@@ -77,7 +84,7 @@ parameters:
     a:focus-visible,
     .input-button:focus-visible,
     [tabindex]:focus-visible {
-      outline: 2px solid #0f766e;
+      outline: 2px solid var(--ln-color-focus);
       outline-offset: 2px;
     }
     .message-bubble a.ln-cite {
@@ -113,12 +120,12 @@ parameters:
     submit:
       container:
         default:
-          backgroundColor: "#0f766e"
+          backgroundColor: "var(--ln-color-primary)"
           borderRadius: "6px"
         hover:
-          backgroundColor: "#134e4a"
+          backgroundColor: "var(--ln-color-primary-strong)"
         click:
-          backgroundColor: "#134e4a"
+          backgroundColor: "var(--ln-color-primary-strong)"
       svg:
         content: |
           <?xml version="1.0" ?>
@@ -136,7 +143,7 @@ parameters:
     loading:
       container:
         default:
-          backgroundColor: "#ffffff"
+          backgroundColor: "var(--ln-color-surface)"
       svg:
         styles:
           default:
@@ -144,9 +151,9 @@ parameters:
     stop:
       container:
         default:
-          backgroundColor: "#ffffff"
+          backgroundColor: "var(--ln-color-surface)"
         hover:
-          backgroundColor: "#f3f3f3"
+          backgroundColor: "var(--ln-color-canvas)"
       svg:
         content: |
           <?xml version="1.0" encoding="utf-8"?>

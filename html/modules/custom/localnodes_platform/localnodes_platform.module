@@ -5,8 +5,16 @@
  * Hooks for the LocalNodes Platform module.
  */
 
+use Drupal\Component\Utility\Html;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\localnodes_platform\Form\TermsConsent;
 use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
 use Drupal\symfony_mailer\EmailInterface;
+use Drupal\symfony_mailer\Exception\SkipMailException;
 
 /**
  * Implements hook_page_attachments().
@@ -26,21 +34,49 @@ function localnodes_platform_page_attachments(array &$attachments) {
 }
 
 /**
+ * Implements hook_block_content_view_alter().
+ *
+ * Resolves [site:name] in the anonymous hero's text to the site's name at
+ * render time (WINDOWS 47, _localnodes_platform_configure_hero_copy()). The
+ * text field has no token filter, so this does the one substitution itself.
+ * The name is admin input and is escaped. The build depends on system.site,
+ * so a rename shows on the next render.
+ */
+function localnodes_platform_block_content_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display): void {
+  if ($entity->bundle() !== 'hero_call_to_action_block' || !isset($build['field_text_block'])) {
+    return;
+  }
+  $site = \Drupal::config('system.site');
+  $name = Html::escape((string) $site->get('name'));
+  foreach (Element::children($build['field_text_block']) as $delta) {
+    if (isset($build['field_text_block'][$delta]['#text'])) {
+      $build['field_text_block'][$delta]['#text'] = str_replace('[site:name]', $name, $build['field_text_block'][$delta]['#text']);
+    }
+  }
+  CacheableMetadata::createFromRenderArray($build)->addCacheableDependency($site)->applyTo($build);
+}
+
+/**
  * Implements hook_css_alter().
  *
  * Core's library parser assigns every module stylesheet to
  * CSS_AGGREGATE_DEFAULT (after hook_library_info_alter() has run, so that hook
  * can't change it), and the asset resolver sorts by group before weight, so a
  * module stylesheet always loads before the theme's whatever its weight.
- * ln-tokens.css has to load after socialblue's brand.css and brand--sky.css
- * (theme weight 700) for its AA overrides to win at equal specificity, so move
- * it into the theme group here, before the resolver sorts.
+ * ln-overrides.css has to load after socialblue's brand.css and brand--sky.css
+ * (theme weight 700) for its AA overrides to win at equal specificity, and
+ * after ln-tokens.css (the generated custom properties it reads), so move both
+ * into the theme group here, before the resolver sorts: ln-tokens.css at
+ * CSS_THEME + 900, ln-overrides.css at CSS_THEME + 901.
  */
 function localnodes_platform_css_alter(array &$css, $assets, $language) {
-  $path = \Drupal::service('extension.list.module')->getPath('localnodes_platform') . '/css/ln-tokens.css';
-  if (isset($css[$path])) {
-    $css[$path]['group'] = CSS_AGGREGATE_THEME;
-    $css[$path]['weight'] = CSS_THEME + 900;
+  $module_path = \Drupal::service('extension.list.module')->getPath('localnodes_platform');
+  foreach (['css/ln-tokens.css' => 900, 'css/ln-overrides.css' => 901] as $file => $weight) {
+    $path = $module_path . '/' . $file;
+    if (isset($css[$path])) {
+      $css[$path]['group'] = CSS_AGGREGATE_THEME;
+      $css[$path]['weight'] = CSS_THEME + $weight;
+    }
   }
 }
 
@@ -54,4 +90,282 @@ function localnodes_platform_css_alter(array &$css, $assets, $language) {
  */
 function localnodes_platform_mailer_post_render(EmailInterface $email): void {
   ReservedRecipientFilter::apply($email, \Drupal::logger('localnodes_platform'));
+}
+
+/**
+ * Implements hook_mailer_TYPE__SUBTYPE_build() for user status_activated.
+ *
+ * 23-35 (B-1): when POST /localnodes/activate unblocks a sign-up site's
+ * organizer, core's "account activated" notice would go out next to the
+ * welcome mail, with a second sign-in link. The welcome mail is the hand-over's
+ * one mail, so the notice is skipped, but only while OrganizerActivation is
+ * saving that account. Every other activation notice is unchanged.
+ */
+function localnodes_platform_mailer_user__status_activated_build(EmailInterface $email): void {
+  if (\Drupal::service('localnodes_platform.organizer_activation')->isUnblocking()) {
+    throw new SkipMailException('The organizer welcome mail replaces the account activated notice.');
+  }
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * Registers, all from the module so no sub-theme is needed and nothing under
+ * html/profiles/contrib is edited:
+ * - email__localnodes: the LocalNodes email wrapper (22.1 D-11), a suggestion
+ *   of symfony_mailer's `email` theme hook, so socialbase's own
+ *   email.html.twig stays untouched (22.1-RESEARCH Pattern 4).
+ * - block__system_branding_block__localnodes: the header's name-as-text
+ *   (Tom, card 2), a suggestion of the `block` hook.
+ * - localnodes_footer: the community site's footer line (Tom, card 11), built
+ *   by the LocalNodesFooterBlock plugin.
+ * - localnodes_guide: the organizer guide page (23-13), built by GuideController.
+ * - localnodes_site_terms: the site terms page (23-26), built by
+ *   SiteTermsController.
+ * - localnodes_safety_help: the "Hacked or Phished?" help page (22.1-15),
+ *   built by SafetyHelpController.
+ * - profile__profile__teaser__localnodes and its __sky variant: the member
+ *   teaser without keyboard stops inside aria-hidden (22.1 quick task), see
+ *   localnodes_platform_theme_suggestions_profile_alter().
+ */
+function localnodes_platform_theme($existing, $type, $theme, $path): array {
+  return [
+    'email__localnodes' => [
+      'base hook' => 'email',
+      'template' => 'email--localnodes',
+      'path' => $path . '/templates/email',
+    ],
+    'block__system_branding_block__localnodes' => [
+      'base hook' => 'block',
+      'template' => 'block--system-branding-block--localnodes',
+      'path' => $path . '/templates/block',
+    ],
+    // 23-04: the organizer welcome mail's body, printed inside the wrapper.
+    'localnodes_organizer_welcome' => [
+      'variables' => [
+        'reset_url' => '',
+        'guide_url' => '',
+      ],
+      'template' => 'localnodes-organizer-welcome',
+      'path' => $path . '/templates/email',
+    ],
+    // 23-13: the organizer guide at /guide (GuideController).
+    'localnodes_guide' => [
+      'variables' => [
+        'show_fund' => FALSE,
+        'show_fees' => FALSE,
+        'group_link' => '',
+        'import_link' => '',
+        'fund_link' => '',
+      ],
+      'template' => 'localnodes-guide',
+      'path' => $path . '/templates',
+    ],
+    // 23-26: the site terms at /terms (SiteTermsController).
+    'localnodes_site_terms' => [
+      'variables' => [
+        'site_name' => '',
+        'version_date' => '',
+      ],
+      'template' => 'localnodes-site-terms',
+      'path' => $path . '/templates',
+    ],
+    // 22.1-15: the "Hacked or Phished?" help page (SafetyHelpController).
+    'localnodes_safety_help' => [
+      'variables' => [
+        'seal_911_url' => '',
+      ],
+      'template' => 'localnodes-safety-help',
+      'path' => $path . '/templates',
+    ],
+    'localnodes_footer' => [
+      'variables' => [
+        'site_name' => '',
+        'repository_url' => '',
+        'mark_url' => '',
+        'terms_url' => '',
+        'help_url' => '',
+      ],
+      'template' => 'localnodes-footer',
+      'path' => $path . '/templates/footer',
+    ],
+    // 22.1 quick task: socialbase's member teaser with its two aria-hidden
+    // profile links out of the Tab order. socialblue appends "__sky" after
+    // every suggestion when its style is sky, so the sky copy (socialblue's
+    // own, extending this teaser) is registered too.
+    'profile__profile__teaser__localnodes' => [
+      'base hook' => 'profile',
+      'template' => 'profile--profile--teaser--localnodes',
+      'path' => $path . '/templates/profile',
+    ],
+    'profile__profile__teaser__localnodes__sky' => [
+      'base hook' => 'profile',
+      'template' => 'profile--profile--teaser--localnodes--sky',
+      'path' => $path . '/templates/profile',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for email.
+ *
+ * Appends email__localnodes to every mail's suggestions. It goes last, so it
+ * outranks the wrapper the mail's theme ships (socialbase's plain
+ * email.html.twig), whichever mail builder made the message: password reset,
+ * welcome, notifications, digests, invites, broadcasts and the Web3 mails all
+ * render through the one `email` theme hook.
+ */
+function localnodes_platform_theme_suggestions_email_alter(array &$suggestions, array $variables): void {
+  $suggestions[] = 'email__localnodes';
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for block.
+ *
+ * The site branding block (the header) gets the name-as-text template. Appended
+ * last, so it outranks socialbase's block--system-branding-block.html.twig,
+ * which prints only the Open Social logo image. No other block is touched.
+ */
+function localnodes_platform_theme_suggestions_block_alter(array &$suggestions, array $variables): void {
+  if (($variables['elements']['#plugin_id'] ?? '') === 'system_branding_block') {
+    $suggestions[] = 'block__system_branding_block__localnodes';
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for profile.
+ *
+ * Open Social's socialbase profile--profile--teaser.html.twig puts two links
+ * to the member's profile inside aria-hidden (the avatar link and the
+ * "Profile: <name>" icon link) and leaves both in the Tab order, so keyboard
+ * users land on stops a screen reader is told to ignore (keyboard.spec.ts S8
+ * on search results; upstream draft
+ * patches/issues/socialbase-profile-teaser-aria-hidden-focusable.md). The
+ * member teaser renders from this module's copy instead, which differs only
+ * by tabindex="-1" on those two links.
+ *
+ * A suggestion, not a theme registry alter: the bootstrap base theme's
+ * registry alter runs after every module's and points each template its
+ * themes ship back at the theme. Appended last, so it outranks the stock
+ * teaser; socialblue then adds its "__sky" variant of it.
+ *
+ * Only for the profile bundle's teaser, only where the active theme ships the
+ * stock teaser (so another theme keeps its own profile output), and only for
+ * a signed-in viewer: socialbase gives anonymous visitors its own __anonymous
+ * teaser, which has no aria-hidden link and which this would outrank.
+ */
+function localnodes_platform_theme_suggestions_profile_alter(array &$suggestions, array $variables): void {
+  $profile = $variables['elements']['#profile'] ?? NULL;
+  if (!$profile instanceof EntityInterface || $profile->bundle() !== 'profile' || ($variables['elements']['#view_mode'] ?? '') !== 'teaser') {
+    return;
+  }
+  if (\Drupal::currentUser()->isAnonymous()) {
+    return;
+  }
+  if (!\Drupal::service('theme.registry')->getRuntime()->has('profile__profile__teaser')) {
+    return;
+  }
+  $suggestions[] = 'profile__profile__teaser__localnodes';
+}
+
+/**
+ * Reads the generated token file, once per request.
+ *
+ * tokens/ln-tokens.flat.json is rendered from the one token source by
+ * scripts/tokens/build_tokens.mjs (22.1-03). A missing or unreadable file
+ * gives an empty array and a logged warning, so a mail still goes out (with
+ * the browser's default colours) rather than failing.
+ *
+ * @return array
+ *   The decoded file: colour, email, font, radius and space maps.
+ */
+function _localnodes_platform_flat_tokens(): array {
+  static $tokens = NULL;
+  if ($tokens === NULL) {
+    $path = \Drupal::service('extension.list.module')->getPath('localnodes_platform') . '/tokens/ln-tokens.flat.json';
+    $decoded = is_readable($path) ? json_decode((string) file_get_contents($path), TRUE) : NULL;
+    if (!is_array($decoded)) {
+      \Drupal::logger('localnodes_platform')->warning('Token file @path is missing or not JSON; mail has no brand colours. Run scripts/tokens/build_tokens.mjs.', ['@path' => $path]);
+    }
+    $tokens = is_array($decoded) ? $decoded : [];
+  }
+  return $tokens;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for email.
+ *
+ * Gives email--localnodes.html.twig what it needs, all under new names:
+ * - ln: the `email` colour roles from the token file (BRAND.md section 9).
+ * - ln_radius_card, ln_radius_control, ln_font: shape and type from the token
+ *   file. The font stack is cut down to letters, digits, spaces, commas,
+ *   hyphens and underscores, because the template prints it inside a <style>
+ *   block where HTML escaping would break a quoted family name.
+ * - ln_site_name: the community's name (system.site), a plain string the
+ *   template autoescapes.
+ * - ln_wallet_line: the one optional line in the organizer-created welcome
+ *   mail on Web3 sites (Tom, card 6), empty everywhere else. Web3 is on when
+ *   the localnodes_web3 submodule is enabled.
+ *
+ * It never sets `logo`, `site_name`, `site_slogan` or `site_sub_slogan`:
+ * social_swiftmail's preprocess runs after this one (module order is
+ * alphabetical) and would overwrite them (22.1-RESEARCH Pitfall 6). There is
+ * no logo variable at all, because Tom chose a mail with no images (card 5).
+ */
+function localnodes_platform_preprocess_email(array &$variables): void {
+  $tokens = _localnodes_platform_flat_tokens();
+  $variables['ln'] = $tokens['email'] ?? [];
+  $variables['ln_radius_card'] = $tokens['radius']['card'] ?? '8px';
+  $variables['ln_radius_control'] = $tokens['radius']['control'] ?? '6px';
+  $variables['ln_font'] = preg_replace('/[^A-Za-z0-9 ,_-]/', '', (string) ($tokens['font']['sans'] ?? '')) ?: 'sans-serif';
+  $variables['ln_site_name'] = (string) \Drupal::config('system.site')->get('name');
+
+  $variables['ln_wallet_line'] = '';
+  $email = $variables['email'] ?? NULL;
+  if ($email instanceof EmailInterface
+    && $email->getSubType() === 'register_admin_created'
+    && \Drupal::moduleHandler()->moduleExists('localnodes_web3')) {
+    $variables['ln_wallet_line'] = t('You can connect a wallet later from your account page.');
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for user_register_form.
+ *
+ * 23-26 (ONB-05, D-25; 23-UI-SPEC section 9): a new member agrees to the
+ * site terms. The terms_consent box is required and never pre-ticked. It sits
+ * in the account fieldset below the fields, so it renders above the "Create
+ * new account" button, and its label's words "site terms" link to /terms
+ * (added at render time; see TermsConsent::preRender()).
+ *
+ * Only for people signing themselves up. The same form is the admin's "Add
+ * user" page (RegisterForm sets administer_users); a site manager creating an
+ * account must not agree to the terms on someone's behalf.
+ */
+function localnodes_platform_form_user_register_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  if (!empty($form['administer_users']['#value']) || !isset($form['account'])) {
+    return;
+  }
+  $form['account']['terms_consent'] = [
+    '#type' => 'checkbox',
+    '#title' => t('I agree to the site terms'),
+    '#required' => TRUE,
+    '#required_error' => t('Agree to the site terms to create your account.'),
+    // 0, not FALSE: core's #required check treats only 0 as an unticked box,
+    // so a FALSE default would let a programmatic submit through unticked.
+    '#default_value' => 0,
+    '#weight' => TermsConsent::WEIGHT,
+    // A #pre_render set here replaces the checkbox's own (the form builder
+    // only fills in missing keys), so keep those and add the link after them.
+    '#pre_render' => array_merge(
+      \Drupal::service('element_info')->getInfoProperty('checkbox', '#pre_render', []),
+      [[TermsConsent::class, 'preRender']],
+    ),
+  ];
+  // Runs after '::save', so the new account has an id to record against.
+  $form['actions']['submit']['#submit'][] = [TermsConsent::class, 'recordAgreement'];
+  // Re-checks the box after Open Social's validator, which can clear it.
+  $form['#after_build'][] = [TermsConsent::class, 'afterBuild'];
+  // After a failed submit, focus goes to the error summary.
+  $form['#attached']['library'][] = 'localnodes_platform/register_error_focus';
 }

@@ -57,6 +57,10 @@ import {
   registrationTypedData,
   SAFE_PROXY_CREATION_CODE,
   SAFE_PROXY_CREATION_CODE_KECCAK,
+  ARBITRATOR_INIT_CODE_BYTES,
+  ARBITRATOR_INIT_CODE_KECCAK256,
+  ARBITRATOR_INIT_CODE_SHA256,
+  ARBITRATOR_STAND_IN,
   setupBatch,
   uintToHatId,
   safeMessageHash,
@@ -412,11 +416,16 @@ function ensVector() {
 
 // --- setup-batch.json (25-06: the one Safe transaction that builds a Group's governance) -------
 
-const ARBITRATOR_BIN = join(HERE, 'vendor', 'reality', 'Arbitrator.bin');
+// Reality.eth's Arbitrator code is GPL-3.0-only and is not in this repository (vendor/SOURCES.md). The batch carries
+// the same-length 0xfe stand-in, and the Arbitrator is predicted from the pinned keccak256, so every address, ABI
+// length word and padding byte is the real batch's.
+//
+// safeTxHash is the one 25-06 recorded over the real code (lane 5a055c13), pinned because it can't be recomputed
+// without the code: it hashes the real batch, not this file's typedData. The owners' signatures are made over it
+// again here, with the anvil dev keys, so they are the recorded ones too.
+const SETUP_BATCH_SAFE_TX_HASH_REAL_CODE = '0x82e7337c41600e9e87bc3bab0b0330e55c16dc628595b5af040df33adb53f556';
 
 function setupBatchInput() {
-  const initCode = readFileSync(ARBITRATOR_BIN, 'utf8').trim();
-  if (!/^0x([0-9a-f]{2})+$/.test(initCode)) throw new Error('vendor/reality/Arbitrator.bin is not 0x-prefixed lowercase hex');
   return {
     chainId: SEPOLIA,
     owners: [anvil(0).address, anvil(1).address],
@@ -425,7 +434,8 @@ function setupBatchInput() {
     // Hats top hat number. The fork test sets lastTopHatId to topHatNumber - 1 so the next top hat id is this one.
     topHatNumber: 5000,
     arbitratorSalt: keccak256(toHex('gov-vectors.eth/arbitrator')),
-    arbitratorInitCode: initCode,
+    arbitratorInitCode: ARBITRATOR_STAND_IN,
+    arbitratorInitCodeKeccak256: ARBITRATOR_INIT_CODE_KECCAK256,
     moduleSaltNonce: 6,
     timeout: 600,
     cooldown: 300,
@@ -434,6 +444,9 @@ function setupBatchInput() {
     // RealityModule.setUp does not check that the template exists; the template itself is created per chain (25-07).
     templateId: 7,
     groupName: 'Gov Vectors',
+    // The organizer's choice (D-28). Under 'proposer_hat' every owner wears the proposer hat; variants.any_member below
+    // is the same batch for the other rule.
+    proposerRule: 'proposer_hat',
     a: {
       safeSingletonL2: NET.safeSingletonL2,
       safeProxyFactory: NET.safeProxyFactory,
@@ -453,27 +466,41 @@ async function setupBatchVector() {
   const batch = setupBatch(input);
   const signers = [anvil(0), anvil(1)];
   const entries = [];
-  for (const acct of signers) entries.push({ owner: acct.address, signature: await acct.sign({ hash: batch.safeTxHash }) });
-  const { arbitratorInitCode, ...rest } = input;
+  for (const acct of signers) entries.push({ owner: acct.address, signature: await acct.sign({ hash: SETUP_BATCH_SAFE_TX_HASH_REAL_CODE }) });
+  const { arbitratorInitCode, arbitratorInitCodeKeccak256, ...rest } = input;
+  if (arbitratorInitCode !== ARBITRATOR_STAND_IN) throw new Error('setup-batch.json must carry the Arbitrator stand-in, never the real code');
   return {
     note: 'Keys are anvil public dev keys 0 and 1. Every inner call runs inside the Safe (MultiSend delegatecall), so no address but the Safe ever owns, wears or administers anything. The signatures are plain ecrecover signatures over safeTxHash (v 27 or 28), concatenated in ascending owner order.',
     inputs: {
       ...rest,
       lastTopHatIdBefore: input.topHatNumber - 1,
-      arbitratorInitCodeSha256: sha256(Buffer.from(arbitratorInitCode.slice(2), 'hex')),
-      arbitratorInitCodeBytes: (arbitratorInitCode.length - 2) / 2,
-      arbitratorInitCodeSource: 'tests/governance/vendor/reality/Arbitrator.bin (see vendor/SOURCES.md)',
+      arbitratorInitCodeSha256: ARBITRATOR_INIT_CODE_SHA256,
+      arbitratorInitCodeBytes: ARBITRATOR_INIT_CODE_BYTES,
+      arbitratorInitCodeSource: 'reality-eth-monorepo 40b9886, fetched at setup (tests/governance/vendor/SOURCES.md); not in this file',
+      arbitratorInitCodeKeccak256,
+      arbitratorInitCodeStandIn: 'every copy of the init code in this file is replaced by 3585 bytes of 0xfe (tests/governance/vendor/SOURCES.md); safeTxHash and signatures are over the real code',
     },
     safeInitializer: batch.safeInitializer,
     moduleInitializer: batch.moduleInitializer,
     calls: batch.calls,
     multiSendPacked: batch.packed,
     safeTx: batch.safeTx,
-    safeTxHash: batch.safeTxHash,
+    safeTxHash: SETUP_BATCH_SAFE_TX_HASH_REAL_CODE,
     typedData: batch.typedData,
     signatures: entries,
     signaturesConcatenated: sortAndConcat(entries),
     predicted: batch.predicted,
+    variants: {
+      any_member: (() => {
+        const v = setupBatch({ ...input, proposerRule: 'any_member' });
+        return {
+          note: 'The same inputs with proposerRule any_member: the proposer hat is created, but no owner is minted it (D-28).',
+          calls: v.calls,
+          multiSendPacked: v.packed,
+          safeTxData: v.safeTx.data,
+        };
+      })(),
+    },
   };
 }
 

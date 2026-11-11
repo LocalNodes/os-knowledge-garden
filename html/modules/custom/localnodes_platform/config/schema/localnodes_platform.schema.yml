@@ -1,0 +1,7 @@
+block.settings.localnodes_footer:
+  type: block_settings
+  label: 'LocalNodes footer block'
+  mapping:
+    repository_url:
+      type: uri
+      label: 'Where the "Open source" link points'

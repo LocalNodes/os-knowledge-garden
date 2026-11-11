@@ -1,0 +1,23 @@
+<?php
+
+/**
+ * @file
+ * LocalNodes OpenRouter: the search store refuses vectors of the wrong size.
+ */
+
+declare(strict_types=1);
+
+use Drupal\localnodes_openrouter\Vdb\LengthGuardedQdrantProvider;
+
+/**
+ * Implements the AI module's VDB provider info alter hook.
+ *
+ * Swaps the Qdrant VDB plugin for a subclass that refuses to write a vector
+ * whose length isn't localnodes_openrouter.settings vector_size (23-06 model
+ * ruling, item 1).
+ */
+function localnodes_openrouter_ai_vdb_provider_info_alter(array &$definitions): void {
+  if (isset($definitions['qdrant'])) {
+    $definitions['qdrant']['class'] = LengthGuardedQdrantProvider::class;
+  }
+}

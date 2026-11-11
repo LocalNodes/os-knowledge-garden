@@ -445,6 +445,21 @@ export function predictCreate2(deployer, salt, initCode) {
   return getContractAddress({ opcode: 'CREATE2', from: deployer, salt, bytecode: initCode });
 }
 
+/** CREATE2 address from the init code's keccak256 alone (the code itself is not needed). */
+export function predictCreate2FromHash(deployer, salt, initCodeHash) {
+  return getContractAddress({ opcode: 'CREATE2', from: deployer, salt, bytecodeHash: initCodeHash });
+}
+
+// Reality.eth's reference Arbitrator creation code (reality-eth-monorepo 40b9886,
+// packages/contracts/bytecode/Arbitrator.bin) is GPL-3.0-only, so it is not in this repository
+// (vendor/SOURCES.md). Only its hashes and length are pinned here. The setup batch is built with a
+// stand-in of the same length, 3585 bytes of 0xfe (INVALID), so every ABI length word and all padding
+// match the real batch, and the Arbitrator's address is predicted from the pinned keccak256.
+export const ARBITRATOR_INIT_CODE_BYTES = 3585;
+export const ARBITRATOR_INIT_CODE_KECCAK256 = '0x421c90ec59f15f919d228393747b45b195e12a6c54287f360c8c7e94f7f369c6';
+export const ARBITRATOR_INIT_CODE_SHA256 = '0x022c7c772f86b46876212d1c48b1190a4a86d723a90b09fc5ae19c55ef96aa0b';
+export const ARBITRATOR_STAND_IN = `0x${'fe'.repeat(ARBITRATOR_INIT_CODE_BYTES)}`;
+
 /** SafeProxyFactory.createProxyWithNonce address: salt = keccak(keccak(initializer) ++ saltNonce), code = proxy creation code ++ singleton. */
 export function predictSafeProxy({ factory, singleton, initializer, saltNonce }) {
   const salt = keccak256(encodePacked(['bytes32', 'uint256'], [keccak256(initializer), BigInt(saltNonce)]));
@@ -493,20 +508,34 @@ export const HAT_MAX_SUPPLY = 4294967295;
 /**
  * The one Safe transaction that builds a Group's governance with the Safe in control of every authority from the
  * first block (RESEARCH Pattern 1, "Key insight"). Inner calls, in order:
- *   1 delegatecall CreateCall.performCreate2: the reference Arbitrator, owner = the Safe (D-07)
+ *   1 delegatecall CreateCall.performCreate2: the reference Arbitrator, owner = the Safe (D-07). `input.arbitratorInitCode`
+ *     is the code to deploy (the stand-in in the vectors); its address comes from `input.arbitratorInitCodeKeccak256`
  *   2 Arbitrator.setRealitio
  *   3 ModuleProxyFactory.deployModule: the Reality module, owner = avatar = target = the Safe (D-04)
  *   4 Safe.enableModule
  *   5 Hats.mintTopHat to the Safe (D-17)
  *   6 and 7 Hats.createHat for the member and proposer hats, eligibility = toggle = the Safe
- *   8 Hats.mintHat of both hats to every owner
+ *   8 Hats.mintHat of the member hat to every owner
+ *   9 Hats.mintHat of the proposer hat to every owner, only when proposerRule is 'proposer_hat'
+ * `input.proposerRule` is required: 'any_member' or 'proposer_hat' ("members with the proposer role"). The organizer
+ * chooses it, so nothing here defaults it (D-06, D-28). Under 'proposer_hat' every signer of the Group's fund always
+ * wears the proposer hat; under 'any_member' the proposer hat is created but nobody gets it.
  * `a` holds the contract addresses; this function reads no network table.
  */
+export const PROPOSER_RULES = Object.freeze(['any_member', 'proposer_hat']);
+
 export function setupBatch(input) {
   const { a } = input;
+  if (!PROPOSER_RULES.includes(input.proposerRule)) {
+    throw new Error(`setupBatch needs proposerRule, one of ${PROPOSER_RULES.join(', ')}; the organizer chooses it and nothing defaults it (D-28)`);
+  }
   const safeInitializer = safeSetupInitializer({ owners: input.owners, threshold: input.threshold, fallbackHandler: a.safeFallbackHandler });
   const safe = predictSafeProxy({ factory: a.safeProxyFactory, singleton: a.safeSingletonL2, initializer: safeInitializer, saltNonce: input.safeSaltNonce });
-  const arbitrator = predictCreate2(safe, input.arbitratorSalt, input.arbitratorInitCode);
+  // Predicted from the pinned hash, not from the bytes: callers pass the stand-in as arbitratorInitCode.
+  if (!/^0x[0-9a-f]{64}$/.test(input.arbitratorInitCodeKeccak256 ?? '')) {
+    throw new Error('setupBatch needs arbitratorInitCodeKeccak256, the init code\'s 32-byte keccak256 in lower-case hex');
+  }
+  const arbitrator = predictCreate2FromHash(safe, input.arbitratorSalt, input.arbitratorInitCodeKeccak256);
   const moduleInit = realityInitializer({
     owner: safe, avatar: safe, target: safe, oracle: a.reality,
     timeout: input.timeout, cooldown: input.cooldown, expiration: input.expiration,
@@ -528,7 +557,9 @@ export function setupBatch(input) {
     call(0, a.hats, enc(hatsAbi, 'createHat', [topHat, 'Proposer', HAT_MAX_SUPPLY, safe, safe, true, '']), 'create the proposer hat (eligibility and toggle = the Safe)'),
   ];
   for (const owner of input.owners) calls.push(call(0, a.hats, enc(hatsAbi, 'mintHat', [memberHat, owner]), `mint the member hat to ${owner}`));
-  for (const owner of input.owners) calls.push(call(0, a.hats, enc(hatsAbi, 'mintHat', [proposerHat, owner]), `mint the proposer hat to ${owner}`));
+  if (input.proposerRule === 'proposer_hat') {
+    for (const owner of input.owners) calls.push(call(0, a.hats, enc(hatsAbi, 'mintHat', [proposerHat, owner]), `mint the proposer hat to ${owner}`));
+  }
   const wire = calls.map((c) => ({ ...c, value: BigInt(c.value) }));
   const safeTx = {
     to: a.multiSend,
