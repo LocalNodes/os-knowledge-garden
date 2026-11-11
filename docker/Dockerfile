@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y \
     libgmp-dev \
     libmagickwand-dev \
     libzip-dev \
+    libicu-dev \
     mariadb-client \
     netcat-openbsd \
     curl \
@@ -65,12 +66,18 @@ RUN docker-php-ext-configure gd --with-webp --with-jpeg --with-freetype \
     && docker-php-ext-install -j$(nproc) \
     gd \
     gmp \
+    intl \
     pdo_mysql \
     opcache \
     zip
 
 # Install imagick via PECL
 RUN pecl install imagick && docker-php-ext-enable imagick
+
+# Fail the build if an extension the site calls is missing. Open Social's
+# "add content" pages call transliterator_transliterate() from intl, and no
+# package declares that need, so Composer cannot catch it.
+RUN php -r 'foreach (["gd", "gmp", "imagick", "intl", "pdo_mysql", "zip"] as $e) { if (!extension_loaded($e)) { fwrite(STDERR, "Missing PHP extension: $e\n"); exit(1); } } if (!function_exists("transliterator_transliterate")) { fwrite(STDERR, "intl has no transliterator\n"); exit(1); }'
 
 # Configure PHP for production
 RUN { \
