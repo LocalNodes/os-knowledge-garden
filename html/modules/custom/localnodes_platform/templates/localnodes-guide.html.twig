@@ -1,29 +1,39 @@
 {#
 /**
  * @file
- * The organizer guide (23-13, 23-UI-SPEC section 8). The words are the
- * approved copy, word for word.
+ * The organizer guide. The words are the approved copy, word for word.
  *
  * The h1 is the page title ("Organizer Guide", the route's title), so this
  * template has none. Reading width is 72ch (css/localnodes-guide.css). Each
- * of the five steps is an h2 inside the numbered list; the T-4 sections come
+ * of the six steps is an h2 inside the numbered list; the T-4 sections come
  * after it, outside the list.
+ *
+ * The last step, bringing in members, follows the stock invite screens as a
+ * new member walks through them: the invite mail opens account creation, a
+ * welcome mail signs them in, and the invitation waits under Invites in the
+ * account menu.
  *
  * Available variables:
  * - show_fund: Whether to print "Your group's fund" (the site has
  *   localnodes_web3 on).
  * - show_fees: Whether to print "Network fees" (same condition).
- * - group_link: "one group", a link to the group list or plain text.
+ * - group_link: The community's group, as a link with its name, or NULL
+ *   when there is none or this person can't open it.
  * - import_link: "Import tab", a link to the first group's Import tab or
  *   plain text.
+ * - get_help_link: "Get help", a link to /help.
+ * - assistant_name: The chat assistant's name, or NULL without the chat.
+ * - members_link: "Manage members tab", a link to the first group's Manage
+ *   members tab or plain text.
  * - fund_link: "Open the Fund tab", a link to the first group's Fund tab or
  *   plain text.
+ * - get_help_url: The "Get help" page, /help.
  *
  * Link text names where the link goes, never "here".
  */
 #}
 <div class="localnodes-guide">
-  <p class="localnodes-guide__intro">{% trans %}This guide takes you from your sign-in link to your first answer with sources.{% endtrans %}</p>
+  <p class="localnodes-guide__intro">{% trans %}This guide takes you from your sign-in link to your first answer with sources, then to your members reading and asking.{% endtrans %}</p>
 
   <ol class="localnodes-guide__steps">
     <li>
@@ -32,19 +42,33 @@
     </li>
     <li>
       <h2>{% trans %}Open your group{% endtrans %}</h2>
-      <p>{% trans %}Your community already has {{ group_link }}, named after it. Open it from the menu. You can rename it, or make more groups, whenever you like.{% endtrans %}</p>
+      {% if group_link %}
+        <p>{% trans %}Your community already has a group named after it: {{ group_link }}. Open it. You can rename it, or make more groups, whenever you like.{% endtrans %}</p>
+      {% else %}
+        <p>{% trans %}Your group isn't ready yet. {{ get_help_link }}.{% endtrans %}</p>
+      {% endif %}
     </li>
     <li>
       <h2>{% trans %}Upload your first files{% endtrans %}</h2>
-      <p>{% trans %}In your group, open the {{ import_link }} and choose Upload files. Choose your files, tick the box that says you have the right to share them, and press the Import button.{% endtrans %}</p>
+      <p>{% trans %}To add documents, open your group's {{ import_link }} and choose Upload files. Choose your files, tick the box that says you have the right to share them, and press the Import button. Use files whose text you can select and copy: the assistant can't read image-only scans, and a very short file may be too short to use.{% endtrans %}</p>
     </li>
     <li>
-      <h2>{% trans %}Wait for search to catch up{% endtrans %}</h2>
-      <p>{% trans %}The Search status panel on the Import tab shows how many of your pages are searchable, for example "18 of 21". Search catches up in the background, usually within a few minutes. You can leave the page.{% endtrans %}</p>
+      <h2>{% trans %}Wait while your documents are prepared{% endtrans %}</h2>
+      <p>{% trans %}The "Preparing documents for the assistant's search" panel on the Import tab shows how many are prepared, for example "18 of 21". This happens in the background. You can leave the page and come back.{% endtrans %}</p>
     </li>
     <li>
       <h2>{% trans %}Ask the AI assistant a question{% endtrans %}</h2>
-      <p>{% trans %}Open the AI assistant and ask something your files answer. The answer shows numbered sources. Open one to check it. When you see Sources under an answer, you got your first cited answer.{% endtrans %}</p>
+      {% if assistant_name %}
+        <p>{% trans %}Go to your group's page. The AI assistant, called "{{ assistant_name }}", is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. The answer shows numbered sources: open one to check it, because the assistant can get things wrong.{% endtrans %}</p>
+      {% else %}
+        <p>{% trans %}Go to your group's page. The AI assistant is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. The answer shows numbered sources: open one to check it, because the assistant can get things wrong.{% endtrans %}</p>
+      {% endif %}
+    </li>
+    <li>
+      <h2>{% trans %}Bring in your members{% endtrans %}</h2>
+      <p>{% trans %}To invite people, open your group's {{ members_link }}, choose Add members, then Invite users. Enter their email addresses, or their names if they are already on the site, and press "Send your invite(s) by email".{% endtrans %}</p>
+      <p>{% trans %}Each person gets an email. Someone new to the site creates an account from it, signs in with the link in the welcome email that follows, then accepts under Invites, in the menu behind their profile picture.{% endtrans %}</p>
+      <p>{% trans %}Your members read the documents in the group's Topics, where each original file can be opened. To ask, they go to the group's page and use the AI assistant at the bottom right. It looks for answers in the pages each member can see.{% endtrans %}</p>
     </li>
   </ol>
 
@@ -64,8 +88,8 @@
 
   <section class="localnodes-guide__section" aria-labelledby="localnodes-guide-assistant">
     <h2 id="localnodes-guide-assistant">{% trans %}Using the assistant{% endtrans %}</h2>
-    <p>{% trans %}Ask the assistant about anything in your community's files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". Every answer lists its sources, so you can check it. It only sees what you're allowed to see: two people asking the same question can get different answers. It can't change anything on the site yet, and it can't see your email or other websites.{% endtrans %}</p>
+    <p>{% trans %}Ask the assistant about anything in your community's files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". Every answer lists its sources, so you can check it. It only sees what you're allowed to see: two people asking the same question can get different answers. It cannot act for the community, open your email inbox or browse other websites; it can read permitted library text, including an email address written in a document.{% endtrans %}</p>
   </section>
 
-  <p class="localnodes-guide__help">{% trans %}Stuck? Use Get help in the footer.{% endtrans %}</p>
+  <p class="localnodes-guide__help">{% trans %}Stuck? <a href="{{ get_help_url }}">Get help</a> is in the footer of every page.{% endtrans %}</p>
 </div>

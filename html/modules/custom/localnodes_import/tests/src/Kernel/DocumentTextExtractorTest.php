@@ -123,6 +123,54 @@ final class DocumentTextExtractorTest extends ImportKernelTestBase {
   }
 
   /**
+   * Markdown and text files: what title the file gives (the export's library).
+   */
+  public static function markdownCases(): array {
+    $body = "Some body text that is long enough to count as a real document here.\n";
+    return [
+      'front matter title' => ['a.md', "---\ntitle: \"Plan - 2025: draft\"\ntype: topic\n---\n\n$body", 'Plan - 2025: draft', 'Some body text', ['title:', 'type: topic']],
+      'first heading' => ['b.md', "Intro line\n\n# Chores, rota & more\n\n$body", 'Chores, rota & more', 'Intro line', []],
+      'front matter wins over heading' => ['c.md', "---\ntitle: From front matter\n---\n# From heading\n$body", 'From front matter', 'From heading', ['title: From front matter']],
+      'neither' => ['d.md', "Just text.\n\n## Second level only\n$body", NULL, 'Just text.', []],
+      'heading in fenced code skipped' => ['e.md', "```\n# not a title\n```\n~~~\n# also not\n~~~\n# Real title\n$body", 'Real title', '# not a title', []],
+      'thematic rule, no closing line' => ['f.md', "---\nNot front matter at all, just a rule.\n$body", NULL, "---\nNot front matter at all", []],
+      'malformed yaml keeps text' => ['g.md', "---\ntitle: [unclosed\n---\n$body", NULL, 'title: [unclosed', []],
+      'empty list keeps text' => ['h.md', "---\n[]\n---\nBody line kept", NULL, "---\n[]\n---\nBody line kept", []],
+      'empty mapping is front matter' => ['h.md', "---\n{}\n---\n# After empty map\n$body", 'After empty map', 'Some body text', ['{}']],
+      'shorter fence does not close a longer one' => ['h.md', "````\n```\n# Still code\n````\n# Real title\n$body", 'Real title', '# Still code', []],
+      'fence with trailing text does not close' => ['h.md', "```\n``` not a close\n# Still code\n```\n# Real title\n$body", 'Real title', '# Still code', []],
+      'list instead of mapping keeps text' => ['h.md', "---\n- one\n- two\n---\n# Heading after list\n$body", 'Heading after list', "- one\n- two", []],
+      'empty title falls back to heading' => ['i.md', "---\ntitle: ''\n---\n# Fallback heading\n$body", 'Fallback heading', 'Some body text', ['title:']],
+      'non-string title falls back to heading' => ['j.md', "---\ntitle: [a, b]\n---\n# Array fallback\n$body", 'Array fallback', 'Some body text', ['title:']],
+      'heading past line 40 ignored' => ['k.md', str_repeat("line\n", 41) . "# Too late\n$body", NULL, 'Too late', []],
+      'txt with heading has no title' => ['l.txt', "# Looks like a heading\n$body", NULL, '# Looks like a heading', []],
+    ];
+  }
+
+  /**
+   * A .md file's own title: front matter first, then the first heading.
+   *
+   * @dataProvider markdownCases
+   */
+  public function testMarkdownTitle(string $name, string $contents, ?string $title, string $kept, array $removed): void {
+    $folder = 'private://localnodes_import/extract-md';
+    $file_system = $this->container->get('file_system');
+    $file_system->prepareDirectory($folder, $file_system::CREATE_DIRECTORY);
+    file_put_contents($file_system->realpath($folder) . '/' . $name, $contents);
+    $file = File::create(['uri' => "$folder/$name", 'filename' => $name, 'status' => 0]);
+    $file->save();
+
+    $document = $this->container->get('localnodes_import.document_text_extractor')->extract($file);
+
+    $this->assertNull($document->failure, "$name: readable, never refused");
+    $this->assertSame($title, $document->title, "$name: title");
+    $this->assertStringContainsString($kept, $document->text, "$name: text kept");
+    foreach ($removed as $gone) {
+      $this->assertStringNotContainsString($gone, $document->text, "$name: front matter removed from the text");
+    }
+  }
+
+  /**
    * Copies a fixture into private:// as a temporary file entity.
    */
   private function fixtureFile(string $name): FileInterface {

@@ -179,7 +179,7 @@ test.describe('S4 Refresh from source', () => {
     const report = `/group/${groupId()}/import/runs/${refreshRun}`;
     await page.goto(report);
     await expect(page.getByText('This page is already in the group.')).toBeVisible();
-    await page.getByRole('link', { name: /^Refresh from source/ }).click();
+    await page.getByRole('link', { name: /^Replace with the website's current text/ }).click();
 
     await expect(page).toHaveURL(new RegExp(`/group/${groupId()}/import/refresh/${refreshNid}\\?run=${refreshRun}$`));
     await expect(page.getByRole('heading', { level: 1, name: 'Refresh Bioregionalism (Source box fixture) from its source?' })).toBeVisible();
@@ -187,11 +187,11 @@ test.describe('S4 Refresh from source', () => {
     await expect(page.getByLabel(RIGHTS)).not.toBeChecked();
     const keep = page.getByRole('link', { name: 'Keep current version' });
     await expect(keep).toBeFocused();
-    await expect(page.getByRole('button', { name: 'Refresh page' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Replace page text' })).toBeVisible();
     await checkA11y(page, 'S4', 'refresh', SCOPE);
 
-    // "Refresh page" unticked: the error, and nothing is fetched or changed.
-    await page.getByRole('button', { name: 'Refresh page' }).click();
+    // "Replace page text" unticked: the error, and nothing is fetched or changed.
+    await page.getByRole('button', { name: 'Replace page text' }).click();
     const summary = page.locator('[data-ln-error-summary]');
     await expect(summary.getByRole('link', { name: RIGHTS_ERROR })).toHaveAttribute('href', '#edit-rights-confirmed');
     await expect(summary).toBeFocused();

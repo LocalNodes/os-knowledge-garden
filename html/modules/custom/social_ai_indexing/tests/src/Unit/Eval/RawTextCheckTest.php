@@ -55,11 +55,20 @@ final class RawTextCheckTest extends UnitTestCase {
   }
 
   /**
-   * The three fixed copies are exempt, even when a tool output or question is
-   * the same text.
+   * The fixed copies are exempt, even when a tool output or question is the
+   * same text.
    */
   public function testFixedCopiesAreExempt(): void {
-    foreach ([CitedAnswer::FALLBACK, CitedAnswer::NO_ANSWER_GROUP, CitedAnswer::NO_ANSWER_SITE] as $copy) {
+    $copies = [
+      CitedAnswer::FALLBACK,
+      CitedAnswer::NO_ANSWER_GROUP,
+      CitedAnswer::NO_ANSWER_SITE,
+      CitedAnswer::NO_SOURCED_ANSWER_GROUP,
+      CitedAnswer::NO_SOURCED_ANSWER_SITE,
+      CitedAnswer::SEARCH_TROUBLE,
+      CitedAnswer::UNAVAILABLE,
+    ];
+    foreach ($copies as $copy) {
       $this->assertSame([], RawTextCheck::findings($copy, [$copy], [$copy]));
     }
   }

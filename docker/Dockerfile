@@ -86,6 +86,9 @@ RUN { \
     echo 'post_max_size = 64M'; \
     echo 'max_execution_time = 300'; \
     echo 'max_input_vars = 5000'; \
+    echo '; Logged exceptions must not carry call arguments: a backtrace can hold'; \
+    echo '; a member question or page text passed down the call stack.'; \
+    echo 'zend.exception_ignore_args = On'; \
     } > /usr/local/etc/php/conf.d/drupal.ini
 
 # Configure opcache for production
@@ -99,6 +102,10 @@ RUN { \
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
+
+# Access log without query strings or Referer (they can hold a member's words)
+COPY docker/apache-access-log.sh /tmp/apache-access-log.sh
+RUN bash /tmp/apache-access-log.sh && rm /tmp/apache-access-log.sh
 
 # Configure Apache DocumentRoot (Open Social uses html/ as web root)
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/html

@@ -91,7 +91,10 @@ final class CitationGuardAgentRunner extends AgentRunner {
     if ($reason !== 'verbose') {
       $this->tempStore->get('ai_assistant_threads')->delete($job_id);
     }
-    $text = CitedAnswer::fallbackMarkdown();
+    // A quota or setup failure says the assistant is unavailable: the cause
+    // is the same whichever group was asked for. It never replaces a cited
+    // answer, which returned above.
+    $text = $this->registry->serviceFailure() !== NULL ? CitedAnswer::UNAVAILABLE : CitedAnswer::fallbackMarkdown();
     return new ChatOutput(new ChatMessage('assistant', $text), [$text], []);
   }
 

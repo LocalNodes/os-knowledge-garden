@@ -5,7 +5,7 @@ services:
 
   social_ai_indexing.search_query_subscriber:
     class: Drupal\social_ai_indexing\EventSubscriber\SearchQuerySubscriber
-    arguments: ['@social_ai_indexing.permission_filter', '@current_user', '@ai_assistant_api.runner']
+    arguments: ['@social_ai_indexing.permission_filter', '@current_user', '@ai_assistant_api.runner', '@social_ai_indexing.source_registry']
     tags:
       - { name: event_subscriber }
 
@@ -61,6 +61,14 @@ services:
   # Agent-exit citation rewrite (AI-SPEC §4 step 4, D-19, KNOW-04).
   social_ai_indexing.citation_rewriter:
     class: Drupal\social_ai_indexing\Citation\CitationRewriter
+
+  # Notes a quota or setup failure so the assistant can say it is
+  # unavailable. Records the kind only; logs nothing.
+  social_ai_indexing.ai_service_failure_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\AiServiceFailureSubscriber
+    arguments: ['@social_ai_indexing.source_registry']
+    tags:
+      - { name: event_subscriber }
 
   social_ai_indexing.citation_rewrite_subscriber:
     class: Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber

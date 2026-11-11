@@ -10,6 +10,7 @@ use Drupal\file\FileInterface;
 use Psr\Log\LoggerInterface;
 use Smalot\PdfParser\Config;
 use Smalot\PdfParser\Parser;
+use Symfony\Component\Yaml\Yaml as SymfonyYaml;
 
 /**
  * Opens a document once and returns its text and its own title (D-16).
@@ -25,7 +26,14 @@ use Smalot\PdfParser\Parser;
  * - DOC: text through the extractor manager (PhpWord MsDoc). MsDoc loads the
  *   SummaryInformation stream but never parses it into DocInfo, so a .doc
  *   has no metadata title and the file name is used.
- * - TXT and MD: the file's contents, no metadata title.
+ * - TXT: the file's contents, no metadata title.
+ * - MD: the file's contents. Its title comes from YAML front matter (a
+ *   `---` block at the very top whose closing line is within the first
+ *   FRONT_MATTER_MAX_LINES lines and which parses as a mapping; the block is
+ *   then removed from the text), else from the first `# ` heading within the
+ *   first HEADING_MAX_LINES lines outside fenced code. Anything that does not
+ *   qualify leaves the text as it is (the export's library pages carry
+ *   their exact title in front matter).
  *
  * Every parse runs under a local error handler: PhpWord's MsDoc reader
  * raises tens of thousands of warnings per .doc (22-04), which are counted
@@ -53,6 +61,16 @@ class DocumentTextExtractor {
    * Longest metadata part read from an Office zip (a title fits easily).
    */
   protected const META_PART_MAX_BYTES = 65536;
+
+  /**
+   * A Markdown front matter block must close within this many lines.
+   */
+  protected const FRONT_MATTER_MAX_LINES = 200;
+
+  /**
+   * A Markdown title heading must be within this many lines.
+   */
+  protected const HEADING_MAX_LINES = 40;
 
   /**
    * Dublin Core, the namespace of dc:title in DOCX and ODT metadata.
@@ -96,6 +114,7 @@ class DocumentTextExtractor {
         'docx' => $this->extractOffice($path, $extension, 'docProps/core.xml'),
         'odt' => $this->extractOffice($path, $extension, 'meta.xml'),
         'doc' => new ExtractedDocument($this->managerText($path, $extension)),
+        'md' => $this->extractMarkdown($path),
         default => new ExtractedDocument($this->plainText($path)),
       };
     }
@@ -182,6 +201,65 @@ class DocumentTextExtractor {
       throw new \RuntimeException('The file could not be read.');
     }
     return trim(mb_scrub($contents, 'UTF-8'));
+  }
+
+  /**
+   * A Markdown file: its text, and its title from front matter or a heading.
+   */
+  protected function extractMarkdown(string $path): ExtractedDocument {
+    $text = $this->plainText($path);
+    $title = NULL;
+    $lines = preg_split('/\R/u', $text);
+    if (($lines[0] ?? NULL) !== NULL && rtrim($lines[0]) === '---') {
+      $limit = min(count($lines), self::FRONT_MATTER_MAX_LINES + 1);
+      for ($i = 1; $i < $limit; $i++) {
+        if (rtrim($lines[$i]) === '---') {
+          $data = NULL;
+          $block = implode("\n", array_slice($lines, 1, $i - 1));
+          try {
+            $data = SymfonyYaml::parse($block);
+          }
+          catch (\Throwable) {
+            // Not front matter; the text stays as it is.
+          }
+          // Only a mapping is front matter. An empty array is one only when
+          // written as {}: `[]` is an empty list and keeps its text.
+          if (is_array($data) && ($data === [] ? trim($block) === '{}' : !array_is_list($data))) {
+            $title = is_string($data['title'] ?? NULL) ? $this->cleanMetadataTitle($data['title']) : NULL;
+            $lines = array_slice($lines, $i + 1);
+            $text = trim(implode("\n", $lines));
+          }
+          break;
+        }
+      }
+    }
+    return new ExtractedDocument($text, $title ?? $this->markdownHeading($lines));
+  }
+
+  /**
+   * The first `# ` heading in the first lines, outside fenced code, or NULL.
+   */
+  protected function markdownHeading(array $lines): ?string {
+    // The open fence, or NULL. A fence closes only on a line of the same
+    // character, at least as long, with nothing after it but spaces.
+    $fence = NULL;
+    foreach (array_slice($lines, 0, self::HEADING_MAX_LINES) as $line) {
+      if ($fence !== NULL) {
+        if (preg_match('/^ {0,3}(`{3,}|~{3,})[ \t]*$/', $line, $m) && $m[1][0] === $fence[0] && strlen($m[1]) >= strlen($fence)) {
+          $fence = NULL;
+        }
+        continue;
+      }
+      // An opening backtick fence's info text cannot hold a backtick.
+      if (preg_match('/^ {0,3}(`{3,})[^`]*$/', $line, $m) || preg_match('/^ {0,3}(~{3,})/', $line, $m)) {
+        $fence = $m[1];
+        continue;
+      }
+      if (preg_match('/^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/u', $line, $m)) {
+        return $this->cleanMetadataTitle($m[1]);
+      }
+    }
+    return NULL;
   }
 
   /**

@@ -18,7 +18,7 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 FAILED=0
 N=0
-TOTAL=11
+TOTAL=12
 
 echo "TAP version 13"
 echo "1..$TOTAL"
@@ -57,7 +57,9 @@ DRUSH_LOG="$TMP/drush.log"
 DRUSH_COUNT="$TMP/drush.count"
 cat > "$STUB_DRUSH" <<STUB
 #!/bin/bash
-echo "\$*" >> "$DRUSH_LOG"
+# Each argument shell-quoted, so an empty argument shows as ''.
+printf '%q ' "\$@" | sed 's/ \$//' >> "$DRUSH_LOG"
+echo >> "$DRUSH_LOG"
 n=\$(cat "$DRUSH_COUNT" 2>/dev/null || echo 0)
 n=\$((n + 1))
 echo "\$n" > "$DRUSH_COUNT"
@@ -90,9 +92,11 @@ DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=3 \
 RC_A=$?
 
 assert_eq "loop exits 0 after WORKER_MAX_ITERATIONS=3 despite a failing drush call" "0" "$RC_A"
-assert_eq "exactly one cron:unlock --all call" "1" \
-  "$(count_lines '-r /x --uri=http://y cron:unlock --all' "$DRUSH_LOG")"
-assert_eq "cron:unlock --all is the first drush call" "-r /x --uri=http://y cron:unlock --all" \
+# ultimate_cron's cron:unlock requires a job name; --all alone exits 1, so the
+# worker passes an empty name.
+assert_eq "exactly one cron:unlock '' --all call" "1" \
+  "$(count_lines "-r /x --uri=http://y cron:unlock '' --all" "$DRUSH_LOG")"
+assert_eq "cron:unlock '' --all is the first drush call" "-r /x --uri=http://y cron:unlock '' --all" \
   "$(head -n 1 "$DRUSH_LOG" 2>/dev/null)"
 assert_eq "three cron:run search_api_cron --force calls" "3" \
   "$(count_lines '-r /x --uri=http://y cron:run search_api_cron --force' "$DRUSH_LOG")"
@@ -137,8 +141,10 @@ OUT_B="$TMP/out-b.log"
 RC_B=$?
 
 assert_eq "default run-as goes through su -s /bin/bash www-data -c with HOME=/tmp" \
-  "-s|/bin/bash|www-data|-c|HOME=/tmp $DRUSH_CMD cron:unlock --all|" \
+  "-s|/bin/bash|www-data|-c|HOME=/tmp $DRUSH_CMD cron:unlock '' --all|" \
   "$(head -n 1 "$SU_LOG" 2>/dev/null)"
+assert_eq "su mode keeps the empty job name as an argument" "-r /x --uri=http://y cron:unlock '' --all" \
+  "$(head -n 1 "$DRUSH_LOG" 2>/dev/null)"
 assert_eq "su mode runs unlock + one iteration (3 su calls) and exits 0" "3 0" \
   "$(wc -l < "$SU_LOG" 2>/dev/null | tr -d ' ') $RC_B"
 

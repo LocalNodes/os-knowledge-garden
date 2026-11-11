@@ -38,7 +38,7 @@ test.use({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
 const ERROR_HEADING = 'Fix these to continue';
 const RQ01_FIRST = 'Bioregionalism organizes human, social, and economic life';
 const OVERVIEW_LOADING = 'Writing an overview of the results';
-const OVERVIEW_DONE = 'AI overview. Written by AI from pages you can see. Check the sources.';
+const OVERVIEW_DONE = 'AI overview. Written by AI from pages you can see, using your search words. Check the sources.';
 
 let seeds: Seeds;
 test.beforeAll(() => {
@@ -66,8 +66,8 @@ const CHECKS: Record<string, (page: Page, log: Announcement[], state: UiState) =
   'S1-populated': async (page, log) => {
     // The stale-worker alert is rendered once by the server; nothing
     // re-announces it.
-    expect.soft(find(log, 'initial', 'Some pages have been waiting'), 'stale alert present at load').toHaveLength(1);
-    expect.soft(find(log, ['live', 'suppressed'], 'Some pages have been waiting'), 'stale alert not re-announced').toEqual([]);
+    expect.soft(find(log, 'initial', 'Some documents have waited'), 'stale alert present at load').toHaveLength(1);
+    expect.soft(find(log, ['live', 'suppressed'], 'Some documents have waited'), 'stale alert not re-announced').toEqual([]);
   },
   'S2-error': async (page, log) => {
     const focusOnSummary = find(log, 'focus', ERROR_HEADING);
@@ -292,16 +292,16 @@ test.describe('screen-reader proxy: flows', () => {
     expect(find(log, 'suppressed'), 'nothing held back by aria-busy').toEqual([]);
   });
 
-  test('S5: "Refresh search status" with pages still waiting announces nothing', async ({ page }, testInfo) => {
+  test('S5: "Check progress" with documents still waiting announces nothing', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'steward', 'runs as the steward');
     const log = await recordAnnouncements(page);
     run = await enterState(page, STATES.find((s) => s.key === 'S1-populated')!, seeds);
     const response = page.waitForResponse((r) => r.url().endsWith(`/group/${seeds.statusGroup}/import/status`));
-    await tabUntil(page, (f) => f.name === 'Refresh search status', { what: '"Refresh search status"' });
+    await tabUntil(page, (f) => f.name === 'Check progress', { what: '"Check progress"' });
     await page.keyboard.press('Enter');
     await response;
     await page.waitForTimeout(500);
     save('sr-S5-refresh.json', JSON.stringify(log, null, 2) + '\n');
-    expect(find(log, ['live', 'suppressed'], /searchable/)).toEqual([]);
+    expect(find(log, ['live', 'suppressed'], /prepared/)).toEqual([]);
   });
 });

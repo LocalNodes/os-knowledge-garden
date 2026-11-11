@@ -30,7 +30,10 @@ $databases['default']['default'] = [
 // ---------------------------------------------------------------------------
 // Core settings.
 // ---------------------------------------------------------------------------
-$settings['hash_salt'] = getenv('DRUPAL_HASH_SALT') ?: 'change-me-in-production';
+$configured_hash_salt = getenv('DRUPAL_HASH_SALT');
+if ($configured_hash_salt !== FALSE && $configured_hash_salt !== '' && $configured_hash_salt !== 'generate-random') {
+  $settings['hash_salt'] = $configured_hash_salt;
+}
 $settings['config_sync_directory'] = '../config/sync';
 $settings['file_private_path'] = '/var/www/private';
 $settings['update_free_access'] = FALSE;
@@ -344,4 +347,11 @@ if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev
 // ---------------------------------------------------------------------------
 if (file_exists(__DIR__ . '/settings.local.php')) {
   include __DIR__ . '/settings.local.php';
+}
+
+// Local/DDEV overrides above still take precedence. Deployed sites with no
+// explicit salt must use the same private file that startup prepared.
+if (!isset($settings['hash_salt']) || $settings['hash_salt'] === '') {
+  require_once __DIR__ . '/hash-salt.php';
+  $settings['hash_salt'] = localnodes_hash_salt($settings['file_private_path']);
 }

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_import\Kernel;
 
+use Drupal\Core\File\Exception\FileWriteException;
 use Drupal\file\FileInterface;
+use Drupal\file\Upload\FileUploadHandler;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\Tests\localnodes_import\Kernel\Support\UploadRequestTrait;
 use Drupal\user\UserInterface;
+use Psr\Log\AbstractLogger;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -149,6 +152,40 @@ final class UploadRouteTest extends ImportKernelTestBase {
     }
     $bound = $this->container->get('tempstore.private')->get('localnodes_import')->get('uploads:' . $this->group->id());
     $this->assertEmpty($bound, 'Nothing refused is bound for the form');
+  }
+
+  /**
+   * A failed save logs the file's type, size and error class, not its name.
+   *
+   * A file name can say what the document is about ("eviction notice for
+   * unit 4"), and the error message often repeats the path.
+   */
+  public function testFailedUploadLogsNoFileName(): void {
+    $this->assertControllerExists();
+    $this->setCurrentUser($this->manager);
+    $canary = 'QZXFILE5512';
+    $handler = $this->createMock(FileUploadHandler::class);
+    $handler->method('handleFileUpload')->willThrowException(new FileWriteException("Could not move the file to private://localnodes_import/1/$canary minutes.pdf"));
+    $this->container->set('file.upload_handler', $handler);
+    $records = [];
+    $this->container->get('logger.factory')->addLogger(new class($records) extends AbstractLogger {
+
+      public function __construct(private array &$records) {}
+
+      public function log($level, string|\Stringable $message, array $context = []): void {
+        $this->records[] = strtr((string) $message, array_filter($context, 'is_scalar'));
+      }
+
+    });
+
+    $response = $this->upload($this->fakeUpload("$canary minutes.pdf", '%PDF-1.4 fictional board minutes'));
+
+    $this->assertSame(500, $response->getStatusCode(), 'The save failure reached the catch.');
+    $lines = array_values(array_filter($records, static fn (string $r): bool => str_starts_with($r, 'Upload of')));
+    $this->assertCount(1, $lines, implode("\n", $records));
+    $this->assertStringNotContainsString($canary, implode("\n", $records));
+    $this->assertStringContainsString('pdf', $lines[0]);
+    $this->assertStringContainsString(FileWriteException::class, $lines[0]);
   }
 
   /**

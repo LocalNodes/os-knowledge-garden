@@ -179,7 +179,7 @@ export const STATES: UiState[] = [
     key: 'S1-populated', screen: 'S1', state: 'populated', persona: 'steward', scope: CONTENT,
     setup: async ({ page, seeds }) => {
       await page.goto(`/group/${seeds.statusGroup}/import`);
-      await expect(page.getByRole('heading', { level: 2, name: 'Search status' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: "Preparing documents for the assistant's search" })).toBeVisible();
     },
   },
   {
@@ -218,7 +218,7 @@ export const STATES: UiState[] = [
     },
   },
   {
-    // "Stop uploading" keeps what was uploaded and reports the rest as "Not
+    // "Stop remaining uploads" keeps what was uploaded and reports the rest as "Not
     // uploaded"; the run then starts on its own, so the state a person ends
     // up in is that run's report.
     key: 'S2-stopped', screen: 'S2', state: 'stopped', persona: 'steward', scope: CONTENT,
@@ -230,7 +230,7 @@ export const STATES: UiState[] = [
       await tickRights(page);
       await pressPrimary(page);
       await expect(page.locator('.localnodes-import-chosen__summary')).toHaveText('Uploading 1 of 2');
-      await tabUntil(page, (f) => f.name === 'Stop uploading', { what: '"Stop uploading"' });
+      await tabUntil(page, (f) => f.name === 'Stop remaining uploads', { what: '"Stop remaining uploads"' });
       await page.keyboard.press('Enter');
       await page.waitForURL(/\/import\/runs\/\d+/, { timeout: 120_000 });
       await expect(page.getByRole('heading', { level: 1, name: 'Import finished' })).toBeVisible();
@@ -286,7 +286,7 @@ export const STATES: UiState[] = [
     setup: async ({ page, seeds }) => {
       await page.goto(`/group/${seeds.group}/import/runs/${seeds.refreshRun}`);
       await expect(page.getByText('This page is already in the group.')).toBeVisible();
-      await tabUntil(page, (f) => f.name.startsWith('Refresh from source'), { what: '"Refresh from source"' });
+      await tabUntil(page, (f) => f.name.startsWith("Replace with the website's current text"), { what: '"Replace with the website\'s current text"' });
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL(new RegExp(`/import/refresh/${seeds.refreshNid}\\?run=${seeds.refreshRun}`));
       await expect(page.getByRole('heading', { level: 1 })).toContainText('from Its Source?');
@@ -297,8 +297,8 @@ export const STATES: UiState[] = [
     setup: async ({ page, seeds }) => {
       await page.goto(`/group/${seeds.statusGroup}/import`);
       const status = page.locator('.localnodes-import-status');
-      await expect(status.getByRole('heading', { level: 2, name: 'Search status' })).toBeVisible();
-      for (const label of ["See what's still waiting (2)", "See pages that can't be searched (1)"]) {
+      await expect(status.getByRole('heading', { level: 2, name: "Preparing documents for the assistant's search" })).toBeVisible();
+      for (const label of ["See what's still waiting (2)", "See documents that can't be prepared (1)"]) {
         await tabUntil(page, (f) => f.tag === 'SUMMARY' && f.name === label, { what: label });
         await page.keyboard.press('Enter');
       }

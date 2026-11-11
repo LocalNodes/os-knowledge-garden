@@ -1,0 +1,24 @@
+{#
+/**
+ * @file
+ * The "Get help" page at /help.
+ *
+ * Who to ask first, where the report link is, and the one address for a
+ * sign-in or site problem. It promises no hours and no response time. The h1
+ * "Get help" is the route title, which the title block prints, so this
+ * template has none.
+ *
+ * The wrapper carries localnodes-site-terms for the terms page's reading
+ * layout (the site_terms library) and localnodes-get-help for its own.
+ *
+ * Variables:
+ * - help_address: the address for sign-in and site problems.
+ * - safety_help_url: the "Hacked or phished?" page.
+ */
+#}
+<div class="localnodes-site-terms localnodes-get-help">
+  <p>{% trans %}Ask your group's organizers first. They can see your group's settings and documents.{% endtrans %}</p>
+  <p>{% trans %}Something wrong in an imported document, such as private information or a mistake? Open it and use its "Report a problem" link. That link is only on imported documents; for anything else, ask your group's organizers.{% endtrans %}</p>
+  <p>{% trans %}Can't sign in, or the site isn't working? Email LocalNodes at <a href="mailto:{{ help_address }}">{{ help_address }}</a>.{% endtrans %}</p>
+  <p>{% trans %}If someone else got into your account: <a href="{{ safety_help_url }}">Hacked or phished?</a>{% endtrans %}</p>
+</div>

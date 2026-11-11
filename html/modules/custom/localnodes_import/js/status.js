@@ -1,14 +1,18 @@
 /**
  * @file
- * S5 "Search status" refresh and polling (22-25; UI-SPEC Part 8 S5).
+ * The progress panel's checks and polling.
  *
- * - "Refresh search status" reads the status JSON instead of reloading the
- *   page (without JavaScript the button's GET form reloads it).
+ * - "Check progress" reads the status JSON instead of reloading the page
+ *   (without JavaScript the button's GET form reloads it).
+ * - A failed check says so ("Couldn't check progress. Last checked ‹time›.
+ *   Try again.") and keeps the last good numbers; a check that works clears
+ *   the line.
  * - Polls at most every 30 seconds, only while pages are waiting and the tab
  *   is visible (threat T-22-73). A hidden tab stops polling; coming back
  *   reads again once 30 seconds have passed since the last read.
- * - Numbers change silently. Only the change to "All imported pages are
- *   searchable." is announced, in the panel's one polite live region.
+ * - Numbers change silently. Only the change to the all-done line is
+ *   announced, in the panel's one polite live region, and so is a failed
+ *   check that the button started.
  * - "Updated ‹relative time›" ticks every minute, in the server's words.
  * - Text is written with textContent only; nothing from the response is
  *   parsed as HTML.
@@ -43,6 +47,7 @@
     const fullText = panel.querySelector('[data-status-full]');
     const form = panel.querySelector('[data-status-refresh]');
     const button = form ? form.querySelector('button') : null;
+    const error = panel.querySelector('[data-status-error]');
 
     let waiting = parseInt(panel.getAttribute('data-waiting'), 10) || 0;
     // The browser's own clock for when the numbers were read: the server's
@@ -127,7 +132,23 @@
       }
     }
 
-    async function read() {
+    /**
+     * The failed-check line, with the local time of the last good check.
+     */
+    function showError(announce) {
+      if (!error) {
+        return;
+      }
+      const at = new Date(readAtMs);
+      const time = `${at.getHours()}:${String(at.getMinutes()).padStart(2, '0')}`;
+      error.textContent = Drupal.t("Couldn't check progress. Last checked @time. Try again.", { '@time': time });
+      error.hidden = false;
+      if (announce && live) {
+        live.textContent = error.textContent;
+      }
+    }
+
+    async function read(byButton = false) {
       if (inFlight) {
         return;
       }
@@ -146,10 +167,14 @@
           throw new Error(`status ${response.status}`);
         }
         apply(await response.json());
-      } catch (error) {
+        if (error) {
+          error.hidden = true;
+        }
+      } catch (failure) {
         // The last good numbers stay with their own "Updated" time, so a
         // failed read never looks current.
         tick();
+        showError(byButton);
       } finally {
         inFlight = false;
         if (button) {
@@ -162,7 +187,7 @@
     if (form) {
       form.addEventListener('submit', (event) => {
         event.preventDefault();
-        read();
+        read(true);
       });
     }
     document.addEventListener('visibilitychange', schedule);

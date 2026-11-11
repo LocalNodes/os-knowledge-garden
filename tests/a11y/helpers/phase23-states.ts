@@ -190,9 +190,9 @@ export const NUXT_STATES: Phase23State[] = [
       await mockAiKey(page, 200, { ok: true });
       await openForm(page);
       // The radio group is one Tab stop; arrow keys move inside it.
-      await tabUntil(page, (f) => f.name.startsWith('The LocalNodes default'), { what: 'the AI choice group', cap: 60 });
+      await tabUntil(page, (f) => f.name.startsWith('Use the included AI service'), { what: 'the AI choice group', cap: 60 });
       await hold(page, 'ArrowDown');
-      await expect(page.getByRole('radio', { name: 'Your own Gemini key' })).toBeChecked();
+      await expect(page.getByRole('radio', { name: 'Your own Gemini account' })).toBeChecked();
       await tabToField(page, keyField(page), { what: 'the key field', cap: 10 });
       await type(page, FAKE_KEY);
       await tabUntil(page, isField('ai-billing'), { what: 'the billing box', cap: 10 });

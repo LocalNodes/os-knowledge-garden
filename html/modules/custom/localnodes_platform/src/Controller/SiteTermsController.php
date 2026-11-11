@@ -10,11 +10,11 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The site terms at /terms (23-26, ONB-05, D-25).
+ * The site terms at /terms.
  *
- * The words are 23-UI-SPEC section 9, word for word, in the template
- * localnodes-site-terms.html.twig. This controller fills in the community's
- * name and the version line's date.
+ * The words live in the template localnodes-site-terms.html.twig; they are a
+ * draft awaiting legal review. This controller fills in the community's name
+ * and the version line's date.
  *
  * The version line reads "Draft for review, ‹date›", where the date is the
  * day the terms text last changed. It is declared once, in TERMS_CHANGED,
@@ -31,7 +31,7 @@ class SiteTermsController extends ControllerBase {
    * template's text, so changing the words without this date (or the other
    * way round) fails the test.
    */
-  public const TERMS_CHANGED = '2026-11-08';
+  public const TERMS_CHANGED = '2026-11-11';
 
   public function __construct(
     ConfigFactoryInterface $configFactory,

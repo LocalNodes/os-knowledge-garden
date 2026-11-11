@@ -10,6 +10,7 @@ use Drupal\ai\Exception\AiRequestErrorException;
 use Drupal\ai_search\EmbeddingStrategyInterface;
 use Drupal\ai_vdb_provider_qdrant\Plugin\VdbProvider\QdrantProvider;
 use Drupal\search_api\IndexInterface;
+use Drupal\search_api\SearchApiException;
 use Drupal\search_api\Item\ItemInterface;
 
 /**
@@ -163,36 +164,68 @@ class ThrottledQdrantProvider extends QdrantProvider {
       }
 
       // Step 2: the item is embedded. Now replace its old points.
-      if (!in_array($item_id, $this->skipDeleteItemIds, TRUE)) {
-        $this->deleteItems($configuration, [$item_id]);
+      try {
+        $this->writeItem($configuration, $index, $item_id, $fields, $embeddings, $collection, $database);
       }
-      foreach ($embeddings as $embedding) {
-        $embedding = array_merge_recursive($embedding, [
-          'metadata' => [
-            'server_id' => $index->getServerId(),
-            'index_id' => $index->id(),
-          ],
-        ]);
-        $data = [
-          'drupal_long_id' => ['value' => $embedding['id'], 'is_multiple' => FALSE],
-          'drupal_entity_id' => ['value' => $item_id, 'is_multiple' => FALSE],
-          'vector' => ['value' => $embedding['values'], 'is_multiple' => FALSE],
-        ];
-        foreach ($embedding['metadata'] as $key => $value) {
-          $data[$key] = [
-            'value' => $value,
-            'is_multiple' => in_array($key, self::AI_SEARCH_NATIVE_FIELDS, TRUE) ? FALSE : ai_vdb_provider_qdrant_is_field_multiple($fields[$key]),
-          ];
-        }
-        $this->insertIntoCollection(
-          collection_name: $collection,
-          data: $data,
-          database: $database,
-        );
+      catch (\Throwable $e) {
+        // The Qdrant client puts the store's error, which can quote the
+        // stored chunk text, in its exception message, and the callers (the
+        // indexing batch, search_api's post-request indexing, drush) log or
+        // show that message. Rethrow with the class and code only, and
+        // without the original as the previous exception.
+        throw new SearchApiException(sprintf('Vector store write failed for %s: %s', $item_id, static::errorCode($e)), (int) $e->getCode());
       }
       $finished[] = $item_id;
     }
     return $finished;
+  }
+
+  /**
+   * Replaces an embedded item's points: deletes the old ones, inserts the new.
+   *
+   * @param array $configuration
+   *   The server's backend configuration.
+   * @param \Drupal\search_api\IndexInterface $index
+   *   The index.
+   * @param string $item_id
+   *   The search_api item id.
+   * @param \Drupal\search_api\Item\FieldInterface[] $fields
+   *   The item's fields.
+   * @param array $embeddings
+   *   The item's embeddings, from the embedding strategy.
+   * @param string $collection
+   *   The collection name.
+   * @param string $database
+   *   The database name.
+   */
+  protected function writeItem(array $configuration, IndexInterface $index, string $item_id, array $fields, array $embeddings, string $collection, string $database): void {
+    if (!in_array($item_id, $this->skipDeleteItemIds, TRUE)) {
+      $this->deleteItems($configuration, [$item_id]);
+    }
+    foreach ($embeddings as $embedding) {
+      $embedding = array_merge_recursive($embedding, [
+        'metadata' => [
+          'server_id' => $index->getServerId(),
+          'index_id' => $index->id(),
+        ],
+      ]);
+      $data = [
+        'drupal_long_id' => ['value' => $embedding['id'], 'is_multiple' => FALSE],
+        'drupal_entity_id' => ['value' => $item_id, 'is_multiple' => FALSE],
+        'vector' => ['value' => $embedding['values'], 'is_multiple' => FALSE],
+      ];
+      foreach ($embedding['metadata'] as $key => $value) {
+        $data[$key] = [
+          'value' => $value,
+          'is_multiple' => in_array($key, self::AI_SEARCH_NATIVE_FIELDS, TRUE) ? FALSE : ai_vdb_provider_qdrant_is_field_multiple($fields[$key]),
+        ];
+      }
+      $this->insertIntoCollection(
+        collection_name: $collection,
+        data: $data,
+        database: $database,
+      );
+    }
   }
 
   /**

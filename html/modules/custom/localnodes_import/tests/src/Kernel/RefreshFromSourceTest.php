@@ -176,7 +176,7 @@ final class RefreshFromSourceTest extends ImportKernelTestBase {
     $this->assertEmpty($form['rights_confirmed']['#default_value'] ?? NULL, 'Never pre-ticked');
     $keys = array_keys($form);
     $this->assertLessThan(array_search('actions', $keys, TRUE), array_search('rights_confirmed', $keys, TRUE), 'The checkbox sits above the buttons');
-    $this->assertSame('Refresh page', (string) $form['actions']['submit']['#value']);
+    $this->assertSame('Replace page text', (string) $form['actions']['submit']['#value']);
     $this->assertSame('danger', $form['actions']['submit']['#button_type']);
     $this->assertSame('Keep current version', (string) $form['actions']['cancel']['#title']);
     $this->assertSame('autofocus', $form['actions']['cancel']['#attributes']['autofocus'] ?? NULL, 'The safe choice gets initial focus');
@@ -235,8 +235,8 @@ final class RefreshFromSourceTest extends ImportKernelTestBase {
     $xpath = $this->renderReport($run);
     $action = $xpath->query('//td[contains(@class, "localnodes-import-report__action")]')->item(0);
     $this->assertStringContainsString('This page is already in the group.', $action->textContent);
-    $link = $xpath->query('.//a[normalize-space(.)="Refresh from source"]', $action)->item(0);
-    $this->assertNotNull($link, 'The Refresh from source link');
+    $link = $xpath->query('.//a[normalize-space(.)="Replace with the website\'s current text"]', $action)->item(0);
+    $this->assertNotNull($link, 'The "Replace with the website\'s current text" link');
     $this->assertSame('/group/' . $this->group->id() . '/import/refresh/' . $this->topic->id() . '?run=' . $run->id(), $link->getAttribute('href'));
 
     // A file duplicate offers no refresh.
@@ -254,7 +254,7 @@ final class RefreshFromSourceTest extends ImportKernelTestBase {
       'outcome' => ImportItem::OUTCOME_DUPLICATE,
       'nid' => $this->topic->id(),
     ])->save();
-    $this->assertSame(0, $this->renderReport($file_run)->query('//a[normalize-space(.)="Refresh from source"]')->length);
+    $this->assertSame(0, $this->renderReport($file_run)->query('//a[normalize-space(.)="Replace with the website\'s current text"]')->length);
   }
 
   /**

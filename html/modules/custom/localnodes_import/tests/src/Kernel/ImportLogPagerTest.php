@@ -129,9 +129,13 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
     $this->importedItem($run, 'Tool Share Rules', 0);
 
     $xpath = $this->renderLanding();
-    $this->assertSame(['Search status', 'Upload files', 'Import web pages', 'Past imports'], $this->nodeTexts($xpath, '//h2'), 'The panel above the choice cards, Past imports below');
+    $this->assertSame(["Preparing documents for the assistant's search", 'Upload files', 'Import web pages', 'Past imports'], $this->nodeTexts($xpath, '//h2'), 'The panel above the choice cards, Past imports below');
     $this->assertSame(1, $xpath->query("//*[contains(concat(' ', @class, ' '), ' localnodes-import-status ')]/following::ul[contains(concat(' ', @class, ' '), ' localnodes-import-landing__cards ')]")->length, 'The panel comes first');
-    $this->assertSame(1, $xpath->query("//button[normalize-space(.)='Refresh search status']")->length, 'A "Refresh search status" button');
+    $this->assertSame(1, $xpath->query("//button[normalize-space(.)='Check progress']")->length, 'A "Check progress" button');
+    $this->assertSame(1, $xpath->query("//p[normalize-space(.)=\"This checks progress. It doesn't restart anything.\"]")->length, 'The line under the button');
+    $error = $xpath->query("//*[@data-status-error]");
+    $this->assertSame(1, $error->length, 'One failed-check line');
+    $this->assertTrue($error->item(0)->hasAttribute('hidden'), 'Hidden until a check fails');
     $time = $xpath->query("//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__updated ')]//time[@datetime]")->item(0);
     $this->assertNotNull($time, 'The stamp is a <time datetime>');
     $this->assertMatchesRegularExpression('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/', $time->getAttribute('datetime'));
@@ -150,15 +154,15 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
 
     $xpath = $this->renderLanding();
     $panel = "//*[contains(concat(' ', @class, ' '), ' localnodes-import-status ')]";
-    $this->assertSame('1 of 3 imported pages are searchable.', $this->nodeText($xpath, "$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__summary ')]"));
+    $this->assertSame("1 of 3 documents are prepared for the assistant's search.", $this->nodeText($xpath, "$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__summary ')]"));
     $this->assertSame([
-      '1 waiting to be added to search',
-      "1 has no readable text and can't be searched",
+      '1 still being prepared',
+      "1 of these can't be prepared: it has too little readable text (listed below).",
     ], $this->nodeTexts($xpath, "$panel//ul[contains(concat(' ', @class, ' '), ' localnodes-import-status__breakdown ')]/li"), 'Non-zero lines only');
-    $this->assertTrue($xpath->query("$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__all ')]")->item(0)->hasAttribute('hidden'), 'Not all searchable yet');
+    $this->assertTrue($xpath->query("$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__all ')]")->item(0)->hasAttribute('hidden'), 'Not all prepared yet');
     $this->assertSame(0, $xpath->query("$panel//*[@role='alert']")->length, 'No stale alert yet');
-    $this->assertSame("See pages that can't be searched (1)", $this->nodeText($xpath, "$panel//details[contains(concat(' ', @class, ' '), ' localnodes-import-status__no-text ')]/summary"));
-    $this->assertSame("This looks like a scanned PDF, so its text can't be read. Members can open it, but search and the AI assistant won't find it.", $this->nodeText($xpath, "$panel//details[contains(concat(' ', @class, ' '), ' localnodes-import-status__no-text ')]//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__reason ')]"));
+    $this->assertSame("See documents that can't be prepared (1)", $this->nodeText($xpath, "$panel//details[contains(concat(' ', @class, ' '), ' localnodes-import-status__no-text ')]/summary"));
+    $this->assertSame("This may be an image-only scan. Members can open it, but we couldn't read enough text for search and the AI assistant. Add a copy whose text you can select and copy.", $this->nodeText($xpath, "$panel//details[contains(concat(' ', @class, ' '), ' localnodes-import-status__no-text ')]//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__reason ')]"));
     $this->assertSame(1, $xpath->query("$panel//*[@aria-live='polite']")->length, 'One polite live region');
 
     // More than an hour of waiting.
@@ -166,18 +170,33 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
     $xpath = $this->renderLanding();
     $alerts = $xpath->query("$panel//*[@role='alert']");
     $this->assertSame(1, $alerts->length, 'The stale alert, once');
-    $this->assertSame("Some pages have been waiting for more than an hour. Search updates may have stopped. Tell whoever looks after your community's site.", trim((string) preg_replace('/\s+/u', ' ', $alerts->item(0)->textContent)));
+    $this->assertSame('Some documents have waited more than an hour. Preparing them may have stopped. Use Get help to tell the people who host this site.', trim((string) preg_replace('/\s+/u', ' ', $alerts->item(0)->textContent)));
+    $help = $xpath->query("$panel//*[@role='alert']//a[normalize-space(.)='Get help']");
+    $this->assertSame(1, $help->length, 'The alert links to Get help');
+    $this->assertStringEndsWith('/help', $help->item(0)->getAttribute('href'));
 
-    // Everything searchable, nothing without text: the all-clear line.
+    // The waiting document is prepared; the scan never will be. Nothing is
+    // left to wait for, so the all-clear shows beside the scan's line.
+    $this->track($waiting, 0);
+    $xpath = $this->renderLanding();
+    $mixed = $xpath->query("$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__all ')]")->item(0);
+    $this->assertFalse($mixed->hasAttribute('hidden'), 'Prepared plus unreadable is all of them: the all-clear shows');
+    // It claims only the documents that can be prepared.
+    $this->assertSame("All documents with enough readable text are prepared for the assistant's search. Try a question and open its source before you invite members.", trim($mixed->textContent));
+    $this->assertSame([
+      "1 of these can't be prepared: it has too little readable text (listed below).",
+    ], $this->nodeTexts($xpath, "$panel//ul[contains(concat(' ', @class, ' '), ' localnodes-import-status__breakdown ')]/li"), 'The unreadable line stays');
+
+    // Everything prepared, nothing without text: the all-clear line.
     $clear = $this->createFlexibleGroup('Clear group');
     $this->addManager($clear, $this->organizer);
     $run = $this->createRun(ImportRun::STATUS_FINISHED, ImportRun::KIND_FILES, NULL, $clear);
     $this->importedItem($run, 'Beekeeping Log', 0, ImportItem::OUTCOME_IMPORTED, NULL, $clear);
     $xpath = $this->renderLanding($clear);
-    $this->assertSame('1 of 1 imported pages are searchable.', $this->nodeText($xpath, "$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__summary ')]"));
+    $this->assertSame("1 of 1 documents are prepared for the assistant's search.", $this->nodeText($xpath, "$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__summary ')]"));
     $all = $xpath->query("$panel//*[contains(concat(' ', @class, ' '), ' localnodes-import-status__all ')]")->item(0);
     $this->assertFalse($all->hasAttribute('hidden'), 'The all-clear line shows');
-    $this->assertSame('All imported pages are searchable.', trim($all->textContent));
+    $this->assertSame("All documents are prepared for the assistant's search. Try a question and open its source before you invite members.", trim($all->textContent));
     $this->assertSame([], $this->nodeTexts($xpath, "$panel//ul[contains(concat(' ', @class, ' '), ' localnodes-import-status__breakdown ')]/li"), 'No breakdown lines');
     $this->assertSame(0, $xpath->query("$panel//details")->length, 'No lists');
   }
@@ -228,7 +247,7 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
   }
 
   /**
-   * The report's "Search is catching up" line, only while pages wait.
+   * The report's progress line, only while documents wait.
    */
   public function testReportCatchingUpLine(): void {
     $run = $this->createRun(ImportRun::STATUS_FINISHED);
@@ -237,7 +256,10 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
 
     $line = "//*[contains(concat(' ', @class, ' '), ' localnodes-import-report__search ')]";
     $xpath = $this->renderReport($run);
-    $this->assertSame('Search is catching up. 1 of 2 new pages are searchable so far. The rest are usually ready within a few minutes.', $this->nodeText($xpath, $line));
+    $this->assertSame("Your documents are added. 1 of 2 readable documents are prepared for the assistant's search so far. You can leave this page and check progress on the Import tab.", $this->nodeText($xpath, $line));
+    $link = $xpath->query("$line//a[normalize-space(.)='check progress on the Import tab']");
+    $this->assertSame(1, $link->length, 'The line links to the Import tab');
+    $this->assertStringEndsWith('/group/' . $this->group->id() . '/import', $link->item(0)->getAttribute('href'));
 
     $this->track($waiting, 0);
     $xpath = $this->renderReport($run);
@@ -245,9 +267,9 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
   }
 
   /**
-   * "The rest" counts only pages that are waiting (22-30, Codex review).
+   * The progress line counts only documents that can be prepared.
    *
-   * A page with no readable text never becomes searchable, so it's left
+   * A file with too little readable text is never prepared, so it's left
    * out of the line's "‹N› of ‹M›"; the breakdown above already lists it.
    */
   public function testReportCatchingUpLineLeavesOutPagesWithNoText(): void {
@@ -258,7 +280,7 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
 
     $xpath = $this->renderReport($run);
     $line = "//*[contains(concat(' ', @class, ' '), ' localnodes-import-report__search ')]";
-    $this->assertSame('Search is catching up. 1 of 2 new pages are searchable so far. The rest are usually ready within a few minutes.', $this->nodeText($xpath, $line));
+    $this->assertSame("Your documents are added. 1 of 2 readable documents are prepared for the assistant's search so far. You can leave this page and check progress on the Import tab.", $this->nodeText($xpath, $line));
   }
 
   /**
@@ -312,9 +334,10 @@ final class ImportLogPagerTest extends ImportKernelTestBase {
     $this->assertSame(1, $data['waiting']);
     $this->assertSame(0, $data['no_text']);
     $this->assertFalse($data['stale']);
-    $this->assertSame('1 of 2 imported pages are searchable.', $data['summary']);
-    $this->assertSame(['1 waiting to be added to search'], $data['lines']);
-    $this->assertSame('All imported pages are searchable.', $data['all']);
+    $this->assertSame("1 of 2 documents are prepared for the assistant's search.", $data['summary']);
+    $this->assertSame(['1 still being prepared'], $data['lines']);
+    $this->assertSame("All documents are prepared for the assistant's search. Try a question and open its source before you invite members.", $data['all']);
+    $this->assertFalse($data['all_visible'], 'One still waits');
     $this->assertSame("See what's still waiting (1)", $data['waiting_label']);
     $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
 

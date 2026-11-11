@@ -144,8 +144,8 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
    * A label from an earlier run in the same process must not resolve in the
    * next one. The second run searches comments only (two sources, R1 and
    * R2) and cites [R3], which existed only in the first run: it is dropped,
-   * nothing citable is left, and the reply is the no-answer copy (22-27
-   * ruling, option A: no valid citation is a no-answer, not a failure).
+   * nothing citable is left, and the reply says no sourced answer could be
+   * given (no valid citation is a no-answer, not a failure).
    */
   public function testRegistryIsResetPerRun(): void {
     $first = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), 'What do the notes say?', $this->citeEverythingScript('What do the notes say?'));
@@ -157,7 +157,7 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
     ]);
     $this->assertCount(2, $second['sources'], 'The registry started empty: only this run\'s two comments.');
     $this->assertTrue($second['rewritten']);
-    $this->assertSame(CitedAnswer::NO_ANSWER_GROUP, $second['answer'], 'The stale [R3] maps to nothing: no valid citation, so the no-answer copy.');
+    $this->assertSame(CitedAnswer::NO_SOURCED_ANSWER_GROUP, $second['answer'], 'The stale [R3] maps to nothing: sources but no valid citation, so the no-sourced-answer copy.');
     $this->assertSame([], $this->guardReasons());
   }
 
@@ -281,13 +281,13 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * Sources found but nothing cited: the exact no-answer copy (door 4).
+   * Sources found but nothing cited: the exact no-sourced-answer copy.
    *
-   * 22-27 ruling, option A: gemini-3.8-flash sometimes declines in its own
-   * words with no label, or answers without citing. Every no-answer must
-   * read the same (door 4), so a reply with no valid citation gets the
-   * no-answer copy, never the fallback and never the uncited text. The
-   * fallback stays for real failures (max loops, verbose, raw tool output).
+   * gemini-3.8-flash sometimes declines in its own words with no label, or
+   * answers without citing. Sources were found, so the scope was a real one
+   * and the reply may say so: "couldn't give you an answer with a source",
+   * never the fallback and never the uncited text. The fallback stays for
+   * real failures (max loops, verbose, raw tool output).
    */
   public function testUncitedReplyGetsTheNoAnswerCopy(): void {
     foreach (["I couldn't find anything about that in the group's pages.", 'The notes say the key is kept somewhere safe.', "**Sources**\n- [One](/node/1)"] as $reply) {
@@ -296,7 +296,7 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
         static fn () => ScriptedLlmSubscriber::text($reply),
       ]);
       $this->assertNotSame([], $run['sources'], 'The search did return sources.');
-      $this->assertSame(CitedAnswer::NO_ANSWER_GROUP, $run['answer'], "No valid citation in '$reply': the no-answer copy.");
+      $this->assertSame(CitedAnswer::NO_SOURCED_ANSWER_GROUP, $run['answer'], "No valid citation in '$reply': the no-sourced-answer copy.");
     }
     $this->assertSame([], $this->guardReasons(), 'Not a guard exit.');
   }

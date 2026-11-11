@@ -1,0 +1,6 @@
+name: 'LocalNodes log address (test only)'
+type: module
+description: 'A search-shaped page that only administrators may open, so DbLogWithoutQueryTest can make a real 403 on a search address. Never enable on a real site.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

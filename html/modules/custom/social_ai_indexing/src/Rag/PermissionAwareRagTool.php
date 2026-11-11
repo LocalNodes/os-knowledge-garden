@@ -518,6 +518,12 @@ class PermissionAwareRagTool extends RagTool {
    *   Blocks from buildBlocks().
    */
   protected function finish(?string $reason, int $returned, array $blocks): void {
+    // A broken backend or an index that can't be searched is search trouble,
+    // and the reply may say so. A refused group (invalid_scope) is not: it
+    // must read like an empty search.
+    if ($reason === 'index_not_allowed' || str_starts_with((string) $reason, 'search_failed:')) {
+      $this->sourceRegistry->markSearchTrouble();
+    }
     $rendered = [];
     $labels = [];
     foreach ($blocks as $block) {

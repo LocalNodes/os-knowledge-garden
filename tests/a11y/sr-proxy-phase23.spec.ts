@@ -119,10 +119,10 @@ const CHECKS: Record<string, (page: Page, log: Announcement[], tree: string) => 
     expect.soft(await page.content(), 'the key is nowhere in the page').not.toContain(FAKE_KEY);
     expect.soft(live(log, 'Key checked'), '"Key checked" is announced once').toHaveLength(1);
     // The question names the group the radios sit in (the fieldset's legend).
-    // Two radios: "Your own OpenRouter key" is hidden while
+    // Two radios: "Your own OpenRouter account" is hidden while
     // NUXT_OPENROUTER_CHOICE_ENABLED is off, its default (23-18 follow-up).
     await expect.soft(page.getByRole('group', { name: 'Which AI should your site use?' }).getByRole('radio')).toHaveCount(2);
-    await expect.soft(page.getByRole('radio', { name: 'Your own OpenRouter key' }), 'Option 3 is hidden by default').toHaveCount(0);
+    await expect.soft(page.getByRole('radio', { name: 'Your own OpenRouter account' }), 'Option 3 is hidden by default').toHaveCount(0);
   },
   'success-failed': async (page, log) => {
     // F8 (23-39; 23-UI-SPEC section 5): heard by the focus move to the box,
@@ -248,7 +248,7 @@ test.describe('screen-reader proxy: behaviour over time', () => {
     test.skip(testInfo.project.name !== 'onboarding', 'runs in the onboarding project');
     await page.route('**/api/ai-key', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
     await openForm(page);
-    await tabUntil(page, (f) => f.name.startsWith('The LocalNodes default'), { what: 'the AI choice group', cap: 60 });
+    await tabUntil(page, (f) => f.name.startsWith('Use the included AI service'), { what: 'the AI choice group', cap: 60 });
     await hold(page, 'ArrowDown');
     await tabToField(page, keyField(page), { what: 'the key field', cap: 10 });
     await expect(keyField(page)).toHaveAttribute('type', 'password');

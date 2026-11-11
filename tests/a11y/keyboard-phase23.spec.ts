@@ -175,7 +175,7 @@ test.describe('keyboard: the sign-up site', () => {
     // Codex review, 23-29 finding C3: a refused key was shown but not heard.
     test.skip(testInfo.project.name !== 'onboarding', 'runs in the onboarding project');
     await openForm(page);
-    await tabUntil(page, (f) => f.name.startsWith('The LocalNodes default'), { what: 'the AI choice group', cap: 60 });
+    await tabUntil(page, (f) => f.name.startsWith('Use the included AI service'), { what: 'the AI choice group', cap: 60 });
     await hold(page, 'ArrowDown');
     await tabUntil(page, isButton('Check key'), { what: 'Check key', cap: 10 });
     await page.keyboard.press('Enter');
@@ -258,11 +258,14 @@ test.describe('keyboard: the skip link (23-39)', () => {
       const app = (document.querySelector('#__nuxt') as unknown as { __vue_app__?: { config: { globalProperties: { $nuxt: { isHydrating?: boolean } } } } } | null)?.__vue_app__;
       return app?.config.globalProperties.$nuxt.isHydrating === false;
     });
-    await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Page Not Found' })).toBeVisible();
+    await expect(page.getByText('We couldn\'t find this page.')).toBeVisible();
+    // The status code and the server's message stay off the page.
+    await expect(page.getByText('404')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Skip to main content' })).toHaveCount(0);
     await expect(page.locator('header')).toHaveCount(0);
     await page.keyboard.press('Tab');
-    expect((await focused(page)).name, 'the first Tab stop is the error page\'s own link').toBe('Go Home');
+    expect((await focused(page)).name, 'the first Tab stop is the error page\'s own link').toBe('Back to the LocalNodes home page');
   });
 
   test('focused skip link: axe', async ({ page }, testInfo) => {
@@ -303,7 +306,7 @@ test.describe('paste is never blocked', () => {
     await tabToField(page, describeField(page), { what: 'Describe your community', cap: 40 });
     expect(await paste(page, 'Neighbours who fix bikes together.'), 'description: paste not cancelled').toBe(false);
     await expect(describeField(page)).toHaveValue('Neighbours who fix bikes together.');
-    await tabUntil(page, (f) => f.name.startsWith('The LocalNodes default'), { what: 'the AI choice group', cap: 60 });
+    await tabUntil(page, (f) => f.name.startsWith('Use the included AI service'), { what: 'the AI choice group', cap: 60 });
     await hold(page, 'ArrowDown');
     await tabToField(page, keyField(page), { what: 'the key field', cap: 10 });
     expect(await paste(page, 'test-key-not-real-0000000000000000'), 'AI key: paste not cancelled').toBe(false);

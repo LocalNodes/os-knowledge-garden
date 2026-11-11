@@ -114,6 +114,25 @@ final class SourceRegistryTest extends UnitTestCase {
   }
 
   /**
+   * Reset clears the search-trouble flag and the AI service failure.
+   */
+  public function testResetClearsSearchTroubleAndServiceFailure(): void {
+    $registry = new SourceRegistry();
+    $this->assertFalse($registry->hadSearchTrouble());
+    $this->assertNull($registry->serviceFailure());
+
+    $registry->markSearchTrouble();
+    $registry->markServiceFailure('quota');
+    $this->assertTrue($registry->hadSearchTrouble());
+    $this->assertSame('quota', $registry->serviceFailure());
+
+    $registry->reset();
+
+    $this->assertFalse($registry->hadSearchTrouble());
+    $this->assertNull($registry->serviceFailure());
+  }
+
+  /**
    * An orphan comment is refused and does not consume a number.
    */
   public function testOrphanCommentDoesNotConsumeNumber(): void {

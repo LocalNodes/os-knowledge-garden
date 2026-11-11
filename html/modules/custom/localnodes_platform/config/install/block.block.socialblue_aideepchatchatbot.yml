@@ -25,7 +25,7 @@ settings:
   default_username: ''
   use_avatar: 0
   default_avatar: ''
-  first_message: "Hi, I'm an AI assistant. I answer only from pages on this site that you're allowed to see, and I number my sources so you can check them. I can get things wrong, so open a source before you rely on an answer."
+  first_message: "Hi, I'm an AI assistant. I answer only from documents and pages on this site that you're allowed to see, and I number my sources so you can check them. I can get things wrong, so open a source before you rely on an answer."
   loading_message: ''
   stream: null
   toggle_state: remember

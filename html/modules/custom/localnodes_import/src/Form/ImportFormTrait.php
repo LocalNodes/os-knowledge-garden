@@ -97,7 +97,7 @@ trait ImportFormTrait {
       '#attributes' => ['class' => ['localnodes-import-upload__visibility']],
     ];
     $descriptions = [
-      'group' => $this->t('Only members of this group.'),
+      'group' => $this->t('Members of this group can read these documents. People who manage or host the site may also have access.'),
       'community' => $this->t('Anyone signed in to this site.'),
       'public' => $this->t('Anyone, including search engines.'),
     ];
@@ -135,9 +135,9 @@ trait ImportFormTrait {
       $allowed['group'] = TRUE;
     }
     $labels = [
-      'group' => $this->t('Group members only'),
-      'community' => $this->t('Community'),
-      'public' => $this->t('Public'),
+      'group' => $this->t("This group's members"),
+      'community' => $this->t('All site members'),
+      'public' => $this->t('Anyone on the web'),
     ];
     $options = [];
     foreach (static::$visibilityOrder as $value) {

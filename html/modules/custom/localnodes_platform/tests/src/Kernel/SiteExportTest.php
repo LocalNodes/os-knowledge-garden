@@ -14,7 +14,7 @@ use Symfony\Component\Process\Process;
 /**
  * drush localnodes:export's archive: secrets, manifest and left-out tables.
  *
- * 22.2 export and restore job. The archive goes to a community's organizers,
+ * The export and restore job. The archive goes to a community's organizers,
  * so no key of ours may be in it. The test seeds secrets the ways a site can
  * hold one (a key on the "config" provider, a password in a DSN, an
  * environment value) and checks every part of the archive for them, the
@@ -255,6 +255,59 @@ final class SiteExportTest extends KernelTestBase {
   }
 
   /**
+   * A persistent site salt stays on the site, never in its exported files.
+   */
+  public function testFileBasedSaltIsLeftOut(): void {
+    $old = getenv('DRUPAL_HASH_SALT');
+    putenv('DRUPAL_HASH_SALT');
+    try {
+      require_once $this->root . '/sites/default/hash-salt.php';
+      $salt = localnodes_hash_salt($this->base . '/private', TRUE);
+      $this->setSetting('hash_salt', $salt);
+      $this->assertSame($salt, $this->exporter()->knownSecrets()['setting hash_salt']);
+      $seen = [];
+      $result = $this->exporter()->export($this->base . '/exports', $this->dumper($seen));
+      $folder = $this->unpack($result['path']);
+      $listing = (new Process(['tar', '-tzf', $folder . '/private-files.tar.gz']))->mustRun()->getOutput();
+      $this->assertStringNotContainsString('.localnodes', $listing);
+      $this->assertStringContainsString('localnodes_import/12/01-bylaws.txt', $listing);
+      $this->assertContains('.localnodes', $result['manifest']['files']['private_left_out']);
+      $this->assertStringNotContainsString($salt, $this->everything($folder));
+    }
+    finally {
+      putenv($old === FALSE ? 'DRUPAL_HASH_SALT' : 'DRUPAL_HASH_SALT=' . $old);
+    }
+  }
+
+  /**
+   * Excluding the storage folder does not weaken the scan anywhere else.
+   */
+  public function testFileBasedSaltElsewhereStillRefusesExport(): void {
+    $old = getenv('DRUPAL_HASH_SALT');
+    putenv('DRUPAL_HASH_SALT');
+    try {
+      require_once $this->root . '/sites/default/hash-salt.php';
+      $salt = localnodes_hash_salt($this->base . '/private', TRUE);
+      $this->setSetting('hash_salt', $salt);
+      file_put_contents($this->base . '/private/leaked-copy.txt', $salt);
+      $seen = [];
+      try {
+        $this->exporter()->export($this->base . '/exports', $this->dumper($seen));
+        $this->fail('A salt outside the excluded folder must refuse the export.');
+      }
+      catch (\RuntimeException $e) {
+        $this->assertStringContainsString('setting hash_salt', $e->getMessage());
+        $this->assertStringContainsString('in private-files.tar.gz', $e->getMessage());
+        $this->assertStringNotContainsString($salt, $e->getMessage());
+      }
+      $this->assertSame([], glob($this->base . '/exports/*'));
+    }
+    finally {
+      putenv($old === FALSE ? 'DRUPAL_HASH_SALT' : 'DRUPAL_HASH_SALT=' . $old);
+    }
+  }
+
+  /**
    * The manifest's contents, the left-out tables and the parts' checksums.
    */
   public function testManifestAndLeftOutTables(): void {
@@ -310,6 +363,68 @@ final class SiteExportTest extends KernelTestBase {
     $this->assertStringContainsString('docs/SELF-HOST.md', $restore);
     $this->assertStringContainsString('Never run `drush config:import`', $restore);
     $this->assertStringNotContainsString('drush cim', $restore);
+  }
+
+  /**
+   * A fake library writer: one page and one file, with optional extra text.
+   */
+  private function library(string $extra = ''): callable {
+    return function (string $dir) use ($extra): array {
+      mkdir("$dir/public/Not in a group/Open news files", 0700, TRUE);
+      file_put_contents("$dir/README.md", "# Library\n");
+      file_put_contents("$dir/public/Not in a group/Open news.md", "---\ntitle: Open news\n---\n\nBody text.$extra\n");
+      file_put_contents("$dir/public/Not in a group/Open news files/minutes.txt", 'minutes');
+      return ['pages' => 1, 'pages_by_folder' => ['public' => 1, 'members' => 0, 'group-only' => 0], 'files' => 1, 'missing_files' => 0];
+    };
+  }
+
+  /**
+   * With a library: format 2, its counts, and a checksum for each of its files.
+   */
+  public function testLibraryInManifest(): void {
+    $seen = [];
+    $result = $this->exporter()->export($this->base . '/exports', $this->dumper($seen), $this->library());
+    $manifest = $result['manifest'];
+    $folder = $this->unpack($result['path']);
+
+    $this->assertSame(2, $manifest['format_version']);
+    $this->assertSame(1, $manifest['library']['pages']);
+    $this->assertSame(1, $manifest['library']['files']);
+    $library_parts = [
+      'library/README.md',
+      'library/public/Not in a group/Open news files/minutes.txt',
+      'library/public/Not in a group/Open news.md',
+    ];
+    $this->assertSame($library_parts, array_values(array_filter(array_keys($manifest['parts']), fn (string $part): bool => str_starts_with($part, 'library/'))));
+    $sums = file_get_contents("$folder/SHA256SUMS");
+    foreach ($library_parts as $part) {
+      $this->assertFileExists("$folder/$part");
+      $this->assertSame(hash_file('sha256', "$folder/$part"), $manifest['parts'][$part]['sha256']);
+      $this->assertStringContainsString($manifest['parts'][$part]['sha256'] . '  ' . $part, $sums);
+    }
+    $this->assertStringContainsString('`library/`', file_get_contents("$folder/RESTORE.md"));
+
+    // Without one, no library folder and a null in the manifest.
+    $result = $this->exporter()->export($this->base . '/exports2', $this->dumper($seen));
+    $this->assertNull($result['manifest']['library']);
+    $this->assertDirectoryDoesNotExist($this->unpack($result['path']) . '/library');
+  }
+
+  /**
+   * A secret that reaches only the library fails the run, archive gone.
+   */
+  public function testLibrarySecretDeletesArchive(): void {
+    putenv('GEMINI_API_KEY=' . self::ENV_SECRET);
+    $seen = [];
+    try {
+      $this->exporter()->export($this->base . '/exports', $this->dumper($seen), $this->library(' key=' . self::ENV_SECRET));
+      $this->fail('A secret in the library must fail the export.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertStringContainsString('(library)', $e->getMessage());
+      $this->assertStringNotContainsString(self::ENV_SECRET, $e->getMessage());
+    }
+    $this->assertSame([], glob($this->base . '/exports/*'));
   }
 
   /**

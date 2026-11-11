@@ -72,9 +72,11 @@ class RelatedContentService {
       return array_slice($nodes, 0, $limit);
     }
     catch (\Exception $e) {
+      // The query is the page's own text, and a provider error can repeat
+      // it, so log the class and code only.
       \Drupal::logger('social_ai_indexing')->warning(
-        'Related content search failed: @message',
-        ['@message' => $e->getMessage()]
+        'Related content search failed: @class (code @code)',
+        ['@class' => $e::class, '@code' => $e->getCode()]
       );
       return [];
     }

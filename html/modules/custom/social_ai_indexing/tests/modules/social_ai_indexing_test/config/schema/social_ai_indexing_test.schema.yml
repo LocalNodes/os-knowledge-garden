@@ -1,0 +1,3 @@
+# The echoing Solr connector takes the standard connector's settings.
+plugin.plugin_configuration.search_api_solr_connector.social_ai_indexing_echo:
+  type: plugin.plugin_configuration.search_api_solr_connector.standard

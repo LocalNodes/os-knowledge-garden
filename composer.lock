@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c57eb8b40fd115f5da8a53b0174c5f8d",
+    "content-hash": "f89e85d14b96b90bbeb89ffec30233e5",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -8073,17 +8073,17 @@
         },
         {
             "name": "drupal/smart_trim",
-            "version": "2.2.0",
+            "version": "2.2.2",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/smart_trim.git",
-                "reference": "2.2.0"
+                "reference": "2.2.2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/smart_trim-2.2.0.zip",
-                "reference": "2.2.0",
-                "shasum": "564737cf0895e1b8a38af575ab7ca23f55335d9a"
+                "url": "https://ftp.drupal.org/files/projects/smart_trim-2.2.2.zip",
+                "reference": "2.2.2",
+                "shasum": "5423ac88304a6c7a831e54e36b1a1a5fee13b61f"
             },
             "require": {
                 "drupal/core": "^9.5 || ^10 || ^11",
@@ -8096,8 +8096,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "2.2.0",
-                    "datestamp": "1723847275",
+                    "version": "2.2.2",
+                    "datestamp": "1794419798",
                     "security-coverage": {
                         "status": "covered",
                         "message": "Covered by Drupal's security advisory policy"
@@ -8135,7 +8135,7 @@
                 "source": "https://git.drupalcode.org/project/smart_trim",
                 "issues": "https://drupal.org/project/issues/smart_trim"
             },
-            "published-time": "2024-08-16T22:27:47+00:00"
+            "published-time": "2026-11-11T16:53:22+00:00"
         },
         {
             "name": "drupal/state_machine",

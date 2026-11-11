@@ -1,0 +1,6 @@
+localnodes_log_uri_test.search:
+  path: '/search/all/{keys}'
+  defaults:
+    _controller: '\Drupal\Core\Controller\ControllerBase::create'
+  requirements:
+    _permission: 'administer site configuration'

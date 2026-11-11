@@ -825,11 +825,11 @@ final class CitedAnswersLiveRunner {
       $found = CitationRewriteSubscriber::countLabels($last_output);
       $kept = count($record['citations']);
       $record['labels'] = ['found' => $found, 'kept' => $kept, 'dropped' => max(0, $found - $kept)];
-      if ($answer === CitedAnswer::fallbackMarkdown()) {
+      if ($answer === CitedAnswer::fallbackMarkdown() || $answer === CitedAnswer::UNAVAILABLE) {
         $record['outcome'] = 'fallback';
         $record['fallback'] = TRUE;
       }
-      elseif ($answer === CitedAnswer::NO_ANSWER_GROUP || $answer === CitedAnswer::NO_ANSWER_SITE) {
+      elseif (in_array($answer, CitedAnswer::FIXED_REPLIES, TRUE)) {
         $record['outcome'] = 'no_answer';
       }
       else {

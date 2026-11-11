@@ -30,9 +30,26 @@ services:
   localnodes_platform.organizer_activation:
     class: Drupal\localnodes_platform\OrganizerActivation
     arguments: ['@state', '@entity_type.manager', '@?email_factory', '@logger.factory', '@lock']
-  # 22.2 export: drush localnodes:export writes one
+  # Sends a member invited by email on to their invitation after they set
+  # their first password. The loader is optional so a site or Kernel test
+  # without group invitations still builds a container.
+  localnodes_platform.invite_landing:
+    class: Drupal\localnodes_platform\InviteLanding
+    arguments: ['@?ginvite.invitation_loader']
+  # drush localnodes:export writes one
   # archive a community can restore on its own server. key.repository is
   # optional so Kernel tests without the key module still build a container.
   localnodes_platform.site_exporter:
     class: Drupal\localnodes_platform\Export\SiteExporter
     arguments: ['@database', '@config.factory', '@file_system', '@module_handler', '@extension.list.module', '@?key.repository']
+  # The export's library/: every published page as Markdown.
+  localnodes_platform.library_writer:
+    class: Drupal\localnodes_platform\Export\LibraryWriter
+    arguments: ['@entity_type.manager', '@request_stack']
+  # Watchdog rows keep the page path, not the query string: search and the AI
+  # overview carry a member's words in it. Replaces dblog's logger in place.
+  localnodes_platform.dblog_without_query:
+    class: Drupal\localnodes_platform\Logger\DbLogWithoutQuery
+    decorates: logger.dblog
+    decoration_on_invalid: ignore
+    arguments: ['@.inner']

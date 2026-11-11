@@ -18,23 +18,25 @@ test.describe('organizer guide', () => {
     test.skip(testInfo.project.name !== 'steward', 'runs as the steward');
   });
 
-  test('default: h1, five numbered steps, then the assistant section and the help line', async ({ page }) => {
+  test('default: h1, six numbered steps, then the assistant section and the help line', async ({ page }) => {
     await page.goto('/guide');
     await expect(page.getByRole('heading', { level: 1, name: 'Organizer Guide' })).toBeVisible();
     expect((await page.title()).split(' | ')[0]).toBe('Organizer Guide');
 
     const steps = page.locator('.localnodes-guide__steps > li');
-    await expect(steps).toHaveCount(5);
+    await expect(steps).toHaveCount(6);
     await expect(steps.locator('h2')).toHaveText([
       'Set your password',
       'Open your group',
       'Upload your first files',
-      'Wait for search to catch up',
+      'Wait while your documents are prepared',
       'Ask the AI assistant a question',
+      'Bring in your members',
     ]);
     // The fund and fees sections show only on a site with localnodes_web3 on.
     await expect(page.getByRole('heading', { level: 2, name: 'Using the assistant' })).toBeVisible();
-    await expect(page.getByText('Stuck? Use Get help in the footer.')).toBeVisible();
+    await expect(page.locator('.localnodes-guide__help')).toHaveText('Stuck? Get help is in the footer of every page.');
+    await expect(page.locator('.localnodes-guide__help').getByRole('link', { name: 'Get help' })).toHaveAttribute('href', /\/help$/);
 
     await checkA11y(page, 'guide', 'default', { include: ['.localnodes-guide'], resultsDir: PHASE23_RESULTS_DIR });
   });

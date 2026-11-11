@@ -15,7 +15,7 @@
 #   IMAGE=...  optional built image, e.g. ghcr.io/localnodes/os-knowledge-garden:<sha7>;
 #              when set, also checks the directory inside the image (needs docker).
 set -u
-cd "$(dirname "$0")/../../.."
+cd "$(dirname "$0")/../../.." || exit 1
 PHP="${PHP:-php}"
 DOCKERFILE="${DOCKERFILE:-docker/Dockerfile}"
 SETTINGS="${SETTINGS:-html/sites/default/settings.php}"
@@ -33,6 +33,7 @@ resolved="$($PHP -- "$SETTINGS" <<'PHP'
 foreach (['SERVICE_FQDN_OPENSOCIAL', 'IS_DDEV_PROJECT', 'DDEV_HOSTNAME', 'DRUPAL_REVERSE_PROXY'] as $k) putenv($k);
 $app_root = '/var/www/html/html'; $site_path = 'sites/default';
 $settings = []; $config = []; $databases = [];
+putenv('DRUPAL_HASH_SALT=fixture-explicit-hash-salt');
 require $argv[1];
 $d = $settings['config_sync_directory'] ?? '';
 // Drupal resolves a relative path against DRUPAL_ROOT (the app root).

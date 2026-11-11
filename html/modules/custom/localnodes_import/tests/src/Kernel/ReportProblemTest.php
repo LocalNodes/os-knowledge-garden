@@ -6,6 +6,7 @@ namespace Drupal\Tests\localnodes_import\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Logger\RfcLogLevel;
+use Drupal\Core\Mail\MailManagerInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_import\Entity\ImportItem;
@@ -49,6 +50,14 @@ final class ReportProblemTest extends ImportKernelTestBase {
   private const REPORTER = 'rights.holder@mail.localnodes.xyz';
 
   private const PAGE_TITLE = 'Watershed commons primer';
+
+  private const THANKS_BOTH = "Thanks. We've sent your report to this site's organizers and to the host.";
+
+  private const THANKS_ORGANIZERS = "Thanks. We've sent your report to this site's organizers. If it's urgent, email LocalNodes at hello@localnodes.xyz.";
+
+  private const THANKS_HOST = "Thanks. We've sent your report to the people who host this site.";
+
+  private const NOT_SENT = "We couldn't send your report. Your text is still below. Try again in a few minutes, or email LocalNodes at hello@localnodes.xyz.";
 
   /**
    * {@inheritdoc}
@@ -354,6 +363,7 @@ final class ReportProblemTest extends ImportKernelTestBase {
     $this->assertSame([], array_map('strval', $state->getErrors()));
     $to = array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $this->sentMails());
     $this->assertEqualsCanonicalizing(['steward@mail.localnodes.xyz', 'organizer@mail.localnodes.xyz', $this->siteOwner->getEmail()], $to);
+    $this->assertSame([self::THANKS_ORGANIZERS], $this->statusMessages(), 'The thank-you names only the organizers');
 
     $warnings = $this->watchdog('No host address is set');
     $this->assertCount(1, $warnings, 'One warning');
@@ -511,6 +521,152 @@ final class ReportProblemTest extends ImportKernelTestBase {
     $storage = $this->container->get('entity_type.manager')->getStorage('node');
     $storage->resetCache([$nid]);
     return $storage->load($nid);
+  }
+
+  /**
+   * Every send failing: an error, the text kept, no thank-you.
+   */
+  public function testEverySendFailingSaysTheReportWasNotSent(): void {
+    $this->stubMailResults(['*' => FALSE]);
+    $this->assertNotSent(['reason' => 'owner', 'details' => 'Please look at this.']);
+  }
+
+  /**
+   * Every send cancelled by a mail hook: also not sent.
+   */
+  public function testEverySendCancelledSaysTheReportWasNotSent(): void {
+    $this->stubMailResults(['*' => NULL]);
+    $this->assertNotSent(['reason' => 'owner', 'details' => 'Please look at this.']);
+  }
+
+  /**
+   * Nobody to send to: not sent, and no mail is attempted.
+   */
+  public function testNoRecipientsSaysTheReportWasNotSent(): void {
+    $this->setSetting('localnodes_host_report_email', '');
+    $this->steward->block()->save();
+    $calls = $this->stubMailResults(['*' => TRUE]);
+    $loose = $this->importedTopic(NULL, 'A page with no group');
+    $this->messenger()->deleteAll();
+    [, $state] = $this->submitReport($loose, ['reason' => 'owner', 'details' => 'Nobody hears this.']);
+    $this->assertSame([], $calls->addresses, 'No mail was attempted');
+    $this->assertSame([self::NOT_SENT], $this->errorMessages());
+    $this->assertSame([], $this->statusMessages());
+    $this->assertTrue($state->isRebuilding(), 'The form is shown again with its text');
+  }
+
+  /**
+   * Only the host's mail went: the thank-you names the host only.
+   */
+  public function testOnlyTheHostReceivedIt(): void {
+    $this->stubMailResults(['*' => FALSE, self::HOST => TRUE]);
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'owner']);
+    $this->assertSame([self::THANKS_HOST], $this->statusMessages());
+    $this->assertSame([], $this->errorMessages());
+    $this->assertFalse($state->isRebuilding());
+    $state->setProgrammed(FALSE);
+    $this->assertSame('localnodes_import.report_sent', $state->getRedirect()->getRouteName());
+  }
+
+  /**
+   * The host's mail failed: the thank-you names the organizers only.
+   */
+  public function testHostSendFailedNamesOnlyTheOrganizers(): void {
+    $this->stubMailResults(['*' => TRUE, self::HOST => FALSE]);
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'owner']);
+    $this->assertSame([self::THANKS_ORGANIZERS], $this->statusMessages());
+    $this->assertSame([], $this->errorMessages());
+    $state->setProgrammed(FALSE);
+    $this->assertSame('localnodes_import.report_sent', $state->getRedirect()->getRouteName());
+  }
+
+  /**
+   * One organizer's mail failing still counts the organizers as told.
+   */
+  public function testOneOrganizerFailingStillThanksBoth(): void {
+    $this->stubMailResults(['*' => TRUE, 'steward@mail.localnodes.xyz' => FALSE]);
+    $this->submitReport($this->topic, ['reason' => 'owner']);
+    $this->assertSame([self::THANKS_BOTH], $this->statusMessages());
+  }
+
+  /**
+   * The host's address is also an organizer's: counted as both.
+   */
+  public function testAnAddressThatIsBothCountsForBoth(): void {
+    $this->setSetting('localnodes_host_report_email', 'steward@mail.localnodes.xyz');
+    $calls = $this->stubMailResults(['*' => FALSE, 'steward@mail.localnodes.xyz' => TRUE]);
+    $this->submitReport($this->topic, ['reason' => 'owner']);
+    $this->assertSame(1, array_count_values($calls->addresses)['steward@mail.localnodes.xyz'], 'Mailed once');
+    $this->assertSame([self::THANKS_BOTH], $this->statusMessages());
+  }
+
+  /**
+   * Failed sends still count against the flood limit.
+   */
+  public function testFailedSendsCountTowardsTheFloodLimit(): void {
+    $this->stubMailResults(['*' => FALSE]);
+    for ($i = 1; $i <= 5; $i++) {
+      [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => "Report $i"]);
+      $this->assertSame([], array_map('strval', $state->getErrors()), "Report $i is not refused");
+    }
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => 'Report 6']);
+    $this->assertSame(['flood' => 'Too many reports from this connection. Wait a while, then try again.'], array_map('strval', $state->getErrors()));
+  }
+
+  /**
+   * Submits a report that no one received, and checks the reply.
+   */
+  private function assertNotSent(array $values): void {
+    $this->messenger()->deleteAll();
+    [, $state] = $this->submitReport($this->topic, $values);
+    $this->assertSame([], array_map('strval', $state->getErrors()), 'Not a validation error');
+    $this->assertSame([self::NOT_SENT], $this->errorMessages());
+    $this->assertSame([], $this->statusMessages(), 'No thank-you');
+    $this->assertTrue($state->isRebuilding(), 'The form is shown again, not the thank-you page');
+    $this->assertSame($values['details'], $state->getValue('details'), 'The text is kept');
+  }
+
+  /**
+   * Replaces the mail manager with one that answers per address.
+   *
+   * @param array<string, bool|null> $results
+   *   Result by address; '*' for any other. NULL is a send a hook cancelled.
+   *
+   * @return object
+   *   Holds the addresses mailed, in order, in ->addresses.
+   */
+  private function stubMailResults(array $results): object {
+    $calls = new \stdClass();
+    $calls->addresses = [];
+    $mail = $this->createMock(MailManagerInterface::class);
+    $mail->method('mail')->willReturnCallback(function ($module, $key, $to) use ($results, $calls) {
+      $calls->addresses[] = $to;
+      $result = array_key_exists($to, $results) ? $results[$to] : $results['*'];
+      return ['result' => $result, 'send' => $result !== NULL];
+    });
+    $this->container->set('plugin.manager.mail', $mail);
+    return $calls;
+  }
+
+  /**
+   * Status messages as strings, then cleared.
+   */
+  private function statusMessages(): array {
+    return array_map('strval', $this->messenger()->deleteByType('status'));
+  }
+
+  /**
+   * Error messages as strings, then cleared.
+   */
+  private function errorMessages(): array {
+    return array_map('strval', $this->messenger()->deleteByType('error'));
+  }
+
+  /**
+   * The messenger.
+   */
+  private function messenger(): \Drupal\Core\Messenger\MessengerInterface {
+    return $this->container->get('messenger');
   }
 
   /**

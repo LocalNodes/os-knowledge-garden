@@ -23,3 +23,28 @@ function social_ai_indexing_test_ai_vdb_provider_info_alter(array &$definitions)
     $definitions['qdrant']['class'] = InMemoryQdrantProvider::class;
   }
 }
+
+/**
+ * Implements hook_ai_search_filterable_rag_query_alter().
+ *
+ * When state 'social_ai_indexing_test.filterable_throw' is TRUE, fails the
+ * filterable retrieval tool's search with an error that repeats the query,
+ * the way a search backend's parse error can.
+ */
+function social_ai_indexing_test_ai_search_filterable_rag_query_alter($query, $tool): void {
+  if (\Drupal::state()->get('social_ai_indexing_test.filterable_throw')) {
+    throw new \RuntimeException('Fictional backend: cannot parse ' . json_encode($query->getOriginalKeys()));
+  }
+}
+
+/**
+ * Implements hook_ai_provider_info_alter().
+ *
+ * The echoai provider becomes FailingEchoProvider, which behaves the same
+ * unless the scripted LLM was given an exception to throw.
+ */
+function social_ai_indexing_test_ai_provider_info_alter(array &$definitions): void {
+  if (isset($definitions['echoai']) && class_exists('Drupal\ai_test\Plugin\AiProvider\EchoProvider')) {
+    $definitions['echoai']['class'] = 'Drupal\social_ai_indexing_test\Plugin\AiProvider\FailingEchoProvider';
+  }
+}

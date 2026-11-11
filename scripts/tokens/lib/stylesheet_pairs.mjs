@@ -204,8 +204,13 @@ export const PARTNERS = {
     [`${LINK}:focus-visible`]: LINK_RING,
     [LINK]: text(['own'], 'the link text sits on the link fill of the same rule'),
     [`${LINK}:hover`]: text(['own'], 'the hovered link text sits on the hover fill of the same rule'),
+    '.ai-deepchat .ln-chat-disclosure': {
+      ...fillOf({ under: ['text-muted'] }, 'templates/ai-deepchat.html.twig puts this paragraph below deep-chat; deepchat.css sets both its surface fill and text-muted foreground in the same rule'),
+      ...text(['own'], 'templates/ai-deepchat.html.twig places the disclosure text in this paragraph, on its own surface background from deepchat.css'),
+    },
   },
   'ai-overview': {
+    '.ai-overview-notice': text(['canvas', 'surface'], 'AiOverviewBlock::build() renders this notice before the social-ai-overview.html.twig panel; socialbase block.html.twig can wrap it in a white card, otherwise the page canvas shows through; ai-overview.css gives only the sibling .ai-overview__content its tint'),
     [OVERVIEW]: {
       ...text(['own'], 'the answer text sits on the tinted card of the same rule (templates/social-ai-overview.html.twig)'),
       ...border([...PAGE], 'the 4px rule is at the card edge: the tint on one side, the page on the other (the card sits on the search page)'),
@@ -231,6 +236,7 @@ export const PARTNERS = {
       ...fillOf({ under: ['text'] }, 'the same line, on the highlight fill'),
     },
     '.localnodes-import-chosen__note': text(IMPORT_PAGE, `the note is above the chosen list, on the page: ${IMPORT_WHY}`),
+    '.localnodes-import-chosen__stop-note': text(IMPORT_PAGE, `js/upload.js appends this paragraph inside .localnodes-import-chosen__progress after the file field; import.css gives neither that progress row nor .localnodes-import-chosen a fill, so the form background shows through: ${IMPORT_WHY}`),
     '.localnodes-import-chosen__name': text(IMPORT_PAGE, `a row of the chosen list, on the page (lane site: .localnodes-import-chosen sits on body rgb(243, 243, 243))`),
     '.localnodes-import-chosen__size': text(IMPORT_PAGE, 'a row of the chosen list, on the page'),
     '.localnodes-import-chosen__status': text(IMPORT_PAGE, 'a row of the chosen list, on the page'),
@@ -315,6 +321,8 @@ export const PARTNERS = {
     [`${IMPORT_STATUS}__toggle:focus-visible`]: importRing([on(IMPORT_STATUS, 'surface')], 'the summary is inside the white status card'),
     [`${IMPORT_STATUS}__reason`]: text([on(IMPORT_STATUS, 'surface')], 'the reason is inside the white status card'),
     [`${IMPORT_STATUS}__updated`]: text([on(IMPORT_STATUS, 'surface')], 'the updated line is inside the white status card'),
+    [`${IMPORT_STATUS}__note`]: text([on(IMPORT_STATUS, 'surface')], 'templates/localnodes-import-status.html.twig puts this paragraph in the status footer; import.css paints the enclosing .localnodes-import-status with surface'),
+    [`${IMPORT_STATUS}__error`]: text([on(IMPORT_STATUS, 'surface')], 'templates/localnodes-import-status.html.twig puts the check-error paragraph immediately after the summary, inside .localnodes-import-status with its surface fill from import.css'),
     [`${IMPORT_STATUS}__button:focus-visible`]: importRing([on(IMPORT_STATUS, 'surface')], 'the refresh button is inside the white status card'),
     '.localnodes-import-past a': text(IMPORT_PAGE, `the past-imports table sits on the page: ${IMPORT_WHY}`),
     '.localnodes-import-past__kind': text(IMPORT_PAGE, 'the kind label in a past-imports row, on the page'),

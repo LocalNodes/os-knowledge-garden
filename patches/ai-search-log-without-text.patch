@@ -1,0 +1,105 @@
+diff --git a/src/Plugin/EmbeddingStrategy/EmbeddingBase.php b/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
+--- a/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
++++ b/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
+@@ -252,13 +252,16 @@
+           if ($utf8_chunk === FALSE) {
+ 
+             // Failed to convert, continue to next embedding but add warning
+-            // to the logs.
+-            $this->messenger->addWarning($this->t('Failed to convert chunk to UTF8: @chunk'), [
+-              '@chunk' => $chunk,
+-            ]);
++            // to the logs. The chunk is content that may be private, so
++            // name it by length and a short hash instead of its text.
++            $this->messenger->addWarning($this->t('Failed to convert chunk to UTF8 (@bytes bytes, hash @hash).', [
++              '@bytes' => strlen($chunk),
++              '@hash' => substr(hash('sha256', $chunk), 0, 12),
++            ]));
+             $logger = $this->loggerChannelFactory->get('ai_search');
+-            $logger->warning('Failed to convert chunk to UTF8: @chunk', [
+-              '@chunk' => $chunk,
++            $logger->warning('Failed to convert chunk to UTF8 (@bytes bytes, hash @hash).', [
++              '@bytes' => strlen($chunk),
++              '@hash' => substr(hash('sha256', $chunk), 0, 12),
+             ]);
+             continue;
+           }
+@@ -268,13 +271,16 @@
+         }
+         else {
+ 
+-          // Failed to determine encoding to convert from.
+-          $this->messenger->addWarning($this->t('Failed to determine non-UTF8 encoding to attempt to auto-convert chunk: @chunk', [
+-            '@chunk' => $chunk,
++          // Failed to determine encoding to convert from. Name the chunk by
++          // length and a short hash, not its text, which may be private.
++          $this->messenger->addWarning($this->t('Failed to determine non-UTF8 encoding to attempt to auto-convert chunk (@bytes bytes, hash @hash).', [
++            '@bytes' => strlen($chunk),
++            '@hash' => substr(hash('sha256', $chunk), 0, 12),
+           ]));
+           $logger = $this->loggerChannelFactory->get('ai_search');
+-          $logger->warning('Failed to determine non-UTF8 encoding to attempt to auto-convert chunk: @chunk', [
+-            '@chunk' => $chunk,
++          $logger->warning('Failed to determine non-UTF8 encoding to attempt to auto-convert chunk (@bytes bytes, hash @hash).', [
++            '@bytes' => strlen($chunk),
++            '@hash' => substr(hash('sha256', $chunk), 0, 12),
+           ]);
+           continue;
+         }
+@@ -332,9 +338,12 @@
+           // If batch embedding fails, fall back to single-chunk processing
+           // for this batch only.
+           $logger = $this->loggerChannelFactory->get('ai_search');
+-          $logger->warning('Batch embedding failed for @count chunks, falling back to single-chunk processing: @message', [
++          // Log the class and code, not the message: a provider error can
++          // repeat the text it was asked to embed.
++          $logger->warning('Batch embedding failed for @count chunks, falling back to single-chunk processing: @class (code @code)', [
+             '@count' => count($batch_chunks),
+-            '@message' => $e->getMessage(),
++            '@class' => $e::class,
++            '@code' => $e->getCode(),
+           ]);
+ 
+           foreach ($batch_chunks as $valid_chunk_index => $chunk) {
+@@ -350,8 +359,9 @@
+               if (static::isProviderLimit($e)) {
+                 throw $e;
+               }
+-              $logger->warning('Failed to embed chunk: @message', [
+-                '@message' => $e->getMessage(),
++              $logger->warning('Failed to embed chunk: @class (code @code)', [
++                '@class' => $e::class,
++                '@code' => $e->getCode(),
+               ]);
+             }
+           }
+@@ -375,8 +385,10 @@
+             throw $e;
+           }
+           $logger = $this->loggerChannelFactory->get('ai_search');
+-          $logger->warning('Failed to embed chunk: @message', [
+-            '@message' => $e->getMessage(),
++          // Class and code only: the message can repeat the chunk.
++          $logger->warning('Failed to embed chunk: @class (code @code)', [
++            '@class' => $e::class,
++            '@code' => $e->getCode(),
+           ]);
+         }
+       }
+diff --git a/src/Plugin/AiFunctionCall/FilterableRagTool.php b/src/Plugin/AiFunctionCall/FilterableRagTool.php
+--- a/src/Plugin/AiFunctionCall/FilterableRagTool.php
++++ b/src/Plugin/AiFunctionCall/FilterableRagTool.php
+@@ -145,9 +145,11 @@
+       }
+     }
+     catch (\Exception $e) {
+-      $this->logger->error('Filterable RAG search failed for index "@index": @message', [
++      // Class and code only: the message can repeat the search string.
++      $this->logger->error('Filterable RAG search failed for index "@index": @class (code @code)', [
+         '@index' => $this->indexId,
+-        '@message' => $e->getMessage(),
++        '@class' => $e::class,
++        '@code' => $e->getCode(),
+       ]);
+       $this->setOutput("Failed to search the index");
+       return;

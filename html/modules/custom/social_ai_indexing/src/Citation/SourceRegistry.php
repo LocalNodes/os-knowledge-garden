@@ -38,6 +38,18 @@ final class SourceRegistry {
   private array $excerpts = [];
 
   /**
+   * Whether a search in this run broke (backend error, bad index or field).
+   *
+   * Never set for a refused group: that must read like an empty search.
+   */
+  private bool $searchTrouble = FALSE;
+
+  /**
+   * The kind of AI service failure in this run: 'quota', 'setup' or NULL.
+   */
+  private ?string $serviceFailure = NULL;
+
+  /**
    * Registers a retrieved entity, or returns its existing source.
    *
    * @throws \InvalidArgumentException
@@ -130,12 +142,48 @@ final class SourceRegistry {
   }
 
   /**
-   * Empties the registry and forgets the rewritten message.
+   * Records that a search in this run broke.
+   *
+   * Only for causes that are the same whichever group was asked for, so the
+   * reply can say so without hinting that a group exists.
+   */
+  public function markSearchTrouble(): void {
+    $this->searchTrouble = TRUE;
+  }
+
+  /**
+   * Whether a search in this run broke.
+   */
+  public function hadSearchTrouble(): bool {
+    return $this->searchTrouble;
+  }
+
+  /**
+   * Records that the AI service ran out of quota or isn't set up.
+   *
+   * @param string $kind
+   *   'quota' or 'setup'.
+   */
+  public function markServiceFailure(string $kind): void {
+    $this->serviceFailure = $kind;
+  }
+
+  /**
+   * The AI service failure in this run ('quota' or 'setup'), or NULL.
+   */
+  public function serviceFailure(): ?string {
+    return $this->serviceFailure;
+  }
+
+  /**
+   * Empties the registry, forgets the rewritten message and clears both flags.
    */
   public function reset(): void {
     $this->sources = [];
     $this->excerpts = [];
     $this->rewrittenMessage = NULL;
+    $this->searchTrouble = FALSE;
+    $this->serviceFailure = NULL;
   }
 
 }

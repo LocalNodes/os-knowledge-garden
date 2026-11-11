@@ -80,7 +80,7 @@ export const OVERVIEW_NONE_RESPONSE = { summary_html: null };
  * No Sources list.
  */
 export const NO_ANSWER_GROUP =
-  "I couldn't find anything about that in this group's pages. Try asking with different words, or look through the group's pages yourself.";
+  "I couldn't find anything about that in this group's documents. Try asking with different words, or open the group's documents yourself.";
 
 export const CHAT_NO_ANSWER_RESPONSE = {
   html: `<p>${NO_ANSWER_GROUP}</p>\n`,

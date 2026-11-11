@@ -73,13 +73,13 @@ final class ToolCallEchoTest extends UnitTestCase {
   }
 
   /**
-   * An echo is logged as tool_call_echo and gets the no-answer copy.
+   * An echo is logged as tool_call_echo and gets the no-sourced-answer copy.
    */
   public function testEchoIsCountedAndReadsAsNoAnswer(): void {
     [$reason, $outcome, $shown] = $this->finish(self::RECORD_129);
     $this->assertSame('tool_call_echo', $reason);
     $this->assertSame('no_answer', $outcome);
-    $this->assertSame(CitedAnswer::noRelevantContent(TRUE)->toMarkdown(), $shown);
+    $this->assertSame(CitedAnswer::NO_SOURCED_ANSWER_GROUP, $shown);
     $this->assertStringNotContainsString('Called', $shown);
   }
 
@@ -90,7 +90,7 @@ final class ToolCallEchoTest extends UnitTestCase {
     [$reason, $outcome, $shown] = $this->finish('Bioregionalism organizes life around watersheds.');
     $this->assertSame('no_valid_citations', $reason);
     $this->assertSame('no_answer', $outcome);
-    $this->assertSame(CitedAnswer::noRelevantContent(TRUE)->toMarkdown(), $shown);
+    $this->assertSame(CitedAnswer::NO_SOURCED_ANSWER_GROUP, $shown);
 
     // The reader can't tell the two apart (door 4).
     [, , $echo_shown] = $this->finish(self::RECORD_129);

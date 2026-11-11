@@ -17,6 +17,8 @@
  *   2.5.3 holds: same words, same order, differing in case and a comma.
  *   The "AI" label is template text on purpose, so no setting removes it
  *   (EU AI Act Art. 50).
+ * - A line under the input, always shown, says the question and passages
+ *   from pages the person can see are sent to the AI service.
  */
 #}
 {{ attach_library('ai_chatbot/sticky-chatbot') }}
@@ -55,6 +57,7 @@
 
     <deep-chat {% for key, value in deepchat_settings %}{{ key }}='{{ value|raw }}'
     {% endfor %}></deep-chat>
+    <p class="ln-chat-disclosure">{{ 'Your question, and passages from pages you can see, are sent to the AI service to write the answer.'|t }}</p>
 
   </div>
 </div>

@@ -272,7 +272,9 @@ final class SafetyHelpPageTest extends KernelTestBase {
   }
 
   /**
-   * The footer links the page after "Site terms", with the same middot.
+   * The footer reads "Site terms · Get help · Hacked or phished?".
+   *
+   * "Get help" (/help) comes between the two, with the same middot.
    */
   public function testFooterLinksTheHelpPage(): void {
     $block = $this->container->get('plugin.manager.block')->createInstance('localnodes_footer');
@@ -280,7 +282,7 @@ final class SafetyHelpPageTest extends KernelTestBase {
     $html = (string) $this->container->get('renderer')->renderRoot($build);
 
     $this->assertMatchesRegularExpression(
-      '#>Site terms</a>\s*<span aria-hidden="true">&middot;</span>\s*<a href="[^"]*/help/hacked-or-phished">Hacked or phished\?</a>#',
+      '#>Site terms</a>\s*<span aria-hidden="true">&middot;</span>\s*<a href="[^"]*/help">Get help</a>\s*<span aria-hidden="true">&middot;</span>\s*<a href="[^"]*/help/hacked-or-phished">Hacked or phished\?</a>#',
       $html,
     );
   }

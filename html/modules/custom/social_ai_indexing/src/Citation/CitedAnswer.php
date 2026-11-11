@@ -17,7 +17,7 @@ final readonly class CitedAnswer {
   /**
    * No-answer copy inside a group.
    */
-  public const NO_ANSWER_GROUP = "I couldn't find anything about that in this group's pages. Try asking with different words, or look through the group's pages yourself.";
+  public const NO_ANSWER_GROUP = "I couldn't find anything about that in this group's documents. Try asking with different words, or open the group's documents yourself.";
 
   /**
    * No-answer copy outside a group.
@@ -25,9 +25,44 @@ final readonly class CitedAnswer {
   public const NO_ANSWER_SITE = "I couldn't find anything about that on this site. Try asking with different words, or use search.";
 
   /**
-   * Fallback copy for an answer that cannot be cited.
+   * Pages were found, but no sentence with a source survived, in a group.
    */
-  public const FALLBACK = "I couldn't find a source I can point you to for that, so I won't guess. Try asking with different words, or look through the group's pages yourself.";
+  public const NO_SOURCED_ANSWER_GROUP = "I couldn't give you an answer with a source this time. Try asking with different words, or open the group's documents yourself.";
+
+  /**
+   * Pages were found, but no sentence with a source survived, outside a group.
+   */
+  public const NO_SOURCED_ANSWER_SITE = "I couldn't give you an answer with a source this time. Try asking with different words, or use search.";
+
+  /**
+   * The search broke: a backend error, or an index or field that is missing.
+   *
+   * Never used for a refused group, which gets the no-answer copy.
+   */
+  public const SEARCH_TROUBLE = "I couldn't look through the documents just now. Wait a moment, then ask again. If it keeps happening, use Get help at the bottom of the page.";
+
+  /**
+   * Fallback copy for an answer that cannot be finished with sources.
+   */
+  public const FALLBACK = "I couldn't finish an answer with sources this time, so I won't guess. Ask again, or look through the documents yourself.";
+
+  /**
+   * The AI service is out of quota or isn't set up.
+   */
+  public const UNAVAILABLE = "The assistant isn't available right now. You can still open and read the documents. If this keeps happening, use Get help at the bottom of the page.";
+
+  /**
+   * Every fixed reply the assistant can give instead of an answer.
+   */
+  public const FIXED_REPLIES = [
+    self::NO_ANSWER_GROUP,
+    self::NO_ANSWER_SITE,
+    self::NO_SOURCED_ANSWER_GROUP,
+    self::NO_SOURCED_ANSWER_SITE,
+    self::SEARCH_TROUBLE,
+    self::FALLBACK,
+    self::UNAVAILABLE,
+  ];
 
   /**
    * The Sources heading line.

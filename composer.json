@@ -30,7 +30,8 @@
         "drupal/ai_provider_openrouter": "1.1.9",
         "drupal/ai_search": "^1.3@alpha",
         "drupal/safe_governance": "^1.0@dev",
-        "drupal/gas_sponsor": "^1.0@dev"
+        "drupal/gas_sponsor": "^1.0@dev",
+        "league/html-to-markdown": "^5.2.3"
     },
     "require-dev": {
         "drupal/core-dev": "^10.6",
@@ -94,9 +95,13 @@
             "drupal/ai": {
                 "AI Chatbot: return provider errors as a handled chat error (HTTP 200), not 500": "patches/ai-chatbot-provider-error-200.patch"
             },
+            "drupal/ai_provider_openrouter": {
+                "Log API errors by class and HTTP status, not their message": "patches/ai-provider-openrouter-log-without-text.patch"
+            },
             "drupal/ai_search": {
                 "AI Search: Include citation fields in RAG search output": "patches/ai-search-citation-fields.patch",
-                "Rethrow rate-limit, quota and provider 5xx errors instead of dropping the chunk; keep an item tracked when the VDB client did not finish it": "patches/ai-search-rethrow-provider-limits.patch"
+                "Rethrow rate-limit, quota and provider 5xx errors instead of dropping the chunk; keep an item tracked when the VDB client did not finish it": "patches/ai-search-rethrow-provider-limits.patch",
+                "Log embedding and RAG errors by class and code, and bad chunks by length and hash, not their text": "patches/ai-search-log-without-text.patch"
             },
             "drupal/gemini_provider": {
                 "Add chat_with_tools support, fix role mapping for ai_agents compatibility": "patches/gemini-provider-chat-with-tools-and-roles.patch",
@@ -110,6 +115,9 @@
             },
             "drupal/ai_vdb_provider_qdrant": {
                 "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"
+            },
+            "drupal/search_api_solr": {
+                "Log indexing and search errors by class and code, not Solr's message (it can quote field values and search keys)": "patches/search-api-solr-log-without-text.patch"
             }
         },
         "patches-ignore": {

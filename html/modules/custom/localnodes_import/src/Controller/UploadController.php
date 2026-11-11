@@ -101,7 +101,13 @@ final class UploadController extends ControllerBase {
       $result = $this->uploadHandler->handleFileUpload(new FormUploadedFile($uploaded), $this->rules->validators(), $destination, FileExists::Rename, FALSE);
     }
     catch (\Throwable $e) {
-      $this->logger->error('Upload of @name failed: @message', ['@name' => $name, '@message' => $e->getMessage()]);
+      // A file name can say what the document is about, and the message
+      // often repeats the path, so log only the type, size and error class.
+      $this->logger->error('Upload of a .@extension file (@bytes bytes) failed: @class', [
+        '@extension' => strtolower(pathinfo($name, PATHINFO_EXTENSION)),
+        '@bytes' => (int) $uploaded->getSize(),
+        '@class' => $e::class,
+      ]);
       return new JsonResponse(['error' => (string) $this->t('Something went wrong on our side. Try importing it again.')], 500);
     }
 

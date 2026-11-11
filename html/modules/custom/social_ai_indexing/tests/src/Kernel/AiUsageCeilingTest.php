@@ -389,14 +389,14 @@ final class AiUsageCeilingTest extends GroupAccessKernelTestBase {
     foreach ($results as $result) {
       $this->assertTrue($result['entity']->access('view', $non), 'Every result is one P-NON may view.');
     }
-    $this->assertNotSame([], $this->logged('social_ai_indexing', 'Vector search failed: Token limit reached'), 'The vector leg met ai_usage_limits\' own refusal.');
+    $this->assertNotSame([], $this->logged('social_ai_indexing', 'Vector search failed: ' . AiTokenUsageException::class), 'The vector leg met ai_usage_limits\' own refusal.');
 
     $related = NULL;
     $this->assertNull(self::thrown(function () use ($non, &$related) {
       $related = $this->container->get('social_ai_indexing.related_content')->findRelated($this->fixtures['G-PUB'], $non);
     }), 'RelatedContentService::findRelated() does not throw at the ceiling.');
     $this->assertSame([], $related, 'No related content at the ceiling.');
-    $this->assertNotSame([], $this->logged('social_ai_indexing', 'Related content search failed: Token limit reached'));
+    $this->assertNotSame([], $this->logged('social_ai_indexing', 'Related content search failed: ' . AiTokenUsageException::class));
 
     $retrieved = NULL;
     $this->assertNull(self::thrown(function () use ($non, &$retrieved) {
