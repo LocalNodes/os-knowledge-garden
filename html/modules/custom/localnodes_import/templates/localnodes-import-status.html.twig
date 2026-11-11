@@ -1,27 +1,31 @@
 {#
 /**
  * @file
- * S5 "Search status" panel on the Import tab (22-25; UI-SPEC Part 8 S5).
+ * The "Preparing documents for the assistant's search" panel on the Import
+ * tab.
  *
- * Order: h2, the count sentence, the stale-worker alert (only when a page
- * has waited more than an hour; role="alert", rendered once by the server),
- * the non-zero breakdown lines or the all-clear line, the two lists, then
- * "Updated ‹relative time›" and "Refresh search status".
+ * Order: h2, the count sentence, the failed-check line (hidden until a check
+ * fails), the stale-worker alert (only when a document has waited more than
+ * an hour; role="alert", rendered once by the server), the non-zero
+ * breakdown lines or the all-clear line, the two lists, then
+ * "Updated ‹relative time›", "Check progress" and a line saying the button
+ * restarts nothing.
  *
  * status.js (library localnodes_import/status) refreshes the numbers from
  * data-status-url on the button, and polls at most every 30 seconds while
- * pages wait and the tab is visible. It writes text with textContent, and
- * announces only the change to "All imported pages are searchable." in the
- * one polite live region. Without JavaScript the button reloads the page.
+ * documents wait and the tab is visible. It writes text with textContent,
+ * and in the one polite live region announces only the all-clear and a
+ * failed check the person asked for. Without JavaScript the button reloads
+ * the page.
  *
  * Available variables:
  * - heading_id: Unique id of the h2.
  * - status: total, searchable, waiting, no_text, stale, updated.
- * - summary: "‹N› of ‹M› imported pages are searchable."
+ * - summary: "‹N› of ‹M› documents are prepared for the assistant's search."
  * - lines: Non-zero breakdown lines.
- * - all: "All imported pages are searchable."
- * - all_hidden: Whether the all-clear line is hidden (pages wait or can't be
- *   searched).
+ * - all: The all-clear line.
+ * - all_hidden: Whether the all-clear line is hidden (documents still
+ *   wait).
  * - stale: The stale-worker message, or empty.
  * - waiting, no_text: Each a list (label, items, pager, open), or empty.
  *   Items have title, url and (no_text) reason.
@@ -44,9 +48,10 @@
 {% endmacro %}
 {% import _self as ui %}
 <section class="card localnodes-import-status" aria-labelledby="{{ heading_id }}" data-localnodes-import-status data-status-url="{{ status_url }}" data-waiting="{{ status.waiting }}" data-no-text="{{ status.no_text }}" data-updated="{{ status.updated }}">
-  <h2 id="{{ heading_id }}" class="localnodes-import-status__heading">{{ 'Search status'|t }}</h2>
+  <h2 id="{{ heading_id }}" class="localnodes-import-status__heading">{{ "Preparing documents for the assistant's search"|t }}</h2>
 
   <p class="localnodes-import-status__summary" data-status-summary>{{ summary }}</p>
+  <p class="localnodes-import-status__error" data-status-error hidden></p>
 
   {% if stale %}
     <div class="localnodes-import-alert localnodes-import-alert--attention localnodes-import-status__stale" role="alert" data-status-stale>
@@ -92,8 +97,9 @@
       {% for name, value in refresh_query %}
         <input type="hidden" name="{{ name }}" value="{{ value }}">
       {% endfor %}
-      <button type="submit" class="btn btn-default button localnodes-import-status__button">{{ ui.icon('refresh') }}{{ 'Refresh search status'|t }}</button>
+      <button type="submit" class="btn btn-default button localnodes-import-status__button">{{ ui.icon('refresh') }}{{ 'Check progress'|t }}</button>
     </form>
+    <p class="localnodes-import-status__note">{{ "This checks progress. It doesn't restart anything."|t }}</p>
   </div>
 
   <div class="visually-hidden" aria-live="polite" data-status-live></div>

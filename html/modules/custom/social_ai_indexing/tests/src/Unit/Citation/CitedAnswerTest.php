@@ -22,11 +22,11 @@ final class CitedAnswerTest extends UnitTestCase {
 
   use CitationTestEntities;
 
-  private const GROUP_NO_ANSWER = "I couldn't find anything about that in this group's pages. Try asking with different words, or look through the group's pages yourself.";
+  private const GROUP_NO_ANSWER = "I couldn't find anything about that in this group's documents. Try asking with different words, or open the group's documents yourself.";
 
   private const SITE_NO_ANSWER = "I couldn't find anything about that on this site. Try asking with different words, or use search.";
 
-  private const FALLBACK = "I couldn't find a source I can point you to for that, so I won't guess. Try asking with different words, or look through the group's pages yourself.";
+  private const FALLBACK = "I couldn't finish an answer with sources this time, so I won't guess. Ask again, or look through the documents yourself.";
 
   /**
    * The cited() factory refuses every invalid answer with its reason code.
@@ -112,6 +112,22 @@ final class CitedAnswerTest extends UnitTestCase {
     $this->assertStringNotContainsString('Sources', $group->toMarkdown());
     // Byte-identical every time, for every person (T-22-20).
     $this->assertSame($group->toMarkdown(), CitedAnswer::noRelevantContent(TRUE)->toMarkdown());
+  }
+
+  /**
+   * The could-not replies are these exact words, with no Sources list.
+   */
+  public function testCouldNotAnswerCopy(): void {
+    $copies = [
+      CitedAnswer::NO_SOURCED_ANSWER_GROUP => "I couldn't give you an answer with a source this time. Try asking with different words, or open the group's documents yourself.",
+      CitedAnswer::NO_SOURCED_ANSWER_SITE => "I couldn't give you an answer with a source this time. Try asking with different words, or use search.",
+      CitedAnswer::SEARCH_TROUBLE => "I couldn't look through the documents just now. Wait a moment, then ask again. If it keeps happening, use Get help at the bottom of the page.",
+      CitedAnswer::UNAVAILABLE => "The assistant isn't available right now. You can still open and read the documents. If this keeps happening, use Get help at the bottom of the page.",
+    ];
+    foreach ($copies as $constant => $words) {
+      $this->assertSame($words, $constant);
+      $this->assertSame([], CitationInvariants::check($constant, new SourceRegistry()));
+    }
   }
 
   /**

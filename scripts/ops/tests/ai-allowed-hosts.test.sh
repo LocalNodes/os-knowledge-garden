@@ -18,7 +18,7 @@
 #                 same with a local php or a container.
 #   SETTINGS=...  settings.php to test (default: the repo's).
 set -u
-cd "$(dirname "$0")/../../.."
+cd "$(dirname "$0")/../../.." || exit 1
 PHP="${PHP:-php}"
 SETTINGS="${SETTINGS:-html/sites/default/settings.php}"
 
@@ -39,6 +39,7 @@ foreach (array_slice($argv, 2) as $kv) putenv($kv);
 $app_root = getcwd() . '/html'; $site_path = 'sites/default';
 $settings = []; $config = []; $databases = [];
 // settings.ddev.php is DDEV-generated and absent here; settings.php guards it.
+putenv('DRUPAL_HASH_SALT=fixture-explicit-hash-salt');
 require $settings_file;
 echo array_key_exists('ai.settings', $config) && array_key_exists('allowed_hosts', $config['ai.settings'])
   ? json_encode($config['ai.settings']['allowed_hosts']) : 'unset';

@@ -28,10 +28,11 @@ if [ "$SITE_URI" = "http://localhost" ]; then
 fi
 DRUSH="${LOCALNODES_DRUSH:-/var/www/html/vendor/bin/drush} -r /var/www/html/html --uri=$SITE_URI"
 
-# --- Auto-generate hash salt if using default sentinel value ---
-if [ "$DRUPAL_HASH_SALT" = "generate-random" ] || [ -z "$DRUPAL_HASH_SALT" ]; then
-  export DRUPAL_HASH_SALT=$(openssl rand -hex 32)
-  echo "Generated random DRUPAL_HASH_SALT."
+# --- One private salt shared by web, worker and exec processes ---
+if [ "${DRUPAL_HASH_SALT:-}" = "generate-random" ] || [ -z "${DRUPAL_HASH_SALT:-}" ]; then
+  mkdir -p /var/www/private
+  chown www-data:www-data /var/www/private
+  su -s /bin/sh www-data -c 'php /var/www/html/html/sites/default/hash-salt.php'
 fi
 
 # --- Wait for services ---
@@ -429,7 +430,7 @@ if [ "$INSTALLED" = false ]; then
     exit 1
   fi
 
-  echo "=== FRESH INSTALL ==="
+  printf '\n=== FRESH INSTALL ===\n'
 
   # No default admin password. When none is set (or it is the old "admin"),
   # the account gets a random one that is never printed; the first sign-in

@@ -72,10 +72,14 @@ export async function mockInviteVerify(page: Page, code: number, body: unknown) 
   await page.route('**/api/invite/verify', (route) => json(route, code, body));
 }
 
-/** Room, price and the address check answered in the browser. */
-export async function mockFormReads(page: Page) {
+/**
+ * Room, price and the address check answered in the browser. A price reply can
+ * carry what the invited session's code offers (inviteCode), which words the
+ * page before anyone presses "Apply code".
+ */
+export async function mockFormReads(page: Page, price: unknown = { line: '$20 a month' }) {
   await page.route('**/api/capacity**', (route) => json(route, 200, { room: true }));
-  await page.route('**/api/price**', (route) => json(route, 200, { line: '$20 a month' }));
+  await page.route('**/api/price**', (route) => json(route, 200, price));
   await page.route('**/api/check-subdomain**', (route) => json(route, 200, { available: true, reason: null }));
 }
 
@@ -98,20 +102,23 @@ export async function mockAiKey(page: Page, code: number, body: unknown) {
  * Room and price answered in the browser, the invited details set, then a
  * client-side move to /onboarding.
  */
-export async function openForm(page: Page) {
-  await mockFormReads(page);
+export async function openForm(page: Page, price?: unknown, details: typeof INVITED | null = INVITED) {
+  await mockFormReads(page, price);
   await open(page, '/invite');
   await expect(page.getByRole('heading', { level: 1, name: 'Use Your Invite' })).toBeVisible();
   // Nuxt keeps useState values in payload.state under "$s" + key; the form
   // reads ln-invite-details from there (23-19).
   await page.evaluate(async (details) => {
     const nuxt = (document.querySelector('#__nuxt') as unknown as { __vue_app__: NuxtWindowApp }).__vue_app__.config.globalProperties.$nuxt;
-    nuxt.payload.state['$sln-invite-details'] = details;
+    if (details) nuxt.payload.state['$sln-invite-details'] = details;
     await nuxt.$router.push('/onboarding');
-  }, INVITED);
+  }, details);
   await expect(page.getByRole('heading', { level: 1, name: 'Name Your Community' })).toBeVisible();
   await expect(page.getByText('$20 a month')).toBeVisible();
 }
+
+/** The price reply for an invite whose code is a free pilot of this many months. */
+export const pilotPrice = (months = 3) => ({ line: '$20 a month', inviteCode: { code: INVITED.promoCode, offer: 'pilot', months } });
 
 /** Answers every GET /api/provision-status with this reply. */
 export async function mockStatus(page: Page, reply: unknown, code = 200) {
@@ -135,7 +142,7 @@ export async function mockStatusSequence(page: Page, replies: unknown[]) {
 // 23-37: a held reply adds heldUntil (ISO) and canConfirm; a declined reply adds heldExpired.
 // 23-43 Task 7: a 3DS hold that ran out adds removed, noCapture and refundProven; refunding and
 // refunded add lateActivation.
-export const statusReply = (status: string, extra: Partial<{ siteUrl: string | null, reason: string | null, canRetry: boolean, stopped: boolean, attempt: number, heldUntil: string, canConfirm: boolean, heldExpired: boolean, removed: boolean, noCapture: boolean, refundProven: boolean, lateActivation: boolean }> = {}) => ({
+export const statusReply = (status: string, extra: Partial<{ pilot: boolean, siteUrl: string | null, reason: string | null, canRetry: boolean, stopped: boolean, attempt: number, heldUntil: string, canConfirm: boolean, heldExpired: boolean, removed: boolean, noCapture: boolean, refundProven: boolean, lateActivation: boolean }> = {}) => ({
   status,
   siteUrl: null,
   reason: null,

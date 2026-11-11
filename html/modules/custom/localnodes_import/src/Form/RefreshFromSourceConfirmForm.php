@@ -121,7 +121,7 @@ class RefreshFromSourceConfirmForm extends ConfirmFormBase {
    * {@inheritdoc}
    */
   public function getConfirmText(): TranslatableMarkup {
-    return $this->t('Refresh page');
+    return $this->t('Replace page text');
   }
 
   /**

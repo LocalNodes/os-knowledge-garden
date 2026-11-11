@@ -136,6 +136,24 @@ function social_ai_indexing_preprocess_ai_deepchat(array &$variables): void {
     }
   }
 
+  // What the input says: the group's name on a group's pages, the site
+  // elsewhere. The style file's look for the placeholder is kept.
+  $text_input_json = $variables['deepchat_settings']['textInput'] ?? '{}';
+  $text_input = is_string($text_input_json) ? json_decode($text_input_json, TRUE) : [];
+  if (!is_array($text_input)) {
+    $text_input = [];
+  }
+  $text_input['placeholder']['text'] = $group instanceof \Drupal\group\Entity\GroupInterface
+    // Plain text: the input shows it as text and the attribute is escaped
+    // when printed, so the group name must not arrive as "&amp;".
+    ? \Drupal\Component\Utility\Html::decodeEntities((string) t('Ask about documents in @group', ['@group' => $group->label()]))
+    : (string) t('Ask about pages on this site');
+  $variables['deepchat_settings']['textInput'] = Json::encode($text_input);
+  $variables['#cache']['contexts'] = Cache::mergeContexts($variables['#cache']['contexts'] ?? [], ['route']);
+  if ($group instanceof \Drupal\group\Entity\GroupInterface) {
+    $variables['#cache']['tags'] = Cache::mergeTags($variables['#cache']['tags'] ?? [], $group->getCacheTags());
+  }
+
   // --- LocalNodes chat (UI-SPEC S7) ---
   // Message colours come from the style file
   // (module:social_ai_indexing:localnodes.yml); nothing is hard-coded here.

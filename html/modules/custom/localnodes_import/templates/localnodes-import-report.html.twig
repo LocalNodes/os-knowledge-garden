@@ -13,9 +13,10 @@
  *   'failed') and the page title; the summary then names the page.
  * - group_id, run_id: the group and this run, for the refresh link.
  * - breakdown: non-zero outcome lines ("18 imported", ...).
- * - search: S5 for this import while its pages wait (22-25): "Search is
- *   catching up. ‹N› of ‹M› new pages are searchable so far. ...", or
- *   empty once every page is searchable.
+ * - search: The progress line while this import's documents wait: "Your
+ *   documents are added. ‹N› of ‹M› readable documents are prepared for the
+ *   assistant's search so far. ..." with a link to the Import tab, or empty
+ *   once every document is prepared.
  * - name_heading: "File" or "Page".
  * - rows: one per submitted item, problems first. Each has:
  *   - id: the item id.
@@ -99,7 +100,7 @@
           <td class="localnodes-import-report__action" data-label="{{ 'What you can do'|t }}">
             {{- row.action -}}
             {%- if row.refreshable -%}
-              {{ ' ' }}<a href="{{ path('localnodes_import.refresh', {'group': group_id, 'topic': row.nid}, {'query': {'run': run_id}}) }}" class="btn btn-default button localnodes-import-report__refresh" aria-label="{{ 'Refresh from source: @title'|t({'@title': row.title}) }}"><svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>{{ 'Refresh from source'|t }}</a>
+              {{ ' ' }}<a href="{{ path('localnodes_import.refresh', {'group': group_id, 'topic': row.nid}, {'query': {'run': run_id}}) }}" class="btn btn-default button localnodes-import-report__refresh" aria-label="{{ "Replace with the website's current text: @title"|t({'@title': row.title}) }}"><svg class="localnodes-import-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>{{ "Replace with the website's current text"|t }}</a>
             {%- endif -%}
           </td>
         </tr>
@@ -109,7 +110,7 @@
 
   <div class="localnodes-import-report__actions">
     {% if view_url %}
-      <a href="{{ view_url }}" class="btn btn-primary button button--primary localnodes-import-report__primary">{{ 'View imported pages'|t }}</a>
+      <a href="{{ view_url }}" class="btn btn-primary button button--primary localnodes-import-report__primary">{{ 'View the documents (in Topics)'|t }}</a>
     {% endif %}
     <a href="{{ more_url }}" class="localnodes-import-report__more">{{ 'Import more documents'|t }}</a>
   </div>

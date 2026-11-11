@@ -21,6 +21,16 @@ localnodes_platform.terms:
   requirements:
     _access: 'TRUE'
 
+# The "Get help" page. Open to everyone: someone who can't sign in must
+# still be able to read it.
+localnodes_platform.get_help:
+  path: '/help'
+  defaults:
+    _controller: '\Drupal\localnodes_platform\Controller\GetHelpController::page'
+    _title: 'Get help'
+  requirements:
+    _access: 'TRUE'
+
 # What to do when you were tricked or your wallet was taken over, and how to
 # reach the group's money if this site is down (Tom's ruling, 2026-11-09;
 # 22.1-15). Shipped with the module so every community site has it. Open to

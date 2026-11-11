@@ -118,7 +118,7 @@ class RunReportController extends ControllerBase {
       // Staleness depends on the clock, and the rows change as items finish.
       $cache->setCacheMaxAge(0);
     }
-    $search = $this->catchingUp($run);
+    $search = $this->catchingUp($run, (int) $group->id());
     if ($search !== NULL) {
       // The tracker has no cache tag: read it fresh while pages wait.
       $cache->setCacheMaxAge(0);
@@ -301,23 +301,23 @@ class RunReportController extends ControllerBase {
   }
 
   /**
-   * S5 for this import (UI-SPEC S4 item 3), or NULL when nothing waits.
+   * The progress line for this import, or NULL when nothing waits.
    *
-   * "Search is catching up. ‹N› of ‹M› new pages are searchable so far.
-   * The rest are usually ready within a few minutes." Once every page is
-   * searchable (or the run made no page) the report adds nothing. Pages with
-   * no readable text never become searchable, so they're left out of ‹M›
-   * and "the rest" is only what's waiting (22-30, Codex review); the
-   * breakdown above lists them.
+   * "Your documents are added. ‹N› of ‹M› readable documents are prepared
+   * for the assistant's search so far." with a link to the Import tab's
+   * progress panel. Once every document is prepared (or the run made none)
+   * the report adds nothing. Files with too little readable text are never
+   * prepared, so they're left out of ‹M›; the breakdown above lists them.
    */
-  protected function catchingUp(ImportRun $run): ?TranslatableMarkup {
+  protected function catchingUp(ImportRun $run, int $gid): ?TranslatableMarkup {
     $status = $this->searchStatus->forRun((int) $run->id());
     if ($status['total'] === 0 || $status['waiting'] === 0) {
       return NULL;
     }
-    return $this->t('Search is catching up. @searchable of @total new pages are searchable so far. The rest are usually ready within a few minutes.', [
+    return $this->t('Your documents are added. @searchable of @total readable documents are prepared for the assistant\'s search so far. You can leave this page and <a href=":progress">check progress on the Import tab</a>.', [
       '@searchable' => $status['searchable'],
       '@total' => $status['total'] - $status['no_text'],
+      ':progress' => Url::fromRoute('localnodes_import.landing', ['group' => $gid])->toString(),
     ]);
   }
 

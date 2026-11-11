@@ -182,8 +182,8 @@ final class SearchStatusTest extends ImportKernelTestBase {
     $this->onPage('');
     $no_text = $this->status()->noTextList($gid, 2);
     $this->assertSame(['Garden Committee Minutes, March', 'Blank page'], array_map(static fn(array $row): string => (string) $row['title'], $no_text));
-    $this->assertSame("This looks like a scanned PDF, so its text can't be read. Members can open it, but search and the AI assistant won't find it.", (string) $no_text[0]['reason']);
-    $this->assertSame("We couldn't find any text in this file. Members can open it, but search and the AI assistant won't find it.", (string) $no_text[1]['reason']);
+    $this->assertSame("This may be an image-only scan. Members can open it, but we couldn't read enough text for search and the AI assistant. Add a copy whose text you can select and copy.", (string) $no_text[0]['reason']);
+    $this->assertSame("We couldn't read enough text in this file. Members can open it, but search and the AI assistant may not find it. Add a copy whose text you can select and copy.", (string) $no_text[1]['reason']);
     $this->assertSame('/node/' . $this->nidOf($scan), $no_text[0]['url']);
   }
 

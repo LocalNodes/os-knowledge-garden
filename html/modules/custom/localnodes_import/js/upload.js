@@ -11,7 +11,8 @@
  *   the X-CSRF-Token header from /session/token, so PHP's max_file_uploads
  *   and post_max_size never drop a file;
  * - shows per-row progress, "Retry upload", a summary line and "Stop
- *   uploading". The summary changes with every file; a screen reader hears
+ *   remaining uploads", with a line saying files already uploaded will
+ *   still be added. The summary changes with every file; a screen reader hears
  *   it through the screen's one polite region at most every 5 seconds (the
  *   latest count), then the final count (22-30 Q3);
  * - then fills the hidden fids / not_uploaded / refused fields and submits
@@ -153,14 +154,21 @@
     const progress = el('div', 'localnodes-import-chosen__progress');
     this.summary = el('p', 'localnodes-import-chosen__summary');
     this.summary.setAttribute('tabindex', '-1');
-    this.stop = el('button', 'button btn btn-default localnodes-import-chosen__stop', Drupal.t('Stop uploading'));
+    this.stop = el('button', 'button btn btn-default localnodes-import-chosen__stop', Drupal.t('Stop remaining uploads'));
     this.stop.type = 'button';
     this.stop.hidden = true;
     this.stop.addEventListener('click', function () {
       self.stopUploading();
     });
+    // Says what stopping keeps, before anyone presses it; the button names
+    // this line as its description.
+    this.stopNote = el('p', 'localnodes-import-chosen__stop-note', Drupal.t('Files already uploaded will still be added.'));
+    this.stopNote.id = 'localnodes-import-stop-note';
+    this.stopNote.hidden = true;
+    this.stop.setAttribute('aria-describedby', this.stopNote.id);
     progress.appendChild(this.summary);
     progress.appendChild(this.stop);
+    progress.appendChild(this.stopNote);
     this.list = el('ul', 'localnodes-import-chosen__list');
     this.panel.appendChild(this.count);
     this.panel.appendChild(this.note);
@@ -487,6 +495,7 @@
     this.setButtonLabel(Drupal.t('Uploading…'));
     this.spinner.hidden = false;
     this.stop.hidden = false;
+    this.stopNote.hidden = false;
     this.entries.forEach(function (entry) {
       entry.remove.hidden = true;
     });
@@ -653,6 +662,7 @@
     }
     this.finished = true;
     this.stop.hidden = true;
+    this.stopNote.hidden = true;
     const fids = [];
     const notUploaded = [];
     const refused = [];

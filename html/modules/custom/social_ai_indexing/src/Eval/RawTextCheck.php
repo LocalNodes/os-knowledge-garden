@@ -44,7 +44,7 @@ final class RawTextCheck {
    */
   public static function findings(string $answer, array $toolOutputs, array $questions): array {
     $normalised = self::normalise($answer);
-    foreach ([CitedAnswer::FALLBACK, CitedAnswer::NO_ANSWER_GROUP, CitedAnswer::NO_ANSWER_SITE] as $copy) {
+    foreach (CitedAnswer::FIXED_REPLIES as $copy) {
       if ($normalised === self::normalise($copy)) {
         return [];
       }

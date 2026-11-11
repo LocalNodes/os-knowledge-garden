@@ -4,7 +4,7 @@
  * The community site's footer line, in the agreed wording.
  *
  * "‹community› · a community on LocalNodes · Open source · Site terms ·
- * Hacked or phished?", with the small node mark before "LocalNodes". The mark
+ * Get help · Hacked or phished?", with the small node mark before "LocalNodes". The mark
  * is decorative (the text beside it names LocalNodes), so its alt text is
  * empty. "Site terms" was added by 23-26, "Hacked or phished?" by 22.1-15.
  *
@@ -12,6 +12,7 @@
  * - site_name: The community's name (system.site).
  * - repository_url: Where "Open source" points.
  * - terms_url: The site terms page, /terms (23-26).
+ * - get_help_url: The "Get help" page, /help.
  * - help_url: The "Hacked or Phished?" help page, /help/hacked-or-phished
  *   (22.1-15).
  * - mark_url: The reversed node mark, for the footer's dark background.
@@ -29,6 +30,8 @@
     <a href="{{ repository_url }}" rel="noopener">{% trans %}Open source{% endtrans %}</a>
     <span aria-hidden="true">&middot;</span>
     <a href="{{ terms_url }}">{% trans %}Site terms{% endtrans %}</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ get_help_url }}">{% trans %}Get help{% endtrans %}</a>
     <span aria-hidden="true">&middot;</span>
     <a href="{{ help_url }}">{% trans %}Hacked or phished?{% endtrans %}</a>
   </p>

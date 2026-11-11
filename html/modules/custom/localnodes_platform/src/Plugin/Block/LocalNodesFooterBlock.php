@@ -105,6 +105,7 @@ final class LocalNodesFooterBlock extends BlockBase implements ContainerFactoryP
     }
     $mark = $this->moduleList->getPath('localnodes_platform') . '/images/localnodes-mark-reversed.svg';
     $terms = Url::fromRoute('localnodes_platform.terms')->toString(TRUE);
+    $get_help = Url::fromRoute('localnodes_platform.get_help')->toString(TRUE);
     $help = Url::fromRoute('localnodes_platform.safety_help')->toString(TRUE);
     $build = [
       '#theme' => 'localnodes_footer',
@@ -112,10 +113,11 @@ final class LocalNodesFooterBlock extends BlockBase implements ContainerFactoryP
       '#repository_url' => $url,
       '#mark_url' => $this->fileUrlGenerator->generateString($mark),
       '#terms_url' => $terms->getGeneratedUrl(),
+      '#get_help_url' => $get_help->getGeneratedUrl(),
       '#help_url' => $help->getGeneratedUrl(),
       '#cache' => ['tags' => ['config:system.site']],
     ];
-    CacheableMetadata::createFromRenderArray($build)->merge(CacheableMetadata::createFromObject($terms))->merge(CacheableMetadata::createFromObject($help))->applyTo($build);
+    CacheableMetadata::createFromRenderArray($build)->merge(CacheableMetadata::createFromObject($terms))->merge(CacheableMetadata::createFromObject($get_help))->merge(CacheableMetadata::createFromObject($help))->applyTo($build);
     return $build;
   }
 

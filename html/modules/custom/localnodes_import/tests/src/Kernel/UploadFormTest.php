@@ -78,6 +78,8 @@ final class UploadFormTest extends ImportKernelTestBase {
     $this->assertSame('Who can see these pages?', (string) $form['visibility']['#title']);
     $this->assertSame(['group', 'community'], array_keys($form['visibility']['#options']), 'Only what the group allows');
     $this->assertSame('group', $form['visibility']['#default_value']);
+    $this->assertSame(["This group's members", 'All site members'], array_values(array_map('strval', $form['visibility']['#options'])));
+    $this->assertSame('Members of this group can read these documents. People who manage or host the site may also have access.', (string) $form['visibility']['group']['#description']);
 
     [, $state] = $this->submit($this->validValues(['visibility' => 'public']));
     $this->assertNotEmpty($state->getErrors(), 'A posted visibility the group does not allow is refused');
@@ -86,6 +88,17 @@ final class UploadFormTest extends ImportKernelTestBase {
     [, $state] = $this->submit($this->validValues(['visibility' => 'community']));
     $this->assertSame([], $this->errors($state));
     $this->assertSame('community', $this->onlyRun()->get('visibility')->value);
+  }
+
+  /**
+   * The file picker says which files the assistant can read, and that a
+   * changed file comes in as a new document.
+   */
+  public function testFileAdvice(): void {
+    $form = $this->buildFresh();
+    $this->assertStringEndsWith("For search and AI answers, use files whose text you can select and copy. An image-only scan can still be added and opened, but the assistant can't read it. A very short file may be too short to use.", (string) $form['files']['#description']);
+    $this->assertStringStartsWith('PDF, Word (.docx, .doc), OpenDocument (.odt), text (.txt) or Markdown (.md). Up to ', (string) $form['files']['#description']);
+    $this->assertSame('A changed version of a file is added as a new document. The old one stays until you delete it.', (string) $form['new_version_note']['#value']);
   }
 
   /**

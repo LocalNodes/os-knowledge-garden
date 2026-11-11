@@ -17,7 +17,8 @@ use Drupal\ai\Event\PreGenerateResponseEvent;
  *   $settings['localnodes_demo_module'] (DEMO_MODULE, with the entrypoint's
  *   default 'localnodes_demo').
  * - localnodes_platform_requirements('runtime') reports an error naming
- *   GEMINI_KEY_TIER unless the tier is paid or local, or the site is a demo.
+ *   GEMINI_KEY_TIER when a key is set, unless the tier is paid or local,
+ *   or the site is a demo. Without a key the assistant is not set up.
  * - Nothing blocks a Gemini request at runtime.
  *
  * @group phase22
@@ -28,7 +29,7 @@ final class DataTierGateTest extends GroupAccessKernelTestBase {
   /**
    * Environment variables settings.php reads for the gate.
    */
-  private const ENV = ['IS_DDEV_PROJECT', 'GEMINI_KEY_TIER', 'DEMO_MODULE'];
+  private const ENV = ['IS_DDEV_PROJECT', 'GEMINI_KEY_TIER', 'DEMO_MODULE', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'DRUPAL_HASH_SALT'];
 
   /**
    * Environment values before the test, restored in tearDown().
@@ -45,6 +46,8 @@ final class DataTierGateTest extends GroupAccessKernelTestBase {
     foreach (self::ENV as $name) {
       $this->savedEnv[$name] = getenv($name);
     }
+    putenv('GEMINI_API_KEY=fixture-gemini-key');
+    putenv('OPENROUTER_API_KEY');
     require_once $this->root . '/core/includes/install.inc';
     $path = $this->container->get('extension.list.module')->getPath('localnodes_platform');
     require_once $this->root . '/' . $path . '/localnodes_platform.install';
@@ -68,7 +71,8 @@ final class DataTierGateTest extends GroupAccessKernelTestBase {
    */
   private function settingsFor(array $env): array {
     foreach (self::ENV as $name) {
-      $value = $env[$name] ?? NULL;
+      // This test reads AI settings, not a site's persistent salt storage.
+      $value = $env[$name] ?? ($name === 'DRUPAL_HASH_SALT' ? 'fixture-explicit-hash-salt' : NULL);
       putenv($value === NULL ? $name : "$name=$value");
     }
     $file = $this->root . '/sites/default/settings.php';
@@ -133,6 +137,31 @@ final class DataTierGateTest extends GroupAccessKernelTestBase {
       $this->assertSame(REQUIREMENT_ERROR, $requirement['severity'], 'Tier ' . var_export($tier, TRUE) . ' on a non-demo site is an error.');
       $this->assertStringContainsString('GEMINI_KEY_TIER', (string) $requirement['description']);
     }
+  }
+
+  /**
+   * A site with no key is not sending content to Gemini yet.
+   */
+  public function testNoKeyIsInformational(): void {
+    foreach ([FALSE, ''] as $key) {
+      putenv($key === FALSE ? 'GEMINI_API_KEY' : "GEMINI_API_KEY=$key");
+      foreach (['', 'unpaid', 'paid', 'local', NULL] as $tier) {
+        $requirement = $this->requirementFor($tier, 'none');
+        $this->assertSame(REQUIREMENT_INFO, $requirement['severity']);
+        $this->assertSame('The assistant is not set up', (string) $requirement['value']);
+      }
+    }
+  }
+
+  /**
+   * A separately configured provider is not described as an absent assistant.
+   */
+  public function testOpenRouterKeyDoesNotMeanTheAssistantIsMissing(): void {
+    putenv('GEMINI_API_KEY');
+    putenv('OPENROUTER_API_KEY=fixture-openrouter-key');
+    $requirement = $this->requirementFor('', 'none');
+    $this->assertSame(REQUIREMENT_INFO, $requirement['severity']);
+    $this->assertSame('No Gemini key set', (string) $requirement['value']);
   }
 
   /**

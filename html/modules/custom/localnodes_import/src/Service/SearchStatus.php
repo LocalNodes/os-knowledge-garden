@@ -158,8 +158,8 @@ class SearchStatus {
    */
   public function noTextReason(?string $reason): TranslatableMarkup {
     return $reason === 'scanned_pdf'
-      ? $this->t("This looks like a scanned PDF, so its text can't be read. Members can open it, but search and the AI assistant won't find it.")
-      : $this->t("We couldn't find any text in this file. Members can open it, but search and the AI assistant won't find it.");
+      ? $this->t("This may be an image-only scan. Members can open it, but we couldn't read enough text for search and the AI assistant. Add a copy whose text you can select and copy.")
+      : $this->t("We couldn't read enough text in this file. Members can open it, but search and the AI assistant may not find it. Add a copy whose text you can select and copy.");
   }
 
   /**

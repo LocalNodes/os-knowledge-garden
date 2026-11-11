@@ -25,7 +25,9 @@ use Drupal\search_api\Query\QueryInterface;
  *   QdrantProvider::prepareFilters() translates them;
  * - 'ignore': returns every stored item whatever the conditions say, like
  *   prepareFilters() returning [] on an exception (AI-SPEC pitfall 1);
- * - 'throw': throws \RuntimeException from search().
+ * - 'throw': throws \RuntimeException from search();
+ * - 'throw_with_keys': throws one whose message repeats the search keys, as
+ *   a search server's error can.
  *
  * Mirrored from QdrantProvider (ai_vdb_provider_qdrant, read 2026-11-04):
  * - convertConditionToQdrant(): a condition on a field the index lacks
@@ -195,6 +197,10 @@ class StubAiSearchBackend extends BackendPluginBase {
     $mode = \Drupal::state()->get(self::MODE_KEY, 'honour');
     if ($mode === 'throw') {
       throw new \RuntimeException('Stub AI search backend: throw mode.');
+    }
+    if ($mode === 'throw_with_keys') {
+      $keys = $query->getOriginalKeys();
+      throw new \RuntimeException('Stub AI search backend: cannot parse ' . (is_array($keys) ? json_encode($keys) : (string) $keys));
     }
 
     $results = $query->getResults();

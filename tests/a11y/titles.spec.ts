@@ -2,7 +2,7 @@
 //
 // Page titles only: the browser <title> and the page's main title (the h1).
 // Tabs, in-page headings, buttons and body copy stay sentence case, so
-// "Search status" and "Past imports" (h2s on the Import tab) don't change.
+// "Preparing documents for the assistant's search" and "Past imports" (h2s on the Import tab) don't change.
 // Each Phase 22 route is pinned here: the Import tab (S1), Upload Files
 // (S2), Import Web Pages (S3), the batch page and the report (S4) and the
 // refresh page.

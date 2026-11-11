@@ -125,7 +125,7 @@ final class OrganizerWelcomeFooterTest extends LocalNodesEmailKernelTestBase {
     // (or a wallet line, or a header slot) would be another row.
     $rows = $xpath->query('//div[contains(concat(" ", normalize-space(@class), " "), " card ")]//td[contains(concat(" ", normalize-space(@class), " "), " wrapper ")]/table/tr | //div[contains(concat(" ", normalize-space(@class), " "), " card ")]//td[contains(concat(" ", normalize-space(@class), " "), " wrapper ")]/table/tbody/tr');
     $this->assertSame(1, $rows->length, 'The card holds the body row only: no header, footer or wallet row.');
-    $this->assertStringContainsString('Your community\'s site is ready.', $this->fold($rows->item(0)->textContent));
+    $this->assertStringContainsString('Your community\'s site is ready for you to add your documents.', $this->fold($rows->item(0)->textContent));
   }
 
   /**

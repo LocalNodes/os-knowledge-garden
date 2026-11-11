@@ -22,7 +22,7 @@ import { CHAT_RQ01_RESPONSE, CHAT_RQ01_SOURCES, RQ01_QUESTION } from './fixtures
 
 const SCOPE = { include: ['.ai-deepchat'] };
 const FIRST_MESSAGE =
-  "Hi, I'm an AI assistant. I answer only from pages on this site that you're allowed to see, and I number my " +
+  "Hi, I'm an AI assistant. I answer only from documents and pages on this site that you're allowed to see, and I number my " +
   'sources so you can check them. I can get things wrong, so open a source before you rely on an answer.';
 
 function groupId(): string {

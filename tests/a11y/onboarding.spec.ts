@@ -55,8 +55,10 @@ import {
   mockSuggest,
   mockUnsubscribePost,
   mouseOff,
+  ONBOARDING_URL,
   open,
   openForm,
+  pilotPrice,
   requireOnboardingSite,
   statusReply,
 } from './helpers/onboarding-mocks';
@@ -77,41 +79,51 @@ test.beforeAll(async () => {
 const focusedBox = (page: Page, text: string) => page.locator('div[tabindex="-1"]').filter({ hasText: text });
 
 // --- 0. Landing page (/) -----------------------------------------------------------
-// The homepage copy of 2026-11-11 (Tom's positioning ruling of 2026-11-09): the new hero subline, four
-// "Who it's for" cards and six examples. The copy itself is held by the sign-up site's own test
-// (tests/unit/homepage-copy.test.ts); this scans the page as rendered, wide and at 320 CSS px.
+// The v5 home page: hero with the
+// "Show me a …" switcher in the prototype's order, then Decide, Fund, Yours and the close.
+// The page's motion, CLS, JS-off and contrast checks live in landing-v5.spec.ts; this keeps the
+// shape scan wide and at 320 CSS px. The old "Who it's for" and "See it in action" sections
+// left the page with v5 (their copy test stays in the sign-up site for now).
 
 test.describe('landing page', () => {
-  const CARDS = ['Neighborhoods and civic groups', 'Pop-up villages and gatherings', 'Co-ops and land trusts', 'Guilds and DAOs'];
-  const EXAMPLES = ['A neighborhood association', 'A pop-up village', 'A housing co-op', 'An online guild', 'A land trust', 'A bioregional network'];
+  const SWITCHER = ['neighborhood group', 'pop-up village', 'housing co-op', 'guild'];
+  const SECTIONS = [
+    'Decide in the open, with everyone who has a say.',
+    'A fund the group controls, and can see.',
+    "It's your site. Take it with you.",
+    'Be one of the first communities in.',
+  ];
 
   async function openLanding(page: Page) {
     await open(page, '/');
     await expect(page.getByRole('heading', { level: 1, name: 'Where your community thinks, decides and funds together.' })).toBeVisible();
     await expect(page.getByText('Your community owns it, not a platform.')).toBeVisible();
   }
-  /** The level-3 headings inside the section whose level-2 heading is `name`, in page order. */
-  const cardHeadings = (page: Page, name: string) =>
-    page.locator('section').filter({ has: page.getByRole('heading', { level: 2, name }) }).getByRole('heading', { level: 3 }).allInnerTexts();
+  const switcher = (page: Page) => page.getByRole('group', { name: 'Example community' }).getByRole('button').allInnerTexts();
+  const sectionHeadings = (page: Page) => page.locator('main').getByRole('heading', { level: 2 }).allInnerTexts();
 
   test('default', async ({ page }) => {
     await openLanding(page);
-    expect(await cardHeadings(page, "Who it's for")).toEqual(CARDS);
-    expect((await cardHeadings(page, 'See it in action')).slice(0, EXAMPLES.length)).toEqual(EXAMPLES);
+    expect((await switcher(page)).map((t) => t.trim())).toEqual(SWITCHER);
+    expect((await sectionHeadings(page)).map((t) => t.trim())).toEqual(SECTIONS);
     await checkA11y(page, 'landing', 'default', SCAN);
   });
 
-  // Scoped to main: at 320 CSS px the site header's "Get early access" button and menu button reach
-  // past the viewport (found 2026-11-11, there before this copy change; todo
-  // 2026-11-11-signup-header-reflow-320.md). The copy sections themselves must fit.
-  test('narrow (320 CSS px): the cards stack and nothing in main reaches past the viewport', async ({ page }) => {
+  // Scoped to main: the site header at 320 CSS px is tracked separately.
+  test('narrow (320 CSS px): nothing in main reaches past the viewport', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 });
     await openLanding(page);
-    expect(await cardHeadings(page, "Who it's for")).toEqual(CARDS);
+    expect((await sectionHeadings(page)).map((t) => t.trim())).toEqual(SECTIONS);
     const past = await page.evaluate(() => {
       const width = document.documentElement.clientWidth;
+      // The hero's rings and source paper reach past the window by design (prototype); the hero
+      // band clips them (overflow hidden), so a box counts only when no ancestor clips it.
+      const clipped = (el: Element) => {
+        for (let e = el.parentElement; e; e = e.parentElement) if (getComputedStyle(e).overflowX !== 'visible') return true;
+        return false;
+      };
       return [...document.querySelectorAll('main *')]
-        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > width + 1; })
+        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > width + 1 && !clipped(el); })
         .map((el) => `${el.tagName.toLowerCase()}: ${(el.textContent ?? '').trim().slice(0, 40)}`);
     });
     expect(past, 'nothing in main reaches past 320 CSS px').toEqual([]);
@@ -225,10 +237,93 @@ test.describe('sign-up', () => {
     await checkA11y(page, 'onboarding', 'code-error', SCAN);
   });
 
+  // The server says what the invite's code offers when the price is read, so a
+  // pilot invite opens a form that already reads as a pilot, before anyone
+  // presses "Apply code". In page order the price line comes after the code field.
+  test('pilot invite reads as a pilot before Apply code', async ({ page }) => {
+    await openForm(page, pilotPrice(3));
+    await expect(page.getByText('Your invite includes this code.')).toBeVisible();
+    const priceLine = page.getByText('Free for three months, then $20 a month only if you choose to continue.', { exact: true });
+    await expect(priceLine).toBeVisible();
+    await expect(page.getByText('We save your card now; your three-month pilot costs nothing, and we charge it only if you choose to keep the site.')).toBeVisible();
+    await expect(page.getByText('We keep it so you won\'t need to enter it again if you choose to continue.')).toBeVisible();
+    await expect(page.getByText('We\'ll save your card now and charge it only once your site is live.')).toHaveCount(0);
+    const before = await page.evaluate(() => {
+      const code = document.querySelector('#promo-code-panel');
+      const line = [...document.querySelectorAll('p')].find((p) => p.textContent?.startsWith('Free for three months'));
+      return !!code && !!line && !!(code.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(before, 'the price line follows the code field in the page').toBe(true);
+    await expect(page.getByRole('button', { name: 'Apply code' })).toBeVisible();
+    await mouseOff(page);
+    await checkA11y(page, 'onboarding', 'pilot-invite', SCAN);
+  });
+
+  // The code is asked about only when there is one: an empty field, or one that
+  // holds only spaces, goes straight to the card page with no check.
+  for (const [name, typed] of [['an empty code', ''], ['a code of only spaces', '   ']] as const) {
+    test(`submitting with ${name} sends no code check and goes to the card page`, async ({ page }) => {
+      const checks: string[] = [];
+      const checkouts: Array<Record<string, unknown>> = [];
+      await page.route('**/api/check-code', (route) => { checks.push(route.request().url()); return json(route, 200, { ok: true, offer: 'paid' }); });
+      const cardPage = new URL('/card-page-stub', ONBOARDING_URL).href;
+      await page.route('**/api/create-checkout', (route) => { checkouts.push(route.request().postDataJSON()); return json(route, 200, { url: cardPage }); });
+      await page.route('**/card-page-stub', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Card page</title><h1>Card page</h1>' }));
+      await openForm(page);
+      await page.getByLabel('Community name').fill('Repair Collective');
+      await expect(page.getByRole('status').filter({ hasText: 'Available' })).toHaveText('Available');
+      // The invite's own code is in the field; clear it to what this case types.
+      await page.getByLabel('Code', { exact: true }).fill(typed);
+      await page.getByRole('button', { name: 'Continue to card details' }).click();
+      await page.waitForURL('**/card-page-stub');
+      expect(checks, 'no request to check a code').toEqual([]);
+      expect(checkouts).toHaveLength(1);
+      expect(String(checkouts[0]!.code ?? '').trim()).toBe('');
+    });
+  }
+
+  // With the launch open the invite details are not given to the page, yet the
+  // server still reads the invite cookie at checkout. The price reply says the
+  // session is live, so a typed code is checked before anyone is sent on.
+  test('launch open with an invite cookie: a typed code is checked on submit', async ({ page }) => {
+    const checks: unknown[] = [];
+    let checkouts = 0;
+    await page.route('**/api/check-code', (route) => { checks.push(route.request().postDataJSON()); return json(route, 200, { ok: true, offer: 'pilot', months: 3 }); });
+    await page.route('**/api/create-checkout', (route) => { checkouts += 1; return json(route, 200, { url: new URL('/card-page-stub', ONBOARDING_URL).href }); });
+    await openForm(page, { line: '$20 a month', invited: true }, null);
+    await page.getByLabel('Community name').fill('Repair Collective');
+    await expect(page.getByRole('status').filter({ hasText: 'Available' })).toHaveText('Available');
+    await page.getByLabel('Email').fill('organizer@example.org');
+    await page.getByRole('button', { name: 'I have a code' }).click();
+    await page.getByLabel('Code', { exact: true }).fill('PILOT-TYPED');
+    await page.getByRole('button', { name: 'Continue to card details' }).click();
+    await expect(page.getByText('Free for three months, then $20 a month only if you choose to continue.', { exact: true })).toBeVisible();
+    expect(checks).toEqual([{ code: 'PILOT-TYPED' }]);
+    expect(checkouts, 'nothing is sent to checkout until the new words are shown and the button is pressed again').toBe(0);
+  });
+
+  test('launch open with no invite cookie: a typed code is not checked', async ({ page }) => {
+    const checks: unknown[] = [];
+    await page.route('**/api/check-code', (route) => { checks.push(1); return json(route, 404, { message: 'Not Found' }); });
+    const checkouts: Array<Record<string, unknown>> = [];
+    await page.route('**/api/create-checkout', (route) => { checkouts.push(route.request().postDataJSON()); return json(route, 200, { url: new URL('/card-page-stub', ONBOARDING_URL).href }); });
+    await page.route('**/card-page-stub', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Card page</title>' }));
+    await openForm(page, { line: '$20 a month' }, null);
+    await page.getByLabel('Community name').fill('Repair Collective');
+    await expect(page.getByRole('status').filter({ hasText: 'Available' })).toHaveText('Available');
+    await page.getByLabel('Email').fill('organizer@example.org');
+    await page.getByRole('button', { name: 'I have a code' }).click();
+    await page.getByLabel('Code', { exact: true }).fill('PILOT-TYPED');
+    await page.getByRole('button', { name: 'Continue to card details' }).click();
+    await page.waitForURL('**/card-page-stub');
+    expect(checks).toEqual([]);
+    expect(checkouts).toHaveLength(1);
+  });
+
   test('AI key checked', async ({ page }) => {
     await mockAiKey(page, 200, { ok: true });
     await openForm(page);
-    await page.getByRole('radio', { name: 'Your own Gemini key' }).check();
+    await page.getByRole('radio', { name: 'Your own Gemini account' }).check();
     await page.getByRole('textbox', { name: 'Gemini key' }).fill('test-key-not-real-0000000000000000');
     await page.getByLabel('This key is from a Google Cloud project with billing turned on').check();
     await page.getByRole('button', { name: 'Check key' }).click();
@@ -254,6 +349,9 @@ test.describe('success page', () => {
     await expect(page.locator('[aria-live="polite"]')).toHaveText('Setting up your server.', { timeout: 15_000 });
     await expect(page.getByText('Card saved')).toBeVisible();
     await expect(page.getByText('We\'ll email your sign-in link when your site is ready.')).toBeVisible();
+    // No number of minutes is promised and no countdown shows.
+    await expect(page.getByText('This usually takes a few minutes. We\'ll email you when it\'s ready.', { exact: true })).toBeVisible();
+    await expect(page.getByText(/minutes? left|about 4 minutes/i)).toHaveCount(0);
     await checkA11y(page, 'success', 'progress', SCAN);
   });
 
@@ -295,7 +393,7 @@ test.describe('success page', () => {
     await expect(alert).toBeFocused();
     expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
     await expect(page.getByRole('alert')).toHaveCount(0);
-    await expect(page.getByText('You can try once more for free. If it doesn\'t work a second time, we\'ll stop and you won\'t be charged.')).toBeVisible();
+    await expect(page.getByText('Try setting up your site once more. If it still doesn\'t work, we\'ll stop. You won\'t be charged.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Retry site setup' })).toBeVisible();
     await expect(page.getByText('deploy_failed')).toHaveCount(0);
     await checkA11y(page, 'success', 'failed', SCAN);
@@ -344,7 +442,7 @@ test.describe('success page', () => {
     // orchestrator rule C and ruling point 1 (c), 2026-11-08).
     await status(page, { status: 'failed', siteUrl: null, reason: 'install_failed', canRetry: false, stopped: false, attempt: 2 });
     await open(page, `/success?session_id=${SESSION}`);
-    const alert = focusedBox(page, 'We couldn\'t finish installing your site.');
+    const alert = focusedBox(page, 'We couldn\'t finish setting up your site.');
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toBeFocused();
     expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
@@ -353,7 +451,7 @@ test.describe('success page', () => {
     await expect(line).toHaveCount(1);
     // The line sits under the alert, outside it, so the alert still ends with the reason.
     await expect(alert).not.toContainText('finishing up');
-    await expect(page.getByText('You can try once more for free.', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Try setting up your site once more.', { exact: false })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Retry site setup' })).toHaveCount(0);
     await checkA11y(page, 'success', 'failed-no-retry', SCAN);
   });
@@ -362,7 +460,7 @@ test.describe('success page', () => {
     // Attempt 1 inside its window: the alert only; the window ends in the free retry (23-38).
     await status(page, { status: 'failed', siteUrl: null, reason: 'install_failed', canRetry: false, stopped: false, attempt: 1 });
     await open(page, `/success?session_id=${SESSION}`);
-    const alert = focusedBox(page, 'We couldn\'t finish installing your site.');
+    const alert = focusedBox(page, 'We couldn\'t finish setting up your site.');
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toBeFocused();
     expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
@@ -389,12 +487,20 @@ test.describe('success page', () => {
   // invoice address is in no page's HTML, for either session (T-23-188).
 
   test('payment step (ready)', async ({ page }) => {
-    await status(page, statusReply('ready'));
+    await status(page, statusReply('ready', { pilot: false }));
     await open(page, `/success?session_id=${SESSION}`);
     await expect(page.locator('[aria-live="polite"]')).toHaveText('Taking your first payment.', { timeout: 15_000 });
     await expect(heading(page, 'Setting Up Your Site')).toBeVisible();
     await expect(page.getByText('Taking your first payment', { exact: true })).toBeVisible();
     await checkA11y(page, 'success', 'payment', SCAN);
+  });
+
+  test('payment step (ready, a free pilot)', async ({ page }) => {
+    await status(page, statusReply('ready', { pilot: true }));
+    await open(page, `/success?session_id=${SESSION}`);
+    await expect(page.locator('[aria-live="polite"]')).toHaveText('Confirming your free pilot.', { timeout: 15_000 });
+    await expect(page.getByText('Confirming your free pilot', { exact: true })).toBeVisible();
+    await expect(page.getByText('Taking your first payment')).toHaveCount(0);
   });
 
   const heldBody = /^Your bank needs you to confirm the first payment\. We've emailed you a link\. Your site is ready and waits for you until November (8|9|10), 2026 at \d{1,2}:\d{2}(am|pm) \S+\.$/;
@@ -695,7 +801,7 @@ test.describe('pointer hover keeps text contrast', () => {
     'signup-key-checked': async (page) => {
       await mockAiKey(page, 200, { ok: true });
       await openForm(page);
-      await page.getByRole('radio', { name: 'Your own Gemini key' }).check();
+      await page.getByRole('radio', { name: 'Your own Gemini account' }).check();
       await page.getByRole('textbox', { name: 'Gemini key' }).fill('test-key-not-real-0000000000000000');
       await page.getByLabel('This key is from a Google Cloud project with billing turned on').check();
       await page.getByRole('button', { name: 'Check key' }).click();

@@ -79,7 +79,8 @@ const RECORD = process.env.LN_RECORD === '1';
 // Drupal, so it has its own baseURL and no stored session, and only
 // onboarding.spec.ts runs in it. Results go to the Phase 23 folder.
 export const ONBOARDING_URL = process.env.LN_ONBOARDING_URL ?? 'http://localhost:3000';
-const ONBOARDING_SPECS = ['onboarding.spec.ts', ...PHASE23_STATE_SPECS];
+// The home page, against the built site (landing-v5.spec.ts).
+const ONBOARDING_SPECS = ['onboarding.spec.ts', 'landing-v5.spec.ts', ...PHASE23_STATE_SPECS];
 
 // global-setup.ts and global-teardown.ts seed and check the DDEV Drupal site.
 // A run of only the onboarding project needs no Drupal and no DDEV, so they are

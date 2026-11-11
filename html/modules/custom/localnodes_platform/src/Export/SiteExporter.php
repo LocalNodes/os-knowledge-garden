@@ -16,7 +16,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 /**
- * Writes one archive a community can take to its own server (22.2, export).
+ * Writes one archive a community can take to its own server.
  *
  * The archive is an uncompressed tar holding one folder:
  * - database.sql.gz: the whole database. Tables that only hold caches, logs,
@@ -25,8 +25,9 @@ use Symfony\Component\Process\Process;
  *   by one, after the dump, with secrets taken out (writeScrubbedConfig()).
  * - public-files.tar.gz and private-files.tar.gz, without files Drupal makes
  *   again on its own (compiled templates, image derivatives, aggregates).
- * - library/: only when export() is given a library writer. None exists yet
- *   (Part 2 of the job, not built), so the Drush command passes none.
+ * - library/: only when export() is given a library writer (LibraryWriter;
+ *   the Drush command passes it unless --no-library): every published topic,
+ *   event and page as Markdown with its files, split by who may read it.
  * - manifest.json, SHA256SUMS and RESTORE.md.
  *
  * Secrets never leave the site. Keys come from the environment, so a fresh
@@ -49,7 +50,7 @@ final class SiteExporter {
   /**
    * Format of manifest.json; raise it when a part changes shape.
    */
-  public const FORMAT_VERSION = 1;
+  public const FORMAT_VERSION = 2;
 
   /**
    * Tables whose rows are left out (structure kept), as LIKE patterns.
@@ -111,7 +112,7 @@ final class SiteExporter {
   /**
    * Top-level folders of the private files left out.
    */
-  public const PRIVATE_SKIP = ['styles', 'php', 'tmp'];
+  public const PRIVATE_SKIP = ['styles', 'php', 'tmp', '.localnodes'];
 
   public function __construct(
     private readonly Connection $database,
@@ -706,7 +707,7 @@ final class SiteExporter {
       'library' => $library_counts,
       'not_included' => [
         'keys' => 'No API key, mail key, token or password from this server. Supply your own (RESTORE.md).',
-        'solr_index' => 'Rebuilt by reindexing (RESTORE.md step 7).',
+        'solr_index' => 'Rebuilt by reindexing (RESTORE.md step 6).',
         'vector_store' => 'Rebuilt by reindexing once you set your own AI key.',
       ],
       'parts' => $parts,

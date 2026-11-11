@@ -236,7 +236,7 @@ test('recorded import run: files, five wiki pages, one question', async ({ page 
   await page.getByRole('button', { name: 'LocalNodes Liaison, AI' }).click();
   await expect(page.getByText(/^Hi, I'm an AI assistant\./)).toBeVisible();
   await capture('S7', 'Opened "LocalNodes LiAIson" on the group\'s page.');
-  const box = page.getByRole('textbox', { name: 'Ask a question' });
+  const box = page.getByRole('textbox', { name: /^Ask about documents in / });
   await box.click();
   await box.pressSequentially(RQ01_QUESTION);
   await page.getByRole('button', { name: 'Send question' }).click();

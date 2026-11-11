@@ -136,10 +136,10 @@ test.describe('S4 Import run and report', () => {
     await expect(rows.first()).toContainText('budget.xlsx');
     await expect(rows.first()).toContainText('Not imported');
     await expect(rows.first()).toContainText(SPREADSHEET);
-    // "View imported pages" only when the run made a page (22-30): on a
+    // "View the documents (in Topics)" only when the run made a page: on a
     // rerun these files are already here, and nothing new is imported.
     const imported = Number(/^(\d+) of/.exec((await page.locator('.localnodes-import-report__summary').textContent()) ?? '')?.[1]);
-    await expect(page.getByRole('link', { name: 'View imported pages' })).toHaveCount(imported > 0 ? 1 : 0);
+    await expect(page.getByRole('link', { name: 'View the documents (in Topics)' })).toHaveCount(imported > 0 ? 1 : 0);
     await expect(page.getByRole('link', { name: 'Import more documents', exact: true })).toBeVisible();
     // "Not searchable" is permanent, so its badge isn't the clock that
     // "In progress" uses (22-30 Codex).

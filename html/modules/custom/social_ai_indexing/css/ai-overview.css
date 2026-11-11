@@ -153,3 +153,12 @@
     opacity: 0.5;
   }
 }
+
+/* The line above the panel that stays when no overview comes back. */
+.ai-overview-notice {
+  max-width: 72ch;
+  margin: 0 0 var(--ln-space-sm, 8px);
+  color: var(--ln-color-text-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}

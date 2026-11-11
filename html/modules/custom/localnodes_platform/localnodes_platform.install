@@ -609,7 +609,15 @@ function localnodes_platform_requirements($phase) {
   $demo = (string) \Drupal\Core\Site\Settings::get('localnodes_demo_module', '');
   $requirement = ['title' => t('Gemini data tier')];
 
-  if ($tier === 'paid' || $tier === 'local') {
+  if ((string) getenv('GEMINI_API_KEY') === '') {
+    $has_openrouter_key = (string) getenv('OPENROUTER_API_KEY') !== '';
+    $requirement['value'] = $has_openrouter_key ? t('No Gemini key set') : t('The assistant is not set up');
+    $requirement['description'] = $has_openrouter_key
+      ? t('This row checks Gemini; an OpenRouter key is set separately.')
+      : t('Add an AI key and finish the assistant setup when you are ready.');
+    $requirement['severity'] = REQUIREMENT_INFO;
+  }
+  elseif ($tier === 'paid' || $tier === 'local') {
     $requirement['value'] = $tier === 'paid' ? t('Paid key declared') : t('Local DDEV');
     $requirement['severity'] = REQUIREMENT_OK;
   }

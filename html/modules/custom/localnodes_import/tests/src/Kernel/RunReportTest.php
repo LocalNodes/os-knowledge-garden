@@ -135,12 +135,12 @@ final class RunReportTest extends ImportKernelTestBase {
       'scanned_pdf' => [
         $this->createItem($run, 'scan_0042_final(2).pdf', ImportItem::OUTCOME_NOT_SEARCHABLE, 'scanned_pdf', (int) $scan->id()),
         'Not searchable',
-        "This looks like a scanned PDF, so its text can't be read. Members can open it, but search and the AI assistant won't find it.",
+        "This may be an image-only scan. Members can open it, but we couldn't read enough text for search and the AI assistant. Add a copy whose text you can select and copy.",
       ],
       'no_text' => [
         $this->createItem($run, 'blank.pdf', ImportItem::OUTCOME_NOT_SEARCHABLE, 'no_text', (int) $blank->id()),
         'Not searchable',
-        "We couldn't find any text in this file. Members can open it, but search and the AI assistant won't find it.",
+        "We couldn't read enough text in this file. Members can open it, but search and the AI assistant may not find it. Add a copy whose text you can select and copy.",
       ],
       'duplicate' => [
         $this->createItem($run, 'copy-of-pdf-01.pdf', ImportItem::OUTCOME_DUPLICATE, NULL, (int) $topic->id()),
@@ -279,8 +279,8 @@ final class RunReportTest extends ImportKernelTestBase {
     $this->assertSame(['File', 'Result', 'What you can do'], $this->nodeTexts($xpath, '//table//th'), 'Column headers');
     $this->assertSame(3, $xpath->query("//table//th[@scope='col']")->length, 'Headers are column headers');
 
-    $primary = $xpath->query("//a[normalize-space(.)='View imported pages']");
-    $this->assertSame(1, $primary->length, 'Primary action "View imported pages"');
+    $primary = $xpath->query("//a[normalize-space(.)='View the documents (in Topics)']");
+    $this->assertSame(1, $primary->length, 'Primary action "View the documents (in Topics)"');
     $this->assertStringContainsString('button--primary', (string) $primary->item(0)->getAttribute('class'));
     $more = $xpath->query("//a[normalize-space(.)='Import more documents']");
     $this->assertSame(1, $more->length, 'Secondary link "Import more documents" (verb plus noun, 22-30)');

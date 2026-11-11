@@ -100,6 +100,8 @@ case "$url" in
     if [ "$method" = GET ]; then
       echo "qdrant read" >> "$SITE/seq"
       [ -f "$SITE/qdrant_info" ] && cat "$SITE/qdrant_info"
+    elif [ "${QDRANT_NO_NEWLINE:-0}" = 1 ]; then
+      printf '{"result":true,"status":"ok"}'
     fi
     ;;
 esac
@@ -214,8 +216,9 @@ run_ep() {  # run_ep DIR [VAR=value ...] -> exit code; output in DIR/out
 
 # 1. Fresh install, every index step fails (quota): no exit, warnings, marker.
 t="$(new_site)"
-rc="$(run_ep "$t" FAIL_INDEX=1 FAIL_CRON=1)"
+rc="$(run_ep "$t" FAIL_INDEX=1 FAIL_CRON=1 QDRANT_NO_NEWLINE=1)"
 check "fresh + index failures: container starts (exit 0)" 0 "$rc"
+check "fresh marker starts on its own line after Qdrant JSON" yes "$(grep -qx '=== FRESH INSTALL ===' "$t/out" && echo yes || echo no)"
 check "fresh + index failures: apache started" yes "$(has "$t/out" "APACHE STARTED")"
 check "fresh + index failures: index warning logged" yes "$(has "$t/out" "WARNING: search-api:index failed (exit 3)")"
 # The install-time cron passes were replaced by docker/worker-loop.sh (Phase 22, 22-06).

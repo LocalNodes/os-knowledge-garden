@@ -151,21 +151,29 @@ class SearchStatusController extends ControllerBase {
   protected function strings(array $status): array {
     $lines = [];
     if ($status['waiting'] > 0) {
-      $lines[] = $this->t('@count waiting to be added to search', ['@count' => $status['waiting']]);
+      $lines[] = $this->t('@count still being prepared', ['@count' => $status['waiting']]);
     }
     if ($status['no_text'] > 0) {
-      $lines[] = $this->formatPlural($status['no_text'], "1 has no readable text and can't be searched", "@count have no readable text and can't be searched");
+      // The summary's total counts these files too, so this line says why
+      // they will never be prepared.
+      $lines[] = $this->formatPlural($status['no_text'], "1 of these can't be prepared: it has too little readable text (listed below).", "@count of these can't be prepared: they have too little readable text (listed below).");
     }
     return [
-      'summary' => $this->t('@searchable of @total imported pages are searchable.', [
+      'summary' => $this->t("@searchable of @total documents are prepared for the assistant's search.", [
         '@searchable' => $status['searchable'],
         '@total' => $status['total'],
       ]),
       'lines' => $lines,
-      'all' => $this->t('All imported pages are searchable.'),
-      'all_visible' => $status['total'] > 0 && $status['waiting'] === 0 && $status['no_text'] === 0,
+      // With files that can't be prepared, the all-clear claims only the
+      // others.
+      'all' => $status['no_text'] > 0
+        ? $this->t("All documents with enough readable text are prepared for the assistant's search. Try a question and open its source before you invite members.")
+        : $this->t("All documents are prepared for the assistant's search. Try a question and open its source before you invite members."),
+      // Files with too little text can never be prepared, so the all-clear
+      // shows once nothing else is waiting.
+      'all_visible' => $status['total'] > 0 && $status['waiting'] === 0,
       'waiting_label' => $this->t("See what's still waiting (@count)", ['@count' => $status['waiting']]),
-      'no_text_label' => $this->t("See pages that can't be searched (@count)", ['@count' => $status['no_text']]),
+      'no_text_label' => $this->t("See documents that can't be prepared (@count)", ['@count' => $status['no_text']]),
       'updated_iso' => $this->dateFormatter->format($status['updated'], 'custom', 'Y-m-d\TH:i:sP'),
       'updated_text' => $this->relative($status['updated']),
       'updated_full' => $this->dateFormatter->format($status['updated'], 'custom', 'j F Y, H:i'),
@@ -190,7 +198,11 @@ class SearchStatusController extends ControllerBase {
    * The stale-worker alert (UI Considerations row "error: Worker stopped").
    */
   protected function staleMessage(): TranslatableMarkup {
-    return $this->t("Some pages have been waiting for more than an hour. Search updates may have stopped. Tell whoever looks after your community's site.");
+    return $this->t('Some documents have waited more than an hour. Preparing them may have stopped. Use <a href=":help">Get help</a> to tell the people who host this site.', [
+      // The Get help page belongs to the platform module, which this module
+      // doesn't depend on, so it's linked by path.
+      ':help' => Url::fromUserInput('/help')->toString(),
+    ]);
   }
 
   /**

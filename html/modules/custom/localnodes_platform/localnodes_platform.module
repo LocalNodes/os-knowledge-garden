@@ -12,6 +12,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\localnodes_platform\Form\TermsConsent;
+use Drupal\localnodes_platform\InviteLanding;
 use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
 use Drupal\symfony_mailer\EmailInterface;
 use Drupal\symfony_mailer\Exception\SkipMailException;
@@ -124,6 +125,7 @@ function localnodes_platform_mailer_user__status_activated_build(EmailInterface 
  *   SiteTermsController.
  * - localnodes_safety_help: the "Hacked or Phished?" help page (22.1-15),
  *   built by SafetyHelpController.
+ * - localnodes_get_help: the "Get help" page, built by GetHelpController.
  * - profile__profile__teaser__localnodes and its __sky variant: the member
  *   teaser without keyboard stops inside aria-hidden (22.1 quick task), see
  *   localnodes_platform_theme_suggestions_profile_alter().
@@ -154,9 +156,13 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'variables' => [
         'show_fund' => FALSE,
         'show_fees' => FALSE,
-        'group_link' => '',
+        'group_link' => NULL,
         'import_link' => '',
         'fund_link' => '',
+        'members_link' => '',
+        'get_help_link' => '',
+        'get_help_url' => '',
+        'assistant_name' => NULL,
       ],
       'template' => 'localnodes-guide',
       'path' => $path . '/templates',
@@ -178,12 +184,22 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'localnodes-safety-help',
       'path' => $path . '/templates',
     ],
+    // The "Get help" page (GetHelpController).
+    'localnodes_get_help' => [
+      'variables' => [
+        'help_address' => '',
+        'safety_help_url' => '',
+      ],
+      'template' => 'localnodes-get-help',
+      'path' => $path . '/templates',
+    ],
     'localnodes_footer' => [
       'variables' => [
         'site_name' => '',
         'repository_url' => '',
         'mark_url' => '',
         'terms_url' => '',
+        'get_help_url' => '',
         'help_url' => '',
       ],
       'template' => 'localnodes-footer',
@@ -368,4 +384,23 @@ function localnodes_platform_form_user_register_form_alter(array &$form, FormSta
   $form['#after_build'][] = [TermsConsent::class, 'afterBuild'];
   // After a failed submit, focus goes to the error summary.
   $form['#attached']['library'][] = 'localnodes_platform/register_error_focus';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for user_form.
+ *
+ * A member invited by email signs in for the first time from the welcome
+ * mail, which opens this form to set a password. When they save it, they go
+ * on to their invites list instead of staying here.
+ */
+function localnodes_platform_form_user_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  $pass_reset = (bool) $form_state->get('user_pass_reset');
+  $form_uid = $form_state->getFormObject()->getEntity()->id();
+  if (!InviteLanding::isFirstPasswordForm($pass_reset, $form_uid, \Drupal::currentUser())) {
+    return;
+  }
+  // Added after every alter has run: Open Social's own first-sign-in handler
+  // (social_user, which moves itself to run last) sends the member to their
+  // profile, and this one has to come after it.
+  $form['#after_build'][] = [InviteLanding::class, 'afterBuild'];
 }

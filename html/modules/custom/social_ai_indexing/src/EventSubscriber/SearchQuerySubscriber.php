@@ -9,6 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\search_api\Event\QueryPreExecuteEvent;
 use Drupal\search_api\Event\SearchApiEvents;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\social_ai_indexing\Citation\SourceRegistry;
 use Drupal\social_ai_indexing\Service\PermissionFilterService;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -61,11 +62,14 @@ class SearchQuerySubscriber implements EventSubscriberInterface {
    *   The current user account.
    * @param \Drupal\ai_assistant_api\AiAssistantApiRunner $ai_assistant_runner
    *   The AI assistant API runner.
+   * @param \Drupal\social_ai_indexing\Citation\SourceRegistry|null $sourceRegistry
+   *   The assistant run's registry, told when an index lacks a field.
    */
   public function __construct(
     PermissionFilterService $permission_filter,
     AccountInterface $current_user,
     AiAssistantApiRunner $ai_assistant_runner,
+    protected ?SourceRegistry $sourceRegistry = NULL,
   ) {
     $this->permissionFilter = $permission_filter;
     $this->currentUser = $current_user;
@@ -115,6 +119,10 @@ class SearchQuerySubscriber implements EventSubscriberInterface {
 
     foreach (self::REQUIRED_FIELDS as $field) {
       if ($index->getField($field) === NULL) {
+        // A broken index, the same for every group: the assistant may say
+        // the search didn't work. Only here, not in failClosed(), which
+        // also refuses scopes; those must read like an empty search.
+        $this->sourceRegistry?->markSearchTrouble();
         $this->failClosed($query, 'missing_' . $field);
         return;
       }

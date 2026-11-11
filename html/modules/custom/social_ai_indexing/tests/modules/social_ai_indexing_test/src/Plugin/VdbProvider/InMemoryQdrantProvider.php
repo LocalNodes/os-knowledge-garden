@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\social_ai_indexing_test\Plugin\VdbProvider;
 
 use Drupal\ai\Enum\VdbSimilarityMetrics;
+use Drupal\ai_vdb_provider_qdrant\Exception\InsertIntoCollectionException;
 use Drupal\social_ai_indexing\Plugin\VdbProvider\ThrottledQdrantProvider;
 
 /**
@@ -20,6 +21,10 @@ use Drupal\social_ai_indexing\Plugin\VdbProvider\ThrottledQdrantProvider;
  * 'generation' read from state 'social_ai_indexing_test.qdrant_generation'
  * when they were inserted. A test sets the generation before each index run to
  * tell the old points from the new ones.
+ *
+ * With state 'social_ai_indexing_test.qdrant_insert_echo' set, every insert
+ * fails with an exception whose message repeats the point, and the message is
+ * kept in state 'social_ai_indexing_test.qdrant_insert_echoed'.
  */
 class InMemoryQdrantProvider extends ThrottledQdrantProvider {
 
@@ -76,6 +81,13 @@ class InMemoryQdrantProvider extends ThrottledQdrantProvider {
    * {@inheritdoc}
    */
   public function insertIntoCollection(string $collection_name, array $data, string $database = 'default'): void {
+    if (\Drupal::state()->get('social_ai_indexing_test.qdrant_insert_echo')) {
+      // Fail the way the Qdrant client does, with the store's error in the
+      // message; here the worst case, an error that repeats the whole point.
+      $message = 'Failed to insert into collection: ' . json_encode($data);
+      \Drupal::state()->set('social_ai_indexing_test.qdrant_insert_echoed', $message);
+      throw new InsertIntoCollectionException($message, 400);
+    }
     $long_id = $data['drupal_long_id']['value'];
     \Drupal::keyValue(self::POINTS)->set(md5($long_id), [
       'collection' => $collection_name,

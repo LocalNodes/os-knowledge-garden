@@ -156,6 +156,41 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
   }
 
   /**
+   * The no-answer reply that says which kind of could-not it was.
+   *
+   * With nothing retrieved, a broken search or an unavailable AI service is
+   * said plainly. Both causes are the same whichever group was asked for: a
+   * refused group stops before any search, so it still gets the no-result
+   * copy, byte for byte. With sources retrieved, an answer whose
+   * every sentence was dropped says it couldn't give a sourced answer; the
+   * model's own "nothing relevant" keeps the no-result copy.
+   *
+   * @param bool $in_group
+   *   Whether the question was asked in a group.
+   * @param bool $rejected
+   *   TRUE when the answer had text but nothing citable survived.
+   * @param string $reason
+   *   The log reason, updated to search_trouble or service_unavailable.
+   */
+  private function noAnswerText(bool $in_group, bool $rejected, string &$reason): string {
+    if ($this->registry->serviceFailure() !== NULL) {
+      $reason = 'service_unavailable';
+      return CitedAnswer::UNAVAILABLE;
+    }
+    if ($this->registry->count() === 0) {
+      if ($this->registry->hadSearchTrouble()) {
+        $reason = 'search_trouble';
+        return CitedAnswer::SEARCH_TROUBLE;
+      }
+      return CitedAnswer::noRelevantContent($in_group)->toMarkdown();
+    }
+    if ($rejected) {
+      return $in_group ? CitedAnswer::NO_SOURCED_ANSWER_GROUP : CitedAnswer::NO_SOURCED_ANSWER_SITE;
+    }
+    return CitedAnswer::noRelevantContent($in_group)->toMarkdown();
+  }
+
+  /**
    * Rewrites the final answer and marks the registry.
    */
   public function onFinished(AgentFinishedExecutionEvent $event): void {
@@ -192,7 +227,7 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
       $kept = count($answer->citations);
       $outcome = $answer->noAnswer ? 'no_answer' : 'cited';
       $reason = $answer->noAnswer ? 'no_relevant_content' : 'ok';
-      $message->setText($answer->toMarkdown());
+      $message->setText($answer->noAnswer ? $this->noAnswerText($in_group, FALSE, $reason) : $answer->toMarkdown());
     }
     catch (UncitableAnswerException $e) {
       // The message is a fixed reason code, never model text.
@@ -201,7 +236,7 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
         // Nothing citable: a no-answer, with the one no-answer copy (door
         // 4), never the uncited text (22-27 ruling, option A).
         $outcome = 'no_answer';
-        $message->setText(CitedAnswer::noRelevantContent($in_group)->toMarkdown());
+        $message->setText($this->noAnswerText($in_group, TRUE, $reason));
         if (self::isToolCallEcho($model_text)) {
           // Counted apart from an ordinary uncited reply; the reader sees
           // the same copy.

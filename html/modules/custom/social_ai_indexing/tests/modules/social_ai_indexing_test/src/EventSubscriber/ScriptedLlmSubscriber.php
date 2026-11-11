@@ -47,6 +47,11 @@ final class ScriptedLlmSubscriber implements EventSubscriberInterface {
   private array $inputs = [];
 
   /**
+   * The exception the provider throws on its next chat call, if any.
+   */
+  private ?\Exception $providerFailure = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public static function getSubscribedEvents(): array {
@@ -60,7 +65,9 @@ final class ScriptedLlmSubscriber implements EventSubscriberInterface {
    *   Each entry is a ChatOutput, or a callable taking (ChatInput $input,
    *   array $configuration) and returning a ChatOutput. Callables let a turn
    *   depend on what the model was given (for example, cite the labels the
-   *   tool returned).
+   *   tool returned). An \Exception entry is thrown by the provider itself
+   *   (FailingEchoProvider), inside the AI module's provider call, so the AI
+   *   module's AiExceptionEvent fires as it does for a real provider error.
    */
   public function script(array $outputs): void {
     $this->queue = array_values($outputs);
@@ -97,6 +104,16 @@ final class ScriptedLlmSubscriber implements EventSubscriberInterface {
     $this->queue = [];
     $this->inputs = [];
     $this->armed = FALSE;
+    $this->providerFailure = NULL;
+  }
+
+  /**
+   * Hands the provider the exception it must throw now, once.
+   */
+  public function takeProviderFailure(): ?\Exception {
+    $failure = $this->providerFailure;
+    $this->providerFailure = NULL;
+    return $failure;
   }
 
   /**
@@ -120,6 +137,11 @@ final class ScriptedLlmSubscriber implements EventSubscriberInterface {
       throw new \LogicException('Scripted LLM: no scripted turn left for request ' . count($this->inputs) . '.');
     }
     $turn = array_shift($this->queue);
+    if ($turn instanceof \Exception) {
+      // Left unforced: the call reaches the provider, which throws it.
+      $this->providerFailure = $turn;
+      return;
+    }
     $output = is_callable($turn) ? $turn($input, $event->getConfiguration()) : $turn;
     if (!$output instanceof ChatOutput) {
       throw new \LogicException('Scripted LLM: a turn must be a ChatOutput.');

@@ -280,11 +280,11 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     $this->flood->register(self::FLOOD_EVENT, self::FLOOD_WINDOW);
 
     $nid = (int) $form_state->get('nid');
-    $form_state->setRedirect('localnodes_import.report_sent', ['topic' => $nid]);
-    $this->messenger()->addStatus($this->t("Thanks. We've sent your report to this site's organizers and to the host."));
 
-    // The honeypot: the same thank-you, and nothing else happens.
+    // The honeypot: the usual thank-you, and nothing else happens.
     if (trim((string) $form_state->getValue('website')) !== '') {
+      $form_state->setRedirect('localnodes_import.report_sent', ['topic' => $nid]);
+      $this->messenger()->addStatus($this->t("Thanks. We've sent your report to this site's organizers and to the host."));
       return;
     }
 
@@ -310,41 +310,81 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     if ($recipients === []) {
       $this->logger->warning('Nobody could be mailed the problem report on page @nid: no site manager, group manager or host address.', ['@nid' => $nid]);
     }
-    foreach ($recipients as $address) {
+    // Who was actually reached. A send counts only when the mail system says
+    // it went; a failed send and one a mail hook cancelled both count as not
+    // sent.
+    $reached = ['organizers' => FALSE, 'host' => FALSE];
+    foreach ($recipients as $address => $kinds) {
       $sent = $this->mailManager->mail('localnodes_import', 'report_problem', $address, $langcode, $params, NULL, TRUE);
-      if (empty($sent['result'])) {
+      if (($sent['result'] ?? NULL) === TRUE) {
+        foreach ($kinds as $kind) {
+          $reached[$kind] = TRUE;
+        }
+      }
+      else {
         // Never names the address.
         $this->logger->warning('A problem report mail for page @nid could not be sent.', ['@nid' => $nid]);
       }
     }
+
+    // The reply names only the people the report really reached.
+    if (!$reached['organizers'] && !$reached['host']) {
+      // The form comes back with the reporter's text still in it.
+      $this->messenger()->addError($this->t("We couldn't send your report. Your text is still below. Try again in a few minutes, or email LocalNodes at hello@localnodes.xyz."));
+      $form_state->setRebuild();
+      return;
+    }
+    if ($reached['organizers'] && $reached['host']) {
+      $thanks = $this->t("Thanks. We've sent your report to this site's organizers and to the host.");
+    }
+    elseif ($reached['organizers']) {
+      $thanks = $this->t("Thanks. We've sent your report to this site's organizers. If it's urgent, email LocalNodes at hello@localnodes.xyz.");
+    }
+    else {
+      $thanks = $this->t("Thanks. We've sent your report to the people who host this site.");
+    }
+    $this->messenger()->addStatus($thanks);
+    $form_state->setRedirect('localnodes_import.report_sent', ['topic' => $nid]);
   }
 
   /**
    * Who gets the report: stewards, then the group's managers, then the host.
    *
-   * @return string[]
-   *   Addresses, once each (case ignored), in the order the mails go out.
+   * Site managers and group managers are the organizers. An address that is
+   * both an organizer's and the host's is mailed once and counts as both.
+   *
+   * @return array<string, string[]>
+   *   Each address once (case ignored), in the order the mails go out, with
+   *   what it stands for: 'organizers', 'host' or both.
    */
   protected function recipients(NodeInterface $node): array {
     $addresses = [];
     foreach ($this->audience->siteManagers() + $this->audience->groupManagers($node) as $account) {
-      $addresses[] = (string) $account->getEmail();
+      $addresses[] = [(string) $account->getEmail(), 'organizers'];
     }
     $host = trim((string) Settings::get(self::HOST_SETTING, ''));
     if ($host !== '' && \Drupal::service('email.validator')->isValid($host)) {
-      $addresses[] = $host;
+      $addresses[] = [$host, 'host'];
     }
     else {
       // One warning per report, with the page's id only.
       $this->logger->warning('No host address is set in localnodes_host_report_email, so the problem report on page @nid was not sent to a host.', ['@nid' => (int) $node->id()]);
     }
     $unique = [];
-    foreach ($addresses as $address) {
-      if ($address !== '' && !isset($unique[mb_strtolower($address)])) {
-        $unique[mb_strtolower($address)] = $address;
+    $kinds = [];
+    foreach ($addresses as [$address, $kind]) {
+      if ($address === '') {
+        continue;
       }
+      $key = mb_strtolower($address);
+      $unique[$key] ??= $address;
+      $kinds[$key][$kind] = $kind;
     }
-    return array_values($unique);
+    $recipients = [];
+    foreach ($unique as $key => $address) {
+      $recipients[$address] = array_values($kinds[$key]);
+    }
+    return $recipients;
   }
 
   /**

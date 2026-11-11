@@ -89,7 +89,7 @@ final class CitationRewriterTest extends UnitTestCase {
    * AI-SPEC §5 rewriter cases plus the planner's comment/parent decision.
    */
   public static function rewriterCases(): array {
-    $group = "I couldn't find anything about that in this group's pages. Try asking with different words, or look through the group's pages yourself.";
+    $group = "I couldn't find anything about that in this group's documents. Try asking with different words, or open the group's documents yourself.";
     $site = "I couldn't find anything about that on this site. Try asking with different words, or use search.";
 
     return [

@@ -157,7 +157,7 @@ test.describe('S2 Upload files', () => {
     await expect(page.locator('[data-ln-upload-live][aria-live="polite"]')).toHaveCount(1);
     await expect(primary(page)).toBeDisabled();
     await expect(primary(page)).toHaveText('Uploading…');
-    await expect(page.getByRole('button', { name: 'Stop uploading' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Stop remaining uploads' })).toBeVisible();
     await expect(page.locator('.localnodes-import-chosen__row').nth(1)).toContainText('Waiting');
     await expect.poll(() => held).toBe(true);
     await checkA11y(page, 'S2', 'in-progress', SCOPE);
@@ -175,7 +175,7 @@ test.describe('S2 Upload files', () => {
     await checkA11y(page, 'S2', 'finished', SCOPE);
   });
 
-  test('stopped before anything uploaded: the report offers no "View imported pages" (22-30 Codex)', async ({ page }) => {
+  test('stopped before anything uploaded: the report offers no "View the documents (in Topics)"', async ({ page }) => {
     test.setTimeout(120_000);
     await page.route(UPLOAD_ROUTE, async () => {});
     await openForm(page);
@@ -183,10 +183,10 @@ test.describe('S2 Upload files', () => {
     await tickRights(page);
     await primary(page).click();
     await expect(page.locator('.localnodes-import-chosen__summary')).toHaveText('Uploading 1 of 1');
-    await page.getByRole('button', { name: 'Stop uploading' }).click();
+    await page.getByRole('button', { name: 'Stop remaining uploads' }).click();
     await page.waitForURL(/\/import\/runs\/\d+/, { timeout: 90_000 });
     await expect(page.locator('.localnodes-import-report__summary')).toHaveText('0 of 1 imported.');
-    await expect(page.getByRole('link', { name: 'View imported pages' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'View the documents (in Topics)' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Import more documents', exact: true })).toBeVisible();
   });
 
@@ -207,11 +207,12 @@ test.describe('S2 Upload files', () => {
     // Permanent, so not the clock "In progress" uses (22-30 Codex).
     expect(await row.locator('.localnodes-import-badge path').getAttribute('d')).not.toBe('M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2');
     // Nothing is waiting for search (the scanned page never will be), so
-    // there's no "the rest are usually ready" line counting it.
-    await expect(page.getByText('The rest are usually ready')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'View imported pages' })).toBeVisible();
+    // there's no "still being prepared" line counting it.
+    await expect(page.locator('.localnodes-import-report__search')).toHaveCount(0);
+    await expect(page.getByText('readable documents are prepared')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'View the documents (in Topics)' })).toBeVisible();
     await row.getByRole('link').first().click();
     const box = page.locator('.localnodes-import-source');
-    await expect(box).toContainText("This looks like a scanned PDF, so its text can't be read. Members can open it, but search and the AI assistant won't find it.");
+    await expect(box).toContainText("This may be an image-only scan. Members can open it, but we couldn't read enough text for search and the AI assistant. Add a copy whose text you can select and copy.");
   });
 });

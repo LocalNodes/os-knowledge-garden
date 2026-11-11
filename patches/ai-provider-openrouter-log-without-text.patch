@@ -1,0 +1,64 @@
+diff --git a/src/Service/OpenRouterClient.php b/src/Service/OpenRouterClient.php
+--- a/src/Service/OpenRouterClient.php
++++ b/src/Service/OpenRouterClient.php
+@@ -5,6 +5,7 @@
+ namespace Drupal\ai_provider_openrouter\Service;
+ 
+ use OpenAI\Factory;
++use OpenAI\Exceptions\ErrorException;
+ use GuzzleHttp\Client;
+ use GuzzleHttp\ClientInterface;
+ use Drupal\Core\Cache\CacheBackendInterface;
+@@ -119,7 +120,7 @@
+       return $this->client->chat()->createStreamed($options);
+     }
+     catch (\Throwable $e) {
+-      $this->logger->error('OpenRouter streamed chat error: @msg', ['@msg' => $e->getMessage()]);
++      $this->logError('streamed chat', $e);
+       throw $e;
+     }
+   }
+@@ -169,7 +170,7 @@
+       return $this->client->chat()->create($options)->toArray();
+     }
+     catch (\Throwable $e) {
+-      $this->logger->error('OpenRouter chat completion error: @msg', ['@msg' => $e->getMessage()]);
++      $this->logError('chat completion', $e);
+       throw $e;
+     }
+   }
+@@ -188,12 +189,33 @@
+       return $this->client->embeddings()->create($options)->toArray();
+     }
+     catch (\Throwable $e) {
+-      $this->logger->error('OpenRouter embeddings error: @msg', ['@msg' => $e->getMessage()]);
++      $this->logError('embeddings', $e);
+       throw $e;
+     }
+   }
+ 
+   /**
++   * Logs a failed API call without the exception's message.
++   *
++   * An API error message can repeat the request, so it may hold the prompt
++   * or the text sent for embedding. The class and HTTP status tell failures
++   * apart without carrying that text.
++   *
++   * @param string $operation
++   *   The call that failed, for the log line.
++   * @param \Throwable $e
++   *   The exception.
++   */
++  protected function logError(string $operation, \Throwable $e): void {
++    $status = $e instanceof ErrorException ? $e->getStatusCode() : $e->getCode();
++    $this->logger->error('OpenRouter @operation error: @class (HTTP @status)', [
++      '@operation' => $operation,
++      '@class' => get_class($e),
++      '@status' => $status,
++    ]);
++  }
++
++  /**
+    * List available models from OpenRouter.
+    *
+    * OpenRouter has separate endpoints for chat/image models and embedding models.

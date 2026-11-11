@@ -133,6 +133,10 @@ final class ImportWebPagesFormTest extends ImportKernelTestBase {
     $this->assertSame('radios', $form['visibility']['#type'] ?? NULL);
     $this->assertSame('Who can see these pages?', (string) $form['visibility']['#title']);
     $this->assertSame(['group', 'community', 'public'], array_keys($form['visibility']['#options']));
+    $this->assertSame(["This group's members", 'All site members', 'Anyone on the web'], array_values(array_map('strval', $form['visibility']['#options'])));
+    $this->assertSame('Members of this group can read these documents. People who manage or host the site may also have access.', (string) $form['visibility']['group']['#description']);
+    $this->assertSame('Anyone signed in to this site.', (string) $form['visibility']['community']['#description']);
+    $this->assertSame('Anyone, including search engines.', (string) $form['visibility']['public']['#description']);
     $this->assertSame('group', $form['visibility']['#default_value']);
 
     $closed = $this->createFlexibleGroup('Closed circle');

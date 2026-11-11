@@ -129,10 +129,11 @@ class HybridSearchService {
       return $this->normalizeResults($results, 'social_posts');
     }
     catch (\Exception $e) {
-      // Log warning but don't fail - return empty results.
+      // Log the class and code, not the message: a provider or search
+      // backend error can repeat the question it was given.
       \Drupal::logger('social_ai_indexing')->warning(
-        'Vector search failed: @message',
-        ['@message' => $e->getMessage()]
+        'Vector search failed: @class (code @code)',
+        ['@class' => $e::class, '@code' => $e->getCode()]
       );
       return [];
     }
@@ -191,10 +192,11 @@ class HybridSearchService {
       return $this->normalizeResults($results, 'social_content');
     }
     catch (\Exception $e) {
-      // Log warning but don't fail - return empty results.
+      // Log the class and code, not the message: a provider or search
+      // backend error can repeat the question it was given.
       \Drupal::logger('social_ai_indexing')->warning(
-        'Keyword search failed: @message',
-        ['@message' => $e->getMessage()]
+        'Keyword search failed: @class (code @code)',
+        ['@class' => $e::class, '@code' => $e->getCode()]
       );
       return [];
     }

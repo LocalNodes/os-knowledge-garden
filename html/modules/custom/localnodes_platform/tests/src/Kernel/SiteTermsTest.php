@@ -64,10 +64,10 @@ final class SiteTermsTest extends KernelTestBase {
    * UI-SPEC section 9: the four personal-data bullets (amended 2026-11-08).
    */
   private const DATA_BULLETS = [
-    'What this site keeps: your account (name, email and password), what you post and upload, and, if you connect one, your wallet\'s public address.',
-    'Who can see it: organizers and site managers can see your account details. Your posts follow each group\'s visibility settings. Other members can\'t see your email unless you choose to show it on your profile.',
-    'The AI assistant: when you ask it something, your question and the pages it uses are sent to this community\'s AI provider to write the answer. They aren\'t used to train AI models.',
-    'Leaving: you can delete your account from your account settings (Cancel account), or ask the site\'s organizers or hello@localnodes.xyz to remove your data.',
+    'What this site keeps: your account name, email address and password record, and what you post or upload.',
+    'Who can see it: organizers and site managers can see your account details. Other members can\'t see your email unless you choose to show it on your profile. Posts follow their chosen audience; site managers and administrators can also read private-group records. People with access to the host\'s servers or hosting accounts, and tools using those accounts, can reach them too.',
+    'The AI assistant: to prepare pages for search, this site sends the text of topics, events, posts and comments, and text from their attached files, to its AI service when they are saved. That includes private groups\' pages, even if nobody asks the assistant anything. The search index itself is kept with this site\'s other data. When you ask the assistant something, your question, the passages used and your recent conversation are sent to the same service. When the AI overview summarizes a search, your search words and the passages used are sent. The service may keep requests and answers for a time to check for abuse. Its rules for this site\'s account, including whether it may use them to improve its products, are being confirmed.',
+    'Leaving: ask the site\'s organizers or hello@localnodes.xyz about closing your account or removing records; closing an account does not itself erase this community\'s records, recovery copies or AI-service logs. The host can also make a copy of the whole site, including every member\'s account and private pages, so the community can move it elsewhere. If this site was a three-month pilot that doesn\'t continue, it stays unchanged for 30 days, and the organizers get at least seven days\' written notice before it is removed. Removing the site deletes its pages, files and search data; backup copies and the AI service\'s logs are deleted on their own schedules, not at once.',
   ];
 
   /**
@@ -84,8 +84,8 @@ final class SiteTermsTest extends KernelTestBase {
    * makes the version date move with the words: change one without the
    * other and testVersionDateMovesWithTheText fails.
    */
-  private const TEMPLATE_TEXT_SHA256 = '45db7178ea7025cd19938e2963d33643ae436144779830aa2f012852a6c8581b';
-  private const TERMS_CHANGED_PIN = '2026-11-08';
+  private const TEMPLATE_TEXT_SHA256 = '546054cd81deb65698cdbb5de413cefc4e91dda93cb9a84962efe852f4203e2e';
+  private const TERMS_CHANGED_PIN = '2026-11-11';
 
   /**
    * {@inheritdoc}
@@ -222,7 +222,7 @@ final class SiteTermsTest extends KernelTestBase {
     $this->assertSame(self::DATA_BULLETS, $bullets, 'The personal-data list has the four approved bullets.');
     $this->assertSame(1, $xpath->query('//a[@href="mailto:hello@localnodes.xyz"]')->length, 'The help address is a mail link.');
 
-    $this->assertSame('Draft for review, November 8, 2026', end($paragraphs), 'The version line ends the page.');
+    $this->assertSame('Draft for review, November 11, 2026', end($paragraphs), 'The version line ends the page.');
     $this->assertSame(1, $xpath->query('(//section)[last()]/following::p[contains(@class, "localnodes-site-terms__version")]')->length, 'The version line comes after the sections.');
   }
 

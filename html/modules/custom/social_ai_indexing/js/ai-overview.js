@@ -183,7 +183,7 @@
           container.removeAttribute('aria-busy');
           // Once, when it's ready: the panel's own header and disclosure
           // line, so the person knows an overview is there and what it is.
-          announce(Drupal.t('AI overview') + '. ' + Drupal.t('Written by AI from pages you can see. Check the sources.'));
+          announce(Drupal.t('AI overview') + '. ' + Drupal.t('Written by AI from pages you can see, using your search words. Check the sources.'));
         })
         .catch(function () {
           window.clearTimeout(skeletonTimer);

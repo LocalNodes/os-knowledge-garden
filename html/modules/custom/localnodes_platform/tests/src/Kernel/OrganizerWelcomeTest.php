@@ -99,7 +99,8 @@ final class OrganizerWelcomeTest extends LocalNodesEmailKernelTestBase {
     $this->assertStringNotContainsString('stock-socialbase-wrapper', $html);
     // UI-SPEC "Mail copy": first line, button, heading, steps, guide link.
     foreach ([
-      "Your community's site is ready.",
+      // It says what the site is ready for: the organizer's documents.
+      "Your community's site is ready for you to add your documents.",
       'Set my password',
       'Your first three steps',
       'Set your password.',

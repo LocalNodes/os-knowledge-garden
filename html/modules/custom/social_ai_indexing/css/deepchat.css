@@ -152,3 +152,12 @@
   font-weight: 600;
   line-height: 1.5;
 }
+/* The always-shown line under the input: what is sent to the AI service. */
+.ai-deepchat .ln-chat-disclosure {
+  margin: 0;
+  padding: 4px 8px 8px;
+  background-color: var(--ln-color-surface);
+  color: var(--ln-color-text-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}

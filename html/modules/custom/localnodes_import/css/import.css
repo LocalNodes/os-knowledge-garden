@@ -916,6 +916,25 @@
   margin: 0;
 }
 
+.localnodes-import-chosen__stop-note {
+  margin: 0;
+  color: var(--ln-color-text-muted);
+  font-size: 14px;
+}
+
+.localnodes-import-status__note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ln-color-text-muted);
+  font-size: 14px;
+}
+
+.localnodes-import-status__error {
+  margin: var(--ln-space-xs, 4px) 0 0;
+  color: var(--ln-color-text);
+  font-weight: 600;
+}
+
 .localnodes-import-status__button {
   display: inline-flex;
   align-items: center;

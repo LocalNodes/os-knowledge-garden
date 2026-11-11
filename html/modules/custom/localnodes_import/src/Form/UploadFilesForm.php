@@ -155,13 +155,21 @@ class UploadFilesForm extends FormBase {
       '#type' => 'file',
       '#title' => $this->t('Choose files'),
       '#multiple' => TRUE,
-      '#description' => $this->t('PDF, Word (.docx, .doc), OpenDocument (.odt), text (.txt) or Markdown (.md). Up to @limit MB each.', [
+      '#description' => $this->t("PDF, Word (.docx, .doc), OpenDocument (.odt), text (.txt) or Markdown (.md). Up to @limit MB each. For search and AI answers, use files whose text you can select and copy. An image-only scan can still be added and opened, but the assistant can't read it. A very short file may be too short to use.", [
         '@limit' => $this->rules->maxFileMegabytes(),
       ]),
       '#attributes' => [
         'accept' => implode(',', array_map(static fn (string $ext): string => '.' . $ext, $this->rules->allowedExtensions())),
         'class' => ['localnodes-import-upload__input'],
       ],
+    ];
+    // A file uploaded again comes in as a new page: nothing is matched or
+    // replaced, so the organizer is told how to remove the old one.
+    $form['new_version_note'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => $this->t('A changed version of a file is added as a new document. The old one stays until you delete it.'),
+      '#attributes' => ['class' => ['localnodes-import-upload__note']],
     ];
     // With JavaScript these limits don't apply (one file per request), so
     // core's js-hide class hides the note.

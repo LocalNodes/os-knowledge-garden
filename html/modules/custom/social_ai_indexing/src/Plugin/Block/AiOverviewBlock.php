@@ -77,8 +77,18 @@ class AiOverviewBlock extends BlockBase implements ContainerFactoryPluginInterfa
     }
 
     return [
-      '#theme' => 'social_ai_overview',
-      '#query' => $query,
+      // Always shown with the search results. The script removes the panel
+      // below when no overview comes back, and this line must stay.
+      'notice' => [
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#attributes' => ['class' => ['ai-overview-notice']],
+        '#value' => $this->t('Your search words, and passages from pages you can see, are sent to the AI service to write an overview.'),
+      ],
+      'panel' => [
+        '#theme' => 'social_ai_overview',
+        '#query' => $query,
+      ],
       '#attached' => [
         'library' => ['social_ai_indexing/ai-overview'],
         'drupalSettings' => [

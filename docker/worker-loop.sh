@@ -45,7 +45,10 @@ run_drush() {
   if [ -n "$WORKER_RUN_AS" ]; then
     # www-data's login shell is nologin, so name bash explicitly. `su` without
     # `-` keeps the container env that settings.php reads with getenv().
-    su -s /bin/bash "$WORKER_RUN_AS" -c "HOME=/tmp $DRUSH $*" >/dev/null 2>&1
+    # Each argument is shell-quoted so an empty one survives the -c string.
+    local args
+    args="$(printf '%q ' "$@")"
+    su -s /bin/bash "$WORKER_RUN_AS" -c "HOME=/tmp $DRUSH ${args% }" >/dev/null 2>&1
   else
     # $DRUSH is deliberately unquoted: it is a command plus its options.
     HOME="${HOME:-/tmp}" $DRUSH "$@" >/dev/null 2>&1
@@ -59,7 +62,9 @@ log "started (interval=${WORKER_INTERVAL}s, max_iterations=${WORKER_MAX_ITERATIO
 
 # Clear locks left by a container killed mid-run: ultimate_cron's
 # launcher.lock_timeout is 3600 s and --force still respects locks.
-run_drush cron:unlock --all
+# ultimate_cron's cron:unlock requires a job name even with --all (without one
+# it exits 1); an empty name selects every job.
+run_drush cron:unlock '' --all
 
 iteration=0
 while true; do
