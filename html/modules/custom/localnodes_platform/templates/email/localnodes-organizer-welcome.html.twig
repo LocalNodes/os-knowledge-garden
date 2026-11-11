@@ -1,0 +1,35 @@
+{#
+/**
+ * @file
+ * The organizer welcome mail's body (23-04, UI-SPEC "Mail copy").
+ *
+ * Printed inside email--localnodes.html.twig, which supplies the community's
+ * name, the "Hi <name>," greeting and the footer. The button markup matches
+ * what that wrapper styles (.btn .btn-primary).
+ *
+ * Variables:
+ * - reset_url: The one-time sign-in link, built by the mail builder. It is
+ *   printed only as this button's href.
+ * - guide_url: The site's /guide page.
+ */
+#}
+<p class="first-paragraph">{% trans %}Your community's site is ready.{% endtrans %}</p>
+<p>{% trans %}Use the button to set your password and sign in. The button works once.{% endtrans %}</p>
+<table border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+  <tr>
+    <td align="left">
+      <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td><a href="{{ reset_url }}" target="_blank">{% trans %}Set my password{% endtrans %}</a></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h2>{% trans %}Your first three steps{% endtrans %}</h2>
+<ol style="list-style: decimal; padding-left: 1.5em;">
+  <li>{% trans %}Set your password.{% endtrans %}</li>
+  <li>{% trans %}Open your group.{% endtrans %}</li>
+  <li>{% trans %}Upload your first files.{% endtrans %}</li>
+</ol>
+<p><a href="{{ guide_url }}">{% trans %}Read the organizer guide{% endtrans %}</a></p>

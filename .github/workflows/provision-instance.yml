@@ -1,5 +1,18 @@
 name: Provision LocalNodes Instance
 
+# The sign-up app's address is pinned (23-43 Task 4, the same fix teardown-instance.yml got on
+# 2026-11-09; 23-REVIEWS.md item 1). A non-empty callback_url input must equal SIGNUP_ORIGIN
+# below, character for character, or the run is refused before any request: no token is
+# derived, no manifest is read and no status or failure notice is posted (a foreign host is not
+# a safe place to report to). Every request to the sign-up app then goes to SIGNUP_ORIGIN itself,
+# never to the input, and the new site's PROVISION_CALLBACK_URL is always SIGNUP_ORIGIN.
+# Otherwise whoever can dispatch this workflow could name a host of their own, receive the
+# per-provision bearer (valid against the real sign-up app's callback routes) and hand the new
+# site a manifest of their choosing. It is a fixed literal in this file, not a repository
+# variable: changing it takes a reviewed commit, and scripts/ops/tests/provision-workflow.test.sh
+# checks it against teardown-instance.yml's SIGNUP_ORIGIN and the callback_url that
+# localnodes-onboarding's dispatcher sends (server/utils/github.ts, dispatchWorkflow).
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,10 +20,15 @@ on:
         description: 'Subdomain (e.g., "portland" → portland.localnodes.xyz)'
         required: true
         type: string
-      site_name:
-        description: 'Site display name (e.g., "Portland LocalNodes")'
-        required: true
+      provision_id:
+        description: 'Opaque sign-up id (22 url-safe characters). The organizer details are fetched with it, privately, from the sign-up app. Leave empty for a manual demo run'
+        required: false
         type: string
+      attempt:
+        description: 'Provision attempt, 1 or 2 (a retry reuses the same provision_id). Required with provision_id'
+        required: false
+        type: string
+        default: '1'
       demo_module:
         description: 'Demo content module (none = blank instance)'
         required: true
@@ -30,16 +48,8 @@ on:
           - paid
           - free
         default: undeclared
-      email:
-        description: 'Organizer email address'
-        required: false
-        type: string
-      stripe_session_id:
-        description: 'Stripe Checkout Session ID for state tracking'
-        required: false
-        type: string
       callback_url:
-        description: 'Base URL to POST status updates to (e.g., https://localnodes.xyz)'
+        description: 'Base URL of the sign-up app. Must be exactly https://localnodes.xyz (pinned as SIGNUP_ORIGIN); any other value is refused before any request. Required with provision_id'
         required: false
         type: string
       image_tag:
@@ -54,13 +64,17 @@ env:
   COOLIFY_ENV: production
   GIT_REPO: https://github.com/LocalNodes/os-knowledge-garden
   GIT_BRANCH: main
+  # The only sign-up app this workflow trusts: an allow-list of one (see the header).
+  SIGNUP_ORIGIN: https://localnodes.xyz
 
 jobs:
   provision:
     runs-on: ubuntu-latest
     # Every workflow input and secret reaches the shell through env: and is only ever
     # expanded as a quoted variable. No ${{ }} expression appears inside a run: block,
-    # so a crafted input (e.g. site_name) is data, never shell source.
+    # so a crafted input (or a crafted manifest value) is data, never shell source.
+    # The run page of this public repo shows inputs and step env: blocks, so no input carries
+    # personal data: the organizer details come from the manifest and are masked on arrival.
     # scripts/ops/tests/provision-workflow.test.sh enforces this.
     env:
       COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
@@ -69,29 +83,152 @@ jobs:
         env:
           SUBDOMAIN_INPUT: ${{ inputs.subdomain }}
           IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
+          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
         run: |
           SUBDOMAIN="$SUBDOMAIN_INPUT"
+          # Sign-up runs carry an opaque provision id (22 url-safe characters) and an attempt number;
+          # a manual demo run has neither. The id goes into a URL and a token below, so it is
+          # checked here, before any request. These checks come first so that a sign-up run
+          # refused later (a bad subdomain, say) can still be reported to the sign-up app.
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            if [[ ! "$PROVISION_ID_INPUT" =~ ^[A-Za-z0-9_-]{22}$ ]]; then
+              echo "::error::Invalid provision_id. Expected 22 characters: letters, digits, hyphen, underscore."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+              exit 1
+            fi
+            if [[ ! "$ATTEMPT_INPUT" =~ ^[12]$ ]]; then
+              echo "::error::Invalid attempt. Use 1 or 2."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+              exit 1
+            fi
+          fi
+          # A sign-up run needs callback_url; any run that names one must name the pinned origin.
+          if [ -n "$PROVISION_ID_INPUT" ] || [ -n "$CALLBACK_URL_INPUT" ]; then
+            # https only: the per-provision token travels as a bearer
+            if [[ ! "$CALLBACK_URL_INPUT" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$ ]]; then
+              echo "::error::A sign-up run needs callback_url as an https base URL (no path)."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+              exit 1
+            fi
+            # Pinned: exactly the sign-up app's origin, compared as a whole string, so another
+            # host, a longer or shorter host, a port or a different case is refused. Before
+            # REPORT_OK, so a foreign host gets no token, no manifest request and no notice.
+            if [ "$CALLBACK_URL_INPUT" != "$SIGNUP_ORIGIN" ]; then
+              echo "::error::callback_url is not the sign-up app's pinned origin. Nothing was requested."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+              exit 1
+            fi
+          fi
+          # From here on a failure may be reported: the id and the address are both checked.
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            echo "REPORT_OK=true" >> "$GITHUB_ENV"
+          fi
           # Lowercase, alphanumeric + hyphens only, no leading/trailing hyphen. Bash =~ tests the
           # whole string (grep would accept a multi-line value whose first line matches, which
           # would then inject extra lines into $GITHUB_ENV).
           if [[ ! "$SUBDOMAIN" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
             echo "::error::Invalid subdomain. Use lowercase letters, numbers, and hyphens only."
+            echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
             exit 1
           fi
           # Reserved subdomains
           for reserved in www api coolify mail smtp; do
             if [ "$SUBDOMAIN" = "$reserved" ]; then
               echo "::error::Subdomain '$SUBDOMAIN' is reserved."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
               exit 1
             fi
           done
           # Optional image pin, validated here so a bad tag fails before any Coolify mutation
           if [ -n "$IMAGE_TAG_INPUT" ] && [[ ! "$IMAGE_TAG_INPUT" =~ ^[0-9a-f]{7,40}$ ]]; then
             echo "::error::Invalid image_tag. Use a GHCR sha tag: 7 to 40 lowercase hex characters."
+            echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
             exit 1
           fi
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
           echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
+
+      - name: Fetch provision manifest
+        # The organizer's details never travel as workflow inputs (they would show on this
+        # public run page). They are read here from the sign-up app with a per-provision
+        # token, masked before anything else touches them, and handed to later steps only
+        # through $GITHUB_ENV (which is not echoed in step headers).
+        if: inputs.provision_id != ''
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+        run: |
+          manifest_failed() {
+            echo "::error::$1"
+            echo "FAIL_REASON=manifest_failed" >> "$GITHUB_ENV"
+            exit 1
+          }
+          [ -n "$CALLBACK_SECRET" ] || manifest_failed "PROVISION_CALLBACK_SECRET is not set for this repository."
+
+          # Per-provision bearer: hex HMAC-SHA256 of the id, keyed by the shared secret. The
+          # secret itself is never sent anywhere.
+          TOKEN="$(printf '%s' "$PROVISION_ID_INPUT" | openssl dgst -sha256 -hmac "$CALLBACK_SECRET" -r | cut -d' ' -f1)"
+          echo "::add-mask::${TOKEN}"
+
+          # --fail-with-body keeps the status check; the body lands in $M and is never printed.
+          M="$(curl -sS --fail-with-body "$SIGNUP_ORIGIN/api/provision-manifest?provision_id=$PROVISION_ID_INPUT" \
+                -H "Authorization: Bearer $TOKEN")" || manifest_failed "The sign-up app refused or did not answer the manifest request."
+
+          # The manifest must be for this very run
+          printf '%s' "$M" | jq -e --arg id "$PROVISION_ID_INPUT" --arg sub "$SUBDOMAIN" \
+            '.provision_id == $id and .subdomain == $sub' >/dev/null 2>&1 \
+            || manifest_failed "The manifest does not match this provision_id and subdomain."
+
+          # field NAME: the string value, or empty for a missing, null or non-string field
+          field() { printf '%s' "$M" | jq -r --arg f "$1" 'if (.[$f] | type) == "string" then .[$f] else "" end'; }
+          SITE="$(field site_name)"
+          EMAIL="$(field organizer_email)"
+          TOPICS="$(field topic_types_b64)"
+          COMMUNITY_SEED="$(field community_seed)"
+          PROVIDER="$(field ai_provider)"
+          KEY_SOURCE="$(field ai_key_source)"
+          AI_KEY_VALUE="$(field ai_key)"
+
+          # One line only: ::add-mask:: masks a single line, and a newline would also let a
+          # value start a new $GITHUB_ENV entry.
+          for v in "$SITE" "$EMAIL" "$AI_KEY_VALUE" "$COMMUNITY_SEED"; do
+            case "$v" in *$'\n'*|*$'\r'*) manifest_failed "The manifest holds a multi-line value." ;; esac
+          done
+          [ -n "$SITE" ] && [ -n "$EMAIL" ] || manifest_failed "The manifest lacks the site name or the organizer address."
+          [[ "$TOPICS" =~ ^[A-Za-z0-9_-]*$ ]] || manifest_failed "The manifest page types are not base64url."
+          # The community's four texts (23-33, 23-34): base64url JSON, at most 16384 characters.
+          # The length is checked on its own; a repeat count that large is not portable in a regex.
+          [[ "$COMMUNITY_SEED" =~ ^[A-Za-z0-9_-]*$ ]] && [ "${#COMMUNITY_SEED}" -le 16384 ] || manifest_failed "The manifest community seed is not base64url or is too long."
+          [[ "$PROVIDER" =~ ^(gemini|openrouter)$ ]] || manifest_failed "The manifest names an unknown AI provider."
+          [[ "$KEY_SOURCE" =~ ^(platform|organizer)$ ]] || manifest_failed "The manifest names an unknown AI key source."
+
+          # Mask first; only then does any value go anywhere else.
+          echo "::add-mask::$SITE"
+          echo "::add-mask::$EMAIL"
+          # Organizer-derived text: masked like the other manifest values, before it goes anywhere.
+          if [ -n "$COMMUNITY_SEED" ]; then
+            echo "::add-mask::$COMMUNITY_SEED"
+          fi
+          if [ -n "$AI_KEY_VALUE" ]; then
+            echo "::add-mask::$AI_KEY_VALUE"
+          fi
+
+          # $GITHUB_ENV heredoc form with a random delimiter, so a value cannot end its own entry
+          DELIM="ghadelim_$(openssl rand -hex 16)"
+          put_env() { printf '%s<<%s\n%s\n%s\n' "$1" "$DELIM" "$2" "$DELIM" >> "$GITHUB_ENV"; }
+          put_env SITE_NAME "$SITE"
+          put_env ORGANIZER_EMAIL "$EMAIL"
+          put_env TOPIC_TYPES_B64 "$TOPICS"
+          put_env COMMUNITY_SEED_B64 "$COMMUNITY_SEED"
+          put_env AI_PROVIDER "$PROVIDER"
+          put_env AI_KEY_SOURCE "$KEY_SOURCE"
+          if [ -n "$AI_KEY_VALUE" ]; then
+            put_env AI_KEY "$AI_KEY_VALUE"
+          fi
+          put_env PROVISION_TOKEN "$TOKEN"
+          echo "Provision manifest fetched; its values are masked."
 
       - name: Check Gemini key tier (G8)
         # Members' content may only go to a paid (billing-enabled) Gemini key:
@@ -113,22 +250,67 @@ jobs:
           fi
 
       - name: Check subdomain availability
+        # A first attempt that dies half way leaves its Coolify app on the domain. The retry
+        # (attempt 2) takes that app over instead of failing, but only when its description
+        # says it belongs to this very provision (set at creation: ln-provision:{provision_id}).
+        # Any other app on the domain, or a first attempt that finds one, is a real collision.
+        # Nothing is ever deleted here (D-18: deleting an app is Tom's call).
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
         run: |
+          taken() {
+            echo "::error::Subdomain '$SUBDOMAIN' is already in use."
+            echo "FAIL_REASON=subdomain_taken" >> "$GITHUB_ENV"
+            exit 1
+          }
+
           # Query Coolify for existing apps with this domain
           APPS=$(curl -sS --fail-with-body "$COOLIFY_API/applications" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
-            -H "Accept: application/json")
-
-          # Applications list is a plain array (no .data wrapper)
-          if printf '%s' "$APPS" | jq -e '.[] | select(.docker_compose_domains != null) | .docker_compose_domains' 2>/dev/null | grep -qF "$FQDN"; then
-            echo "::error::Subdomain '$SUBDOMAIN' is already in use."
+            -H "Accept: application/json") || {
+            echo "::error::Could not list the Coolify applications."
+            echo "FAIL_REASON=coolify_unreachable" >> "$GITHUB_ENV"
             exit 1
+          }
+
+          # Applications list is a plain array (no .data wrapper). Every app whose domains mention
+          # the FQDN counts, as a substring: a format surprise then blocks instead of colliding.
+          # A list that is not JSON must not read as "free".
+          HOLDERS="$(printf '%s' "$APPS" | jq -c --arg fqdn "$FQDN" \
+            '[.[] | select(.docker_compose_domains != null) | select((.docker_compose_domains | tostring) | contains($fqdn))]' 2>/dev/null)" || {
+            echo "::error::The Coolify application list could not be read."
+            echo "FAIL_REASON=coolify_unreachable" >> "$GITHUB_ENV"
+            exit 1
+          }
+          HOLDER_COUNT="$(printf '%s' "$HOLDERS" | jq 'length')"
+
+          if [ "$HOLDER_COUNT" -gt 0 ]; then
+            # Reuse needs a sign-up retry, exactly one holder, and that holder's description
+            # equal to this provision's tag.
+            if [ "$ATTEMPT_INPUT" = "2" ] && [ -n "$PROVISION_ID_INPUT" ] && [ "$HOLDER_COUNT" -eq 1 ]; then
+              OWN_UUID="$(printf '%s' "$HOLDERS" | jq -r --arg tag "ln-provision:$PROVISION_ID_INPUT" \
+                '.[0] | select(.description == $tag) | .uuid // empty' 2>/dev/null || true)"
+              if [ -n "$OWN_UUID" ] && [[ "$OWN_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
+                echo "APP_UUID=$OWN_UUID" >> "$GITHUB_ENV"
+                echo "REUSE=true" >> "$GITHUB_ENV"
+                echo "Subdomain $FQDN is held by this provision's own app from attempt 1; reusing it ($OWN_UUID)"
+                exit 0
+              fi
+            fi
+            taken
           fi
           echo "Subdomain $FQDN is available"
 
       - name: Create Coolify application
         id: create
+        # A retry that took over its own half-made app (REUSE, set by the availability check) creates nothing
+        if: env.REUSE != 'true'
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
         run: |
+          # Sign-up apps carry a description naming their provision, so a retry can tell its own
+          # half-made app from anyone else's (see "Check subdomain availability").
           # Include docker_compose_domains at creation time so Coolify
           # parses the compose file and sets up domain routing in one step.
           # docker_compose_location needs a leading slash: Coolify >= 4.1 validates it against
@@ -136,20 +318,26 @@ jobs:
           BODY=$(jq -n \
             --arg name "$SUBDOMAIN" --arg project "$COOLIFY_PROJECT" --arg env "$COOLIFY_ENV" \
             --arg server "$COOLIFY_SERVER" --arg repo "$GIT_REPO" --arg branch "$GIT_BRANCH" \
-            --arg domain "https://$FQDN" \
+            --arg domain "https://$FQDN" --arg pid "$PROVISION_ID_INPUT" \
             '{name: $name, project_uuid: $project, environment_name: $env, server_uuid: $server,
               git_repository: $repo, git_branch: $branch, build_pack: "dockercompose",
               ports_exposes: "80", docker_compose_location: "/docker-compose.yaml",
-              docker_compose_domains: [{name: "opensocial", domain: $domain}]}')
-          RESPONSE=$(printf '%s' "$BODY" | curl -sS -X POST "$COOLIFY_API/applications/public" \
+              docker_compose_domains: [{name: "opensocial", domain: $domain}]}
+             + (if $pid != "" then {description: ("ln-provision:" + $pid)} else {} end)')
+          # The reply goes to a file and is parsed, never printed: a Coolify reply can carry anything,
+          # so a failure logs the HTTP status and a fixed reason only (23-43 code review fix round 1).
+          RESP_FILE=$(mktemp)
+          HTTP_CODE=$(printf '%s' "$BODY" | curl -sS -o "$RESP_FILE" -w '%{http_code}' -X POST "$COOLIFY_API/applications/public" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
-            --data-binary @-)
+            --data-binary @-) || HTTP_CODE="curl-error"
 
-          APP_UUID=$(printf '%s' "$RESPONSE" | jq -r '.uuid // empty' 2>/dev/null || true)
+          APP_UUID=$(jq -r '.uuid // empty' "$RESP_FILE" 2>/dev/null || true)
+          rm -f "$RESP_FILE"
           if [ -z "$APP_UUID" ] || [[ ! "$APP_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
-            echo "::error::Failed to create app: $RESPONSE"
+            echo "::error::Failed to create app (HTTP $HTTP_CODE, no app uuid in the reply)"
+            echo "FAIL_REASON=create_failed" >> "$GITHUB_ENV"
             exit 1
           fi
 
@@ -159,16 +347,40 @@ jobs:
       - name: Configure environment variables
         env:
           DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
-          SITE_NAME_INPUT: ${{ inputs.site_name }}
-          EMAIL_INPUT: ${{ inputs.email }}
-          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
-          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
           IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
           GEMINI_API_KEY_SECRET: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_KEY_TIER_INPUT: ${{ inputs.gemini_key_tier }}
-          PROVISION_CALLBACK_SECRET_VALUE: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
           RESEND_API_KEY_SECRET: ${{ secrets.RESEND_API_KEY }}
+          # The OpenRouter backup chat model (23-40, ONB-07). Must equal backup_chat_model in
+          # localnodes_openrouter/config/install/localnodes_openrouter.settings.yml; change both
+          # in the same commit. Empty means no backup (no gate-passing model). Checked by
+          # scripts/ops/tests/provision-workflow.test.sh. This is the workflow's only copy of the
+          # id; 23-42 replaces it with the organizer's choice from the manifest.
+          OPENROUTER_BACKUP_MODEL: "z-ai/glm-5.3"
         run: |
+          # The shared callback secret (the repository secret) is not read here and never reaches a container:
+          # each site gets only its own per-provision token (PROVISION_TOKEN, masked, from the
+          # manifest step). The manifest values (SITE_NAME, ORGANIZER_EMAIL, TOPIC_TYPES_B64,
+          # AI_PROVIDER, AI_KEY_SOURCE, AI_KEY) come through $GITHUB_ENV, already masked.
+          #
+          # Every failure in this step (update_env, dedup_envs and verify_env all `return 1`
+          # under set -e) is one reason for the sign-up app: the environment did not stick.
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "FAIL_REASON=env_failed" >> "$GITHUB_ENV"; fi' EXIT
+
+          # An OpenRouter site always runs on the organizer's own key: the platform holds no
+          # OpenRouter key to give it. Refused before anything is written.
+          if [ "$AI_PROVIDER" = "openrouter" ] && [ "$AI_KEY_SOURCE" != "organizer" ]; then
+            echo "::error::An OpenRouter site needs the organizer's own key."
+            exit 1
+          fi
+          # A sign-up run authenticates its callbacks with the per-provision token in the container
+          if [ -n "$PROVISION_ID_INPUT" ] && [ -z "$PROVISION_TOKEN" ]; then
+            echo "::error::No per-provision token for this sign-up run."
+            exit 1
+          fi
+
           # Wait for Coolify to fully parse compose file and generate env vars.
           # Coolify creates one env var per ${VAR:-default} reference in the compose
           # file. This needs time to complete before we can deduplicate and update.
@@ -196,14 +408,18 @@ jobs:
             fi
           }
 
-          # update_env KEY VALUE: persist one production env var or return nonzero.
+          # update_env KEY VALUE [secret]: persist one production env var or return nonzero.
+          #  - With a third argument "secret" the variable is written is_shown_once and is_literal:
+          #    Coolify shows it once and never reads it back, and it is stored as typed (an
+          #    organizer's AI key, the per-provision token). verify_env checks such keys by presence.
           #  - PATCH updates an existing variable (Coolify answers 201).
           #  - POST is used only when PATCH reports the variable itself is missing.
           #  - A 409 on POST means a concurrent create won the race: retry PATCH, bounded.
           #  - Any other status (5xx, 401, 422, app-not-found 404) or a nonzero curl exit fails.
           update_env() {
             local KEY="$1" BODY HTTP_CODE ATTEMPT
-            BODY=$(K="$KEY" V="$2" jq -n '{key: env.K, value: env.V}')
+            BODY=$(K="$KEY" V="$2" S="${3:-}" jq -n \
+              '{key: env.K, value: env.V} + (if env.S == "secret" then {is_shown_once: true, is_literal: true} else {} end)')
             for ATTEMPT in 1 2 3; do
               HTTP_CODE=$(printf '%s' "$BODY" | env_request PATCH)
               case "$HTTP_CODE" in
@@ -266,13 +482,23 @@ jobs:
             return 1
           }
 
-          # verify_env KEY EXPECTED: read the saved production value back and compare it
+          # verify_env KEY EXPECTED [secret]: read the saved production value back and compare it
           # inside jq. The expected value travels via the environment and is never printed.
+          # With "secret" only the presence of exactly one production variable is checked: a
+          # write-once value is hidden on read, and the key itself must never be passed around.
           verify_env() {
             local KEY="$1" ENV_VARS
             ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               -H "Accept: application/json") || { echo "::error::Could not read env vars back"; return 1; }
+            if [ "${3:-}" = "secret" ]; then
+              if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1' >/dev/null 2>&1; then
+                echo "::error::$KEY: expected exactly one production variable"
+                return 1
+              fi
+              echo "  Verified $KEY (present; value not read back)"
+              return 0
+            fi
             if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1 and (.[0] | has("value"))' >/dev/null 2>&1; then
               echo "::error::$KEY: expected exactly one readable production variable (the API token needs read:sensitive)"
               return 1
@@ -282,6 +508,27 @@ jobs:
               return 1
             fi
             echo "  Verified $KEY"
+          }
+
+          # pick_secret KEY NEW DEFAULT: the value to store for a generated secret. A reused app
+          # (REUSE=true) already runs a database made with the secrets its first attempt generated,
+          # and MariaDB only reads them when its volume is created, so a retry must keep the ones the
+          # app holds. Only a value that is still empty or the docker-compose.yaml default (DEFAULT)
+          # is replaced. A fresh app always gets NEW. Prints the value for the caller to capture;
+          # the caller masks it.
+          pick_secret() {
+            local KEY="$1" ENV_VARS OLD
+            if [ "${REUSE:-}" = "true" ]; then
+              ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+                -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                -H "Accept: application/json") || { echo "::error::Could not read env vars" >&2; return 1; }
+              OLD=$(printf '%s' "$ENV_VARS" | K="$KEY" jq -r '[.[] | select(.key == env.K and (.is_preview | not))][0].value // ""') || return 1
+              if [ -n "$OLD" ] && [ "$OLD" != "$3" ]; then
+                printf '%s' "$OLD"
+                return 0
+              fi
+            fi
+            printf '%s' "$2"
           }
 
           echo "Cleaning duplicate env vars (pass 1)..."
@@ -295,34 +542,95 @@ jobs:
           if [ "$DEMO_MODULE_INPUT" != "none" ]; then
             update_env "MAIL_FROM" "noreply@demo.localnodes.xyz"
           fi
-          update_env "DRUPAL_SITE_NAME" "$SITE_NAME_INPUT"
-          # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed
-          ADMIN_PASS="$(openssl rand -hex 16)"
+          # SITE_NAME and ORGANIZER_EMAIL come from the provision manifest (GITHUB_ENV); a manual
+          # demo run has neither and keeps the compose defaults.
+          if [ -n "$SITE_NAME" ]; then
+            update_env "DRUPAL_SITE_NAME" "$SITE_NAME"
+            update_env "SITE_NAME" "$SITE_NAME"
+          fi
+          # Sign-up identity (D-12, D-17): the container's own id, attempt and callback token.
+          # A manual demo run has none of these.
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            update_env "PROVISION_ID" "$PROVISION_ID_INPUT"
+            update_env "PROVISION_ATTEMPT" "$ATTEMPT_INPUT"
+            update_env "PROVISION_CALLBACK_TOKEN" "$PROVISION_TOKEN" secret
+          fi
+          # Page types (D-20) go in as the manifest's base64url JSON, unchanged: the entrypoint decodes it.
+          if [ -n "$TOPIC_TYPES_B64" ]; then
+            update_env "LOCALNODES_TOPIC_TYPES" "$TOPIC_TYPES_B64"
+          fi
+          # The community's texts (23-34) go in the same way: the manifest's base64url JSON, unchanged;
+          # drush localnodes:seed-community decodes it once per site.
+          if [ -n "$COMMUNITY_SEED_B64" ]; then
+            update_env "LOCALNODES_COMMUNITY_SEED" "$COMMUNITY_SEED_B64"
+          fi
+          if [ -n "$AI_PROVIDER" ]; then
+            update_env "AI_PROVIDER" "$AI_PROVIDER"
+            # The chat-only failover (23-10, read by settings.php as localnodes_ai_backup). Only an
+            # OpenRouter site gets one, and its provider is always openrouter: 23-10 refuses a
+            # backup on another provider than the one that failed. The model is the shipped
+            # backup_chat_model; empty means none. A Gemini site gets no backup until the 22.2-09
+            # gate result is in (orchestrator answer 91ab2f6): its failover stays off and a failed
+            # call shows the busy message. Not secret: read back by value below.
+            if [ "$AI_PROVIDER" = "openrouter" ] && [ -n "${OPENROUTER_BACKUP_MODEL:-}" ]; then
+              update_env "AI_BACKUP_PROVIDER" "openrouter"
+              update_env "AI_BACKUP_MODEL" "$OPENROUTER_BACKUP_MODEL"
+            fi
+          fi
+          # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed.
+          # A reused app keeps the one it holds (pick_secret).
+          ADMIN_PASS="$(pick_secret DRUPAL_ADMIN_PASS "$(openssl rand -hex 16)" admin)"
           echo "::add-mask::$ADMIN_PASS"
           update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
-          update_env "GEMINI_API_KEY" "$GEMINI_API_KEY_SECRET"
+          # AI key (D-21). An organizer's own key is written write-once (is_shown_once, is_literal)
+          # and only its presence is checked later; it is never echoed. A retry after the manifest
+          # ack carries no key (organizer source, empty value): the reused app already holds it, so
+          # nothing is written and the presence check still has to find it. With no organizer key
+          # the platform's Gemini key (repository secret) is used, as before.
+          SECRET_AI_NAME=""
+          if [ "$AI_KEY_SOURCE" = "organizer" ]; then
+            if [ "$AI_PROVIDER" = "openrouter" ]; then
+              SECRET_AI_NAME="OPENROUTER_API_KEY"
+              if [ -n "$AI_KEY" ]; then
+                update_env "OPENROUTER_API_KEY" "$AI_KEY" secret
+              fi
+            else
+              SECRET_AI_NAME="GEMINI_API_KEY"
+              if [ -n "$AI_KEY" ]; then
+                update_env "GEMINI_API_KEY" "$AI_KEY" secret
+              fi
+            fi
+          else
+            update_env "GEMINI_API_KEY" "$GEMINI_API_KEY_SECRET"
+          fi
           # Read by settings.php -> status report (G8). Left unset when undeclared or empty.
           if [ -n "$GEMINI_KEY_TIER_INPUT" ] && [ "$GEMINI_KEY_TIER_INPUT" != "undeclared" ]; then
             update_env "GEMINI_KEY_TIER" "$GEMINI_KEY_TIER_INPUT"
           fi
 
           # Generate unique secrets for this instance
-          update_env "DB_PASSWORD" "$(openssl rand -hex 16)"
-          update_env "DB_ROOT_PASSWORD" "$(openssl rand -hex 16)"
-          update_env "DRUPAL_HASH_SALT" "$(openssl rand -hex 32)"
+          # (a reused app keeps the ones it holds: its database was made with them)
+          DB_PASS="$(pick_secret DB_PASSWORD "$(openssl rand -hex 16)" changeme)"
+          DB_ROOT_PASS="$(pick_secret DB_ROOT_PASSWORD "$(openssl rand -hex 16)" rootpassword)"
+          HASH_SALT="$(pick_secret DRUPAL_HASH_SALT "$(openssl rand -hex 32)" generate-random)"
+          echo "::add-mask::$DB_PASS"
+          echo "::add-mask::$DB_ROOT_PASS"
+          echo "::add-mask::$HASH_SALT"
+          update_env "DB_PASSWORD" "$DB_PASS"
+          update_env "DB_ROOT_PASSWORD" "$DB_ROOT_PASS"
+          update_env "DRUPAL_HASH_SALT" "$HASH_SALT"
+          unset DB_PASS DB_ROOT_PASS HASH_SALT
 
           # Organizer provisioning env vars (entrypoint handles user creation + email)
-          if [ -n "$EMAIL_INPUT" ]; then
-            update_env "ORGANIZER_EMAIL" "$EMAIL_INPUT"
-            update_env "ORGANIZER_NAME" "$SITE_NAME_INPUT"
+          if [ -n "$ORGANIZER_EMAIL" ]; then
+            update_env "ORGANIZER_EMAIL" "$ORGANIZER_EMAIL"
+            update_env "ORGANIZER_NAME" "$SITE_NAME"
           fi
-          if [ -n "$CALLBACK_URL_INPUT" ]; then
-            update_env "PROVISION_CALLBACK_URL" "$CALLBACK_URL_INPUT"
+          # The site reports back to the pinned origin only, never to the raw input; a manual
+          # run reports to nobody.
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            update_env "PROVISION_CALLBACK_URL" "$SIGNUP_ORIGIN"
           fi
-          if [ -n "$STRIPE_SESSION_ID_INPUT" ]; then
-            update_env "STRIPE_SESSION_ID" "$STRIPE_SESSION_ID_INPUT"
-          fi
-          update_env "PROVISION_CALLBACK_SECRET" "$PROVISION_CALLBACK_SECRET_VALUE"
           update_env "RESEND_API_KEY" "$RESEND_API_KEY_SECRET"
 
           # Optional image pin: IMAGE_TAG selects the GHCR tag in docker-compose.yaml
@@ -341,21 +649,57 @@ jobs:
           if [ -n "$IMAGE_TAG_INPUT" ]; then
             verify_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
           fi
+          # Write-once values: presence only, and the value is not even passed to the function
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            verify_env "PROVISION_CALLBACK_TOKEN" "" secret
+          fi
+          if [ -n "$SECRET_AI_NAME" ]; then
+            verify_env "$SECRET_AI_NAME" "" secret
+          fi
+          # The backup pair, under the same condition it was written with (23-40)
+          if [ "${AI_PROVIDER:-}" = "openrouter" ] && [ -n "${OPENROUTER_BACKUP_MODEL:-}" ]; then
+            verify_env "AI_BACKUP_PROVIDER" "openrouter"
+            verify_env "AI_BACKUP_MODEL" "$OPENROUTER_BACKUP_MODEL"
+          fi
+
+          # The env is known good, so the sign-up app can forget the sealed organizer key (D-21).
+          # Only the status is logged; an ack that fails is a warning, because the sealed copy
+          # also expires on its own.
+          if [ -n "$PROVISION_ID_INPUT" ]; then
+            ACK_RC=0
+            ACK_CODE="$(jq -n --arg pid "$PROVISION_ID_INPUT" '{provision_id: $pid}' \
+              | curl -sS -o /dev/null -w '%{http_code}' -X POST "$SIGNUP_ORIGIN/api/provision-manifest/ack" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $PROVISION_TOKEN" \
+                --data-binary @-)" || ACK_RC=$?
+            if [ "$ACK_RC" -ne 0 ]; then
+              echo "  Warning: manifest ack failed (non-fatal)"
+            else
+              echo "  Manifest ack: HTTP $ACK_CODE"
+              case "$ACK_CODE" in 2??) ;; *) echo "  Warning: the sign-up app did not accept the ack (non-fatal)" ;; esac
+            fi
+          fi
 
           rm -f "$RESP_FILE"
           echo "Environment configured"
 
       - name: Deploy instance
         run: |
-          # Coolify >= 4.2 requires POST to /deploy?uuid=...&force=true (GET returns 405); 4.1 accepts GET or POST
-          RESPONSE=$(curl -sS -X POST "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
+          # Coolify >= 4.2 requires POST to /deploy?uuid=...&force=true (GET returns 405); 4.1 accepts GET or POST.
+          # force=true also makes a reused app (REUSE=true, a retry's own half-made app) rebuild and
+          # restart with the env this run just applied.
+          # The reply is parsed from a file and never printed (23-43 code review fix round 1).
+          RESP_FILE=$(mktemp)
+          HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' -X POST "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
-            -H "Accept: application/json")
+            -H "Accept: application/json") || HTTP_CODE="curl-error"
 
           # Response is { "deployments": [...] } (no .data wrapper)
-          DEPLOY_UUID=$(printf '%s' "$RESPONSE" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null || true)
+          DEPLOY_UUID=$(jq -r '.deployments[0].deployment_uuid // empty' "$RESP_FILE" 2>/dev/null || true)
+          rm -f "$RESP_FILE"
           if [ -z "$DEPLOY_UUID" ] || [[ ! "$DEPLOY_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
-            echo "::error::Failed to trigger deployment: $RESPONSE"
+            echo "::error::Failed to trigger deployment (HTTP $HTTP_CODE, no deployment uuid in the reply)"
+            echo "FAIL_REASON=deploy_failed" >> "$GITHUB_ENV"
             exit 1
           fi
 
@@ -363,17 +707,18 @@ jobs:
           echo "Deployment triggered: $DEPLOY_UUID"
 
       - name: Notify status - provisioning
-        if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        if: inputs.callback_url != '' && inputs.provision_id != ''
         env:
-          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
-          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
-          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
         run: |
-          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" --arg url "https://$FQDN" \
-            '{session_id: $sid, status: "provisioning", site_url: $url}' \
-            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+          # Authenticates with the masked per-provision token from "Fetch provision manifest",
+          # never with the shared secret.
+          jq -n --arg pid "$PROVISION_ID_INPUT" --arg att "$ATTEMPT_INPUT" --arg url "https://$FQDN" \
+            '{provision_id: $pid, attempt: ($att | tonumber), status: "provisioning", site_url: $url, source: "workflow"}' \
+            | curl -sf -X POST "$SIGNUP_ORIGIN/api/provision-callback" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              -H "Authorization: Bearer $PROVISION_TOKEN" \
               --data-binary @- || echo "Warning: callback failed (non-fatal)"
 
       - name: Wait for deployment
@@ -393,27 +738,30 @@ jobs:
               break
             elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
               echo "::error::Deployment $STATUS"
+              echo "FAIL_REASON=deploy_failed" >> "$GITHUB_ENV"
               exit 1
             fi
           done
           # Deadline: anything but "finished" (still queued/in progress, or unreadable) fails the run
           if [ "$STATUS" != "finished" ]; then
             echo "::error::Deployment did not finish within 5 min (last status: $STATUS)"
+            echo "FAIL_REASON=deploy_timeout" >> "$GITHUB_ENV"
             exit 1
           fi
 
       - name: Notify status - installing
-        if: inputs.callback_url != '' && inputs.stripe_session_id != ''
+        if: inputs.callback_url != '' && inputs.provision_id != ''
         env:
-          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
-          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
-          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
         run: |
-          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" --arg url "https://$FQDN" \
-            '{session_id: $sid, status: "installing", site_url: $url}' \
-            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+          # Authenticates with the masked per-provision token from "Fetch provision manifest",
+          # never with the shared secret.
+          jq -n --arg pid "$PROVISION_ID_INPUT" --arg att "$ATTEMPT_INPUT" --arg url "https://$FQDN" \
+            '{provision_id: $pid, attempt: ($att | tonumber), status: "installing", site_url: $url, source: "workflow"}' \
+            | curl -sf -X POST "$SIGNUP_ORIGIN/api/provision-callback" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              -H "Authorization: Bearer $PROVISION_TOKEN" \
               --data-binary @- || echo "Warning: callback failed (non-fatal)"
 
       - name: Wait for site to become healthy
@@ -434,44 +782,67 @@ jobs:
           # so the summary never reports an instance that is not serving
           if [ "$HTTP_CODE" != "200" ]; then
             echo "::error::Site not healthy after 10 min (last HTTP $HTTP_CODE at https://$FQDN/user/login)"
+            echo "FAIL_REASON=install_timeout" >> "$GITHUB_ENV"
             exit 1
           fi
 
       - name: Summary
         env:
-          SITE_NAME_INPUT: ${{ inputs.site_name }}
           DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
-          EMAIL_INPUT: ${{ inputs.email }}
           GEMINI_KEY_TIER_INPUT: ${{ inputs.gemini_key_tier }}
         run: |
+          # Public run page: no organizer address and no community name here (both are personal data).
           # Table cells: printf only (no heredoc expansion); strip newlines and escape pipes
           cell() { printf '%s' "$1" | tr '\r\n' '  ' | sed 's/|/\\|/g'; }
           {
             printf '## LocalNodes Instance Provisioned\n\n'
             printf '| | |\n|---|---|\n'
             printf '| **URL** | https://%s |\n' "$FQDN"
-            printf '| **Site Name** | %s |\n' "$(cell "$SITE_NAME_INPUT")"
             printf '| **Demo Content** | %s |\n' "$(cell "$DEMO_MODULE_INPUT")"
             printf '| **Gemini Key Tier** | %s |\n' "$(cell "$GEMINI_KEY_TIER_INPUT")"
             printf '| **Coolify UUID** | `%s` |\n' "$APP_UUID"
             printf '| **Admin Login** | admin / random per-run password, stored only in the Coolify app env (DRUPAL_ADMIN_PASS); never printed |\n'
-            printf '| **Organizer Email** | %s |\n' "$(cell "$EMAIL_INPUT")"
             printf '\n### Next Steps\n'
             printf -- '- Visit https://%s and verify the site\n' "$FQDN"
-            printf -- '- Organizer will receive a welcome email with login link (sent by entrypoint)\n'
+            printf -- '- The new site sends the organizer a welcome message itself\n'
             printf -- '- Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)\n'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify status - failed
-        if: failure() && inputs.callback_url != '' && inputs.stripe_session_id != ''
+        if: failure() && inputs.callback_url != '' && inputs.provision_id != ''
         env:
-          CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
-          STRIPE_SESSION_ID_INPUT: ${{ inputs.stripe_session_id }}
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+          ATTEMPT_INPUT: ${{ inputs.attempt }}
           CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
         run: |
-          jq -n --arg sid "$STRIPE_SESSION_ID_INPUT" \
-            '{session_id: $sid, status: "failed", error: "Provisioning workflow failed. Check GitHub Actions logs for details."}' \
-            | curl -sf -X POST "$CALLBACK_URL_INPUT/api/provision-callback" \
+          if [ "${REPORT_OK:-}" != "true" ]; then
+            # Never post for an id, or after a callback_url, that failed validation (a foreign
+            # callback_url is never reported to, not even at the pinned origin), and derive no
+            # token for it. The run page shows the refusal instead.
+            echo "Failure not reported: provision_id or callback_url failed validation"
+            exit 0
+          fi
+          # The token normally exists already (manifest step). A run that failed before it,
+          # for instance on a refused subdomain, derives it here from the secret.
+          TOKEN="${PROVISION_TOKEN:-}"
+          if [ -z "$TOKEN" ] && [ -n "$CALLBACK_SECRET" ]; then
+            TOKEN="$(printf '%s' "$PROVISION_ID_INPUT" | openssl dgst -sha256 -hmac "$CALLBACK_SECRET" -r | cut -d' ' -f1)"
+            echo "::add-mask::${TOKEN}"
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "Warning: no token for the failure callback (non-fatal)"
+            exit 0
+          fi
+          # Only a code this workflow wrote itself goes out; no Coolify text, no error message.
+          REASON="${FAIL_REASON:-unknown}"
+          case "$REASON" in
+            invalid_request|coolify_unreachable|subdomain_taken|create_failed|env_failed|deploy_failed|deploy_timeout|install_timeout|manifest_failed) ;;
+            *) REASON=unknown ;;
+          esac
+          jq -n --arg pid "$PROVISION_ID_INPUT" --arg att "$ATTEMPT_INPUT" --arg reason "$REASON" --arg app "${APP_UUID:-}" \
+            '{provision_id: $pid, attempt: ($att | tonumber), status: "failed", reason: $reason, source: "workflow"}
+             + (if $app != "" then {app_uuid: $app} else {} end)' \
+            | curl -sf -X POST "$SIGNUP_ORIGIN/api/provision-callback" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              -H "Authorization: Bearer $TOKEN" \
               --data-binary @- || echo "Warning: callback failed (non-fatal)"

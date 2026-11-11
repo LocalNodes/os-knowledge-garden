@@ -66,3 +66,12 @@ source_box:
   css:
     component:
       css/import.css: {}
+
+# The page after a report is sent (23-05): focus starts on the heading.
+report_sent:
+  version: VERSION
+  js:
+    js/report-sent.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

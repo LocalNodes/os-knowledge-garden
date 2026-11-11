@@ -29,11 +29,14 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  * become [1], [2], [3] by first use, the Sources list is rebuilt from the
  * request's SourceRegistry, and everything else the model wrote about
  * sources is dropped. Text that can't be cited becomes the fixed fallback
- * copy. The message object is the one AgentRunner returns as end($history),
- * so the rewrite is what the person receives.
+ * copy. On a normal finish the rewritten message is the one AgentRunner
+ * returns as end($history). On a failed chat call ai_agents passes a
+ * throwaway message instead, so the registry keeps the object rewritten here
+ * and CitationGuardAgentRunner replaces any exit that isn't it.
  *
  * Exits that never fire the finished event are caught by
- * CitationGuardAgentRunner, which checks the flag set here.
+ * CitationGuardAgentRunner too: it passes only the message object marked
+ * here.
  *
  * Logs one 'answer_summary' per answer: counts, labels, reason codes, the
  * chat calls and tokens behind it (TokenTally) and a prompt hash. Never
@@ -106,13 +109,6 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
   ) {}
 
   /**
-   * {@inheritdoc}
-   *
-   * Event names are literal strings, not the ai_agents class constants:
-   * this module doesn't depend on ai_agents, and reading a constant would
-   * autoload a class that may not exist when the container is compiled.
-   */
-  /**
    * Sets the runtime support check (service container setter injection).
    */
   public function setSupportCheck(SupportCheck $support_check): void {
@@ -121,6 +117,10 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * Event names are literal strings, not the ai_agents class constants:
+   * this module doesn't depend on ai_agents, and reading a constant would
+   * autoload a class that may not exist when the container is compiled.
    */
   public static function getSubscribedEvents(): array {
     return [
@@ -162,8 +162,8 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
     if ($event->getAgentId() !== self::AGENT_ID) {
       return;
     }
-    // The same ChatMessage object that is pushed to history, read back into
-    // the agent's answer and returned by AgentRunner as end($history).
+    // On a normal finish this is the message AgentRunner returns; on a failed
+    // chat call it is a throwaway, which the guard recognises by identity.
     $message = $event->getResponse()->getNormalized();
     if (!$message instanceof ChatMessage) {
       // Streamed output can't be rewritten; the guard replaces it.
@@ -219,7 +219,7 @@ final class CitationRewriteSubscriber implements EventSubscriberInterface {
       $reason = 'rewrite_error:' . get_class($e);
       $message->setText(CitedAnswer::fallbackMarkdown());
     }
-    $this->registry->markRewritten();
+    $this->registry->markRewritten($message);
 
     $runner_id = $event->getAgentRunnerId();
     $latency = isset($this->started[$runner_id]) ? (int) round((hrtime(TRUE) - $this->started[$runner_id]) / 1e6) : -1;

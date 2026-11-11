@@ -132,6 +132,31 @@ final class ChatbotGuardTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * A drupal/ai 1.5 request body, as the shipped block's JavaScript sends it.
+   *
+   * 1.5.x names a chat processor plugin and carries the assistant in
+   * plugin_configuration. The guard reads only messages from the body.
+   */
+  private static function body15(string $latest): string {
+    return Json::encode([
+      'chat_processor_plugin' => 'ai_assistant_api_processor',
+      'plugin_configuration' => [
+        'assistant_id' => 'group_assistant',
+        'stream_output' => FALSE,
+        'verbose_mode' => FALSE,
+        'show_structured_results' => FALSE,
+      ],
+      'thread_id' => 'fictional-thread',
+      'show_copy_icon' => TRUE,
+      'messages' => [
+        ['role' => 'user', 'text' => 'Fictional earlier question'],
+        ['role' => 'assistant', 'text' => 'Fictional earlier answer'],
+        ['role' => 'user', 'text' => $latest],
+      ],
+    ]);
+  }
+
+  /**
    * Sends one chatbot request through the guard; returns its response or NULL.
    */
   private function send(AccountInterface $account, string $body, string $ip = self::IP, string $route = 'ai_chatbot.api', string $method = 'POST'): ?Response {
@@ -209,6 +234,30 @@ final class ChatbotGuardTest extends GroupAccessKernelTestBase {
 
     // Multibyte text is counted in characters, not bytes.
     $this->assertNull($this->send($this->alice, self::body(str_repeat('é', 2000))), '2,000 multibyte characters pass.');
+  }
+
+  /**
+   * The drupal/ai 1.5 body shape (plugin_configuration) hits the same limits.
+   *
+   * T-22.2-17: the 1.5.x body names a chat processor plugin and carries the
+   * assistant in plugin_configuration. A 2,001-character message gets 413
+   * before the controller, and a short message passes and is counted.
+   */
+  public function testFifteenBodyShapeIsGuarded(): void {
+    $too_long = mb_substr(str_repeat('fictional ', 201), 0, 2001);
+
+    $response = $this->send($this->alice, self::body15($too_long));
+    $this->assertNotNull($response, 'A 2,001-character message in the 1.5 body is refused.');
+    $this->assertSame(413, $response->getStatusCode());
+    $this->assertSame(['error' => self::TOO_LONG], Json::decode($response->getContent()));
+    $this->assertSame(0, $this->preEvents, '413: no provider call.');
+    $this->assertSame(0, $this->allChatbotRows(), '413: no flood event.');
+
+    $this->assertNull($this->send($this->alice, self::body15('Fictional short question')), 'A short message in the 1.5 body passes the guard.');
+    $this->assertSame(1, $this->floodCount(self::USER_EVENT, 'uid:' . $this->alice->id()), 'The 1.5 body is counted against the member limit.');
+
+    $this->setLimits(user: 1);
+    $this->assertRateLimited($this->send($this->alice, self::body15('Fictional second question'), '198.51.100.30'), 3600, '1.5 body, user limit');
   }
 
   /**

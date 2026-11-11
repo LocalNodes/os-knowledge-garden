@@ -7,3 +7,7 @@ services:
     class: Drupal\localnodes_platform\Drush\Commands\LocalNodesStatusCommands
     tags:
       - { name: drush.command }
+  localnodes_platform.organizer.drush.commands:
+    class: Drupal\localnodes_platform\Drush\Commands\OrganizerCommands
+    tags:
+      - { name: drush.command }

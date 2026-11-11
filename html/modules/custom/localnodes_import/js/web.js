@@ -7,10 +7,15 @@
  * - When the addresses change, "Check licences" runs through its #ajax, so
  *   the licence lines and the preview update in place. Nothing here moves
  *   focus while the person types.
- * - The confirmation (UI-SPEC Part 3 "Confirmation"): "Keep current
+ * - The confirmations (UI-SPEC Part 3 "Confirmation"; the takedown of 23-05
+ *   works the same way): "Keep current
  *   version" has initial focus (its autofocus attribute, applied here too
  *   for browsers that ignore autofocus on links), and Escape cancels, which
  *   goes back to the report the person came from.
+ * - "Report a problem" (23-05; 23-UI-SPEC section 10 "Sending", 23-29): once
+ *   the form is on its way, "Send report" reads "Sending…", shows the spinner
+ *   and is disabled. It is disabled after the submit event, so the form data
+ *   (and the button) have already gone with the POST.
  */
 (function (Drupal, once) {
   Drupal.behaviors.localnodesImportWeb = {
@@ -38,7 +43,45 @@
           }
         });
       });
-      once('localnodes-import-refresh', 'form.localnodes-import-refresh', context).forEach(function (form) {
+      once('localnodes-import-report-sending', 'form.localnodes-import-report-problem', context).forEach(function (form) {
+        const button = form.querySelector('[type="submit"]');
+        if (!button) {
+          return;
+        }
+        const label = button.tagName === 'BUTTON' ? button.textContent : button.value;
+        const spinner = document.createElement('span');
+        spinner.className = 'localnodes-import-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        spinner.hidden = true;
+        button.insertAdjacentElement('afterend', spinner);
+        const setLabel = function (text) {
+          if (button.tagName === 'BUTTON') {
+            button.textContent = text;
+          }
+          else {
+            button.value = text;
+          }
+        };
+        form.addEventListener('submit', function (event) {
+          if (event.defaultPrevented) {
+            return;
+          }
+          setTimeout(function () {
+            setLabel(Drupal.t('Sending…'));
+            spinner.hidden = false;
+            button.disabled = true;
+          }, 0);
+        });
+        // Back to the page from the browser's history: the form can be sent again.
+        window.addEventListener('pageshow', function (event) {
+          if (event.persisted) {
+            setLabel(label);
+            spinner.hidden = true;
+            button.disabled = false;
+          }
+        });
+      });
+      once('localnodes-import-refresh', 'form.localnodes-import-refresh, form.localnodes-import-takedown', context).forEach(function (form) {
         const cancel = form.querySelector('a[autofocus]');
         if (!cancel) {
           return;

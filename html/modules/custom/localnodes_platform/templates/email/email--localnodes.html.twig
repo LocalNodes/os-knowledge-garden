@@ -1,0 +1,531 @@
+{#
+/**
+ * @file
+ * The LocalNodes email wrapper (22.1 D-11, BRAND.md section 9).
+ *
+ * One template for every mail the site sends. Registered by
+ * localnodes_platform_theme() as the email__localnodes suggestion, so it
+ * outranks the wrapper the mail's theme ships.
+ *
+ * The look is Tom's, from the canvas (card 5): a white card with an 8px radius
+ * on the light grey canvas, 600px wide at most, the community's name at the
+ * top in 20px type, 16px body text, one button in the brand blue, and a 14px
+ * footer. No images, so the mail reads the same with images off. The table
+ * layout is for old mail clients.
+ *
+ * Variables:
+ * - body: The mail's body content.
+ * - heading, header, footer: Optional slots set by social_swiftmail.
+ * - ln: The email colour roles from tokens/ln-tokens.flat.json (body, card,
+ *   heading, text, link, button, button-text, button-hover, divider,
+ *   footer-text, footer-bg).
+ * - ln_radius_card, ln_radius_control, ln_font: Shape and type from the same
+ *   file.
+ * - ln_site_name: The community's name (system.site).
+ * - ln_wallet_line: One optional line, set only in the organizer-created
+ *   welcome mail on Web3 sites.
+ *
+ * Colours come only from `ln`. A literal colour here would drift from the
+ * token source (D-03), and scripts/tokens/check_raw_colors.mjs (22.1-06)
+ * fails on one.
+ *
+ * Everything printed is autoescaped. The site name is a plain string that a
+ * site manager can edit, so a name with markup shows as text. Never add a
+ * raw-output filter to it or to any other string here.
+ *
+ * Deliberately not printed: Open Social's logo, site link, slogan and
+ * sub-slogan. The rules below style the markup that Open Social's notification
+ * mails put in `body` (posts, comments, event cards, buttons); they are
+ * socialbase's own, recoloured and without its shadows.
+ */
+#}
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>{{ ln_site_name }}</title>
+  <style>
+    img {
+      border: none;
+      -ms-interpolation-mode: bicubic;
+      max-width: 100%; }
+
+    body {
+      background-color: {{ ln.body }};
+      color: {{ ln.text }};
+      font-family: {{ ln_font }}, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+      line-height: 1.5;
+      margin: 0;
+      padding: 0;
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%; }
+
+    table {
+      border-collapse: separate;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      width: 100%; }
+    table td {
+      font-family: {{ ln_font }}, system-ui, sans-serif;
+      font-size: 16px;
+      vertical-align: top; }
+
+    .body {
+      background-color: {{ ln.body }};
+      width: 100%; }
+
+    .container {
+      display: block;
+      margin: 0 auto !important;
+      max-width: 600px;
+      padding: 16px;
+      width: 600px; }
+
+    .content {
+      box-sizing: border-box;
+      display: block;
+      margin: 0 auto;
+      max-width: 600px;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      -ms-hyphens: auto;
+      -moz-hyphens: auto;
+      -webkit-hyphens: auto;
+      hyphens: auto; }
+
+    /* The white card: header, greeting, body. */
+    .card {
+      width: 100%;
+      background: {{ ln.card }};
+      border: 1px solid {{ ln.divider }};
+      border-radius: {{ ln_radius_card }}; }
+
+    .header > tbody > tr > td,
+    .header > tr > td {
+      padding: 32px 44px 8px;
+      color: {{ ln.heading }};
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: left; }
+
+    .postheader > tbody > tr > td,
+    .postheader > tr > td {
+      padding: 8px 44px 16px;
+      font-size: 16px; }
+
+    .main {
+      width: 100%; }
+
+    .wrapper {
+      box-sizing: border-box;
+      padding: 0 44px 40px; }
+
+    .wallet-line {
+      margin-top: 16px; }
+
+    /* The footer sits on the canvas, under the card. */
+    .footer {
+      clear: both;
+      padding-top: 24px;
+      text-align: center;
+      width: 100%;
+      background-color: {{ ln['footer-bg'] }}; }
+    .footer td,
+    .footer p,
+    .footer span,
+    .footer a {
+      color: {{ ln['footer-text'] }};
+      font-size: 14px;
+      line-height: 21px;
+      text-align: center; }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      color: {{ ln.heading }};
+      font-family: {{ ln_font }}, system-ui, sans-serif;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 0;
+      margin-bottom: 24px; }
+
+    h1 {
+      font-size: 28px; }
+
+    p,
+    ul,
+    ol {
+      font-family: {{ ln_font }}, system-ui, sans-serif;
+      font-size: 16px;
+      font-weight: normal;
+      margin: 0;
+      margin-bottom: 16px;
+      list-style: none; }
+
+    p:last-child {
+      margin-bottom: 0; }
+
+    p li,
+    ul li,
+    ol li {
+      list-style-position: inside;
+      margin-left: 5px; }
+
+    ul {
+      padding-left: 1em; }
+
+    small {
+      font-size: 14px; }
+
+    a {
+      color: {{ ln.link }};
+      font-weight: 600;
+      text-decoration: underline; }
+
+    a:hover {
+      text-decoration: underline; }
+
+    .first-paragraph {
+      font-size: 16px;
+      margin-bottom: 20px; }
+
+    .bottom-space {
+      margin-bottom: 40px; }
+
+    .notification {
+      font-size: 18px;
+      margin-bottom: 20px; }
+
+    /* Buttons: one filled button in the brand blue. */
+    .btn {
+      box-sizing: border-box;
+      width: 100%; }
+    .btn > tbody > tr > td {
+      padding-bottom: 16px; }
+    .btn table {
+      width: auto; }
+    .btn table td {
+      background-color: {{ ln.card }};
+      border-radius: {{ ln_radius_control }};
+      text-align: center; }
+    .btn a {
+      background-color: {{ ln.card }};
+      border: solid 1px {{ ln.button }};
+      border-radius: {{ ln_radius_control }};
+      box-sizing: border-box;
+      color: {{ ln.button }};
+      cursor: pointer;
+      display: inline-block;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      padding: 12px 24px;
+      text-decoration: none; }
+
+    .btn-primary table td {
+      background-color: {{ ln.button }}; }
+
+    .btn-primary a {
+      background-color: {{ ln.button }};
+      border-color: {{ ln.button }};
+      color: {{ ln['button-text'] }}; }
+
+    .btn-wrapp {
+      margin-bottom: 24px; }
+
+    .btn-wrapp td:nth-child(odd) {
+      padding-left: 0; }
+
+    .btn-wrapp td:nth-child(even) {
+      padding-right: 0; }
+
+    .btn-link {
+      display: block;
+      position: relative;
+      margin-bottom: 16px;
+      border-radius: {{ ln_radius_control }};
+      border: 1px solid {{ ln.button }};
+      color: {{ ln.button }};
+      padding: 9px 24px 7px;
+      text-align: center;
+      text-decoration: none; }
+
+    .btn-link:hover {
+      text-decoration: none; }
+
+    .btn-link img {
+      position: absolute;
+      top: 10px;
+      left: 11px; }
+
+    .btn-link-bg {
+      background-color: {{ ln.button }};
+      color: {{ ln['button-text'] }}; }
+
+    /* Notification markup: posts, comments, replies. */
+    .comments {
+      border-radius: {{ ln_radius_card }};
+      border: 1px solid {{ ln.divider }};
+      margin-bottom: 20px;
+      margin-top: 20px; }
+
+    .comment {
+      padding: 16px 20px 0;
+      border-radius: {{ ln_radius_card }}; }
+
+    .reply {
+      padding-bottom: 20px;
+      margin: 20px 16px;
+      background: {{ ln.body }}; }
+
+    .post {
+      padding: 16px 20px 20px;
+      font-size: 16px; }
+
+    .message {
+      padding: 5px 20px; }
+
+    .author-msg {
+      margin-bottom: 10px; }
+
+    .post p,
+    .comment p {
+      margin: 10px 0; }
+
+    .post-type {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: {{ ln.link }}; }
+
+    .post-title {
+      margin-bottom: 10px; }
+
+    .post-info {
+      font-size: 14px; }
+
+    .post-info span,
+    .post-info strong {
+      display: inline-block;
+      vertical-align: sub; }
+
+    .post-answer {
+      background-color: {{ ln.body }}; }
+
+    .middle-block {
+      padding: 45px 0 0;
+      margin-bottom: 30px;
+      border-bottom: 2px solid {{ ln.divider }};
+      border-top: 2px solid {{ ln.divider }}; }
+
+    .last {
+      margin-bottom: 0; }
+
+    .first {
+      margin-top: 0; }
+
+    .align-center,
+    .text-align-center {
+      text-align: center; }
+
+    .align-right,
+    .text-align-right {
+      text-align: right; }
+
+    .align-left,
+    .text-align-left {
+      text-align: left; }
+
+    .clear {
+      clear: both; }
+
+    .mt0 {
+      margin-top: 0; }
+
+    .mb0 {
+      margin-bottom: 0; }
+
+    .preheader {
+      color: transparent;
+      display: none;
+      height: 0;
+      max-height: 0;
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+      mso-hide: all;
+      visibility: hidden;
+      width: 0; }
+
+    .list {
+      display: flex;
+      flex-direction: column; }
+
+    hr {
+      border: 0;
+      border-bottom: 1px solid {{ ln.divider }};
+      margin: 20px 0; }
+
+    .sr-only {
+      position: absolute;
+      height: 1px;
+      width: 1px;
+      overflow: hidden;
+      word-wrap: normal;
+      margin: -1px;
+      padding: 0;
+      clip: rect(0, 0, 0, 0);
+      border: 0; }
+
+    /* Event and topic cards in notification mails. */
+    .card__node-email {
+      border: 1px solid {{ ln.divider }}; }
+    .card__node-email--header {
+      padding-top: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid {{ ln.divider }}; }
+    .card__node-email--location,
+    .card__node-email--addtocal,
+    .card__node-email--header {
+      padding-left: 20px;
+      padding-right: 20px; }
+    .card__node-email--location,
+    .card__node-email--header {
+      margin-bottom: 24px; }
+    .card__node-email--header a,
+    .card__node-email--title {
+      font-weight: 600; }
+    .card__node-email--title {
+      margin-bottom: 4px;
+      font-size: 14px;
+      line-height: 21px;
+      text-transform: uppercase;
+      color: {{ ln.link }}; }
+    .card__node-email--header a {
+      font-size: 16px;
+      line-height: 24px;
+      color: {{ ln.text }};
+      text-decoration: underline; }
+    .card__node-email--header a:hover {
+      color: {{ ln.text }};
+      text-decoration: none; }
+    .card__node-email--location > div {
+      margin-bottom: 10px; }
+    .card__node-email--location > div:last-child {
+      margin-bottom: 0; }
+    .add-to-calendar > span {
+      display: block;
+      margin-bottom: 24px;
+      font-weight: 600; }
+    .add-to-calendar > a {
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 21px;
+      color: {{ ln.text }};
+      text-decoration: underline; }
+    .add-to-calendar > a:hover {
+      text-decoration: none; }
+
+    @media only screen and (max-width: 620px) {
+      table[class=body] h1 {
+        font-size: 24px !important;
+        margin-bottom: 10px !important; }
+      table[class=body] .wrapper,
+      table[class=body] .article {
+        padding: 0 16px 24px !important; }
+      table[class=body] .header td,
+      table[class=body] .postheader td {
+        padding-left: 16px !important;
+        padding-right: 16px !important; }
+      table[class=body] .content {
+        padding: 0 !important; }
+      table[class=body] .container {
+        padding: 0 !important;
+        width: 100% !important; }
+      table[class=body] .btn table {
+        width: 100% !important; }
+      table[class=body] .btn a {
+        width: 100% !important; }
+      table[class=body] .img-responsive {
+        height: auto !important;
+        max-width: 100% !important;
+        width: auto !important; }}
+
+    @media all {
+      .ExternalClass {
+        width: 100%; }
+      .ExternalClass,
+      .ExternalClass p,
+      .ExternalClass span,
+      .ExternalClass font,
+      .ExternalClass td,
+      .ExternalClass div {
+        line-height: 100%; }
+      .apple-link a {
+        color: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        text-decoration: none !important; }
+      .btn-primary table td:hover {
+        background-color: {{ ln['button-hover'] }} !important; }
+      .btn-primary a:hover {
+        background-color: {{ ln['button-hover'] }} !important;
+        border-color: {{ ln['button-hover'] }} !important; } }
+  </style>
+</head>
+<body>
+<!-- localnodes-email -->
+<table border="0" cellpadding="0" cellspacing="0" class="body">
+  <tr>
+    <td class="container">
+      <div class="content">
+        <span class="preheader"></span>
+        <div class="card">
+          <table class="header" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td class="site-name">{{ ln_site_name }}</td>
+            </tr>
+          </table>
+          {% if heading %}
+            <table class="postheader" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>{{ heading }},</td>
+              </tr>
+            </table>
+          {% endif %}
+          <table class="main">
+            <tr>
+              <td class="wrapper">
+                <table border="0" cellpadding="0" cellspacing="0">
+                  {% if header %}
+                    <tr><td>{{ header }}</td></tr>
+                  {% endif %}
+                  <tr><td>{{ body }}</td></tr>
+                  {% if ln_wallet_line %}
+                    <tr><td><p class="wallet-line">{{ ln_wallet_line }}</p></td></tr>
+                  {% endif %}
+                  {% if footer %}
+                    <tr><td>{{ footer }}</td></tr>
+                  {% endif %}
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="footer">
+          <p>{% trans %}Sent by {{ ln_site_name }} · a community on LocalNodes{% endtrans %}</p>
+        </div>
+      </div>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

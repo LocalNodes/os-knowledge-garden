@@ -41,10 +41,62 @@ STEWARD_SPECS.push('treasury-titles.spec.ts');
 // 21-29: the recorded walkthrough and the keyboard checks (steward project;
 // the walkthrough's member block switches its own session).
 STEWARD_SPECS.push('treasury-walkthrough.spec.ts', 'treasury-keyboard.spec.ts');
+// Phase 23 (23-13): the organizer guide, as the steward. Results go to the
+// Phase 23 folder through PHASE23_RESULTS_DIR.
+STEWARD_SPECS.push('guide.spec.ts');
+// 23-26: the site terms and the register form's consent box, as an
+// anonymous visitor. Results go to the Phase 23 folder.
+ANONYMOUS_SPECS.push('terms.spec.ts');
+// 23-29: the Phase 23 keyboard run and screen-reader proxy. They run in the
+// onboarding, anonymous and steward projects; each test skips the states that
+// belong to another project (helpers/phase23-states.ts).
+const PHASE23_STATE_SPECS = ['keyboard-phase23.spec.ts', 'sr-proxy-phase23.spec.ts'];
+ANONYMOUS_SPECS.push(...PHASE23_STATE_SPECS);
+STEWARD_SPECS.push(...PHASE23_STATE_SPECS);
+// Phase 25 group governance screens (25-26). governance.spec.ts runs in the
+// member project and switches persona per block; results go to the Phase 25
+// folder.
+MEMBER_SPECS.push('governance.spec.ts');
+// 22.1-17: the DeepChat bar's computed keyboard focus ring, as the member (the chat shows on the group page).
+MEMBER_SPECS.push('chat-focus-ring.spec.ts');
+// 25-26: the keyboard walk and screen-reader evidence, as the steward (the
+// vote blocks switch to the voter).
+STEWARD_SPECS.push('governance-keyboard.spec.ts');
+// 22.1-15: the "Hacked or Phished?" help page, signed out and as a member.
+// Results go to the 22.1 folder.
+ANONYMOUS_SPECS.push('safety-help.spec.ts');
+MEMBER_SPECS.push('safety-help.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test (22-30). The CLI's
 // --trace flag also works; there's no CLI flag for video.
 const RECORD = process.env.LN_RECORD === '1';
+
+// Phase 23 (23-20): the Nuxt sign-up site's screens, with every sign-up API
+// answered by page.route mocks. It runs against the Nuxt dev server
+// (NUXT_LAUNCH_OPEN=true npm --prefix ../localnodes-onboarding run dev), not
+// Drupal, so it has its own baseURL and no stored session, and only
+// onboarding.spec.ts runs in it. Results go to the Phase 23 folder.
+export const ONBOARDING_URL = process.env.LN_ONBOARDING_URL ?? 'http://localhost:3000';
+const ONBOARDING_SPECS = ['onboarding.spec.ts', ...PHASE23_STATE_SPECS];
+
+// global-setup.ts and global-teardown.ts seed and check the DDEV Drupal site.
+// A run of only the onboarding project needs no Drupal and no DDEV, so they are
+// skipped when every --project on the command line is "onboarding". Playwright
+// runs them for the whole config whichever projects are picked, so the choice
+// is made here from the command line.
+function selectedProjects(argv: string[]): string[] {
+  const names: string[] = [];
+  argv.forEach((arg, i) => {
+    if (arg === '--project' && argv[i + 1]) names.push(argv[i + 1]);
+    else if (arg.startsWith('--project=')) names.push(arg.slice('--project='.length));
+  });
+  return names;
+}
+const PICKED = selectedProjects(process.argv);
+const ONBOARDING_ONLY = PICKED.length > 0 && PICKED.every((name) => name === 'onboarding');
+// onboarding.spec.ts fails when the Nuxt server is down and the project was
+// picked by name, and skips in a run of every project. Workers inherit this.
+if (PICKED.includes('onboarding')) process.env.LN_ONBOARDING_PICKED = '1';
 
 export default defineConfig({
   testDir: '.',
@@ -56,10 +108,10 @@ export default defineConfig({
   timeout: 60_000,
   reporter: [['list']],
   outputDir: '../../test-results',
-  globalSetup: './global-setup.ts',
+  globalSetup: ONBOARDING_ONLY ? undefined : './global-setup.ts',
   // Fails the run if any AI provider call reached a provider on the server
   // while the suite ran (22-30; tests/a11y/README.md).
-  globalTeardown: './global-teardown.ts',
+  globalTeardown: ONBOARDING_ONLY ? undefined : './global-teardown.ts',
   use: {
     baseURL: BASE_URL,
     channel: BROWSER_CHANNEL === 'chromium' ? undefined : BROWSER_CHANNEL,
@@ -84,6 +136,11 @@ export default defineConfig({
       name: 'member',
       testMatch: MEMBER_SPECS,
       use: { storageState: join(AUTH_DIR, 'member.json') },
+    },
+    {
+      name: 'onboarding',
+      testMatch: ONBOARDING_SPECS,
+      use: { baseURL: ONBOARDING_URL, storageState: { cookies: [], origins: [] } },
     },
   ],
 });

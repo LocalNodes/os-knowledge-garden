@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - social_ai_indexing
+id: localnodes_input_length
+label: 'LocalNodes input length (2,000 characters)'
+description: 'Stops a request whose last user message is over 2,000 characters, before the provider is called.'
+guardrail: input_length_limit
+guardrail_settings:
+  max_length: 2000
+  use_tokens: false
+  violation_message: 'That request is too long for the assistant. Shorten it and try again.'

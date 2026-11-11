@@ -5,6 +5,11 @@
  * Hooks for the LocalNodes Web3 module.
  */
 
+use Drupal\Core\Block\BlockPluginInterface;
+use Drupal\localnodes_web3\SiweHelpLink;
+use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
+use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
+
 /**
  * Implements hook_library_info_alter().
  *
@@ -23,4 +28,51 @@ function localnodes_web3_library_info_alter(array &$libraries, $extension) {
     $dependencies[] = 'localnodes_web3/treasury';
   }
   $libraries['components']['dependencies'] = $dependencies;
+}
+
+/**
+ * Implements hook_safe_smart_accounts_approve_help().
+ *
+ * "Hacked or phished? Get help" right after "Approve payment", on payments
+ * and settings changes alike (Tom's ruling of 2026-11-09, 22.1-15). It
+ * links localnodes_platform's "Hacked or Phished?" page; without that page
+ * there is no link.
+ */
+function localnodes_web3_safe_smart_accounts_approve_help(SafeTransactionInterface $transaction, SafeAccountInterface $safe): array {
+  $link = SiweHelpLink::link();
+  return $link === NULL ? [] : ['localnodes_web3_safety_help' => $link];
+}
+
+/**
+ * Implements hook_block_view_BASE_BLOCK_ID_alter() for siwe_login_block.
+ *
+ * The same link under the wallet sign-in (22.1-15). It is added in a
+ * #pre_render callback, which runs once the block content is built and
+ * after siwe_login_waap's own callback, so it lands after the final
+ * content: see SiweHelpLink.
+ */
+function localnodes_web3_block_view_siwe_login_block_alter(array &$build, BlockPluginInterface $block): void {
+  $build['#pre_render'][] = [SiweHelpLink::class, 'preRender'];
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * Runs localnodes_web3's siwe_login block alter last. siwe_login_waap's
+ * alter adds a #pre_render callback that, with show_siwe_wallet_button
+ * FALSE, replaces the whole block content with its mount element; the help
+ * link's callback has to come after it, or the link is thrown away. Core
+ * orders the block_view_alter and block_view_siwe_login_block_alter
+ * implementations together and calls this hook with either name, and
+ * localnodes_web3 sorts before siwe_login_waap, so it is moved for both.
+ * It is only ever moved, never added: core refuses an entry whose function
+ * doesn't exist.
+ */
+function localnodes_web3_module_implements_alter(array &$implementations, string $hook): void {
+  if (!in_array($hook, ['block_view_alter', 'block_view_siwe_login_block_alter'], TRUE) || !array_key_exists('localnodes_web3', $implementations)) {
+    return;
+  }
+  $group = $implementations['localnodes_web3'];
+  unset($implementations['localnodes_web3']);
+  $implementations['localnodes_web3'] = $group;
 }

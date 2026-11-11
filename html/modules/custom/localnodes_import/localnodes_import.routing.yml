@@ -109,3 +109,54 @@ localnodes_import.upload_file:
     parameters:
       group:
         type: entity:group
+
+# "Report a problem with this page" (23-05, ONB-05, D-25). Open to anyone who
+# can see the page, signed in or not: a rights holder is usually not a
+# member. The link is on the Source box of imported pages only; the form
+# 404s for any other page. The parameter is {topic}, not {node}, for the
+# same reason as the refresh route (Open Social's node hero).
+localnodes_import.report_problem:
+  path: '/node/{topic}/report-problem'
+  defaults:
+    _form: '\Drupal\localnodes_import\Form\ReportProblemForm'
+    _title: 'Report a Problem with This Page'
+  requirements:
+    _entity_access: 'topic.view'
+    topic: \d+
+  options:
+    parameters:
+      topic:
+        type: entity:node
+
+# The thank-you page: its own address so the h1 is "Report Sent" and focus
+# starts there. It shows nothing the reporter typed.
+localnodes_import.report_sent:
+  path: '/node/{topic}/report-problem/sent'
+  defaults:
+    _controller: '\Drupal\localnodes_import\Controller\ReportSentController::view'
+    _title: 'Report Sent'
+  requirements:
+    _entity_access: 'topic.view'
+    topic: \d+
+  options:
+    parameters:
+      topic:
+        type: entity:node
+
+# The takedown confirmation the report mail links to (23-05, T-23-17): the
+# page's editors, site managers and the group's managers. The link carries
+# only the page's id; the access check is the gate.
+localnodes_import.takedown:
+  path: '/node/{topic}/takedown'
+  defaults:
+    _form: '\Drupal\localnodes_import\Form\TakedownConfirmForm'
+    # The page title is the question (Open Social's title block reads the
+    # route title, not the form's #title).
+    _title_callback: '\Drupal\localnodes_import\Form\TakedownConfirmForm::title'
+  requirements:
+    _localnodes_import_takedown_access: 'TRUE'
+    topic: \d+
+  options:
+    parameters:
+      topic:
+        type: entity:node

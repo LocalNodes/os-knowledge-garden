@@ -1,0 +1,81 @@
+diff --git a/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php b/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
+--- a/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
++++ b/src/Plugin/search_api/backend/SearchApiAiSearchBackend.php
+@@ -515,7 +515,15 @@
+ 
+       // Index only this item; the client calls getEmbedding() which returns
+       // the offset-based slice.
+-      $client->indexItems($this->configuration, $index, [$item], $embedding_strategy);
++      $indexed_ids = $client->indexItems($this->configuration, $index, [$item], $embedding_strategy);
++
++      // When the client did not finish the item (a provider rate limit or
++      // outage, an embedding that failed, a backoff in progress), do not
++      // record chunk progress and do not report the item as indexed: it must
++      // stay tracked, and its old vectors are still in the vector database.
++      if (!in_array($item_id, $indexed_ids, TRUE)) {
++        continue;
++      }
+ 
+       $new_processed = min($offset + static::MAX_CHUNKS_PER_BATCH, $total_chunks);
+ 
+diff --git a/src/Plugin/EmbeddingStrategy/EmbeddingBase.php b/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
+--- a/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
++++ b/src/Plugin/EmbeddingStrategy/EmbeddingBase.php
+@@ -326,6 +326,9 @@
+           }
+         }
+         catch (\Exception $e) {
++          if (static::isProviderLimit($e)) {
++            throw $e;
++          }
+           // If batch embedding fails, fall back to single-chunk processing
+           // for this batch only.
+           $logger = $this->loggerChannelFactory->get('ai_search');
+@@ -344,6 +347,9 @@
+               )->getNormalized();
+             }
+             catch (\Exception $e) {
++              if (static::isProviderLimit($e)) {
++                throw $e;
++              }
+               $logger->warning('Failed to embed chunk: @message', [
+                 '@message' => $e->getMessage(),
+               ]);
+@@ -365,6 +371,9 @@
+           )->getNormalized();
+         }
+         catch (\Exception $e) {
++          if (static::isProviderLimit($e)) {
++            throw $e;
++          }
+           $logger = $this->loggerChannelFactory->get('ai_search');
+           $logger->warning('Failed to embed chunk: @message', [
+             '@message' => $e->getMessage(),
+@@ -377,6 +386,27 @@
+   }
+ 
+   /**
++   * Tells whether an embeddings error is a provider rate limit or outage.
++   *
++   * A rate limit, a quota error or a provider 5xx error means every further
++   * chunk would fail the same way, and the chunks that did work are not the
++   * whole item. These errors are passed on to the caller (the VDB client),
++   * which can keep the item's old vectors and try again later. Every other
++   * error, a 4xx included, is logged and the chunk dropped, as before.
++   *
++   * @param \Throwable $e
++   *   The exception from the embeddings call.
++   *
++   * @return bool
++   *   TRUE when the exception should be rethrown.
++   */
++  protected static function isProviderLimit(\Throwable $e): bool {
++    return $e instanceof \Drupal\ai\Exception\AiRateLimitException
++      || $e instanceof \Drupal\ai\Exception\AiQuotaException
++      || ($e instanceof \Drupal\ai\Exception\AiRequestErrorException && $e->getCode() >= 500 && $e->getCode() <= 599);
++  }
++
++  /**
+    * Group the fields into title, contextual content, and main content.
+    *
+    * @param array $fields

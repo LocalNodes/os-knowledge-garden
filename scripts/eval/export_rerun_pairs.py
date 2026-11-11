@@ -122,6 +122,17 @@ def overview_excerpts(record):
         for n, r in zip(ns, rs):
             if n_to_r.setdefault(n, r) != r:
                 errors.append(f"[{n}] maps to both R{n_to_r[n]} and R{r}")
+    # Elimination (23-16): a citation no check line maps is still exact when
+    # only one block with its base title is left unclaimed (RQ-19 on
+    # gpt-oss-120b: the check merged two answer sentences into one line).
+    for c in record["citations"]:
+        n = int(c["n"])
+        if n in n_to_r:
+            continue
+        left = [r for r, (title, _) in by_label.items()
+                if title == base(c["title"]) and r not in n_to_r.values()]
+        if len(left) == 1:
+            n_to_r[n] = left[0]
     for c in record["citations"]:
         n = int(c["n"])
         if n not in n_to_r or n_to_r[n] not in by_label:

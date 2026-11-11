@@ -1,0 +1,22 @@
+{
+  "$description": "socialblue's stock colour scheme, the 'default' scheme in html/profiles/contrib/social/themes/socialblue/color/color.inc (goalgorilla/open_social 13.1.0, from this repo's composer.lock). An overlay with exactly these 15 values makes the generator exit 1: drupal/color deletes color.theme.socialblue when the palette equals the theme default (color_scheme_form_submit). Used by --palette in the guard tests.",
+  "targets": {
+    "socialblue": {
+      "brand-primary": "#29abe2",
+      "brand-secondary": "#1f80aa",
+      "brand-accent": "#ffc142",
+      "brand-accent-text": "#343434",
+      "brand-link": "#33b5e5",
+      "navbar-bg": "#333333",
+      "navbar-text": "#ffffff",
+      "navbar-active-bg": "#1f1f1f",
+      "navbar-active-text": "#f3f3f3",
+      "navbar-sec-bg": "#1f7ea7",
+      "navbar-sec-text": "#f9f9f9",
+      "second-line-navbar-bg": "#004494",
+      "second-line-navbar-text": "#fffff1",
+      "second-line-navbar-active-bg": "#f2f5f9",
+      "second-line-navbar-active-text": "#002f67"
+    }
+  }
+}

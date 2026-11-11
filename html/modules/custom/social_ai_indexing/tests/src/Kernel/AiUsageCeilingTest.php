@@ -7,6 +7,7 @@ namespace Drupal\Tests\social_ai_indexing\Kernel;
 use Drupal\ai\Event\PreGenerateResponseEvent;
 use Drupal\ai\OperationType\Chat\ChatInput;
 use Drupal\ai\OperationType\Chat\ChatMessage;
+use Drupal\ai\OperationType\Embeddings\EmbeddingsCollectionInput;
 use Drupal\ai_usage_limits\Exception\AiTokenUsageException;
 use Drupal\Component\Serialization\Json;
 use Drupal\search_api\Entity\Index;
@@ -252,6 +253,19 @@ final class AiUsageCeilingTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * One echoai batch embeddings call (several texts, one request).
+   *
+   * What ai_search sends for an item with several chunks when the provider
+   * implements EmbeddingsCollectionInterface (echoai does, and since 22.2-11
+   * so does gemini_provider).
+   */
+  private function embedCollection(): void {
+    $this->container->get('ai.provider')
+      ->createInstance(self::PROVIDER)
+      ->embeddingsCollection(new EmbeddingsCollectionInput(['A fictional query', 'Another fictional query']), self::MODEL, ['ai_search']);
+  }
+
+  /**
    * Runs a callable and returns the exception it throws, or NULL.
    */
   private static function thrown(callable $callable): ?\Throwable {
@@ -482,6 +496,32 @@ final class AiUsageCeilingTest extends GroupAccessKernelTestBase {
     // before the backend; one on another server (the keyword index) runs.
     $this->assertInstanceOf(SearchApiException::class, self::thrown(fn() => $dispatcher->dispatch(new IndexingItemsEvent($this->posts, []), SearchApiEvents::INDEXING_ITEMS)), 'INDEXING_ITEMS at the ceiling on the AI search server is refused.');
     $this->assertNull(self::thrown(fn() => $dispatcher->dispatch(new IndexingItemsEvent(Index::load('social_content'), []), SearchApiEvents::INDEXING_ITEMS)), 'INDEXING_ITEMS on the keyword index is not refused.');
+  }
+
+  /**
+   * A batch embeddings call is converted inside an index run, like a single one.
+   *
+   * 22.2-11 gave Gemini batch embeddings, so a multi-chunk item now goes out
+   * as one 'embeddings_collection' request. ai_usage_limits refuses it at the
+   * ceiling like any other call; the subscriber has to turn that refusal into
+   * the same SearchApiException a single embeddings call gets.
+   */
+  public function testBatchEmbeddingsInsideIndexRunConverted(): void {
+    $this->assertSubscriberRegistered();
+    $dispatcher = $this->container->get('event_dispatcher');
+
+    // Outside an index run a batch call is not converted.
+    $this->reachCeiling();
+    $this->assertInstanceOf(AiTokenUsageException::class, self::thrown(fn() => $this->embedCollection()), 'Outside an index run, a batch call at the ceiling gets AiTokenUsageException.');
+
+    // Inside one, it is.
+    $this->setEchoUsage(10, 5);
+    $dispatcher->dispatch(new IndexingItemsEvent($this->posts, []), SearchApiEvents::INDEXING_ITEMS);
+    $this->assertNull(self::thrown(fn() => $this->embedCollection()), 'Under the ceiling, a batch call inside an index run runs.');
+    $this->reachCeiling();
+    $this->assertInstanceOf(SearchApiException::class, self::thrown(fn() => $this->embedCollection()), 'Inside an index run, a batch call at the ceiling becomes a SearchApiException.');
+    // The run is over once it threw: the next call is outside it.
+    $this->assertInstanceOf(AiTokenUsageException::class, self::thrown(fn() => $this->embedCollection()), 'After the converted call, the next batch call is not converted.');
   }
 
   /**

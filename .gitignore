@@ -42,6 +42,12 @@ private/
 # DDEV environment (contains API keys)
 .ddev/.env
 
+# Lane-only DDEV relayer (scripts/ddev-relayer.sh enable, 25-09): the symlink to .ddev/relayer/
+# and the env files that hold the lane relayer's anvil key and bearer token
+.ddev/docker-compose.relayer.yaml
+.ddev/.env.relayer
+.ddev/.env.web
+
 # DDEV service volumes (binary runtime data)
 .ddev/milvus/
 .ddev/qdrant/
@@ -139,3 +145,6 @@ tmp/
 .gsd/milestones/**/*-CONTINUE.md
 .gsd/milestones/**/continue.md
 html/sites/default/settings.local.php
+
+# Impeccable local state and critique snapshots (22.1-11); the snapshots are copied into the phase directory instead
+.impeccable/

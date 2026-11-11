@@ -1,0 +1,8 @@
+# The site manager's menu (Open Social's admin menu, beside Dashboard): a link
+# to the organizer guide (23-13, ONB-03).
+localnodes_platform.guide:
+  title: 'Organizer guide'
+  description: 'Steps from your sign-in link to your first answer with sources.'
+  route_name: localnodes_platform.guide
+  parent: system.admin
+  weight: -98

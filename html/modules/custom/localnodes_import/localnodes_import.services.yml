@@ -52,6 +52,18 @@ services:
     tags:
       - { name: access_check, applies_to: _localnodes_import_refresh_access }
 
+  # Problem reports (23-05, ONB-05): who a report about an imported page
+  # concerns, and who may take the page down.
+  localnodes_import.report_audience:
+    class: Drupal\localnodes_import\Service\ReportAudience
+    arguments: ['@entity_type.manager']
+
+  localnodes_import.takedown_access:
+    class: Drupal\localnodes_import\Access\TakedownAccessCheck
+    arguments: ['@localnodes_import.report_audience', '@entity_type.manager']
+    tags:
+      - { name: access_check, applies_to: _localnodes_import_takedown_access }
+
   # S5 "N of M searchable" (22-25): item rows joined to the social_posts
   # tracker.
   localnodes_import.search_status:

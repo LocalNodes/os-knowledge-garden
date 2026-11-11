@@ -38,12 +38,36 @@ services:
       # sets noreply@demo.localnodes.xyz for demo and staging instances.
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
-      # Organizer provisioning (entrypoint): account, one-time login, welcome mail, callbacks
+      # Organizer provisioning (entrypoint): account, welcome mail, callbacks. Set per sign-up by
+      # provision-instance.yml from the private manifest; empty on a manual demo run. Coolify only
+      # passes names listed here, so every Phase 23 value is listed (scripts/ops/tests/compose-env.test.sh).
       ORGANIZER_EMAIL: ${ORGANIZER_EMAIL:-}
       ORGANIZER_NAME: ${ORGANIZER_NAME:-}
+      SITE_NAME: ${SITE_NAME:-}
       PROVISION_CALLBACK_URL: ${PROVISION_CALLBACK_URL:-}
-      PROVISION_CALLBACK_SECRET: ${PROVISION_CALLBACK_SECRET:-}
+      # This sign-up's own id and attempt, and its own callback token (a per-provision HMAC). The
+      # shared callback secret is deliberately not here: a site that can read its env must not be
+      # able to report on any other sign-up (T-23-28).
+      PROVISION_ID: ${PROVISION_ID:-}
+      PROVISION_ATTEMPT: ${PROVISION_ATTEMPT:-}
+      PROVISION_CALLBACK_TOKEN: ${PROVISION_CALLBACK_TOKEN:-}
       STRIPE_SESSION_ID: ${STRIPE_SESSION_ID:-}
+      # Page types the organizer confirmed: base64url JSON, decoded by the entrypoint.
+      LOCALNODES_TOPIC_TYPES: ${LOCALNODES_TOPIC_TYPES:-}
+      LOCALNODES_COMMUNITY_SEED: ${LOCALNODES_COMMUNITY_SEED:-}
+      # AI choice (gemini or openrouter). OPENROUTER_API_KEY is an organizer's own key, written
+      # write-once by the workflow. OPENROUTER_BASE_URL points the OpenRouter provider at another
+      # OpenAI-compatible gateway (runbook only, set per instance). AI_BACKUP_PROVIDER and
+      # AI_BACKUP_MODEL name the chat-only failover (settings.php -> localnodes_ai_backup).
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      # Redeploy only (23-40): "reindex" clears and re-indexes the vectors when switching a live site to OpenRouter.
+      AI_PROVIDER_SWITCH: ${AI_PROVIDER_SWITCH:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
+      AI_BACKUP_PROVIDER: ${AI_BACKUP_PROVIDER:-}
+      AI_BACKUP_MODEL: ${AI_BACKUP_MODEL:-}
+      # Where "Report a problem" mails go besides the site's own managers (set per instance by the runbook).
+      HOST_REPORT_EMAIL: ${HOST_REPORT_EMAIL:-}
       # Optional Web3 stack (entrypoint toggle; settings.php RPC override). Empty/false = off
       WEB3_ENABLED: ${WEB3_ENABLED:-false}
       ETHEREUM_PROVIDER_URL: ${ETHEREUM_PROVIDER_URL:-}

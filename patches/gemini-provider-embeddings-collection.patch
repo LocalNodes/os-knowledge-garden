@@ -1,0 +1,58 @@
+diff --git a/src/Plugin/AiProvider/GeminiProvider.php b/src/Plugin/AiProvider/GeminiProvider.php
+--- a/src/Plugin/AiProvider/GeminiProvider.php
++++ b/src/Plugin/AiProvider/GeminiProvider.php
+@@ -18,6 +18,9 @@
+ use Drupal\ai\OperationType\Chat\ChatMessage;
+ use Drupal\ai\OperationType\Chat\ChatOutput;
+ use Drupal\ai\OperationType\Chat\Tools\ToolsFunctionOutput;
++use Drupal\ai\OperationType\Embeddings\EmbeddingsCollectionInput;
++use Drupal\ai\OperationType\Embeddings\EmbeddingsCollectionInterface;
++use Drupal\ai\OperationType\Embeddings\EmbeddingsCollectionOutput;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsInput;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsInterface;
+ use Drupal\ai\OperationType\Embeddings\EmbeddingsOutput;
+@@ -59,7 +62,7 @@
+   id: 'gemini',
+   label: new TranslatableMarkup('Gemini')
+ )]
+-class GeminiProvider extends AiProviderClientBase implements ChatInterface, EmbeddingsInterface, SpeechToTextInterface, TextToImageInterface {
++class GeminiProvider extends AiProviderClientBase implements ChatInterface, EmbeddingsInterface, EmbeddingsCollectionInterface, SpeechToTextInterface, TextToImageInterface {
+ 
+   /**
+    * The Gemini Client.
+@@ -570,6 +573,35 @@
+   }
+ 
+   /**
++   * {@inheritdoc}
++   *
++   * All texts go out in one batchEmbedContents request, and the vectors come
++   * back in the same order. Gemini limits the texts one request may hold (100 when this was written); a
++   * caller with more (ai_search sends at most its collection size, 50 by
++   * default) gets Gemini's own error, mapped like any other.
++   */
++  public function embeddingsCollection(EmbeddingsCollectionInput $input, string $model_id, array $tags = []): EmbeddingsCollectionOutput {
++    $prompts = array_values($input->getPrompts());
++    if ($prompts === []) {
++      return new EmbeddingsCollectionOutput([], [], []);
++    }
++    $this->loadClient();
++    try {
++      $response = $this->client->embeddingModel($model_id)->batchEmbedContents(...$prompts);
++    }
++    catch (GeminiErrorException $e) {
++      throw static::mapClientException($e);
++    }
++
++    $vectors = array_map(static fn ($embedding): array => $embedding->values, $response->embeddings);
++    if (count($vectors) !== count($prompts)) {
++      // Never pair a vector with the wrong text.
++      throw new AiResponseErrorException(sprintf('Gemini returned %d embeddings for %d texts.', count($vectors), count($prompts)));
++    }
++    return new EmbeddingsCollectionOutput($vectors, $response->toArray(), []);
++  }
++
++  /**
+    * {@inheritdoc}
+    */
+   public function speechToText(string|SpeechToTextInput $input, string $model_id, array $tags = []): SpeechToTextOutput {

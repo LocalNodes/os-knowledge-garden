@@ -30,7 +30,7 @@ final class OverviewSanitiseTest extends OverviewFunctionalTestBase {
   public function testSummaryIsFilteredOverHttp(): void {
     $this->setHttpScript([
       'mode' => 'text',
-      'text' => "<script>document.location='https://evil.example/steal'</script><p onclick=\"steal()\" style=\"color:red\">Fictional notes <strong>matter</strong> [R1].</p>\n\nRead <a href=\"https://evil.example/x\">this page</a> or https://evil.example/y <iframe src=\"https://evil.example/z\"></iframe> <img src=\"x\" onerror=\"steal()\"> <em>soon</em> [R2].",
+      'text' => "<script>document.location='https://evil.example/steal'</script><p onclick=\"steal()\" style=\"color:red\">Fictional notes <strong>matter</strong> [R1].</p>\n\nRead <a href=\"https://evil.example/x\">this page</a> or https://evil.example/y <iframe src=\"https://evil.example/z\"></iframe> <img src=\"x\" onerror=\"steal()\"> <em>soon</em> [R2].", // raw-color-allow: test input, a style attribute the sanitiser must strip
     ]);
     $data = $this->requestOverview($this->personas['P-MEM'], self::MEMBERS_ONLY_KEYWORD);
     $html = (string) $data['summary_html'];

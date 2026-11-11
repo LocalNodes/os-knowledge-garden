@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\social_ai_indexing\Unit\Citation;
 
+use Drupal\ai\OperationType\Chat\ChatMessage;
 use Drupal\social_ai_indexing\Citation\SourceRegistry;
 use Drupal\Tests\UnitTestCase;
 
@@ -73,7 +74,7 @@ final class SourceRegistryTest extends UnitTestCase {
     $registry = new SourceRegistry();
     $registry->register($this->mockNode(1, 'One'), 'Topic');
     $this->assertFalse($registry->wasRewritten());
-    $registry->markRewritten();
+    $registry->markRewritten(new ChatMessage('assistant', 'x'));
     $this->assertTrue($registry->wasRewritten());
 
     $registry->reset();
@@ -84,6 +85,32 @@ final class SourceRegistryTest extends UnitTestCase {
     $this->assertNull($registry->byLabelNumber(1));
     // Numbering restarts at 1 after a reset.
     $this->assertSame(1, $registry->register($this->mockNode(2, 'Two'), 'Topic')->n);
+  }
+
+  /**
+   * The registry keeps the very message object it was given.
+   */
+  public function testMarkRewrittenKeepsThatMessage(): void {
+    $registry = new SourceRegistry();
+    $message = new ChatMessage('assistant', 'x');
+    $registry->markRewritten($message);
+
+    $this->assertSame($message, $registry->rewrittenMessage());
+    $this->assertNotSame(new ChatMessage('assistant', 'x'), $registry->rewrittenMessage(), 'An equal message is not the rewritten one.');
+    $this->assertTrue($registry->wasRewritten());
+  }
+
+  /**
+   * Reset forgets the rewritten message.
+   */
+  public function testResetForgetsTheRewrittenMessage(): void {
+    $registry = new SourceRegistry();
+    $registry->markRewritten(new ChatMessage('assistant', 'x'));
+
+    $registry->reset();
+
+    $this->assertNull($registry->rewrittenMessage());
+    $this->assertFalse($registry->wasRewritten());
   }
 
   /**

@@ -20,6 +20,10 @@ function localnodes_platform_install() {
   // writing to the database. No need to apply them here.
   _localnodes_platform_grant_chatbot_access();
   _localnodes_platform_configure_mailer();
+  // 22.1 D-11: Open Social's footer out of every mail, Tom's subjects in.
+  _localnodes_platform_configure_email();
+  // 22.1 criterion 6: Open Social's "#MadeToShare" footer block off.
+  _localnodes_platform_configure_branding();
   // DES-01 brand tokens (22-UI-SPEC Part 1): socialblue scheme + shapes.
   _localnodes_platform_apply_brand_palette();
   _localnodes_platform_configure_theme_shape();
@@ -30,6 +34,76 @@ function localnodes_platform_install() {
   _localnodes_platform_enable_group_features();
   // 22.2 D-05: keyword search shows new and edited content without cron.
   _localnodes_platform_index_solr_directly();
+  // 23-26: members don't see each other's email unless they choose to.
+  _localnodes_platform_hide_profile_email();
+  // WINDOWS 47: the anonymous front-page hero speaks for the community, not
+  // for Open Social.
+  _localnodes_platform_configure_hero_copy();
+}
+
+/**
+ * Replaces Open Social's stock text on the anonymous front-page hero.
+ *
+ * WINDOWS 47. social_core_install() creates the hero as a block_content
+ * (hero_call_to_action_block, uuid 8bb9d4bb-f182-4afc-b138-8a4b802824e4)
+ * reading "This community is powered by Open Social, the plug-and-play
+ * community solution for NGOs and semi-governmental organizations", against
+ * BRAND.md section 3. Orchestrator ruling (22.1-ORCH-INBOX.md, 2026-11-09):
+ * heading "[site name]", body "Your community's own space: a shared memory
+ * with an assistant that knows your group's history, a shared fund, and a
+ * fair way to decide together." No crypto words.
+ *
+ * Why this lives in hook_install: the hero is a content entity created by
+ * Open Social's own install, so neither config/install nor config/optional can
+ * hold it (CLAUDE.md: no entrypoint edits, no update hooks).
+ *
+ * The heading is the placeholder [site:name]: the text field has no token
+ * filter, so localnodes_platform_block_content_view_alter() resolves it to the
+ * site's name at render time.
+ *
+ * Idempotent: a hero that already holds this copy is not saved again, and a
+ * site without the hero block is left alone.
+ */
+function _localnodes_platform_configure_hero_copy() {
+  $blocks = \Drupal::entityTypeManager()->getStorage('block_content')
+    ->loadByProperties(['uuid' => '8bb9d4bb-f182-4afc-b138-8a4b802824e4']);
+  $block = reset($blocks);
+  if (!$block || !$block->hasField('field_text_block')) {
+    return;
+  }
+  $want = '<h3>[site:name]</h3><p>' . htmlspecialchars("Your community's own space: a shared memory with an assistant that knows your group's history, a shared fund, and a fair way to decide together.", ENT_QUOTES | ENT_HTML5) . '</p>';
+  if ($block->get('field_text_block')->value === $want) {
+    return;
+  }
+  $block->set('field_text_block', ['value' => $want, 'format' => 'full_html']);
+  $block->save();
+}
+
+/**
+ * Hides members' email addresses from other members, site-wide.
+ *
+ * The site terms (23-26, 23-UI-SPEC section 9) say: "Other members can't see
+ * your email unless you choose to show it on your profile." Open Social ships
+ * social_profile.settings:social_profile_show_email TRUE, which shows every
+ * member's address on their profile to every other member and locks each
+ * member's own "Show my email on my profile" switch on. With it FALSE, only
+ * people with "view profile email" (site managers) see an address, and each
+ * member's own switch is unlocked and off by default (orchestrator ruling,
+ * 2026-11-08, bullet 2 (a)).
+ *
+ * Why this lives in hook_install: social_profile ships the settings object in
+ * its own config/install, created by the Open Social profile before
+ * `drush en localnodes_platform`, so a module copy would be pre-existing
+ * config (CLAUDE.md).
+ *
+ * Idempotent: writes only when the value isn't already FALSE, and makes no
+ * settings object when social_profile has none.
+ */
+function _localnodes_platform_hide_profile_email() {
+  $config = \Drupal::configFactory()->getEditable('social_profile.settings');
+  if (!$config->isNew() && $config->get('social_profile_show_email') !== FALSE) {
+    $config->set('social_profile_show_email', FALSE)->save();
+  }
 }
 
 /**
@@ -246,19 +320,38 @@ function _localnodes_platform_apply_brand_palette() {
  * these theme settings into the page head, and social_swiftmail uses them in
  * emails.
  *
+ * The values come from the token source (tokens/localnodes.tokens.json) through
+ * its generated flat file, tokens/ln-tokens.flat.json: radius.control is the
+ * button and form-control radius, radius.card the card radius (22.1-03, D-08).
+ * Run scripts/tokens/build_tokens.mjs after changing them.
+ *
  * Why this lives in hook_install: socialblue ships socialblue.settings in its
  * own config/install, so a module config/install copy would collide with an
  * existing object. Editing it here is the install-time equivalent. Idempotent.
+ * If the flat file is missing or unreadable, it logs a warning and leaves
+ * socialblue's own radius alone.
  */
 function _localnodes_platform_configure_theme_shape() {
   if (!\Drupal::service('theme_handler')->themeExists('socialblue')) {
     return;
   }
+  $path = \Drupal::service('extension.list.module')->getPath('localnodes_platform')
+    . '/tokens/ln-tokens.flat.json';
+  $tokens = is_readable($path) ? json_decode((string) file_get_contents($path), TRUE) : NULL;
+  $radius = is_array($tokens) ? ($tokens['radius'] ?? NULL) : NULL;
+  // "6px" -> "6": socialblue.settings stores the number without a unit.
+  $number = static fn ($value): string => preg_match('/^\d+(?:\.\d+)?/', (string) $value, $m) ? $m[0] : '';
+  $control = is_array($radius) ? $number($radius['control'] ?? '') : '';
+  $card = is_array($radius) ? $number($radius['card'] ?? '') : '';
+  if ($control === '' || $card === '') {
+    \Drupal::logger('localnodes_platform')->warning('Token file @path is missing or has no radius.control and radius.card; socialblue keeps its own radius. Run scripts/tokens/build_tokens.mjs.', ['@path' => $path]);
+    return;
+  }
   $config = \Drupal::configFactory()->getEditable('socialblue.settings');
   $shape = [
-    'button_radius' => '6',
-    'form_control_radius' => '6',
-    'card_radius' => '8',
+    'button_radius' => $control,
+    'form_control_radius' => $control,
+    'card_radius' => $card,
   ];
   $changed = FALSE;
   foreach ($shape as $key => $value) {
@@ -322,6 +415,84 @@ function _localnodes_platform_configure_mailer() {
     ->getEditable('system.site')
     ->set('mail', getenv('MAIL_FROM') ?: 'noreply@localnodes.xyz')
     ->save(TRUE);
+}
+
+/**
+ * Takes Open Social's footer out of every mail and sets Tom's mail subjects.
+ *
+ * Phase 22.1 D-11 (criterion 6). Two settings that belong to other modules:
+ * - social_swiftmail.settings:remove_open_social_branding TRUE. social_swiftmail
+ *   then shows the community's own site name instead of the Open Social link,
+ *   and leaves out the slogan and "#MadeToShare" sub-slogan. The object has a
+ *   schema but no config/install file, and a copy here would collide with the
+ *   object its own install writes (setDefaultDisabledGreetingKeys()).
+ * - user.mail subjects, as Tom approved them on the canvas (BRAND.md section 9):
+ *   "Reset your password for [site:name]" and, for the two welcome mails (an
+ *   organizer-created account and a self-registration without approval),
+ *   "Welcome to [site:name]". user.mail comes from core's config/install, so
+ *   shipping a copy would be pre-existing config; it is edited here, as the
+ *   other install helpers do (CLAUDE.md, D-10).
+ *
+ * The look of the mail (the email--localnodes.html.twig wrapper) is not config;
+ * localnodes_platform_theme() registers it. The transport is not touched: that
+ * is _localnodes_platform_configure_mailer().
+ *
+ * Idempotent: a value that is already right is not written, so a second call
+ * saves nothing.
+ */
+function _localnodes_platform_configure_email() {
+  if (\Drupal::moduleHandler()->moduleExists('social_swiftmail')) {
+    $swiftmail = \Drupal::configFactory()->getEditable('social_swiftmail.settings');
+    if ($swiftmail->get('remove_open_social_branding') !== TRUE) {
+      $swiftmail->set('remove_open_social_branding', TRUE)->save();
+    }
+  }
+
+  $subjects = [
+    'password_reset' => 'Reset your password for [site:name]',
+    'register_admin_created' => 'Welcome to [site:name]',
+    'register_no_approval_required' => 'Welcome to [site:name]',
+  ];
+  $mail = \Drupal::configFactory()->getEditable('user.mail');
+  $changed = FALSE;
+  foreach ($subjects as $key => $subject) {
+    if ($mail->get($key . '.subject') !== $subject) {
+      $mail->set($key . '.subject', $subject);
+      $changed = TRUE;
+    }
+  }
+  if ($changed) {
+    $mail->save();
+  }
+}
+
+/**
+ * Switches off Open Social's powered-by footer block on the community site.
+ *
+ * Phase 22.1 criterion 6 (Tom, card 11): every page's footer reads
+ * "‹community› · a community on LocalNodes · Open source" instead of the
+ * Open Social mark and "#MadeToShare by Open Social". The new footer is the
+ * socialblue_localnodes_footer block in config/optional (the LocalNodesFooterBlock
+ * plugin); this switches off the old one, social_footer's socialblue_footer_powered.
+ *
+ * It is disabled, not deleted, so a site that wants Open Social's block back
+ * can turn it on again in Block layout.
+ *
+ * The header needs no config: block--system-branding-block--localnodes.html.twig
+ * (registered in localnodes_platform_theme()) prints the community's name as
+ * text whatever logo the theme settings hold, so no logo setting is written.
+ *
+ * Why this lives in hook_install: the block belongs to social_footer and is
+ * created by the Open Social profile before `drush en localnodes_platform`, so
+ * a config/install copy would be pre-existing config (CLAUDE.md, D-10).
+ *
+ * Idempotent: a block that is missing or already off is left alone.
+ */
+function _localnodes_platform_configure_branding() {
+  $block = \Drupal::entityTypeManager()->getStorage('block')->load('socialblue_footer_powered');
+  if ($block && $block->status()) {
+    $block->disable()->save();
+  }
 }
 
 /**

@@ -94,7 +94,11 @@ processor_settings:
       - anonymous
   solr_date_range: {  }
 tracker_settings:
-  default:
+  # ai_search's own tracker, not the default one: it resets an item's chunk
+  # progress when the item is edited, so an edit is embedded again. With the
+  # default tracker the progress stays at "complete", the next run embeds
+  # nothing and the edited item is marked indexed with its old vectors (22.2-10).
+  ai_search_tracker:
     indexing_order: fifo
 options:
   # Free-tier Gemini allows 100 embedding requests a minute. drupal/ai aborts

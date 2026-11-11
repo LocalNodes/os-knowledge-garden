@@ -1,0 +1,45 @@
+# Lane-only gas-sponsor relayer for a DDEV project (Phase 25, plan 25-09, D-01).
+#
+# DDEV does not auto-load this file: it sits in .ddev/relayer/, not in .ddev/. Run
+# `bash scripts/ddev-relayer.sh enable`, which symlinks it to the gitignored
+# .ddev/docker-compose.relayer.yaml and writes the gitignored .ddev/.env.relayer. Other
+# checkouts and lanes never see this service.
+#
+# The relayer runs from the local source in repos/gas-sponsor-relayer (a gitignored clone), so
+# the image is built here and never pulled. It holds anvil's well-known dev key only (the
+# script refuses any other key). It publishes no port: only `expose`, so the web container
+# reaches it at http://relayer:8080 over the project's own network (TM-87).
+services:
+  relayer:
+    container_name: ddev-${DDEV_SITENAME}-relayer
+    # DDEV_APPROOT is the checkout root, so the build context does not depend on where the
+    # symlink to this file lives.
+    build:
+      context: ${DDEV_APPROOT}/repos/gas-sponsor-relayer
+    image: ddev-${DDEV_SITENAME}-relayer:lane
+    restart: unless-stopped
+    env_file:
+      - .env.relayer
+    environment:
+      # The server binds 0.0.0.0 and the default database is :memory: (25-04 handoffs): pin the
+      # sqlite file to the volume so a restart keeps registrations and the spend ledger.
+      SPONSOR_RELAYER_DB: /data/relayer.sqlite
+      SPONSOR_RELAYER_PORT: "8080"
+    volumes:
+      - relayer-data:/data
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+
+volumes:
+  relayer-data:
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}

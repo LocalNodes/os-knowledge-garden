@@ -8,9 +8,25 @@ services:
     arguments: ['@state', '@config.factory']
     tags:
       - { name: event_subscriber }
+  # D-21, ONB-07 (23-10): a chat call that fails with a quota, rate-limit or
+  # request error is answered once by the backup model in the
+  # localnodes_ai_backup setting, on the same provider only. Never embeddings.
+  localnodes_platform.ai_failover_subscriber:
+    class: Drupal\localnodes_platform\EventSubscriber\AiFailoverSubscriber
+    arguments: ['@?ai.provider', '@logger.factory', '@settings']
+    tags:
+      - { name: event_subscriber }
   # Runs before core's ReverseProxyMiddleware (priority 300).
   localnodes_platform.cloudflare_client_ip_middleware:
     class: Drupal\localnodes_platform\StackMiddleware\CloudflareClientIpMiddleware
     arguments: ['@settings', '@state', '@datetime.time']
     tags:
       - { name: http_middleware, priority: 310 }
+  # B-1 (23-35): unblocks a sign-up site's organizer and sends the welcome mail
+  # once, when the sign-up app calls POST /localnodes/activate after the first
+  # payment. email_factory is optional only so Kernel tests that enable this
+  # module without symfony_mailer still build a container; on a site it is
+  # always there (Open Social needs symfony_mailer).
+  localnodes_platform.organizer_activation:
+    class: Drupal\localnodes_platform\OrganizerActivation
+    arguments: ['@state', '@entity_type.manager', '@?email_factory', '@logger.factory', '@lock']

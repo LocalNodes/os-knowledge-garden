@@ -1,0 +1,6 @@
+name: 'LocalNodes stock profile teaser (test)'
+type: theme
+description: 'Test theme that ships a byte copy of socialbase''s profile--profile--teaser.html.twig (Open Social 13.1), so ProfileTeaserAriaHiddenTest has the stock member teaser in the active theme''s registry, which is when localnodes_platform adds its teaser suggestion. Real socialblue cannot boot in a Kernel test (the bootstrap base theme registers a shutdown function that needs the container). The test asserts the copy still matches the socialbase file, so an Open Social update that changes the template fails the test and the module copy gets re-checked.'
+package: 'LocalNodes tests'
+base theme: false
+core_version_requirement: ^10

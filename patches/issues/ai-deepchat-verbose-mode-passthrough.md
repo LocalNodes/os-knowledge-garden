@@ -1,3 +1,5 @@
+> **Obsolete on drupal/ai 1.5.x: verbose_mode travels in plugin_configuration (checked on 2026-11-08).** The 1.5.2 block posts `chat_processor_plugin` and `plugin_configuration` (which holds `verbose_mode`) from its own JavaScript, and `AiAssistantApiProcessor::execute()` reads `verbose_mode` from that configuration. The patch was dropped, and this draft is kept only as a record. Do not post it.
+
 # drupal.org Issue: DeepChat verbose_mode not sent to server
 
 ## Issue Metadata

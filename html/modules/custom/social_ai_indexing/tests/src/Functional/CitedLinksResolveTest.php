@@ -123,14 +123,13 @@ final class CitedLinksResolveTest extends BrowserTestBase {
       $data['llm_model'] = 'gpt-test';
       return $data;
     });
-    // AiAgentManager merges config agents into its definitions only in its
-    // constructor (mergeAgentConfigurations()), and any plugin cache clear
-    // in this long-lived test process drops them again, leaving only the
-    // annotated agents. A web request builds a fresh manager; this process
-    // has to merge again by hand.
+    // ai_agents 1.3.5 merges the config agents into the plugin definitions in
+    // findDefinitions(), so a plugin cache clear rebuilds them with the rest.
+    // (Before 1.3.5 the merge ran only in the manager's constructor, and this
+    // test had to call it by hand through reflection after every clear.)
     $this->resetAll();
     $manager = $this->container->get('plugin.manager.ai_agents');
-    (new \ReflectionMethod($manager, 'mergeAgentConfigurations'))->invoke($manager);
+    $manager->clearCachedDefinitions();
     $this->assertArrayHasKey('group_assistant', $manager->getDefinitions(), 'The group_assistant agent is a plugin in this process.');
   }
 

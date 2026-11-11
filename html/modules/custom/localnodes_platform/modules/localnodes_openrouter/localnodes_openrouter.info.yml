@@ -1,0 +1,9 @@
+name: 'LocalNodes OpenRouter'
+type: module
+description: 'Optional OpenRouter AI: the site uses the organizer''s own OpenRouter key, with zero data retention and ZDR-only hosts forced on every request. Enable per-instance (the Docker entrypoint enables it when AI_PROVIDER=openrouter).'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - localnodes_platform:localnodes_platform
+  - ai_provider_openrouter:ai_provider_openrouter
+  - key:key

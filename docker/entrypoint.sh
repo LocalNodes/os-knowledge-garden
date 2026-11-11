@@ -140,130 +140,107 @@ load_demo_content() {
   mark_step demo_content
 }
 
-# Callback helper (automated provisioning)
-provision_callback() {
-  local STATUS="$1"
-  shift
-  if [ -n "$PROVISION_CALLBACK_URL" ] && [ -n "$STRIPE_SESSION_ID" ] && [ -n "$PROVISION_CALLBACK_SECRET" ]; then
-    curl -sf -X POST "$PROVISION_CALLBACK_URL/api/provision-callback" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $PROVISION_CALLBACK_SECRET" \
-      -d "{\"session_id\":\"$STRIPE_SESSION_ID\",\"status\":\"$STATUS\"$*}" \
-      || echo "Warning: $STATUS callback failed (non-fatal)"
-  fi
-}
+# --- Sign-up or manual run: the PROVISION pair must agree (23-43, T-23-201) ---
+# PROVISION_ID and PROVISION_CALLBACK_TOKEN decide the run: both set is a sign-up run
+# (the organizer is made blocked and handed over after the first payment), both empty is
+# a manual run (an active organizer and the welcome mail at install). Exactly one of them
+# non-empty is a half-configured container: taken as a manual run it would make an active
+# organizer on an unpaid site; taken as a sign-up run it could never be handed over. So
+# it stops here, before install-state detection and before any drush call or callback,
+# on a fresh install and on a redeploy alike. The line names the variables, never a value.
+# Test: scripts/ops/tests/install-resume.test.sh (5n)
+if { [ -n "${PROVISION_ID:-}" ] && [ -z "${PROVISION_CALLBACK_TOKEN:-}" ]; } \
+  || { [ -z "${PROVISION_ID:-}" ] && [ -n "${PROVISION_CALLBACK_TOKEN:-}" ]; }; then
+  echo "ERROR: PROVISION_ID and PROVISION_CALLBACK_TOKEN must both be set (a sign-up run) or both be empty (a manual run); only one is set. Stopping before any install step."
+  exit 1
+fi
 
-# --- Organizer welcome email ---
-welcome_login_url() {  # sets LOGIN_URL; non-zero if drush uli fails
-  LOGIN_URL="$($DRUSH uli --name="$ORGANIZER_USERNAME" 2>&1)" || return 1
-  echo "Login URL: $LOGIN_URL"
-}
-# Sends the welcome email (uses LOGIN_URL) and marks organizer_mail_sent when
-# Resend accepted it. Never stops the entrypoint: a failed send is logged, left
-# unmarked, and retried on the next start (retry_pending_welcome).
-#
-# Idempotency-Key: Resend drops a second send with the same key for 24 h. The
-# key is stable per site and organizer, so a retry after a lost response or a
-# failed marker write cannot mail twice. Resend answers a reused key with 409:
-#   invalid_idempotent_request      the key was used with a different body (a
-#                                   retry carries a new login link): the first
-#                                   email went out, and its link still works.
-#   concurrent_idempotent_requests  the first request is still running: retry
-#                                   later with the same key AND the same body.
-# Any other 409 or error is not counted as sent.
-#
-# The key only protects for 24 h. The first POST's time is stored
-# (organizer_mail_first_attempt, epoch seconds), and no POST is made more than
-# 23 h after it: a first send that Resend accepted but whose response was lost
-# could otherwise be sent a second time once the key has expired.
-WELCOME_RETRY_WINDOW=$((23 * 3600))
-send_welcome_email() {
-  if [ -z "$RESEND_API_KEY" ]; then
-    echo "WARNING: RESEND_API_KEY is not set; welcome email not sent."
+# --- Callbacks to the sign-up app (automated provisioning) ---
+# Sent only for a sign-up: PROVISION_CALLBACK_URL, PROVISION_ID, PROVISION_ATTEMPT (a
+# number) and PROVISION_CALLBACK_TOKEN must all be set (provision-instance.yml sets them
+# from the private manifest). Any other instance skips this silently.
+# The token is this sign-up's own HMAC, so a site can speak only for itself. A callback
+# carries the provision id, the attempt, a status and the site address, or, for a
+# failure, one fixed reason code. Never a sign-in address, a key, an email or free text.
+# A callback that cannot be sent is a warning, never a stop: the install goes on.
+# The body is built by PHP (always in this image, json_encode escapes everything); the
+# values reach it through the environment, never through the code string.
+send_callback() {  # send_callback STATUS REASON SITE_URL (REASON and SITE_URL may be empty)
+  local status="$1" reason="$2" site_url="$3" body
+  [ -n "$PROVISION_CALLBACK_URL" ] && [ -n "$PROVISION_ID" ] && [ -n "$PROVISION_ATTEMPT" ] \
+    && [ -n "$PROVISION_CALLBACK_TOKEN" ] || return 0
+  case "$PROVISION_ATTEMPT" in
+    *[!0-9]*)
+      echo "Warning: PROVISION_ATTEMPT is not a number; $status callback not sent."
+      return 0
+      ;;
+  esac
+  if ! body="$(CB_STATUS="$status" CB_REASON="$reason" CB_SITE_URL="$site_url" php -r '
+      $b = ["provision_id" => (string) getenv("PROVISION_ID"), "attempt" => (int) getenv("PROVISION_ATTEMPT"), "status" => (string) getenv("CB_STATUS")];
+      if ((string) getenv("CB_REASON") !== "") { $b["reason"] = getenv("CB_REASON"); }
+      if ((string) getenv("CB_SITE_URL") !== "") { $b["site_url"] = getenv("CB_SITE_URL"); }
+      $b["source"] = "site";
+      echo json_encode($b, JSON_UNESCAPED_SLASHES);')"; then
+    echo "Warning: $status callback not built (non-fatal)"
     return 0
   fi
-  local first now
-  read_state "localnodes.install_step.organizer_mail_first_attempt"
-  first="$STATE_VALUE"
-  now="$(date -u +%s)"
-  if [ -z "$first" ]; then
-    $DRUSH state:set "localnodes.install_step.organizer_mail_first_attempt" "$now"
-  else
-    case "$first" in
-      *[!0-9]*)
-        echo "WARNING: welcome mail unconfirmed and its first-attempt time is unreadable ('$first'); not retrying. Check the Resend dashboard."
-        return 0
-        ;;
-    esac
-    if [ $((now - first)) -gt "$WELCOME_RETRY_WINDOW" ]; then
-      echo "WARNING: welcome mail unconfirmed after 23h; check Resend dashboard. Not retrying (the idempotency key has expired)."
-      return 0
-    fi
-  fi
-  local key body response code name attempt=1
-  key="welcome-$(printf '%s\n%s' "$SITE_URI" "$ORGANIZER_EMAIL" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -d' ' -f1)"
-  body="{
-    \"from\": \"LocalNodes <${MAIL_FROM:-hello@localnodes.xyz}>\",
-    \"to\": [\"$ORGANIZER_EMAIL\"],
-    \"subject\": \"Your knowledge garden is ready!\",
-    \"html\": \"<h1>Your knowledge garden is ready!</h1><p>Your community's knowledge garden at <a href='$SITE_URI'>$SITE_URI</a> is live and waiting for you.</p><h2>Getting started</h2><ol><li><strong>Set your password</strong> &mdash; click the button below (single-use, works once).</li><li><strong>Explore your garden</strong> &mdash; visit Groups, Events, and Topics to see the demo content.</li><li><strong>Invite your community</strong> &mdash; use the Groups section to add members.</li><li><strong>Try the AI assistant</strong> &mdash; ask the chat widget anything about your community's content.</li></ol><p><a href='$LOGIN_URL' style='background:#14b8a6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;'>Set Password &amp; Log In</a></p><p style='color:#888;font-size:0.85em;'>This link is single-use and will expire. If it expires, visit <a href='$SITE_URI/user/password'>$SITE_URI/user/password</a> to request a new one.</p><p>Happy gardening,<br>The LocalNodes Team</p>\"
-  }"
-  while :; do
-    response="$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
-      -H "Authorization: Bearer $RESEND_API_KEY" \
-      -H "Idempotency-Key: $key" \
-      -H "Content-Type: application/json" \
-      -d "$body")" || true
-    code="$(printf '%s\n' "$response" | tail -1)"
-    name="$(printf '%s\n' "$response" | sed '$d' | grep -o '"name"[[:space:]]*:[[:space:]]*"[a-z_]*"' | head -1 | sed 's/.*"\([a-z_]*\)"$/\1/')"
-    case "$code:$name" in
-      200:*)
-        echo "Welcome email sent to $ORGANIZER_EMAIL"
-        mark_step organizer_mail_sent
-        return 0
-        ;;
-      409:invalid_idempotent_request)
-        echo "Welcome email already accepted by Resend under this idempotency key (409 invalid_idempotent_request); not sending again."
-        mark_step organizer_mail_sent
-        return 0
-        ;;
-      409:concurrent_idempotent_requests)
-        if [ "$attempt" -lt 3 ]; then
-          echo "Resend is still processing a welcome email with this key (409 concurrent_idempotent_requests); retrying in 5 s with the same key and body ($attempt/3)."
-          attempt=$((attempt + 1))
-          sleep 5
-          continue
-        fi
-        echo "WARNING: Resend still reports the welcome email in progress after 3 attempts; not marked as sent, the next start retries it."
-        return 0
-        ;;
-      *)
-        echo "WARNING: Welcome email failed (HTTP $code${name:+, $name}); not marked as sent, the next start retries it."
-        return 0
-        ;;
-    esac
-  done
+  # -o /dev/null: the sign-up app's answer is not logged, whatever it says.
+  curl -sf --max-time 15 -o /dev/null -X POST "$PROVISION_CALLBACK_URL/api/provision-callback" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $PROVISION_CALLBACK_TOKEN" \
+    -d "$body" \
+    || echo "Warning: $status callback failed (non-fatal)"
 }
-# On every later start: an account this entrypoint created whose welcome email
-# never went out (a 429/5xx, a lost response, a crash) gets one more attempt.
-retry_pending_welcome() {
-  [ -n "$ORGANIZER_EMAIL" ] || return 0
-  step_done organizer_mail_sent && return 0
-  step_done organizer_account || return 0
-  ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
-  echo "Organizer welcome email is pending (account created, email not sent); trying once on this start."
-  if welcome_login_url; then
-    send_welcome_email
-  else
-    echo "WARNING: drush uli failed; the welcome email stays pending for the next start."
-  fi
+provision_callback() {  # provision_callback STATUS: a progress callback with the site address
+  send_callback "$1" "" "$SITE_URI"
 }
+fail_callback() {       # fail_callback REASON: status failed and a fixed code, nothing else
+  send_callback "failed" "$1" ""
+}
+
+# --- One failed callback when a fresh install or a resume run dies ---
+# FAIL_REASON is set to the code of the step about to run and put back to install_failed
+# after it. RUN_KIND is set where the script decides the path: fresh, resume or redeploy.
+# On a non-zero exit the trap sends ONE failed callback with the current code, only for
+# fresh and resume runs, and only while "ready" has not gone out (READY_SENT; a stop after
+# ready, such as the closing cache clear, must not mark a finished site as failed). A
+# redeploy sends none: its site is already live. A stop before the path is decided (a state
+# read failing right at start-up) sends none either. The exit status is kept. The sign-up
+# app treats a failed from the site as provisional; a later ready for the same attempt wins.
+# Codes: install_failed (any other step), db_not_empty, platform_enable_failed,
+# organizer_failed. The code is a fixed word: no step output, key or address ever goes in it.
+# Test: scripts/ops/tests/install-resume.test.sh
+FAIL_REASON=install_failed
+RUN_KIND=""
+READY_SENT=false
+on_exit() {
+  local rc=$?
+  trap - EXIT
+  if [ "$rc" -ne 0 ] && [ "$READY_SENT" != "true" ]; then
+    case "$RUN_KIND" in
+      fresh|resume) fail_callback "$FAIL_REASON" ;;
+    esac
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
 
 # Every step after site:install. Each one is safe to run again on resume.
 run_post_install() {
   # Enable LocalNodes platform (AI config, block placement, Solr/Qdrant overrides)
   echo "Enabling localnodes_platform..."
+  FAIL_REASON=platform_enable_failed
   $DRUSH en localnodes_platform -y
+  FAIL_REASON=install_failed
+
+  # Optional OpenRouter AI (the organizer's own key, ONB-07). Off unless AI_PROVIDER is
+  # exactly "openrouter". Enabled here, before page types, demo content and indexing, so
+  # the site's AI provider is fixed before anything is saved or embedded. The module's
+  # install hook does the AI configuration; this only turns it on (D-21).
+  if [ "${AI_PROVIDER:-}" = "openrouter" ]; then
+    echo "Enabling localnodes_openrouter..."
+    $DRUSH en localnodes_openrouter -y
+  fi
 
   # NOTE: We deliberately do NOT run `drush deploy`/`config:import` here.
   # This is a distribution: all platform config lives in module config/install
@@ -274,6 +251,12 @@ run_post_install() {
   # A cache rebuild is all that's needed after module enablement.
   echo "Rebuilding caches..."
   $DRUSH cr
+
+  # Page types the organizer confirmed at sign-up (LOCALNODES_TOPIC_TYPES). Drupal does the
+  # work and the command is safe to run again, so a resume just repeats it. It prints fixed
+  # sentences only. A non-zero exit stops the install here (set -e); the container retries.
+  echo "Creating the community's page types..."
+  $DRUSH localnodes:topic-types
 
   # Optional Web3 stack (SIWE login, Safe smart accounts, group treasuries).
   # Off by default; set WEB3_ENABLED=true to enable on this instance.
@@ -317,58 +300,77 @@ run_post_install() {
 
   # Vector indexing is left to the worker loop forked below: the old 3x install-time cron passes mostly indexed nothing (ultimate_cron runs search_api_cron every 15 min).
 
-  # --- Organizer account provisioning ---
-  # When ORGANIZER_EMAIL is set (automated provisioning), create the organizer's admin account,
-  # generate a one-time login link, send callbacks, and send the welcome email.
-  # organizer_account (marked just before user:create) and organizer_mail_sent
-  # are separate: a run that created the account but stopped before the email
-  # retries the login link and the email; an account with neither marker comes
-  # from an install made before the markers and is adopted, with no second email.
+  # --- Organizer account (and, on a manual run, the welcome mail) ---
+  # When ORGANIZER_EMAIL is set, Drupal creates the organizer's admin account and the first
+  # group from inside the site. This script only triggers it: it makes no sign-in address and
+  # sends no mail, and nothing here names the organizer's address.
+  # - Sign-up run (PROVISION_ID and PROVISION_CALLBACK_TOKEN set; 23-35, Tom's billing rule
+  #   B-1): the organizer-setup command makes the account BLOCKED and sends no mail. The
+  #   sign-up app charges the saved card when it hears "ready" and then calls the site's
+  #   POST /localnodes/activate, which unblocks the account and sends the welcome mail. An
+  #   unpaid site never has a usable organizer login. The command's step marker
+  #   (organizer_setup) is what a resume skips on.
+  # - Manual run (no callback variables): localnodes:organizer-welcome, as before (23-04):
+  #   an active account and the welcome mail at install. Its marker (organizer_mail_sent)
+  #   is what a resume skips on.
+  # Either command skips what it already did, so a run that stopped part-way retries.
   if [ -n "$ORGANIZER_EMAIL" ]; then
-    ORGANIZER_USERNAME="${ORGANIZER_NAME:-Community} Admin"
-    if step_done organizer_mail_sent; then
+    ORGANIZER_DONE=true
+    SIGNUP_RUN=false
+    if [ -n "${PROVISION_ID:-}" ] && [ -n "${PROVISION_CALLBACK_TOKEN:-}" ]; then
+      SIGNUP_RUN=true
+    fi
+    if [ "$SIGNUP_RUN" = "true" ]; then
+      if step_done organizer_setup; then
+        echo "Organizer account already set up; skipping."
+      else
+        provision_callback "creating_user"
+        # A non-zero exit stops the install (set -e): the container retries.
+        FAIL_REASON=organizer_failed
+        $DRUSH localnodes:organizer-setup
+        FAIL_REASON=install_failed
+        echo "Organizer account ready; the welcome mail goes out after the first payment."
+      fi
+    elif step_done organizer_mail_sent; then
       echo "Organizer already provisioned and emailed; skipping."
     else
-      # The address reaches PHP through the environment, never through the code string.
-      count_query "organizer accounts" 'echo count(\Drupal::entityTypeManager()->getStorage("user")->loadByProperties(["mail" => getenv("ORGANIZER_EMAIL")]));'
-      if [ "$COUNT" -gt 0 ] && ! step_done organizer_account; then
-        echo "Organizer account exists from an install made before the step markers; adopting it (no second welcome email)."
-        # mail_sent first: if the second write fails, the next start skips
-        # (mail_sent is marked) instead of resending.
-        mark_step organizer_mail_sent
-        mark_step organizer_account
-      else
-        if [ "$COUNT" -eq 0 ]; then
-          provision_callback "creating_user" ",\"site_url\":\"$SITE_URI\""
-          # Marked BEFORE user:create: from here on an existing account is this
-          # entrypoint's own, so a crash anywhere below retries the email
-          # instead of adopting the account as a pre-marker one.
-          mark_step organizer_account
-          PASSWORD=$(openssl rand -hex 16)
-          $DRUSH user:create "$ORGANIZER_USERNAME" --mail="$ORGANIZER_EMAIL" --password="$PASSWORD" 2>&1
-        else
-          echo "WARNING: the organizer account was created by an earlier run that stopped before the welcome email; sending the login link and the email now."
-        fi
-        $DRUSH user:role:add sitemanager "$ORGANIZER_USERNAME" 2>&1
-
-        # One-time login URL; if drush cannot make it, stop so the container
-        # retries (organizer_account is marked, so the retry sends the email).
-        if ! welcome_login_url; then
-          echo "ERROR: drush uli failed; stopping so the container retries."
-          exit 1
-        fi
-
-        # Send welcome email via Resend
-        provision_callback "sending_email" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
-        send_welcome_email
-
-        provision_callback "complete" ",\"site_url\":\"$SITE_URI\",\"login_url\":\"$LOGIN_URL\""
-        echo "Organizer provisioning complete for $ORGANIZER_EMAIL"
-      fi
+      provision_callback "creating_user"
+      # A non-zero exit stops the install (set -e): the container retries, and the
+      # command skips what it already did.
+      FAIL_REASON=organizer_failed
+      $DRUSH localnodes:organizer-welcome
+      FAIL_REASON=install_failed
+      echo "Organizer provisioning complete."
     fi
+
+    # The community's texts from sign-up (LOCALNODES_COMMUNITY_SEED, 23-34): the tagline and
+    # About page, the first group's description, the assistant's context and a draft welcome
+    # post. They need the organizer's account and the first group, which the step above makes
+    # (organizer-setup or organizer-welcome; a blocked account is fine), so this runs after it,
+    # outside both "already done" skips, also on a resume where that step had finished. The
+    # command keeps its own marker (community_seed): a second run changes nothing, so an
+    # organizer's edits are never put back. It needs no sign-in by the organizer, and it prints
+    # fixed sentences only, never the value or a text. No closed reason code fits this step, as
+    # with topic-types, so a failure reports install_failed; set -e stops the install and the
+    # container retries. Direct indexing is off for this one command (as for the demo load): it
+    # saves content, and an embedding quota error in search_api's post-request indexing would
+    # otherwise end the command non-zero after the work is done. The worker loop indexes it.
+    echo "Applying the community's texts..."
+    FAIL_REASON=install_failed
+    LOCALNODES_DEFER_INDEXING=1 $DRUSH localnodes:seed-community
+    FAIL_REASON=install_failed
   fi
 
   $DRUSH state:set "$INSTALL_MARKER" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  # "ready" goes out only now, with the install marker written, and on a resume too (the
+  # first one may never have arrived). It carries the site address and nothing secret. The
+  # sign-up app charges the saved card on it and calls /localnodes/activate after the payment
+  # (23-35, B-1); a site never sends complete (the sign-up app writes that itself). A manual
+  # run sends nothing (it has no callback variables).
+  if [ "${ORGANIZER_DONE:-false}" = "true" ] && [ "${SIGNUP_RUN:-false}" = "true" ]; then
+    provision_callback "ready"
+    READY_SENT=true
+  fi
   echo "=== FRESH INSTALL COMPLETE ==="
 }
 
@@ -380,6 +382,7 @@ if $DRUSH status --field=bootstrap 2>/dev/null | grep -q 'Successful'; then
 fi
 
 if [ "$INSTALLED" = false ]; then
+  RUN_KIND=fresh
   # Drupal did not bootstrap. That alone is not proof of an empty database: a
   # DB hiccup, a bad setting or a PHP fatal would otherwise run site:install
   # over a live site and wipe it. Install only on positive evidence that the
@@ -394,6 +397,7 @@ if [ "$INSTALLED" = false ]; then
     exit 1
   fi
   if [ "$DB_TABLES" != "0" ]; then
+    FAIL_REASON=db_not_empty
     echo "ERROR: Drupal did not bootstrap, but database ${DB_NAME:-opensocial} is not empty (it has '$DB_TABLES' tables). Refusing to run site:install over it; stopping so the container retries. If this is a broken install on a throwaway instance, delete its volumes and redeploy."
     exit 1
   fi
@@ -407,6 +411,7 @@ if [ "$INSTALLED" = false ]; then
     --account-pass="${DRUPAL_ADMIN_PASS:-admin}" \
     --account-mail="${DRUPAL_ADMIN_EMAIL:-admin@example.com}" \
     --db-url="mysql://${DB_USER:-opensocial}:${DB_PASSWORD:-changeme}@${DB_HOST:-mariadb}:${DB_PORT:-3306}/${DB_NAME:-opensocial}" \
+    install_configure_form.enable_update_status_emails=NULL \
     -y
 
   run_post_install
@@ -414,12 +419,14 @@ elif ! install_marker_present; then
   # Installed, but the post-install steps never all finished. This includes
   # installs made before the marker existed: their next start runs the
   # (re-runnable) post-install steps once and writes the marker.
+  RUN_KIND=resume
   echo "=== RESUMING INSTALL (no completion marker) ==="
   echo "Running database updates..."
   $DRUSH updatedb -y
   $DRUSH cr
   run_post_install
 else
+  RUN_KIND=redeploy
   echo "=== EXISTING INSTALL ==="
 
   # Apply pending DB updates and rebuild caches. We intentionally do NOT run
@@ -437,14 +444,89 @@ else
     $DRUSH en localnodes_web3 -y 2>/dev/null || true
   fi
 
+  # Ensure the OpenRouter submodule matches AI_PROVIDER on redeploy, with the provider flip
+  # guard (23-40, D-21: a site's chat and embedding models are fixed at install). Redeploy
+  # only: run_post_install enables the module on the fresh and resume paths, where nothing
+  # is indexed yet, and reads none of this.
+  # - Module already on: nothing to do. So AI_PROVIDER_SWITCH acts only while the module is
+  #   off, and a switch left set never clears the index again.
+  # - Module off and the vector server's indexes empty: enable it, as the 23-27 toggle did.
+  # - Module off and items already indexed (a live site on another provider): enabling
+  #   OpenRouter would query its embeddings against the old provider's vectors, and search
+  #   answers would go wrong with no error. Refused unless AI_PROVIDER_SWITCH is exactly
+  #   "reindex". A refusal logs one REFUSED line and skips: exit 0 and no FAIL_REASON code.
+  #   The codes are the sign-up callback contract (closed at four, sent only on fresh and
+  #   resume runs), a redeploy sends no callback, and a non-zero exit would crash-loop a
+  #   working live site over an env mismatch. The site keeps its current provider.
+  # - The switch clears the vector server BEFORE enabling the module. If the clear fails, the
+  #   site stays on its current provider with that provider's vectors, which is consistent;
+  #   enabling first and then failing to clear would leave OpenRouter querying the old
+  #   vectors, the state this guard exists to prevent. The Qdrant provider only logs a
+  #   warning when a drop or create fails, so a zero drush exit is not proof: the collection
+  #   is read back (0 points at 3072) before the module is enabled.
+  # Both reads go through count_query: a read that fails stops the start-up, as every
+  # entrypoint read does, and is never taken as "not enabled" or "empty". Every other
+  # command here sits in an if or an ||, so set -e cannot end the redeploy.
+  # Test: scripts/ops/tests/install-resume.test.sh (section 5l)
+  if [ "${AI_PROVIDER:-}" = "openrouter" ]; then
+    echo "Ensuring localnodes_openrouter enabled..."
+    count_query "the localnodes_openrouter module state" \
+      'echo (int) \Drupal::moduleHandler()->moduleExists("localnodes_openrouter");'
+    if [ "$COUNT" -gt 0 ]; then
+      echo "localnodes_openrouter is already enabled; nothing to change."
+    else
+      count_query "the vector index items" \
+        '$server = \Drupal::entityTypeManager()->getStorage("search_api_server")->load("ai_knowledge_garden"); if (!$server) { echo "no-server"; } else { $sum = 0; foreach ($server->getIndexes() as $index) { $sum += (int) $index->getTrackerInstance()->getIndexedItemsCount(); } echo $sum; }'
+      if [ "$COUNT" -eq 0 ]; then
+        $DRUSH en localnodes_openrouter -y 2>/dev/null || true
+      elif [ "${AI_PROVIDER_SWITCH:-}" = "reindex" ]; then
+        echo "AI_PROVIDER_SWITCH=reindex: switching this site to OpenRouter. Clearing its vector index ($COUNT items), then indexing every item again with the new model."
+        if ! $DRUSH search-api:server-clear ai_knowledge_garden; then
+          echo "ERROR: clearing the vector index failed; localnodes_openrouter was not enabled. The site keeps its current AI provider and indexes again with it."
+        else
+          QDRANT_AFTER_CLEAR="$(curl -sf "$QDRANT_URL/collections/knowledge_garden" 2>/dev/null || true)"
+          POINTS_CLEARED=no
+          case "$QDRANT_AFTER_CLEAR" in *'"points_count":0,'*|*'"points_count":0}'*) POINTS_CLEARED=yes ;; esac
+          case "$QDRANT_AFTER_CLEAR" in *'"size":3072'*) ;; *) POINTS_CLEARED=no ;; esac
+          if [ "$POINTS_CLEARED" != yes ]; then
+            echo "ERROR: the Qdrant collection still holds points or could not be read after the clear; localnodes_openrouter was not enabled. The site keeps its current AI provider and indexes again with it."
+          elif ! $DRUSH en localnodes_openrouter -y; then
+            echo "ERROR: enabling localnodes_openrouter failed after the clear. The site keeps its current AI provider and indexes again with it."
+          else
+            $DRUSH cr || echo "WARNING: drush cr failed after enabling localnodes_openrouter; continuing."
+            soft "search-api:index" $DRUSH search-api:index
+            echo "Switched to OpenRouter. Items not indexed yet stay tracked for the worker loop. Unset AI_PROVIDER_SWITCH."
+          fi
+        fi
+      else
+        echo "REFUSED: AI_PROVIDER=openrouter, but this site's vector index already holds $COUNT items made with its current embedding model. localnodes_openrouter was not enabled and the site keeps its current AI provider. To switch, set AI_PROVIDER_SWITCH=reindex and redeploy: that clears the vector index and indexes every item again with the new model."
+      fi
+    fi
+  fi
+
+  # Re-send "ready" for a sign-up site that has not been handed over yet (23-35, B-1). The
+  # install marker is written before the install's ready callback, so a container stopped
+  # between the two would come back on this path and never report: a built site that is
+  # never charged. While localnodes.organizer_activated is unset, every redeploy sends ready
+  # again; the sign-up app ignores a repeated ready once billing has started (23-32). It sits
+  # after the provider flip guard, so a guard read that stops the start-up sends nothing, and
+  # read_state stops the start-up too if the read itself fails (never taken as "not
+  # activated"). A redeploy sends no failed callback (the trap reports fresh and resume runs
+  # only), and a manual site, without the callback variables, sends nothing.
+  if [ -n "$ORGANIZER_EMAIL" ] && [ -n "${PROVISION_ID:-}" ] && [ -n "${PROVISION_CALLBACK_TOKEN:-}" ]; then
+    read_state localnodes.organizer_activated
+    if [ -z "$STATE_VALUE" ]; then
+      echo "Organizer not activated yet; telling the sign-up app this site is ready."
+      provision_callback "ready"
+    fi
+  fi
+
   # Ensure instance-specific demo module is enabled (excluded from config sync)
   DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
   if [ "$DEMO_MODULE" != "none" ]; then
     echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   fi
-
-  retry_pending_welcome
 
   echo "=== EXISTING INSTALL READY ==="
 fi

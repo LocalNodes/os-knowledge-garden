@@ -23,9 +23,13 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  * is rewritten, doesn't fire when max_loops is exceeded, in verbose mode, or
  * when a tool returns directly. AgentRunner then returns end($history): raw
  * model text, a tool-call turn, or a raw tool message holding excerpts
- * (AI-SPEC pitfall 19). Any group_assistant exit that wasn't rewritten is
- * replaced here by the fixed fallback copy and counted by a 'guard_fallback'
- * warning.
+ * (AI-SPEC pitfall 19). A failed chat call is a fourth exit: ai_agents then
+ * dispatches the finished event with a throwaway message that is not in the
+ * chat history, and AgentRunner returns the last history message (the last
+ * tool result, or the asker's own question). So a group_assistant exit passes
+ * only if the returned message is the very object the subscriber rewrote.
+ * Any other exit is replaced here by the fixed fallback copy and counted by a
+ * 'guard_fallback' warning.
  */
 final class CitationGuardAgentRunner extends AgentRunner {
 
@@ -65,11 +69,17 @@ final class CitationGuardAgentRunner extends AgentRunner {
     $this->registry->reset();
     $output = parent::runAsAgent($assistant_id, $chat_history, $defaults, $job_id, $verbose_mode, $context);
     // $assistant_id is the agent id here (AiAssistantApiRunner.php:330).
-    if ($assistant_id !== CitationRewriteSubscriber::AGENT_ID || $this->registry->wasRewritten()) {
+    if ($assistant_id !== CitationRewriteSubscriber::AGENT_ID) {
+      return $output;
+    }
+    // Identity, not the flag and not the role: the flag is also set for the
+    // throwaway message of a failed call, and a role can be changed in place.
+    $rewritten = $this->registry->rewrittenMessage();
+    if ($rewritten !== NULL && $output->getNormalized() === $rewritten) {
       return $output;
     }
 
-    $reason = self::reason($output, $verbose_mode);
+    $reason = $this->reason($output, $verbose_mode);
     $this->logger->warning('guard_fallback agent=@agent reason=@reason', [
       '@agent' => $assistant_id,
       '@reason' => $reason,
@@ -88,9 +98,14 @@ final class CitationGuardAgentRunner extends AgentRunner {
   /**
    * Why an exit escaped the rewrite, as a reason code.
    */
-  private static function reason(ChatOutput $output, bool $verbose_mode): string {
+  private function reason(ChatOutput $output, bool $verbose_mode): string {
     if ($verbose_mode) {
       return 'verbose';
+    }
+    // The finished event fired, but the run returned another message: a
+    // failed chat call.
+    if ($this->registry->wasRewritten()) {
+      return 'rewrite_not_returned';
     }
     $message = $output->getNormalized();
     if (!$message instanceof ChatMessage) {

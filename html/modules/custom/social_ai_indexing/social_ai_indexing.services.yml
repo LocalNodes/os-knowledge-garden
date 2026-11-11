@@ -78,6 +78,15 @@ services:
     tags:
       - { name: event_subscriber }
 
+  # The community's own context in the group assistant's prompt (23-34,
+  # ruling S): State value set by drush localnodes:seed-community, appended
+  # after the rules inside a labelled fence, at ai_agents.pre_system_prompt.
+  social_ai_indexing.community_context_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\CommunityContextSubscriber
+    arguments: ['@state']
+    tags:
+      - { name: event_subscriber }
+
   # Tool-level trace: plugin id, index, counts and labels only (E10).
   social_ai_indexing.tool_trace_subscriber:
     class: Drupal\social_ai_indexing\EventSubscriber\ToolTraceSubscriber
@@ -132,5 +141,19 @@ services:
       - '@config.factory'
       - '@logger.channel.social_ai_indexing'
       - '@current_user'
+    tags:
+      - { name: event_subscriber }
+
+  # Per-minute budget on indexing embeddings (22.2-12, D-07). Counts texts of
+  # calls tagged 'indexing'; waits under drush/cron, stops in a web request.
+  # Priority 40: after the usage-ceiling check (50), before ai_usage_limits.
+  social_ai_indexing.embedding_throttle_subscriber:
+    class: Drupal\social_ai_indexing\EventSubscriber\EmbeddingThrottleSubscriber
+    arguments:
+      - '@state'
+      - '@lock'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@logger.channel.social_ai_indexing'
     tags:
       - { name: event_subscriber }

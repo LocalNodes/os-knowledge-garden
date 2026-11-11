@@ -1,0 +1,8 @@
+name: 'LocalNodes AI failover (test only)'
+type: module
+description: 'Two AI providers for AiFailoverSubscriberTest (23-10): one fails on demand, one answers with fixed text. Never enable on a real site.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true
+dependencies:
+  - ai:ai

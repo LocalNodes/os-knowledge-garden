@@ -184,6 +184,7 @@ export class FailureDump {
   private errors = 0;
   private warnings = 0;
   private pageErrors = 0;
+  private readonly pageErrorLines: string[] = [];
   private failedRequests = 0;
   private readonly safe = new Map<string, number>();
   private readonly answers: string[] = [];
@@ -196,8 +197,16 @@ export class FailureDump {
     if (key && key.startsWith('safe:')) this.safe.set(key, (this.safe.get(key) ?? 0) + 1);
   }
 
-  pageError(): void {
+  /**
+   * One uncaught page error: counted, and the first 5 listed by their allowlisted error name and
+   * the receipt panel's state when it happened (digits, else "other"; "-" when unknown).
+   */
+  pageError(error?: unknown, panelState?: string | null): void {
     this.pageErrors++;
+    if (this.pageErrorLines.length >= 5) return;
+    const name = error instanceof Error ? (ERROR_NAMES.includes(error.name) ? error.name : 'Error') : 'unknown';
+    const state = panelState === undefined || panelState === null ? '-' : /^\d{1,2}$/.test(panelState) ? panelState : 'other';
+    this.pageErrorLines.push(`pageerror: name=${name} panel_state=${state}`);
   }
 
   requestFailed(): void {
@@ -213,6 +222,7 @@ export class FailureDump {
     return [
       `console: errors=${this.errors} warnings=${this.warnings} ${SAFE_KEYS.map((k) => `${k}=${this.safe.get(k) ?? 0}`).join(' ')}`,
       `pageerrors=${this.pageErrors} update-deployment requests failed=${this.failedRequests}`,
+      ...this.pageErrorLines,
       ...(this.answers.length ? this.answers : ['update-deployment: no answer recorded']),
     ];
   }
@@ -220,7 +230,14 @@ export class FailureDump {
   /** Records the page's console, page errors, update-deployment answers and failed requests. */
   watch(page: Page): void {
     page.on('console', (msg) => this.console(msg.type(), msg.text()));
-    page.on('pageerror', () => this.pageError());
+    page.on('pageerror', (error) => {
+      page
+        .locator('#safe-deployment-status-container [data-safe-panel-state]')
+        .first()
+        .getAttribute('data-safe-panel-state', { timeout: 1_000 })
+        .catch(() => null)
+        .then((state) => this.pageError(error, state));
+    });
     page.on('response', (response) => {
       if (!/\/safe-accounts\/\d+\/update-deployment(\?|$)/.test(response.url())) return;
       response

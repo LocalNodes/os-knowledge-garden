@@ -41,3 +41,4 @@ exclude_users_role: false
 masquerade_roles: {  }
 structured_output_enabled: false
 structured_output_schema: ''
+guardrail_set: localnodes_ai_requests

@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * Test hooks for social_ai_indexing's test support module.
+ */
+
+use Drupal\social_ai_indexing_test\Plugin\VdbProvider\InMemoryQdrantProvider;
+
+/**
+ * Implements hook_ai_vdb_provider_info_alter().
+ *
+ * When state 'social_ai_indexing_test.in_memory_qdrant' is TRUE, the 'qdrant'
+ * VDB plugin becomes InMemoryQdrantProvider (a subclass of the shipped
+ * ThrottledQdrantProvider that keeps its points in a key_value collection and
+ * opens no connection). Hook order is by module name, and
+ * 'social_ai_indexing_test' sorts after 'social_ai_indexing', so this alter
+ * runs after the shipped class swap and the test sees the shipped
+ * indexItems() logic on in-memory storage.
+ */
+function social_ai_indexing_test_ai_vdb_provider_info_alter(array &$definitions): void {
+  if (isset($definitions['qdrant']) && \Drupal::state()->get('social_ai_indexing_test.in_memory_qdrant')) {
+    $definitions['qdrant']['class'] = InMemoryQdrantProvider::class;
+  }
+}

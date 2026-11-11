@@ -186,15 +186,33 @@ trait OverviewTrait {
    */
   protected static function contextLabels(ChatInput $input): array {
     $labels = [];
-    foreach ($input->getMessages() as $message) {
-      if ($message instanceof ChatMessage && $message->getRole() !== 'assistant') {
-        preg_match_all('/^\[(R\d+)\] /m', $message->getText(), $matches);
-        foreach ($matches[1] as $label) {
-          $labels[$label] = $label;
-        }
+    foreach (self::contextTexts($input) as $text) {
+      preg_match_all('/^\[(R\d+)\] /m', $text, $matches);
+      foreach ($matches[1] as $label) {
+        $labels[$label] = $label;
       }
     }
     return array_values($labels);
+  }
+
+  /**
+   * The texts a request gives the model its sources in.
+   *
+   * Since 22.2-09 (D-12) the overview's sources are in the system prompt and
+   * its user turn is only the query; before, they were in the user turn. Both
+   * places are read, so a test doesn't depend on the layout.
+   *
+   * @return list<string>
+   *   The system prompt, then every non-assistant message's text.
+   */
+  protected static function contextTexts(ChatInput $input): array {
+    $texts = [(string) $input->getSystemPrompt()];
+    foreach ($input->getMessages() as $message) {
+      if ($message instanceof ChatMessage && $message->getRole() !== 'assistant') {
+        $texts[] = $message->getText();
+      }
+    }
+    return $texts;
   }
 
   /**
@@ -205,12 +223,10 @@ trait OverviewTrait {
    */
   protected static function contextTitles(ChatInput $input): array {
     $titles = [];
-    foreach ($input->getMessages() as $message) {
-      if ($message instanceof ChatMessage) {
-        preg_match_all('/^\[(R\d+)\] (.+)$/m', $message->getText(), $matches, PREG_SET_ORDER);
-        foreach ($matches as $match) {
-          $titles[$match[1]] ??= trim($match[2]);
-        }
+    foreach (self::contextTexts($input) as $text) {
+      preg_match_all('/^\[(R\d+)\] (.+)$/m', $text, $matches, PREG_SET_ORDER);
+      foreach ($matches as $match) {
+        $titles[$match[1]] ??= trim($match[2]);
       }
     }
     return $titles;

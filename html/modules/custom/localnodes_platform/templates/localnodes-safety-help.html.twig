@@ -1,0 +1,43 @@
+{#
+/**
+ * @file
+ * The "Hacked or Phished?" help page at /help/hacked-or-phished (22.1-15).
+ *
+ * Tom's ruling of 2026-11-09. The words are the help page rows of
+ * 22.1-15-UI-SPEC-PROPOSAL.md, approved as written: the intro, the six steps
+ * in order, then "If this site is down". The h1 "Hacked or Phished?" is the
+ * route title, which Open Social's title block prints, so this template has
+ * none.
+ *
+ * The steps use plain words only: "approve" and "wallet", never the words
+ * SafetyHelpPageTest lists. The section after them names the Safe app on
+ * purpose, because that is what an approver finds there.
+ *
+ * The wrapper carries localnodes-site-terms for the terms page's reading
+ * layout (the site_terms library) and localnodes-safety-help for its own.
+ *
+ * Variables:
+ * - seal_911_url: SEAL 911's official page (SafetyHelpController::SEAL_911_URL).
+ */
+#}
+<div class="localnodes-site-terms localnodes-safety-help">
+  <p>{% trans %}If someone tricked you or got into your wallet, act fast. Do these steps in order.{% endtrans %}</p>
+
+  <section aria-labelledby="localnodes-safety-help-steps">
+    <h2 id="localnodes-safety-help-steps">{% trans %}What to do now{% endtrans %}</h2>
+    <ol>
+      <li>{% trans %}Stop approving. Don't approve anything else in your wallet until you know what happened.{% endtrans %}</li>
+      <li>{% trans %}Move what you can. On a phone or computer you trust, move anything you still can to a new wallet that only you control.{% endtrans %}</li>
+      <li>{% trans %}Take back approvals. Your wallet may have let other apps or sites spend from it. Remove those approvals in your wallet, or ask SEAL 911 to help you do it.{% endtrans %}</li>
+      <li>{% trans %}Tell your group's other approvers. They can refuse any payment you didn't mean to approve, and change who approves.{% endtrans %}</li>
+      <li>{% trans %}Get free emergency help from SEAL 911, a volunteer security team: <a href="{{ seal_911_url }}">SEAL 911's website</a>. Use only this link. No real helper will ask for the secret words or password that open your wallet.{% endtrans %}</li>
+      <li>{% trans %}Tell the people who run this site: its organizers, or LocalNodes at <a href="mailto:hello@localnodes.xyz">hello@localnodes.xyz</a>.{% endtrans %}</li>
+    </ol>
+  </section>
+
+  <section id="if-this-site-is-down" aria-labelledby="localnodes-safety-help-site-down">
+    <h2 id="localnodes-safety-help-site-down">{% trans %}If this site is down{% endtrans %}</h2>
+    <p>{% trans %}Your group's money isn't kept on this site. It's in a standard Safe account on the blockchain. If this site is down, any approver can open the group's Safe in the Safe app at app.safe.global, approve payments there, and pay the network fee from their own wallet.{% endtrans %}</p>
+    <p>{% trans %}On your group fund's page, "Open in Safe app" takes you straight there. Save that link somewhere you'll find it.{% endtrans %}</p>
+  </section>
+</div>

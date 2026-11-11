@@ -1,0 +1,21 @@
+/**
+ * @file
+ * The organizer guide's reading width (23-UI-SPEC section 8, Typography).
+ *
+ * Lines hold to 72 characters. No colour literal here (D-03).
+ */
+.localnodes-guide {
+  max-width: 72ch;
+}
+.localnodes-guide__steps {
+  padding-left: 1.5em;
+}
+.localnodes-guide__steps > li {
+  margin-bottom: 1.5em;
+}
+.localnodes-guide h2 {
+  margin-top: 1.5em;
+}
+.localnodes-guide__steps > li > h2 {
+  margin-top: 0;
+}

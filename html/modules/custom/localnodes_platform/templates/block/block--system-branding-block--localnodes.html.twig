@@ -1,0 +1,28 @@
+{#
+/**
+ * @file
+ * The community site's header: the community's own name, as text.
+ *
+ * Tom (2026-11-06, card 2): the header shows the community's name, because it
+ * is their site, not Open Social's mark. This replaces socialbase's
+ * block--system-branding-block.html.twig, which prints only the logo image.
+ * Registered by localnodes_platform_theme() as the
+ * block__system_branding_block__localnodes suggestion.
+ *
+ * Variables:
+ * - site_name: The community's name (system.site), a plain string that Twig
+ *   autoescapes. Never add a raw-output filter to it.
+ *
+ * The logo (site_logo) and slogan are deliberately not printed.
+ */
+#}
+{%
+  set classes = [
+    'block-' ~ plugin_id|clean_class,
+    'navbar-header',
+  ]
+%}
+
+<div {{ attributes.addClass(classes) }}>
+  <a class="navbar-brand" href="{{ path('<front>') }}" title="{% trans %}Home{% endtrans %}" rel="home"><span class="ln-site-name">{{ site_name }}</span></a>
+</div>

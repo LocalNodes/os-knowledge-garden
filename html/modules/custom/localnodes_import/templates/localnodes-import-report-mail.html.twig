@@ -1,0 +1,40 @@
+{#
+/**
+ * @file
+ * The problem-report mail's body (23-05, ONB-05; UI-SPEC "Report
+ * notification").
+ *
+ * Printed inside the LocalNodes mail wrapper (email--localnodes.html.twig of
+ * localnodes_platform), which supplies the community's name, the "Hi <name>,"
+ * greeting where there is one, and the footer. The button markup matches
+ * what that wrapper styles (.btn .btn-primary). Everything from the reporter
+ * is printed escaped, as text.
+ *
+ * Variables:
+ * - page_title: The reported page's title.
+ * - reason: The reporter's reason, as its label.
+ * - details: What the reporter wrote, or an empty string.
+ * - contact: The reporter's address, or an empty string. It appears in this
+ *   mail only (T-23-18).
+ * - review_url: The page's address.
+ * - takedown_url: The takedown confirmation; it never acts without it.
+ */
+#}
+<p class="first-paragraph">{% trans %}Someone reported {{ page_title }}.{% endtrans %}</p>
+<p>{% trans %}Reason: {{ reason }}{% endtrans %}</p>
+<p>{{ 'Details:'|t }} {% if details %}{{ details|nl2br }}{% else %}{{ 'none'|t }}{% endif %}</p>
+{% if contact %}
+  <p>{{ 'Their email:'|t }} {{ contact }}</p>
+{% endif %}
+<table border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+  <tr>
+    <td align="left">
+      <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td><a href="{{ review_url }}" target="_blank">{% trans %}Review the page{% endtrans %}</a></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<p><a href="{{ takedown_url }}">{% trans %}Unpublish this page{% endtrans %}</a></p>

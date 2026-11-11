@@ -147,7 +147,9 @@ class ProvenanceTest extends ImportKernelTestBase {
       $line = $xpath->query(".//*[contains(concat(' ', @class, ' '), ' localnodes-import-source__attribution ')]", $box)->item(0);
       $this->assertNotNull($line);
       $this->assertSame('Source: P2P Foundation Wiki, ' . self::ADDRESS, $this->visibleText($line), "'$text' is not shown as a licence");
-      $this->assertSame(1, $xpath->query('.//a', $box)->length, "Only the address is linked for '$text'");
+      // The report link (23-05) sits in its own paragraph and is not part of
+      // the attribution; only the source address may be linked there.
+      $this->assertSame(1, $xpath->query(".//a[not(ancestor::*[contains(concat(' ', @class, ' '), ' localnodes-import-source__report ')])]", $box)->length, "Only the address is linked for '$text'");
     }
   }
 

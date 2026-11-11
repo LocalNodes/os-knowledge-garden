@@ -7,6 +7,7 @@
 
 declare(strict_types=1);
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
@@ -19,8 +20,10 @@ use Drupal\localnodes_import\Controller\RunReportController;
 use Drupal\localnodes_import\Entity\ImportItem;
 use Drupal\localnodes_import\Entity\ImportRun;
 use Drupal\localnodes_import\Fetch\DetectedLicense;
+use Drupal\localnodes_import\Form\ReportProblemForm;
 use Drupal\localnodes_import\Service\ImportRunFinalizer;
 use Drupal\localnodes_import\Theme\BatchThemeNegotiator;
+use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 
 /**
@@ -101,6 +104,21 @@ function localnodes_import_theme(): array {
         'refreshed' => NULL,
         'preview' => FALSE,
         'no_text' => NULL,
+        // "Report a problem with this page" (23-05): the report form's
+        // address, set on imported pages only.
+        'report_url' => NULL,
+      ],
+    ],
+    // The mail a problem report sends to the stewards and the host (23-05).
+    // Printed inside the LocalNodes mail wrapper.
+    'localnodes_import_report_mail' => [
+      'variables' => [
+        'page_title' => '',
+        'reason' => '',
+        'details' => '',
+        'contact' => '',
+        'review_url' => '',
+        'takedown_url' => '',
       ],
     ],
     // The import batch's progress bar (S4, 22-17): same ARIA as the JS bar
@@ -357,11 +375,7 @@ function _localnodes_import_source_box(NodeInterface $node, CacheableMetadata $c
   $ids = $storage->getQuery()
     ->accessCheck(FALSE)
     ->condition('nid', $node->id())
-    ->condition('outcome', [
-      ImportItem::OUTCOME_IMPORTED,
-      ImportItem::OUTCOME_NOT_SEARCHABLE,
-      ImportItem::OUTCOME_REFRESHED,
-    ], 'IN')
+    ->condition('outcome', ImportItem::IMPORTED_OUTCOMES, 'IN')
     ->sort('created')
     ->sort('id')
     ->execute();
@@ -394,6 +408,10 @@ function _localnodes_import_source_box(NodeInterface $node, CacheableMetadata $c
     '#imported' => $imported ? $date_formatter->format((int) $imported->get('created')->value, 'custom', 'j F Y') : NULL,
     '#refreshed' => $refreshed ? $date_formatter->format((int) $refreshed->get('created')->value, 'custom', 'j F Y') : NULL,
   ];
+  // The link to the report form (23-05, ONB-05): on every imported page.
+  $report = Url::fromRoute('localnodes_import.report_problem', ['topic' => $node->id()])->toString(TRUE);
+  $cache->addCacheableDependency($report);
+  $box['#report_url'] = $report->getGeneratedUrl();
   // A page with no readable text says so on the page too, not only in the
   // report (22-30, Codex review): search and the assistant won't find it.
   if ($imported && $imported->get('outcome')->value === ImportItem::OUTCOME_NOT_SEARCHABLE) {
@@ -477,4 +495,46 @@ function _localnodes_import_field_string(NodeInterface $node, string $field_name
   }
   $value = trim((string) $node->get($field_name)->first()?->get($property)->getValue());
   return $value === '' ? NULL : $value;
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * report_problem (23-05): the mail a problem report sends to a site manager,
+ * a group manager and the host. The words are the report notification table
+ * of 23-UI-SPEC.md. Reporter text (details, address) is printed by the
+ * template, which escapes it; nothing from the reporter is rendered as HTML
+ * (T-23-19). Sent by ReportProblemForm, one mail per person.
+ *
+ * @param string $key
+ *   The mail key.
+ * @param array $message
+ *   The message array.
+ * @param array $params
+ *   nid, reason (key), details, contact.
+ */
+function localnodes_import_mail($key, &$message, $params): void {
+  if ($key !== 'report_problem') {
+    return;
+  }
+  $node = Node::load((int) ($params['nid'] ?? 0));
+  if (!$node instanceof NodeInterface) {
+    // The page is gone: nothing to report.
+    $message['send'] = FALSE;
+    return;
+  }
+  $site_name = (string) \Drupal::config('system.site')->get('name');
+  $message['subject'] = PlainTextOutput::renderFromHtml(t('A page was reported on @site', ['@site' => $site_name]));
+  $reasons = ReportProblemForm::reasonOptions();
+  $reason = (string) ($params['reason'] ?? 'other');
+  $build = [
+    '#theme' => 'localnodes_import_report_mail',
+    '#page_title' => (string) $node->label(),
+    '#reason' => (string) ($reasons[$reason] ?? $reasons['other']),
+    '#details' => (string) ($params['details'] ?? ''),
+    '#contact' => (string) ($params['contact'] ?? ''),
+    '#review_url' => $node->toUrl('canonical', ['absolute' => TRUE])->toString(),
+    '#takedown_url' => Url::fromRoute('localnodes_import.takedown', ['topic' => $node->id()], ['absolute' => TRUE])->toString(),
+  ];
+  $message['body'][] = \Drupal::service('renderer')->renderInIsolation($build);
 }

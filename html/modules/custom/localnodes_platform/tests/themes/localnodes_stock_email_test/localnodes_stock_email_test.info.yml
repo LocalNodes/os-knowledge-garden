@@ -1,0 +1,6 @@
+name: 'LocalNodes stock email wrapper (test)'
+type: theme
+description: 'Test theme that ships a plain email.html.twig the way socialbase does, so LocalNodesEmailTest can prove the module template outranks a theme wrapper. Real socialblue cannot boot in a Kernel test (the bootstrap base theme registers a shutdown function that needs the container); scripts/check_branded_mail.sh covers it on the running site.'
+package: 'LocalNodes tests'
+base theme: false
+core_version_requirement: ^10

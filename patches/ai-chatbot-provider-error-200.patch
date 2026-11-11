@@ -1,20 +1,35 @@
 diff --git a/modules/ai_chatbot/src/Controller/DeepChatApi.php b/modules/ai_chatbot/src/Controller/DeepChatApi.php
-index 040ff91..3135f81 100644
 --- a/modules/ai_chatbot/src/Controller/DeepChatApi.php
 +++ b/modules/ai_chatbot/src/Controller/DeepChatApi.php
-@@ -236,10 +236,14 @@ class DeepChatApi extends ControllerBase {
-         // Log the error.
-         $this->getLogger('ai_chatbot')->error('The chatbot had an error: @message', ['@message' => $e->getMessage()]);
- 
+@@ -8,6 +8,7 @@
+ use Drupal\Component\Utility\Xss;
+ use Drupal\Core\Access\CsrfTokenGenerator;
+ use Drupal\Core\Controller\ControllerBase;
++use Drupal\ai\Exception\AiRequestErrorException;
+ use Drupal\ai\OperationType\Chat\ChatInput;
+ use Drupal\ai\OperationType\Chat\ChatMessage;
+ use Drupal\ai\OperationType\Chat\StreamedChatMessageIteratorInterface;
+@@ -224,10 +225,21 @@
+       catch (\Exception $e) {
+         // Log the exception.
+         $this->getLogger('ai_chatbot')->error('DeepChat API error: @message', ['@message' => $e->getMessage()]);
 -        // Otherwise use the default error message.
-+        // Return the message as a handled chat error with HTTP 200. Both
-+        // front-end paths render {"error": ...} from a 200 response, while the
++        // The assistant processor re-throws a provider failure as an
++        // AiRequestErrorException that carries the assistant's chosen message
++        // (its error_message, or the specific_error_messages entry for the
++        // failure). Show that message; anything else gets the default text.
++        $error_message = $e instanceof AiRequestErrorException
++          ? Xss::filter($e->getMessage(), self::ALLOWED_TAGS)
++          : $this->t('An error occurred while processing the request. Please try again later.');
++        // Return it as a handled chat error with HTTP 200. Both front-end
++        // paths render {"error": ...} from a 200 response, while the
 +        // verbose-mode path (deepchat-init.js getAllMessages) drops any
 +        // non-OK body and shows a generic failure, so a 500 would hide the
-+        // assistant's configured message. The error is logged above.
++        // message. The error is logged above.
          return new JsonResponse([
-           'error' => $error_message,
+-          'error' => $this->t('An error occurred while processing the request. Please try again later.'),
 -        ], 500);
++          'error' => $error_message,
 +        ], 200);
  
        }

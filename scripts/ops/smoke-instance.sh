@@ -11,13 +11,24 @@
 #
 #   --no-chat may appear in any position.
 #
+# Environment:
+#   SMOKE_CHAT_OUT=<path>   write the body of the last chatbot response to <path>
+#                           (also on a failed check, so the shape can be inspected)
+#
 # Checks (each prints one "PASS <name>" or "FAIL <name> ..." line):
-#   home          GET /                     200 and the chat block marker "assistant_id":"group_assistant"
+#   home          GET /                     200 and the group_assistant chat block's settings, read from
+#                                           what the page renders (drupal-settings-json and the <deep-chat>
+#                                           connect attribute); needs jq
 #   search hit    GET /search/all/<word>    200 and the body contains <expect>
 #   search miss   GET /search/all/zqxjkvnonsense   200 and "No results found"
 #   chatbot       POST /api/deepchat/session (CSRF token), then POST /api/deepchat?token=...
 #                 repeated with "dummy_loading" while should_continue is true (max 8 calls);
 #                 PASS when the final html has "Sources" and at least one <a href=
+#                 The request body is built from the rendered chat block settings, never hard-coded:
+#                   drupal/ai 1.5.x: chat_processor_plugin and plugin_configuration exactly as the block
+#                                    renders them in the <deep-chat> connect attribute;
+#                   drupal/ai 1.4.x: the legacy body, from drupalSettings.ai_deepchat.assistant_id.
+#                 HTTP 400 fails as "request refused: chat format". Settings not found: FAIL.
 #
 # The chatbot check is NOT read-only: it writes a temp store entry and spends Gemini quota.
 # Use --no-chat against production (Cascadia) except for a single post-change verify.
@@ -26,8 +37,9 @@
 #
 # Exit status: 0 when every check passed, 1 when any check failed, 2 on bad usage.
 #
-# Sources: ai_chatbot.routing.yml:16-31, DeepChatApi.php:123-301, deepchat-init.js:255-310
-# Prerequisites: curl; jq (chatbot check only)
+# Sources: ai_chatbot.routing.yml:16-31, DeepChatApi.php::api() (1.5.2), DeepChatFormBlock.php
+#          getDeepChatParameters() (the connect attribute) and build() (drupalSettings)
+# Prerequisites: curl; jq (home and chatbot checks)
 #
 set -uo pipefail
 
@@ -74,11 +86,48 @@ fetch() {
 }
 
 # (a) Home page with the chat block present.
+#
+# The chat block's settings are read from what the page renders:
+#   - drupalSettings (<script data-drupal-selector="drupal-settings-json">), key ai_deepchat;
+#   - the <deep-chat connect='{...}'> attribute, whose additionalBodyProps drupal/ai 1.5.x fills
+#     with chat_processor_plugin and plugin_configuration (the body the block's own JavaScript posts).
+# Parsed with jq only, never evaluated. The values are sent back to the same host's /api/deepchat.
+CHAT_MODE=""
+CHAT_SETTINGS=""
 fetch "$BASE/"
-if [[ "$CODE" == "200" ]] && grep -qF '"assistant_id":"group_assistant"' <<<"$BODY"; then
-  pass "home"
+HOME_CODE="$CODE"
+HOME_BODY="$BODY"
+if [[ "$HOME_CODE" != "200" ]]; then
+  fail "home code=$HOME_CODE body=$(snippet "$HOME_BODY")"
+elif ! command -v jq >/dev/null 2>&1; then
+  fail "home code=$HOME_CODE body=jq not installed"
 else
-  fail "home code=$CODE body=$(snippet "$BODY")"
+  DS_JSON=$(grep -oE '<script type="application/json" data-drupal-selector="drupal-settings-json">[^<]*</script>' <<<"$HOME_BODY" \
+    | head -n 1 | sed -E 's#^<script[^>]*>##; s#</script>$##')
+  DS_ASSISTANT=$(jq -r '.ai_deepchat.assistant_id // empty' <<<"${DS_JSON:-null}" 2>/dev/null || true)
+  DS_PRESENT=$(jq -r 'if (.ai_deepchat|type)=="object" then "yes" else "no" end' <<<"${DS_JSON:-null}" 2>/dev/null || echo no)
+  # The <deep-chat> block for group_assistant: 1.5.x names it in plugin_configuration.
+  while IFS= read -r attr; do
+    [[ -n "$attr" ]] || continue
+    j="${attr#connect=\'}"; j="${j%\'}"
+    if jq -e '.additionalBodyProps.plugin_configuration.assistant_id == "group_assistant"
+              and ((.additionalBodyProps.chat_processor_plugin // "") != "")' <<<"$j" >/dev/null 2>&1; then
+      CHAT_SETTINGS=$(jq -c '{chat_processor_plugin: .additionalBodyProps.chat_processor_plugin,
+                              plugin_configuration: .additionalBodyProps.plugin_configuration}' <<<"$j")
+      CHAT_MODE="1.5"
+      break
+    fi
+  done < <(grep -oE "connect='[^']*'" <<<"$HOME_BODY")
+  if [[ -z "$CHAT_MODE" && "$DS_ASSISTANT" == "group_assistant" ]]; then
+    # Instance still on drupal/ai 1.4.x: the assistant id is a drupalSettings value.
+    CHAT_SETTINGS=$(jq -nc --arg a "$DS_ASSISTANT" '{assistant_id: $a}')
+    CHAT_MODE="legacy"
+  fi
+  if [[ "$DS_PRESENT" == "yes" && -n "$CHAT_MODE" ]]; then
+    pass "home (chat block group_assistant, $CHAT_MODE settings)"
+  else
+    fail "home code=$HOME_CODE chat block settings not found (drupalSettings ai_deepchat: $DS_PRESENT, mode: ${CHAT_MODE:-none})"
+  fi
 fi
 
 # (b) Search hit for a known demo word.
@@ -101,6 +150,8 @@ fi
 if [[ "$CHAT" == "yes" ]]; then
   if ! command -v jq >/dev/null 2>&1; then
     fail "chatbot code=n/a body=jq not installed"
+  elif [[ -z "$CHAT_MODE" ]]; then
+    fail "chatbot chat block settings not found"
   else
     out=$(curl -sS --max-time 120 -c "$JAR" -b "$JAR" -X POST -w $'\n%{http_code}' \
       "$BASE/api/deepchat/session" 2>&1)
@@ -113,8 +164,9 @@ if [[ "$CHAT" == "yes" ]]; then
       TEXT="What events are happening and where? Cite sources."
       RESP=""
       for i in 1 2 3 4 5 6 7 8; do
-        PAYLOAD=$(jq -nc --arg t "$TEXT" --arg tid "$TID" \
-          '{assistant_id:"group_assistant",thread_id:$tid,messages:[{role:"user",text:$t}]}')
+        # The block's own settings, plus the thread id and the messages.
+        PAYLOAD=$(jq -nc --argjson s "$CHAT_SETTINGS" --arg t "$TEXT" --arg tid "$TID" \
+          '$s + {thread_id:$tid,messages:[{role:"user",text:$t}]}')
         out=$(curl -sS --max-time 120 -c "$JAR" -b "$JAR" -X POST \
           -H 'Content-Type: application/json' -w $'\n%{http_code}' \
           --data "$PAYLOAD" "$BASE/api/deepchat?token=$TOKEN" 2>&1)
@@ -124,8 +176,13 @@ if [[ "$CHAT" == "yes" ]]; then
         [[ "$(jq -r '.should_continue // false' <<<"$RESP" 2>/dev/null)" == "true" ]] || break
         TEXT="dummy_loading"
       done
+      if [[ -n "${SMOKE_CHAT_OUT:-}" ]]; then
+        printf '%s' "$RESP" >"$SMOKE_CHAT_OUT"
+      fi
       HTML=$(jq -r '.html // empty' <<<"$RESP" 2>/dev/null)
-      if [[ "$CODE" == "200" && -n "$HTML" ]] && grep -qi 'sources' <<<"$HTML" && grep -qF '<a href=' <<<"$HTML"; then
+      if [[ "$CODE" == "400" ]]; then
+        fail "chatbot request refused: chat format ($CHAT_MODE body) code=400 body=$(snippet "$RESP")"
+      elif [[ "$CODE" == "200" && -n "$HTML" ]] && grep -qi 'sources' <<<"$HTML" && grep -qF '<a href=' <<<"$HTML"; then
         pass "chatbot answer with sources"
       else
         fail "chatbot code=$CODE body=$(snippet "$RESP")"

@@ -404,3 +404,42 @@ test('treasuries and symbol that were not signed are ignored', () => {
   hub.treasuries = [{ name: 'Other fund', address: member1, network: '1' }];
   assert.deepEqual(compareHubSpace(s, hub), []);
 });
+
+// --- mixed-case (EIP-55) address fixtures (25-03, Codex round 4 note) -----------------------------
+//
+// The fixtures above use digit-only addresses, which have no letter case, so their "any case" tests
+// cannot catch a case-sensitive comparison. These are real checksummed addresses from the live Wave 0
+// run (25-WAVE0-SMOKE.md): the Safe, the predicted Reality module and owner 1.
+
+const safeMixed = '0x104c533758151051f35c8E59B05AC4707516f0Bd';
+const realityMixed = '0xa2894eBadAB77B6c21fC5792d4f58fc531D9e9a0';
+const memberMixed = '0xE6F18F6d6cB38a502e483e327eABA98c2195b67f';
+
+test('the mixed-case fixtures really differ from their lowercase form', () => {
+  for (const a of [safeMixed, realityMixed, memberMixed]) {
+    assert.notEqual(a, a.toLowerCase());
+    assert.notEqual(a, '0x' + a.slice(2).toUpperCase());
+  }
+});
+
+test('checksummed signed addresses equal their lowercase form on the hub', () => {
+  const s = signed({ safe: safeMixed, realityAddress: realityMixed });
+  s.members = [memberMixed];
+  // spaceSettings checksums safe and realityAddress, so the signed side really is mixed case.
+  assert.equal(s.treasuries[0].address, safeMixed);
+  assert.equal(s.plugins.safeSnap.safes[0].realityAddress, realityMixed);
+  const hub = hubFrom(s);
+  hub.treasuries[0].address = safeMixed.toLowerCase();
+  hub.plugins.safeSnap.safes[0].realityAddress = realityMixed.toLowerCase();
+  hub.members = [memberMixed.toLowerCase()];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+  assert.deepEqual(hubSpaceVerdict(s, hub), { ok: true, line: null });
+});
+
+test('a lowercase signed member equals its checksummed form on the hub', () => {
+  const s = signed({ safe: safeMixed, realityAddress: realityMixed });
+  s.members = [memberMixed.toLowerCase()];
+  const hub = hubFrom(s);
+  hub.members = [memberMixed];
+  assert.deepEqual(compareHubSpace(s, hub), []);
+});

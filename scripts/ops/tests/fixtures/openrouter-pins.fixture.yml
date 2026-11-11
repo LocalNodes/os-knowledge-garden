@@ -1,0 +1,31 @@
+# Fixture for openrouter-probe.test.mjs: the shapes the real settings file
+# does not have today (a non-empty ignore, an empty entry, inline lists).
+chat_model: fixture/chat
+provider_pins:
+  # only and ignore, both block lists.
+  - model: fixture/both
+    only:
+      - host-a/one
+      - host-a/two
+    ignore:
+      - bad-host/one
+  # ignore alone: only is an inline empty list.
+  - model: fixture/ignore-only
+    only: []
+    ignore:
+      - bad-host/two
+      - bad-host/three
+  # Nothing in it: counts as no pin.
+  - model: fixture/empty
+    only: []
+    ignore: []
+  # Inline lists with values.
+  - model: fixture/inline
+    only: [host-b/one, 'host-b/two']
+    ignore: ["bad-host/four"]
+  # only with a block list and ignore left out.
+  - model: fixture/only-block
+    only:
+      - host-c
+low_reasoning_models:
+  - fixture/low
