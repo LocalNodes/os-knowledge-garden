@@ -7,6 +7,7 @@
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Database\IntegrityConstraintViolationException;
 use Drupal\block\BlockInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
@@ -198,17 +199,21 @@ function localnodes_quick_poll_block_access(BlockInterface $block, string $opera
 /**
  * Implements hook_form_BASE_FORM_ID_alter() for poll_view_form.
  *
- * A signed-in member's answer is kept without the internet address the poll
- * module stores with it. The module finds a signed-in member's answer by
- * account alone; the address only tells signed-out visitors apart.
+ * A signed-in member's answer is saved by our own handler, which keeps it
+ * without the internet address the poll module stores. The module finds a
+ * signed-in member's answer by account alone; the address only tells
+ * signed-out visitors apart.
  *
  * After "See answers so far" the poll module offers a way back to the
  * question only when signed-out answers are allowed, which quick polls
  * never allow. Give a member who has not answered that way back.
  */
 function localnodes_quick_poll_form_poll_view_form_alter(array &$form, FormStateInterface $form_state): void {
-  if (isset($form['actions']['vote']['#submit'])) {
-    $form['actions']['vote']['#submit'][] = '_localnodes_quick_poll_forget_address';
+  if (isset($form['actions']['vote']['#submit']) && \Drupal::currentUser()->isAuthenticated()) {
+    $form['actions']['vote']['#submit'] = array_map(
+      fn ($handler) => $handler === '::save' ? '_localnodes_quick_poll_save_answer' : $handler,
+      $form['actions']['vote']['#submit'],
+    );
   }
   $poll = $form['poll']['#value'] ?? NULL;
   if (!$poll instanceof PollInterface || !$form_state->get('show_results') || isset($form['actions']['back'])) {
@@ -238,17 +243,58 @@ function localnodes_quick_poll_form_poll_view_form_alter(array &$form, FormState
 }
 
 /**
- * Submit handler: blanks the address stored with a signed-in member's answer.
+ * Submit handler: saves a signed-in member's answer, without an address.
+ *
+ * Replaces the poll module's own save, which stores the address and does
+ * not look again whether the member has answered. A form shown before the
+ * member answered (one left open in another tab, or reached again through
+ * "Back to the question") could otherwise add a second answer.
  */
-function _localnodes_quick_poll_forget_address(array &$form, FormStateInterface $form_state): void {
+function _localnodes_quick_poll_save_answer(array &$form, FormStateInterface $form_state): void {
   $poll = $form_state->getValue('poll');
   $uid = (int) \Drupal::currentUser()->id();
   if (!$poll instanceof PollInterface || $uid === 0) {
-    return;
+    throw new \LogicException('Quick poll answers are saved for signed-in members only.');
   }
-  \Drupal::database()->update('poll_vote')
-    ->fields(['hostname' => ''])
-    ->condition('pid', $poll->id())
-    ->condition('uid', $uid)
-    ->execute();
+  $database = \Drupal::database();
+  $saved = FALSE;
+  $transaction = $database->startTransaction();
+  try {
+    // Lock this member's answers to the poll, so two forms sent at once
+    // cannot both find none.
+    $answered = $database->query('SELECT 1 FROM {poll_vote} WHERE pid = :pid AND uid = :uid FOR UPDATE', [
+      ':pid' => $poll->id(),
+      ':uid' => $uid,
+    ])->fetchField();
+    if (!$answered) {
+      $database->insert('poll_vote')->fields([
+        'chid' => $form_state->getValue('choice'),
+        'uid' => $uid,
+        'pid' => $poll->id(),
+        'hostname' => '',
+        'timestamp' => \Drupal::time()->getRequestTime(),
+      ])->execute();
+      $saved = TRUE;
+    }
+  }
+  catch (IntegrityConstraintViolationException) {
+    // The same answer row already exists: the member has answered.
+  }
+  catch (\Throwable $e) {
+    $transaction->rollBack();
+    throw $e;
+  }
+  unset($transaction);
+
+  if ($saved) {
+    \Drupal::service('cache_tags.invalidator')->invalidateTags(['poll-votes:' . $poll->id()]);
+    \Drupal::messenger()->addMessage(t('Your vote has been recorded.'));
+  }
+  else {
+    \Drupal::messenger()->addMessage(t('Your vote for this poll has already been submitted.'));
+  }
+  // The poll module remembered, earlier in this request, that the member
+  // had not answered; show the totals directly instead of asking it again.
+  $form_state->set('show_results', TRUE);
+  $form_state->setRebuild(TRUE);
 }

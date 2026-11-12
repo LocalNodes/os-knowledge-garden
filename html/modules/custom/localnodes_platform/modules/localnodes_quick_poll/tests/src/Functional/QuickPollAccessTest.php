@@ -353,6 +353,83 @@ final class QuickPollAccessTest extends BrowserTestBase {
   }
 
   /**
+   * A second answer form shown before the first answer saves nothing.
+   *
+   * A form left open in another tab, or reached again through "Back to the
+   * question", is still sent after the member has answered.
+   */
+  public function testSecondFormAfterAnsweringSavesNothing(): void {
+    $poll = $this->createPoll();
+    $this->drupalLogin($this->member);
+    $this->drupalGet('/poll/' . $poll->id());
+    $this->submitForm([], 'See answers so far');
+    $this->submitForm([], 'Back to the question');
+    // Keep this answer form, as a second tab would.
+    $form = $this->getSession()->getPage()->find('css', 'form.poll-view-form, form[id^="poll-view-form"]');
+    $this->assertNotNull($form);
+    $action = $form->getAttribute('action');
+    $hidden = [];
+    foreach ($form->findAll('css', 'input[type="hidden"]') as $input) {
+      $hidden[$input->getAttribute('name')] = $input->getAttribute('value');
+    }
+
+    // Answer through another copy of the form. Drupal forgets a cached form
+    // once it is sent, so the kept one must be a different copy.
+    $this->drupalGet('/poll/' . $poll->id());
+    $this->submitForm(['choice' => $this->choiceId($poll, 'Tuesday')], 'Answer');
+    $this->assertSession()->pageTextContains('Your answer has been saved.');
+
+    // Send the kept form, choosing the other answer.
+    $this->getSession()->getDriver()->getClient()->request('POST', $this->getAbsoluteUrl($action), $hidden + [
+      'choice' => $this->choiceId($poll, 'Thursday'),
+      'op' => 'Answer',
+    ]);
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('You have already answered this question.');
+    $this->assertSession()->pageTextNotContains('Your answer has been saved.');
+
+    $rows = $this->container->get('database')->select('poll_vote', 'v')
+      ->fields('v', ['chid', 'hostname'])
+      ->condition('pid', $poll->id())
+      ->execute()->fetchAll(\PDO::FETCH_ASSOC);
+    $this->assertSame([['chid' => $this->choiceId($poll, 'Tuesday'), 'hostname' => '']], array_map(fn ($row) => array_map('strval', $row), $rows), 'One answer, the first, with no address.');
+  }
+
+  /**
+   * No answer row ever holds a signed-in member's address, even for a moment.
+   *
+   * The database itself refuses to store an address with a member's answer,
+   * and refuses any later change to an answer, so a save that wrote the
+   * address and blanked it afterwards fails here, and a failed blanking
+   * cannot leave the address behind.
+   */
+  public function testAnswerNeverWritesAnAddress(): void {
+    $poll = $this->createPoll();
+    $database = $this->container->get('database');
+    $table = $database->getPrefix() . 'poll_vote';
+    // Drupal's query layer takes one statement without semicolons; a
+    // trigger body needs them, so it goes to the connection directly.
+    $pdo = $database->getClientConnection();
+    $pdo->exec("CREATE TRIGGER {$table}_no_address BEFORE INSERT ON {$table} FOR EACH ROW BEGIN IF NEW.uid > 0 AND NEW.hostname <> '' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'address stored with a member answer'; END IF; END");
+    $pdo->exec("CREATE TRIGGER {$table}_no_change BEFORE UPDATE ON {$table} FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'answer changed after saving'");
+    try {
+      $this->drupalLogin($this->member);
+      $this->drupalGet('/poll/' . $poll->id());
+      $this->submitForm(['choice' => $this->choiceId($poll, 'Thursday')], 'Answer');
+      $this->assertSession()->statusCodeEquals(200);
+      $this->assertSession()->pageTextContains('Your answer has been saved.');
+      $this->assertSame([''], $database->select('poll_vote', 'v')
+        ->fields('v', ['hostname'])
+        ->condition('pid', $poll->id())
+        ->execute()->fetchCol());
+    }
+    finally {
+      $pdo->exec("DROP TRIGGER IF EXISTS {$table}_no_address");
+      $pdo->exec("DROP TRIGGER IF EXISTS {$table}_no_change");
+    }
+  }
+
+  /**
    * Fails if the current page shows a forbidden word to a reader.
    *
    * Checks the text and the attributes people read or hear: button values,
