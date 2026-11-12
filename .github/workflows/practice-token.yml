@@ -1,0 +1,99 @@
+name: Practice token
+
+# Practice Money (PRACTICE) is worthless test money for group funds (contracts/practice-token).
+# The test job runs on every change to it: the contract tests, the deploy script's guard test on
+# local anvil nodes, and the address the token will have. The deploy job is manual, from main only,
+# with a typed confirmation, and only on Ethereum Sepolia. It goes through the standard CREATE2
+# deployer with a fixed salt, so a rerun sends nothing. Gas comes from the CI practice wallet
+# (secret SPONSOR_RELAYER_PRIVATE_KEY_CI), which reaches the deploy only through the environment
+# and is never printed or put on a command line. The "practice-token-deploy" environment can add a
+# required reviewer.
+
+on:
+  pull_request:
+    paths: ['contracts/practice-token/**', '.github/workflows/practice-token.yml']
+  push:
+    branches: [main]
+    paths: ['contracts/practice-token/**', '.github/workflows/practice-token.yml']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Type DEPLOY to deploy Practice Money on Ethereum Sepolia (leave empty to only test)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: practice-token-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FOUNDRY_IMAGE: ghcr.io/foundry-rs/foundry:v1.8.6@sha256:4a16a86f41d30418fbdca47ce2868121bbb0aeaa0a34bde2dd1e2911c4be2464
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: contracts/practice-token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install the pinned OpenZeppelin sources (no install scripts)
+        run: npm ci --ignore-scripts
+      - name: Foundry tests
+        run: docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" "forge test -vv"
+      - name: Deploy script guard (refuses a main network, deploys once on a test network)
+        run: docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" "script/test-deploy-guard.sh"
+      - name: The address the token will have
+        run: docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" "script/deploy.sh address" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy == 'DEPLOY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: practice-token-deploy
+    defaults:
+      run:
+        working-directory: contracts/practice-token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install the pinned OpenZeppelin sources (no install scripts)
+        run: npm ci --ignore-scripts
+      - name: Read the Ethereum Sepolia registry entry
+        id: registry
+        working-directory: .
+        run: |
+          set -euo pipefail
+          f=html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.ethereum_sepolia.yml
+          rpc=$(awk '/^rpc_urls:/ {r=1; next} r && /^[[:space:]]*-/ {gsub(/[\047" ]/, "", $2); print $2; exit}' "$f")
+          case "$rpc" in https://*) ;; *) echo "registry rpc url not found" >&2; exit 1 ;; esac
+          echo "rpc_url=$rpc" >> "$GITHUB_OUTPUT"
+      - name: Deploy (or find) Practice Money on Ethereum Sepolia
+        env:
+          RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || steps.registry.outputs.rpc_url }}
+          DEPLOYER_KEY: ${{ secrets.SPONSOR_RELAYER_PRIVATE_KEY_CI }}
+        run: |
+          set -euo pipefail
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e RPC_URL -e DEPLOYER_KEY -e EXPECT_CHAIN_ID=11155111 \
+            -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" "script/deploy.sh deploy" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify the source on Blockscout (a failure here does not undo the deploy)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          addr=$(docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" "script/deploy.sh address" | sed -n 's/^PRACTICE_TOKEN_ADDRESS=//p')
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w "$FOUNDRY_IMAGE" \
+            "forge verify-contract $addr src/PracticeMoney.sol:PracticeMoney --chain 11155111 --verifier blockscout --verifier-url https://eth-sepolia.blockscout.com/api/ --watch"

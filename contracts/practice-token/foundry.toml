@@ -1,0 +1,17 @@
+# Pinned so the bytecode, and so the CREATE2 address, is the same on every build.
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["node_modules"]
+remappings = ["@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"]
+solc_version = "0.8.24"
+evm_version = "shanghai"
+optimizer = true
+optimizer_runs = 200
+# No metadata hash in the bytecode: a comment or path change cannot move the address.
+bytecode_hash = "none"
+cbor_metadata = false
+
+[fuzz]
+runs = 512
