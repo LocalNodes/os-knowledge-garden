@@ -2,7 +2,8 @@
 // real MetaMask. Log lines hold fixed fields only: the CI logs are public (failure-dump.ts).
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { approveAlertKey, setupRouteKey } from '../failure-dump';
-import { confirmPrompts, within, type PromptLog } from '../metamask-steps';
+import { confirmPrompts, SETUP_SIGN_PROMPT, within, type PromptLog } from '../metamask-steps';
+import { forSite } from './judge-wallet';
 import { COPY, fill, pattern, setupProgress } from './pages';
 
 /** How long one check on the page may take; a slower one counts as "nothing seen yet". */
@@ -90,6 +91,7 @@ export async function approveSetup(page: Page, context: BrowserContext, extensio
           },
           timeoutMs: 300_000,
           reopenIdleMs: 20_000,
+          expect: forSite(SETUP_SIGN_PROMPT, page),
         });
         break;
       } catch (e) {
