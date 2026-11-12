@@ -117,7 +117,7 @@ test.describe('Phase 21 page titles', () => {
   test('T7 approval settings: Approval Settings', async ({ page }) => {
     await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.filled}`);
     await pin(page, 'T7', '/user/{user}/safe-accounts/{account}', 'Approval Settings', 'none');
-    await expect(page.getByRole('button', { name: 'Save approval settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Propose this change', exact: true })).toBeVisible();
   });
 
   test('T6 personal payment page: Payment: ‹amount› to ‹recipient›', async ({ page }) => {

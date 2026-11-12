@@ -1,0 +1,5 @@
+localnodes_quick_poll.group_list:
+  route_name: localnodes_quick_poll.group_list
+  base_route: entity.group.canonical
+  title: 'Quick polls'
+  weight: 45

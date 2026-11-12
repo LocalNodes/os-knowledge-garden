@@ -1,13 +1,14 @@
 // The home page, against the built site.
 //
 // Runs in the "onboarding" project against the BUILT sign-up site, not the dev server:
-//   NUXT_LAUNCH_OPEN=true npm --prefix ../localnodes-onboarding run build
-//   PORT=3000 NUXT_LAUNCH_OPEN=true node ../localnodes-onboarding/.output/server/index.mjs
+//   npm --prefix ../localnodes-onboarding run build
+//   PORT=3000 node ../localnodes-onboarding/.output/server/index.mjs
 //   LN_BROWSER_CHANNEL=chromium npx --no-install playwright test -c tests/a11y/playwright.config.ts \
 //     --project onboarding landing-v5
-// "/" is prerendered at build time, so the launch flag is baked into it; the build for this run was
-// made with the launch open so /onboarding is reachable for the isolation check (with the launch
-// closed that check goes to /invite, which is open either way).
+// Build with the launch flag closed: while any home page promise in the site's
+// shared/launch-claims.mjs is pending, a build with the flag open fails. "/" is
+// prerendered, so the flag is baked into it; with the launch closed the isolation
+// check goes to /invite, which is open either way.
 //
 // What it holds:
 //   - axe (WCAG 2.2 AA tags) on "/" at 1440 and 400 in the finished state, with the mobile menu
@@ -46,7 +47,7 @@ test.beforeAll(async () => {
 /** Opens "/" and waits until the page is live (the demos have been started). */
 async function openHome(page: Page) {
   await open(page, '/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community thinks, decides and funds');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community shares, decides and funds');
   await page.waitForSelector('.home-page.home-live');
 }
 
@@ -242,7 +243,7 @@ test.describe('mobile menu', () => {
 test.describe('keyboard', () => {
   test.use({ viewport: WIDE });
 
-  test('Tab reaches the header, hero, switcher, Pause, Play again buttons, form, demo link and footer, each with a visible ring', async ({ page }) => {
+  test('Tab reaches the header, hero, switcher, Pause, Play again buttons, demo link, form and footer, each with a visible ring', async ({ page }) => {
     await openHome(page);
     const stops = await walkRings(page, 90);
     writeFileSync(join(BUILD_DIR, 'focus-rings-1440.json'), JSON.stringify(stops, null, 2) + '\n');
@@ -260,8 +261,8 @@ test.describe('keyboard', () => {
       /Co-op|housing co-op|neighborhood|guild|land trust/i, // switcher
       /^Pause/,
       /Play again/,
-      /Email|you@example\.org/,
-      /Look around the Boulder demo site/
+      /Look around the Boulder demo site/,
+      /Email|you@example\.org/
     ];
     let last = -1;
     for (const re of order) {
@@ -270,7 +271,7 @@ test.describe('keyboard', () => {
       last = idx;
     }
     expect(at(/Play again/), 'Play again is reachable').toBeGreaterThan(-1);
-    expect(names.filter((n) => /Play again/.test(n)).length, 'three Play again buttons').toBe(3);
+    expect(names.filter((n) => /Play again/.test(n)).length, 'four Play again buttons').toBe(4);
     for (const kind of ['neighborhood group', 'pop-up village', 'housing co-op', 'guild']) expect(names, `the switcher button ${kind}`).toContain(kind);
     const bad = stops.filter((s) => s.ring === 'none' || (s.ratio !== null && s.ratio < 3));
     expect(bad, 'every stop has a focus ring of at least 3:1 against its surface').toEqual([]);
@@ -321,7 +322,7 @@ test.describe('JavaScript off', () => {
 
   test('the finished states and the form are in the page, and the class and teal are there', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community thinks, decides and funds');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community shares, decides and funds');
     expect(await page.evaluate(() => document.documentElement.classList.contains('ln-home'))).toBe(true);
     // the teal: the page's primary is the home teal (#0f766e), not the sign-up pages' #176c93, and the
     // hero button takes the dark band's pale mint, both without a script
@@ -384,7 +385,7 @@ test.describe('navigation isolation', () => {
       { message: 'the sign-up button is still #176c93 after leaving "/" by client navigation', timeout: 3000 }
     ).toBe(TEAL_LIGHT);
     await page.goBack();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community thinks');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community shares');
     expect(await homeClass(), 'ln-home back on "/"').toBe(true);
     await page.waitForSelector('.home-page.home-live');
     await page.goForward();
@@ -598,7 +599,7 @@ test.describe('contrast table', () => {
       ['header "Get early access" (mint button)', 'header a[href$="#early-access"]'],
       ['hero "Get early access" (mint button)', '.home-row a >> nth=0'],
       ['hero "See how it works" (outline button)', '.home-row a >> nth=1'],
-      ['header nav link "How it works"', 'header a[href$="#decide"]'],
+      ['header nav link "How it works"', 'header a[href$="#together"]'],
       ['switcher chip, not selected', '.home-who button[aria-pressed="false"] >> nth=0'],
       ['switcher chip, selected', '.home-who button[aria-pressed="true"]'],
       ['Pause', '.home-pause'],

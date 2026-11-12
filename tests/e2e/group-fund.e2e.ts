@@ -225,7 +225,7 @@ test.describe.serial('group fund on the local chain', () => {
       await signIn(page);
       const path = `/user/${run.users.organizer.uid}/safe-accounts/${row!.id}`;
       const isSavePost = (r: { method(): string; url(): string }) => r.method() === 'POST' && new URL(r.url()).pathname === path;
-      const save = page.getByRole('button', { name: 'Save approval settings' });
+      const save = page.getByRole('button', { name: 'Propose this change' });
       const removes = page.getByRole('button', { name: /^Remove / });
       const changes = page.locator('table.safe-payment-list tbody tr');
       const ownersBefore = owners(run.network, fundAddress);
@@ -244,7 +244,7 @@ test.describe.serial('group fund on the local chain', () => {
       await save.click();
       let body = new URLSearchParams((await posted).postData() ?? '');
       p.unchangedOp = body.getAll('op');
-      expect(body.getAll('op')).toContain('Save approval settings');
+      expect(body.getAll('op')).toContain('Propose this change');
       expect([...body.keys()].filter((k) => /remove/i.test(k))).toEqual([]);
       await expect(page.getByText('Nothing changed, so nothing was proposed.')).toBeVisible();
       await expect(removes).toHaveCount(rowsBefore);
@@ -256,7 +256,7 @@ test.describe.serial('group fund on the local chain', () => {
       await save.click();
       body = new URLSearchParams((await posted).postData() ?? '');
       p.changeOp = body.getAll('op');
-      expect(body.getAll('op')).toContain('Save approval settings');
+      expect(body.getAll('op')).toContain('Propose this change');
       await expect(page.getByText("Change proposed. It shows in the list below until it's approved and sent.")).toBeVisible();
       await expect(removes).toHaveCount(rowsBefore);
       await expect(changes).toHaveCount(changesBefore + 1);
@@ -325,7 +325,7 @@ test.describe('group fund set-up without JavaScript', () => {
       await page.waitForLoadState('load');
       p.url = page.url();
 
-      const warning = "Nothing was set up, because setting up a group fund needs your wallet and the page hadn't finished loading. Wait a moment, then try again.";
+      const warning = "Nothing was set up. Reload the page, then try again.";
       // Drupal's status message shows a moment after the load event, so wait for it.
       p.warningShown = await page
         .getByText(warning)

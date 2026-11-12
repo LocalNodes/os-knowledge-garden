@@ -154,7 +154,7 @@ test.describe('Tab order, visible focus, nothing under the chat toggle', () => {
 
   test('T7 approval settings', async ({ page }) => {
     await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.filled}`);
-    await expect(page.getByRole('button', { name: 'Save approval settings' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Propose this change' })).toBeVisible();
     await walk(page, 'T7-settings');
   });
 });
@@ -178,7 +178,7 @@ test.describe('Focus after an action', () => {
     await tabTo(page, /^Link account$/);
     await Promise.all([page.waitForURL(/[?&]linked=1/, { timeout: 30_000 }), page.keyboard.press('Enter')]);
     const alert = page.locator('[data-group-treasury-focus]');
-    await expect(alert).toContainText('The account is linked. Its balance and approvers are shown below.');
+    await expect(alert).toContainText('The group fund is linked.');
     await expect(alert).toBeFocused({ timeout: 10_000 });
     // Unlink, by keyboard, so the seeded "empty" group is empty again.
     await tabTo(page, /^Unlink group fund$/);

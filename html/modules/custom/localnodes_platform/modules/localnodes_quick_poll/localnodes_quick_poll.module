@@ -1,0 +1,254 @@
+<?php
+
+/**
+ * @file
+ * Quick polls: informal questions inside a group, for its members only.
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\block\BlockInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Form\FormBuilderInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_quick_poll\Form\QuickPollForm;
+use Drupal\poll\PollInterface;
+
+/**
+ * Implements hook_entity_base_field_info().
+ *
+ * The group a quick poll belongs to. Its members are the only people besides
+ * site administrators who may see the poll or answer it.
+ */
+function localnodes_quick_poll_entity_base_field_info(EntityTypeInterface $entity_type): array {
+  if ($entity_type->id() !== 'poll') {
+    return [];
+  }
+  return [
+    'quick_poll_group' => BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Group'))
+      ->setDescription(t('The group whose members may see and answer this quick poll.'))
+      ->setSetting('target_type', 'group'),
+  ];
+}
+
+/**
+ * Whether an account is a member of a group, or a site poll administrator.
+ *
+ * The result varies by person and is invalidated when the group's member
+ * list changes, so a member who leaves loses access at once, also on pages
+ * served from cache.
+ */
+function _localnodes_quick_poll_member_access(GroupInterface $group, AccountInterface $account): AccessResultInterface {
+  if ($account->hasPermission('administer polls')) {
+    return AccessResult::allowed()->cachePerPermissions();
+  }
+  return AccessResult::allowedIf($account->isAuthenticated() && $group->getMember($account) !== FALSE)
+    ->cachePerUser()
+    ->addCacheableDependency($group)
+    ->addCacheTags(['group_content_list:plugin:group_membership:group:' . $group->id()]);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for poll entities.
+ *
+ * Only members of a poll's group may see, answer, edit or delete it; a poll
+ * that belongs to no group is for site administrators only. For members the
+ * poll module's own permissions then decide.
+ */
+function localnodes_quick_poll_poll_access(PollInterface $poll, string $operation, AccountInterface $account): AccessResultInterface {
+  if ($account->hasPermission('administer polls')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  $group = $poll->get('quick_poll_group')->entity;
+  if (!$group instanceof GroupInterface) {
+    return AccessResult::forbidden('A poll outside any group is for site administrators only.')
+      ->cachePerPermissions()
+      ->addCacheableDependency($poll);
+  }
+  $member = _localnodes_quick_poll_member_access($group, $account);
+  $result = $member->isAllowed()
+    ? AccessResult::neutral()
+    : AccessResult::forbidden('Only members of the group may see its quick polls.');
+  return $result->addCacheableDependency($member)->addCacheableDependency($poll);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for poll entities.
+ *
+ * A quick poll is answered once, by signed-in members, and everyone who can
+ * see it can see the answers so far. These are set on every save, whatever a
+ * form sent.
+ */
+function localnodes_quick_poll_poll_presave(PollInterface $poll): void {
+  if ($poll->get('quick_poll_group')->isEmpty()) {
+    return;
+  }
+  $poll->setAnonymousVoteAllow(0);
+  $poll->setCancelVoteAllow(0);
+  $poll->setResultVoteAllow(1);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for the poll add form.
+ */
+function localnodes_quick_poll_form_poll_form_alter(array &$form, FormStateInterface $form_state): void {
+  $poll = $form_state->getFormObject()->getEntity();
+  $group = $poll->get('quick_poll_group')->entity;
+  if (!$group instanceof GroupInterface) {
+    return;
+  }
+  $form['#title'] = t('Ask @group a quick question', ['@group' => $group->label()]);
+  // Before the question, so the reader knows who will see it first.
+  $form['question']['#prefix'] = '<p>' . t('Only members of @group can see this question and its answers. Each member answers once. A quick poll is an informal check on how people lean; it does not settle anything for the group.', ['@group' => $group->label()]) . '</p>';
+  // These are fixed for quick polls; see localnodes_quick_poll_poll_presave().
+  foreach (['uid', 'anonymous_vote_allow', 'cancel_vote_allow', 'result_vote_allow', 'status', 'langcode'] as $field) {
+    if (isset($form[$field])) {
+      $form[$field]['#access'] = FALSE;
+    }
+  }
+  if (isset($form['runtime']['widget'])) {
+    $form['runtime']['widget']['#title'] = t('Open for');
+    $form['runtime']['widget']['#description'] = t('After this time the question closes and no one can answer any more.');
+  }
+  if (isset($form['choice']['widget'])) {
+    $form['choice']['widget']['#title'] = t('Choices');
+    if (isset($form['choice']['widget']['add_more'])) {
+      $form['choice']['widget']['add_more']['#value'] = t('Add a choice');
+    }
+  }
+  $form['actions']['submit']['#value'] = t('Ask');
+  $form['#validate'][] = '_localnodes_quick_poll_validate_member';
+  $form['actions']['submit']['#submit'][] = '_localnodes_quick_poll_redirect_to_group';
+}
+
+/**
+ * Checks on submit that the person asking is still a member of the group.
+ */
+function _localnodes_quick_poll_validate_member(array &$form, FormStateInterface $form_state): void {
+  $group = $form_state->getFormObject()->getEntity()->get('quick_poll_group')->entity;
+  if (!$group instanceof GroupInterface || !_localnodes_quick_poll_member_access($group, \Drupal::currentUser())->isAllowed()) {
+    $form_state->setErrorByName('', t('Only members of the group can ask it a quick question.'));
+  }
+}
+
+/**
+ * Returns the person who asked to the group's quick polls.
+ */
+function _localnodes_quick_poll_redirect_to_group(array &$form, FormStateInterface $form_state): void {
+  $group_id = $form_state->getFormObject()->getEntity()->get('quick_poll_group')->target_id;
+  $form_state->setRedirect('localnodes_quick_poll.group_list', ['group' => $group_id]);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for poll entities.
+ *
+ * A quick poll's own page links back to its group's quick polls.
+ */
+function localnodes_quick_poll_poll_view(array &$build, PollInterface $poll, $display, string $view_mode): void {
+  if ($view_mode !== 'full' && $view_mode !== 'default') {
+    return;
+  }
+  $group = $poll->get('quick_poll_group')->entity;
+  if (!$group instanceof GroupInterface) {
+    return;
+  }
+  $build['#attributes']['class'][] = 'card';
+  $build['#attributes']['class'][] = 'localnodes-quick-poll';
+  $build['#attached']['library'][] = 'localnodes_quick_poll/quick_poll';
+  $build['quick_poll_back'] = [
+    '#type' => 'link',
+    '#title' => t('All quick polls in @group', ['@group' => $group->label()]),
+    '#url' => Url::fromRoute('localnodes_quick_poll.group_list', ['group' => $group->id()]),
+    '#attributes' => ['class' => ['localnodes-quick-poll-back']],
+    '#weight' => 100,
+  ];
+}
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function localnodes_quick_poll_entity_type_alter(array &$entity_types): void {
+  if (isset($entity_types['poll'])) {
+    $entity_types['poll']->setFormClass('default', QuickPollForm::class);
+    $entity_types['poll']->setFormClass('edit', QuickPollForm::class);
+  }
+}
+
+/**
+ * Implements hook_block_access().
+ *
+ * The poll module's "Most recent poll" block shows the newest poll on the
+ * whole site without asking whether the reader may see it, so a group's
+ * question would reach people outside the group. Only site administrators
+ * may see it.
+ */
+function localnodes_quick_poll_block_access(BlockInterface $block, string $operation, AccountInterface $account): AccessResultInterface {
+  if ($operation !== 'view' || $block->getPluginId() !== 'poll_recent_block') {
+    return AccessResult::neutral();
+  }
+  return AccessResult::forbiddenIf(!$account->hasPermission('administer polls'), 'The most recent poll may belong to a group the reader is not in.')
+    ->cachePerPermissions();
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for poll_view_form.
+ *
+ * A signed-in member's answer is kept without the internet address the poll
+ * module stores with it. The module finds a signed-in member's answer by
+ * account alone; the address only tells signed-out visitors apart.
+ *
+ * After "See answers so far" the poll module offers a way back to the
+ * question only when signed-out answers are allowed, which quick polls
+ * never allow. Give a member who has not answered that way back.
+ */
+function localnodes_quick_poll_form_poll_view_form_alter(array &$form, FormStateInterface $form_state): void {
+  if (isset($form['actions']['vote']['#submit'])) {
+    $form['actions']['vote']['#submit'][] = '_localnodes_quick_poll_forget_address';
+  }
+  $poll = $form['poll']['#value'] ?? NULL;
+  if (!$poll instanceof PollInterface || !$form_state->get('show_results') || isset($form['actions']['back'])) {
+    return;
+  }
+  if (\Drupal::currentUser()->isAnonymous() || !$poll->isOpen() || $poll->hasUserVoted()) {
+    return;
+  }
+  $form['actions']['#type'] = 'actions';
+  $form['actions']['back'] = [
+    '#type' => 'submit',
+    '#button_type' => 'primary',
+    '#value' => t('Back to the question'),
+    '#submit' => ['::back'],
+    '#ajax' => [
+      'callback' => '::ajaxReplaceForm',
+      'url' => $poll->toUrl(),
+      'options' => [
+        'query' => [
+          FormBuilderInterface::AJAX_FORM_REQUEST => TRUE,
+          'view_mode' => $form['#view_mode'] ?? 'default',
+        ],
+      ],
+    ],
+    '#weight' => 0,
+  ];
+}
+
+/**
+ * Submit handler: blanks the address stored with a signed-in member's answer.
+ */
+function _localnodes_quick_poll_forget_address(array &$form, FormStateInterface $form_state): void {
+  $poll = $form_state->getValue('poll');
+  $uid = (int) \Drupal::currentUser()->id();
+  if (!$poll instanceof PollInterface || $uid === 0) {
+    return;
+  }
+  \Drupal::database()->update('poll_vote')
+    ->fields(['hostname' => ''])
+    ->condition('pid', $poll->id())
+    ->condition('uid', $uid)
+    ->execute();
+}

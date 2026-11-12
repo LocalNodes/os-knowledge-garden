@@ -1,0 +1,10 @@
+name: 'LocalNodes Quick Poll'
+type: module
+description: 'Informal quick questions inside a group, seen and answered by its members only.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - drupal:block
+  - group:group
+  - poll:poll
+  - social:social_group

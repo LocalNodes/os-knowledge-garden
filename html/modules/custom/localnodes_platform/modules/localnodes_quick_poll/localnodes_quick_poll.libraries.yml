@@ -1,0 +1,4 @@
+quick_poll:
+  css:
+    component:
+      css/localnodes-quick-poll.css: {}

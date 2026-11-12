@@ -13,6 +13,11 @@
 //   NUXT_LAUNCH_OPEN=true npm --prefix ../localnodes-onboarding run dev
 //   npx --no-install playwright test -c tests/a11y/playwright.config.ts --project onboarding
 // LN_ONBOARDING_URL overrides http://localhost:3000.
+// Use the dev server, not a production build. While any home page promise in
+// the site's shared/launch-claims.mjs is pending, a production build with the
+// flag open fails, and a production server keeps sign-ups closed whatever the
+// flag. A dev run is the one place the flag still opens them, and it is not
+// deployable.
 //
 // No live calls: the dev server runs with no Stripe, Resend, Upstash, Gemini,
 // OpenRouter, Coolify or GitHub keys, and every sign-up API the browser calls
@@ -87,6 +92,7 @@ const focusedBox = (page: Page, text: string) => page.locator('div[tabindex="-1"
 test.describe('landing page', () => {
   const SWITCHER = ['neighborhood group', 'pop-up village', 'housing co-op', 'guild'];
   const SECTIONS = [
+    'Post news, plan events and keep in touch.',
     'Decide in the open, with everyone who has a say.',
     'A fund the group controls, and can see.',
     "It's your site. Take it with you.",
@@ -95,7 +101,7 @@ test.describe('landing page', () => {
 
   async function openLanding(page: Page) {
     await open(page, '/');
-    await expect(page.getByRole('heading', { level: 1, name: 'Where your community thinks, decides and funds together.' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Where your community shares, decides and funds together.' })).toBeVisible();
     await expect(page.getByText('Your community owns it, not a platform.')).toBeVisible();
   }
   const switcher = (page: Page) => page.getByRole('group', { name: 'Example community' }).getByRole('button').allInnerTexts();
@@ -108,27 +114,111 @@ test.describe('landing page', () => {
     await checkA11y(page, 'landing', 'default', SCAN);
   });
 
-  // Scoped to main: the site header at 320 CSS px is tracked separately.
-  test('narrow (320 CSS px): nothing in main reaches past the viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 800 });
-    await openLanding(page);
-    expect((await sectionHeadings(page)).map((t) => t.trim())).toEqual(SECTIONS);
-    const past = await page.evaluate(() => {
+  /** Boxes that reach past the window, on the whole page. A box counts only when no ancestor clips it:
+   *  the hero's rings and source paper reach past the window by design, and the hero band clips them. */
+  async function pastWindow(page: Page) {
+    await fontsIn(page);
+    return page.evaluate(() => {
       const width = document.documentElement.clientWidth;
-      // The hero's rings and source paper reach past the window by design (prototype); the hero
-      // band clips them (overflow hidden), so a box counts only when no ancestor clips it.
       const clipped = (el: Element) => {
         for (let e = el.parentElement; e; e = e.parentElement) if (getComputedStyle(e).overflowX !== 'visible') return true;
         return false;
       };
-      return [...document.querySelectorAll('main *')]
+      const boxes = [...document.querySelectorAll('body *')]
         .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > width + 1 && !clipped(el); })
         .map((el) => `${el.tagName.toLowerCase()}: ${(el.textContent ?? '').trim().slice(0, 40)}`);
+      return { scrollWidth: document.documentElement.scrollWidth, width, boxes };
     });
-    expect(past, 'nothing in main reaches past 320 CSS px').toEqual([]);
+  }
+
+  test('narrow (320 CSS px): nothing on the page reaches past the viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openLanding(page);
+    expect((await sectionHeadings(page)).map((t) => t.trim())).toEqual(SECTIONS);
+    const past = await pastWindow(page);
+    expect(past.boxes, 'nothing on the page reaches past 320 CSS px').toEqual([]);
+    expect(past.scrollWidth, 'the page does not scroll sideways').toBeLessThanOrEqual(past.width);
     await checkA11y(page, 'landing', 'narrow', SCAN);
   });
+
+  for (const width of [360, 400]) {
+    test(`at ${width} CSS px nothing on the page reaches past the viewport`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await openLanding(page);
+      const past = await pastWindow(page);
+      expect(past.boxes).toEqual([]);
+      expect(past.scrollWidth).toBeLessThanOrEqual(past.width);
+      // From 400 up the button stays in the header bar.
+      const button = page.locator('header').first().getByRole('link', { name: 'Get early access' });
+      if (width >= 400) await expect(button).toBeVisible();
+      else await expect(button).toBeHidden();
+    });
+  }
+
+  test('on a narrow phone the early-access link is in the menu and goes to the form', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openLanding(page);
+    const header = page.locator('header').first();
+    await expect(header.getByRole('link', { name: 'Get early access' })).toBeHidden();
+    await header.getByRole('button', { name: 'Open menu' }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu' });
+    await expect(menu).toBeVisible();
+    await fontsIn(page);
+    const pastMenu = await menu.evaluate((d) => [...d.querySelectorAll('*')]
+      .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > document.documentElement.clientWidth + 1; })
+      .map((el) => el.tagName.toLowerCase()));
+    expect(pastMenu, 'nothing in the open menu reaches past 320 CSS px').toEqual([]);
+    const link = menu.getByRole('link', { name: 'Get early access' });
+    await expect(link).toHaveCount(1);
+    await expect(link).toBeVisible();
+    await link.click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/#early-access$/);
+  });
+
+  test('on a narrow phone already at the form, the menu button still closes the menu', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await open(page, '/#early-access');
+    await page.locator('header').first().getByRole('button', { name: 'Open menu' }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu' });
+    await expect(menu).toBeVisible();
+    await menu.getByRole('link', { name: 'Get early access' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/#early-access$/);
+  });
+
+  test('at 1440 the header keeps its links and button on the right, with no menu button', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openLanding(page);
+    const header = page.locator('header').first();
+    const button = header.getByRole('link', { name: 'Get early access' });
+    await expect(button).toBeVisible();
+    await expect(header.getByRole('link', { name: 'How it works' })).toBeVisible();
+    await expect(header.getByRole('button', { name: /menu/i })).toBeHidden();
+    const box = await button.boundingBox();
+    expect(box && box.x + box.width).toBeGreaterThan(1200);
+  });
 });
+
+test.describe('sign-up pages at narrow widths', () => {
+  for (const width of [320, 360, 400]) {
+    test(`/invite at ${width} CSS px does not scroll sideways`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await open(page, '/invite');
+      await expect(page.getByRole('heading', { level: 1, name: 'Use Your Invite' })).toBeVisible();
+      await fontsIn(page);
+      const w = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      expect(w[0], `scrollWidth at ${width}`).toBeLessThanOrEqual(w[1]!);
+    });
+  }
+});
+
+/** Waits until the page's web font is in use: the fallback font is narrower and hides an overflow. */
+async function fontsIn(page: Page) {
+  await page.evaluate(async () => { await document.fonts.load('500 14px Montserrat'); await document.fonts.ready; });
+  await page.waitForFunction(() => document.fonts.check('500 14px Montserrat'));
+  await page.waitForLoadState('networkidle');
+}
 
 // --- 1. Invite entry (/invite) --------------------------------------------------
 

@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * @file
+ * Install functions for the LocalNodes quick poll module.
+ */
+
+use Drupal\user\Entity\Role;
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_quick_poll_install(): void {
+  // Signed-in people may open polls; localnodes_quick_poll_poll_access()
+  // narrows that to members of each poll's group. Taking back an answer is
+  // not granted: each member answers once.
+  $role = Role::load('authenticated');
+  if ($role !== NULL) {
+    $role->grantPermission('access polls')->save();
+  }
+
+  // The poll module's /polls page lists every poll on the site, whatever its
+  // group, because Views does not ask about each poll's access.
+  $view = \Drupal::entityTypeManager()->getStorage('view')->load('poll_list');
+  if ($view !== NULL && $view->status()) {
+    $view->disable()->save();
+  }
+
+  _localnodes_quick_poll_show_group_blocks();
+}
+
+/**
+ * Shows the group header and side blocks on a group's quick polls page.
+ *
+ * Open Social lists the group pages these theme blocks appear on by path.
+ * Blocks a site does not have are skipped, and a path already listed is not
+ * added twice.
+ */
+function _localnodes_quick_poll_show_group_blocks(): void {
+  $path = '/group/*/quick-polls';
+  $storage = \Drupal::entityTypeManager()->getStorage('block');
+  foreach ($storage->loadMultiple(['socialblue_groupheroblock', 'socialblue_group_statistic_block']) as $block) {
+    $visibility = $block->getVisibility();
+    if (!isset($visibility['request_path']['pages'])) {
+      continue;
+    }
+    $pages = $visibility['request_path']['pages'];
+    $lines = array_map('trim', preg_split('/\R/', $pages));
+    if (in_array($path, $lines, TRUE)) {
+      continue;
+    }
+    $visibility['request_path']['pages'] = rtrim($pages) . "\n" . $path;
+    $block->setVisibilityConfig('request_path', $visibility['request_path']);
+    $block->save();
+  }
+}

@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * @file
+ * Links between the events lists and the month calendars, and the group
+ * calendar's access check.
+ */
+
+/**
+ * Implements hook_social_group_flexible_group_content_routes_alter().
+ *
+ * A group's calendar shows the same events as its events tab, so it gets the
+ * same check: someone who may not open the events tab gets no calendar page
+ * either, not even an empty one under the group's name.
+ */
+function localnodes_events_calendar_social_group_flexible_group_content_routes_alter(array &$content_routes): void {
+  $content_routes[] = 'view.localnodes_events_calendar.page_group_calendar';
+}
+
+/**
+ * Implements hook_views_pre_render().
+ *
+ * Puts a "Calendar" link on the community's events list and on a group's
+ * events tab, and a "List" link back on each calendar. The links go above the
+ * results so they show on a phone without scrolling past the list.
+ */
+function localnodes_events_calendar_views_pre_render(\Drupal\views\ViewExecutable $view): void {
+  $pairs = [
+    'upcoming_events:page_community_events' => ['view.localnodes_events_calendar.page_calendar', t('Calendar')],
+    'localnodes_events_calendar:page_calendar' => ['view.upcoming_events.page_community_events', t('List')],
+    'group_events:page_group_events' => ['view.localnodes_events_calendar.page_group_calendar', t('Calendar')],
+    'localnodes_events_calendar:page_group_calendar' => ['view.group_events.page_group_events', t('List')],
+  ];
+  $key = $view->id() . ':' . $view->current_display;
+  if (!isset($pairs[$key])) {
+    return;
+  }
+  [$route, $label] = $pairs[$key];
+  if ($view->id() === 'localnodes_events_calendar') {
+    $view->element['#attached']['library'][] = 'localnodes_events_calendar/calendar';
+  }
+  $parameters = [];
+  if (str_contains($route, 'group')) {
+    $group = \Drupal::routeMatch()->getRawParameter('group');
+    if ($group === NULL) {
+      return;
+    }
+    $parameters['group'] = $group;
+  }
+  $url = \Drupal\Core\Url::fromRoute($route, $parameters);
+  if (!$url->access()) {
+    return;
+  }
+  $view->attachment_before[] = [
+    '#type' => 'container',
+    '#attributes' => ['class' => ['localnodes-events-switch']],
+    'link' => [
+      '#type' => 'link',
+      '#title' => $label,
+      '#url' => $url,
+      '#attributes' => ['class' => ['btn', 'btn-default']],
+    ],
+  ];
+}

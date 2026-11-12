@@ -51,6 +51,7 @@ import { ln, pairing } from './pairing.mjs';
 
 /** The five stylesheets: repo path and the name the output prints. */
 export const STYLESHEETS = Object.freeze({
+  'site-export': { rel: 'html/modules/custom/localnodes_platform/css/site-export.css', name: 'site-export.css' },
   overrides: { rel: 'html/modules/custom/localnodes_platform/css/ln-overrides.css', name: 'ln-overrides.css' },
   import: { rel: 'html/modules/custom/localnodes_import/css/import.css', name: 'import.css' },
   'ai-overview': { rel: 'html/modules/custom/social_ai_indexing/css/ai-overview.css', name: 'ai-overview.css' },
@@ -132,6 +133,13 @@ const P5_NAV = ['navbar-bg', 'navbar-active-bg', 'navbar-sec-bg', 'second-line-n
  * them (ACCENT_TEXT_RULES in pairings.mjs).
  */
 export const PARTNERS = {
+  'site-export': {
+    '.ln-export': { ...text(['own'], 'localnodes-site-export.html.twig sets the panel text and surface fill together'), ...fillOf({ under: ['text'] }, 'the panel contains records, actions and helper details') },
+    '.ln-export-owner': text(['surface'], 'the owner label is inside the explicitly white export panel'),
+    '.ln-export-warning': fillOf({ under: ['text'] }, 'the private-records warning inherits the panel text over its own tint'),
+    '.ln-export-row.is-complete svg': text(['surface'], 'the completed row check is inside the white export panel'),
+    '.ln-export-error': text(['surface'], 'the safe failure sentence is inside the white export panel'),
+  },
   overrides: {
     // Buttons, alerts, badges, status text: socialblue's own components, drawn on the page or on their own fill.
     '.btn-danger': { ...text(['own'], 'white text on the red fill of the same rule (P7 on-danger on danger)'), ...border(PAGE, 'the border is the fill colour, drawn on the page around the button') },

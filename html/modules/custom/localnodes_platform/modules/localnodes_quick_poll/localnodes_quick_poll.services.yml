@@ -1,0 +1,11 @@
+services:
+  localnodes_quick_poll.route_subscriber:
+    class: Drupal\localnodes_quick_poll\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+  # Runs before core's custom strings (priority 30), so a site's own
+  # settings.php overrides can't bring the poll module's wording back.
+  localnodes_quick_poll.wording:
+    class: Drupal\localnodes_quick_poll\StringTranslation\QuickPollWording
+    tags:
+      - { name: string_translator, priority: 35 }

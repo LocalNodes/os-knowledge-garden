@@ -125,7 +125,7 @@ try {
       console.log(`FAIL ${p.id} ${p.fg}=${fg} on ${p.bg}=${bg} ${ratio.toFixed(2)} < ${p.min} (${p.source})`);
     }
   }
-  // What the five module stylesheets draw (22.1-17, review WR-06; treasury.css joined by WR-06b, 22.1-15). The ring
+  // What the five module stylesheets draw (treasury.css and signin.css are read the same way). The ring
   // that wins is what is measured; where a module stylesheet asks for another, say so. A colour with no partner, or a
   // partner the CSS no longer matches, fails.
   const sheets = declaredStylesheets({ overridesFile: opts.overrides, tree });

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f89e85d14b96b90bbeb89ffec30233e5",
+    "content-hash": "3860f56a2f6a808d1a211c8fc984e555",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -2868,6 +2868,51 @@
             "published-time": "2024-12-02T05:09:10+00:00"
         },
         {
+            "name": "drupal/calendar_view",
+            "version": "2.1.10",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/calendar_view.git",
+                "reference": "2.1.10"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/calendar_view-2.1.10.zip",
+                "reference": "2.1.10",
+                "shasum": "878c250a93917b0b5c91b647248f4f6889f4609f"
+            },
+            "require": {
+                "drupal/core": "^8.8 || ^9 || ^10 || ^11"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "2.1.10",
+                    "datestamp": "1727076859",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "matthieuscarset",
+                    "homepage": "https://www.drupal.org/user/3471281"
+                }
+            ],
+            "description": "Display entities in a filterable calendar View",
+            "homepage": "https://www.drupal.org/project/calendar_view",
+            "support": {
+                "source": "https://git.drupalcode.org/project/calendar_view"
+            },
+            "published-time": "2024-09-23T07:33:29+00:00"
+        },
+        {
             "name": "drupal/ckeditor",
             "version": "1.0.2",
             "source": {
@@ -5286,17 +5331,17 @@
         },
         {
             "name": "drupal/group_treasury",
-            "version": "1.0.0-alpha4",
+            "version": "1.0.0-alpha6",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/group_treasury.git",
-                "reference": "1.0.0-alpha4"
+                "reference": "1.0.0-alpha6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha4.zip",
-                "reference": "1.0.0-alpha4",
-                "shasum": "8ad4e3a76d3fa3d9cee09737b83a9e349c252f57"
+                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha6.zip",
+                "reference": "1.0.0-alpha6",
+                "shasum": "f7270f2242f99f41e063235ce56177d6fffc130e"
             },
             "require": {
                 "drupal/core": "^10",
@@ -5310,8 +5355,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha4",
-                    "datestamp": "1794414692",
+                    "version": "1.0.0-alpha6",
+                    "datestamp": "1794456319",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5338,7 +5383,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/group_treasury"
             },
-            "published-time": "2026-11-11T16:31:03+00:00"
+            "published-time": "2026-11-12T04:04:59+00:00"
         },
         {
             "name": "drupal/hux",
@@ -7124,6 +7169,67 @@
             "published-time": "2025-10-07T11:54:52+00:00"
         },
         {
+            "name": "drupal/poll",
+            "version": "1.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/poll.git",
+                "reference": "8.x-1.6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/poll-8.x-1.6.zip",
+                "reference": "8.x-1.6",
+                "shasum": "e7ae83ed214a03e6ecf26a8ac7b500ba61d4dde5"
+            },
+            "require": {
+                "drupal/core": "^9 || ^10"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "8.x-1.6",
+                    "datestamp": "1680209860",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "adammalone",
+                    "homepage": "https://www.drupal.org/user/1295980"
+                },
+                {
+                    "name": "berdir",
+                    "homepage": "https://www.drupal.org/user/214652"
+                },
+                {
+                    "name": "bramdriesen",
+                    "homepage": "https://www.drupal.org/user/3383264"
+                },
+                {
+                    "name": "ivnish",
+                    "homepage": "https://www.drupal.org/user/3547706"
+                },
+                {
+                    "name": "mqanneh",
+                    "homepage": "https://www.drupal.org/user/2833163"
+                }
+            ],
+            "description": "Allows your site to capture votes on different topics in the form of multiple choice questions.",
+            "homepage": "https://www.drupal.org/project/poll",
+            "support": {
+                "source": "https://git.drupalcode.org/project/poll"
+            },
+            "published-time": "2023-03-30T20:57:26+00:00"
+        },
+        {
             "name": "drupal/private_message",
             "version": "3.0.7",
             "source": {
@@ -7542,7 +7648,7 @@
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_governance.git",
-                "reference": "f31d53dc5d735d60d70cc897dcb24bf23b6d09ce"
+                "reference": "703dade1a1f25a09d91ab52ea7ca03a2225121c7"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7566,7 +7672,7 @@
                 },
                 "drupal": {
                     "version": "1.0.x-dev",
-                    "datestamp": "1794408260",
+                    "datestamp": "1794456184",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7596,17 +7702,17 @@
         },
         {
             "name": "drupal/safe_smart_accounts",
-            "version": "1.0.0-alpha3",
+            "version": "1.0.0-alpha5",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_smart_accounts.git",
-                "reference": "1.0.0-alpha3"
+                "reference": "1.0.0-alpha5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha3.zip",
-                "reference": "1.0.0-alpha3",
-                "shasum": "ce32ec90132e5d146f1ce4b03576f8fa4e853998"
+                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha5.zip",
+                "reference": "1.0.0-alpha5",
+                "shasum": "1b947e1917d521a5c2d756395274a71259577652"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7621,8 +7727,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha3",
-                    "datestamp": "1794414719",
+                    "version": "1.0.0-alpha5",
+                    "datestamp": "1794456308",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7649,7 +7755,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_smart_accounts"
             },
-            "published-time": "2026-11-11T16:30:38+00:00"
+            "published-time": "2026-11-12T04:04:46+00:00"
         },
         {
             "name": "drupal/search_api",
@@ -8017,17 +8123,17 @@
         },
         {
             "name": "drupal/siwe_login",
-            "version": "1.0.0-beta9",
+            "version": "1.0.0-beta10",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/siwe_login.git",
-                "reference": "1.0.0-beta9"
+                "reference": "1.0.0-beta10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta9.zip",
-                "reference": "1.0.0-beta9",
-                "shasum": "a90c95f431ae3511019de2d402bcb136b8778504"
+                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta10.zip",
+                "reference": "1.0.0-beta10",
+                "shasum": "05d70a80da444e934de80383ab7f6158117f435d"
             },
             "require": {
                 "drupal/core": "^10 || ^11",
@@ -8041,8 +8147,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-beta9",
-                    "datestamp": "1794133990",
+                    "version": "1.0.0-beta10",
+                    "datestamp": "1794462591",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -8069,7 +8175,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/siwe_login"
             },
-            "published-time": "2026-11-08T10:31:49+00:00"
+            "published-time": "2026-11-12T05:49:30+00:00"
         },
         {
             "name": "drupal/smart_trim",

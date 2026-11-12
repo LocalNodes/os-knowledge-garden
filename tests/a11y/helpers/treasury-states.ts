@@ -161,7 +161,7 @@ export function stewardStates(o: StateOptions = {}): void {
     test('T7 approval settings', async ({ page }) => {
       setScenario('ok');
       await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.filled}`);
-      await expect(page.getByRole('button', { name: 'Save approval settings' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Propose this change' })).toBeVisible();
       await expect(page.getByText('Right now: needs 2 of 2 organizers to approve a payment.')).toBeVisible();
       await audit(page, 'approval-settings', 'filled', SCOPE);
     });
@@ -175,7 +175,7 @@ export function stewardStates(o: StateOptions = {}): void {
     test('T7 approval settings: Save with JavaScript on posts the save (fix 14)', async ({ page }) => {
       setScenario('ok');
       await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.filled}`);
-      const save = page.getByRole('button', { name: 'Save approval settings' });
+      const save = page.getByRole('button', { name: 'Propose this change' });
       await expect(save).toBeVisible();
       // The behaviour is attached (the form is marked once processed).
       await expect(page.locator('#safe-account-manage-form.safe-config-processed')).toHaveCount(1);
@@ -184,7 +184,7 @@ export function stewardStates(o: StateOptions = {}): void {
       const posted = page.waitForRequest((r) => r.method() === 'POST' && new URL(r.url()).pathname === `/user/${t.steward}/safe-accounts/${t.safes.filled}`);
       await save.click();
       const body = new URLSearchParams((await posted).postData() ?? '');
-      expect(body.getAll('op')).toContain('Save approval settings');
+      expect(body.getAll('op')).toContain('Propose this change');
       expect([...body.keys()].filter((k) => /remove/i.test(k))).toEqual([]);
       await expect(page.getByText('Nothing changed, so nothing was proposed.')).toBeVisible();
       await expect(removes).toHaveCount(rowsBefore);
@@ -253,7 +253,7 @@ export function stewardStates(o: StateOptions = {}): void {
   // seed-treasury.php writes the payments and the key-value marks the
   // product's chain searches leave; the RPC fixture has no logs or mempool.
   test.describe('Lost and dropped sends (fixes 15 to 19)', () => {
-    const DROPPED_NOTE = 'The last send of this payment never reached the public record, so nothing was sent. It can be sent again.';
+    const DROPPED_NOTE = "The last try to send this payment didn't go through, so no money moved. It can be sent again.";
 
     test('T6 payment: failed after a dropped send (fix 15)', async ({ page }) => {
       setScenario('ok');
@@ -267,7 +267,7 @@ export function stewardStates(o: StateOptions = {}): void {
     test('T6 payment: ran but failed (fix 19)', async ({ page }) => {
       setScenario('ok');
       await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.ran_failed}`);
-      await expect(page.getByText("This payment ran but failed, so nothing was sent. Propose it again if it's still needed.")).toBeVisible();
+      await expect(page.getByText("This payment failed when it was sent, so no money moved. Propose it again if it's still needed.")).toBeVisible();
       await expect(page.getByText("This payment didn't go through.")).toHaveCount(0);
       await expect(page.getByRole('link', { name: /^See the public record on / })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
@@ -304,7 +304,7 @@ export function stewardStates(o: StateOptions = {}): void {
     test('T7 approval settings: payments list with the lost-send rows (fix 18)', async ({ page }) => {
       setScenario('ok');
       await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.recovery}`);
-      await expect(page.getByRole('button', { name: 'Save approval settings' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Propose this change' })).toBeVisible();
       await expect(page.getByText("Didn't go through", { exact: true })).toHaveCount(2);
       await expect(page.getByText('Replaced', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Ready to send', { exact: true })).toHaveCount(1);
@@ -315,7 +315,7 @@ export function stewardStates(o: StateOptions = {}): void {
   test.describe('T1 states with nothing to read', () => {
     test('T1 setup not finished (organizer)', async ({ page }) => {
       await page.goto(`/group/${t.groups.setup}/treasury`);
-      await expect(page.getByText("This group fund isn't set up on the public record yet.")).toBeVisible();
+      await expect(page.getByText("This group fund's setup isn't finished yet.")).toBeVisible();
       await expect(page.getByRole('link', { name: 'Finish setting up the group fund' })).toBeVisible();
       await audit(page, 'treasury', 'setup-not-finished', SCOPE);
     });
@@ -490,13 +490,13 @@ export function stewardStates(o: StateOptions = {}): void {
       setScenario('ok');
       forget(t.safes.filled);
       await page.goto(`/user/${t.steward}/safe-accounts/${t.safes.filled}`);
-      await expect(page.getByRole('button', { name: 'Save approval settings' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Propose this change' })).toBeVisible();
       forget(t.safes.filled);
       setScenario('fail');
       await page.getByLabel('How many organizers must approve a payment').fill('1');
       // With JavaScript on and the in-flight marker in place: the 21-28
       // workaround (dropping the marker) is gone since 21-25 fix 14.
-      await page.getByRole('button', { name: 'Save approval settings' }).click();
+      await page.getByRole('button', { name: 'Propose this change' }).click();
       await expect(page.getByText("We couldn't read the group fund right now. Try saving again in a minute.")).toBeVisible();
       await audit(page, 'approval-settings', 'failed-save', SCOPE);
     });
@@ -633,7 +633,7 @@ export function memberStates(o: StateOptions = {}): void {
   test('T6 member payment, resendable after a dropped send', async ({ page }) => {
     setScenario('ok');
     await page.goto(`/group/${t.groups.recovery}/treasury/transaction/${t.payments.resendable}`);
-    await expect(page.getByText('The last send of this payment never reached the public record, so nothing was sent. It can be sent again.')).toBeVisible();
+    await expect(page.getByText("The last try to send this payment didn't go through, so no money moved. It can be sent again.")).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send payment' })).toHaveCount(0);
     await audit(page, 'payment', 'member-resendable', SCOPE);
   });

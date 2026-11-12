@@ -19,9 +19,9 @@
         "drupal/gemini_provider": "1.x-dev",
         "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
-        "drupal/siwe_login": "1.0.0-beta9",
-        "drupal/safe_smart_accounts": "^1.0.0-alpha3@alpha",
-        "drupal/group_treasury": "^1.0.0-alpha4@alpha",
+        "drupal/siwe_login": "1.0.0-beta10",
+        "drupal/safe_smart_accounts": "^1.0.0-alpha5@alpha",
+        "drupal/group_treasury": "^1.0.0-alpha6@alpha",
         "kornrunner/keccak": "^1.0",
         "simplito/elliptic-php": "^1.0",
         "brick/math": "^0.17 || ^1.0",
@@ -31,7 +31,9 @@
         "drupal/ai_search": "^1.3@alpha",
         "drupal/safe_governance": "^1.0@dev",
         "drupal/gas_sponsor": "^1.0@dev",
-        "league/html-to-markdown": "^5.2.3"
+        "league/html-to-markdown": "^5.2.3",
+        "drupal/calendar_view": "^2.1.10",
+        "drupal/poll": "^1.6"
     },
     "require-dev": {
         "drupal/core-dev": "^10.6",
@@ -118,6 +120,9 @@
             },
             "drupal/search_api_solr": {
                 "Log indexing and search errors by class and code, not Solr's message (it can quote field values and search keys)": "patches/search-api-solr-log-without-text.patch"
+            },
+            "drupal/calendar_view": {
+                "Read stored date and time values as UTC, so events land on the right day": "patches/calendar-view-datetime-utc.patch"
             }
         },
         "patches-ignore": {
