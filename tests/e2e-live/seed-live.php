@@ -124,4 +124,14 @@ else {
   }
 }
 
+// The nightly signs in with a browser wallet (#siwe-login-button). With WaaP sign-in on
+// (localnodes_web3 needs siwe_login_waap), that button is hidden unless this setting allows it,
+// and the test would wait for a button that never comes. seed-governance-live.php sets it
+// the same way. WaaP sign-in itself is checked by hand, not here.
+if (\Drupal::moduleHandler()->moduleExists('siwe_login_waap')) {
+  \Drupal::configFactory()->getEditable('siwe_login_waap.settings')
+    ->set('show_siwe_wallet_button', TRUE)
+    ->save();
+}
+
 print 'LN_LIVE_GROUP=' . (int) $group->id() . PHP_EOL;
