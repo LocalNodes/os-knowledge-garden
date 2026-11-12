@@ -13,7 +13,7 @@
 // steps use MetaMask's own data-testid values from the 13.13.1 bundle. No step reads page
 // state with page.evaluate: LavaMoat's scuttling blocks it on extension pages.
 import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
-import { categorized } from './failure-dump';
+import { categorized } from './failure-dump.ts';
 
 /** The wallet's home page, unlocked. */
 export async function openHome(page: Page, extensionId: string, password: string): Promise<void> {
