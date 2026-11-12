@@ -878,10 +878,32 @@ final class CitedAnswersLiveRunner {
         'type' => $source->type,
         'groups' => $entity instanceof ContentEntityInterface ? $this->groupsOf($entity) : [],
         'viewable' => $entity instanceof ContentEntityInterface && $entity->access('view', $account),
+        'shared' => $entity instanceof ContentEntityInterface && $this->isShared($entity, $account),
         'excerpt' => $excerpts[$source->n] ?? NULL,
       ];
     }
     return $records;
+  }
+
+  /**
+   * Whether the page (a comment's parent) is shared with this asker.
+   *
+   * Public, or community when signed in, and in no group the asker can't
+   * view: a hidden group shares nothing (SHARED PAGES FIX 1).
+   */
+  private function isShared(ContentEntityInterface $entity, AccountInterface $account): bool {
+    $page = $entity instanceof CommentInterface ? $entity->getCommentedEntity() : $entity;
+    if (!$page instanceof ContentEntityInterface || !$page->hasField('field_content_visibility')) {
+      return FALSE;
+    }
+    foreach (\Drupal::entityTypeManager()->getStorage('group_content')->loadByEntity($page) as $relationship) {
+      $group = $relationship->getGroup();
+      if ($group !== NULL && !$group->access('view', $account)) {
+        return FALSE;
+      }
+    }
+    $shared = $account->isAnonymous() ? ['public'] : ['public', 'community'];
+    return in_array((string) $page->get('field_content_visibility')->value, $shared, TRUE);
   }
 
   /**
@@ -1047,14 +1069,19 @@ final class CitedAnswersLiveRunner {
       }
     }
     // E1: every registry entry must be viewable by the asker and, when a
-    // group was named, belong to that group (D-17).
+    // group was named, belong to that group or be a page the whole community
+    // shares (D-17); with no group named, be shared (no members-only
+    // page site-wide, SHARED PAGES FIX 1).
     $scope_group = isset($run['scope'], $this->seed['groups'][$run['scope']]) ? (int) $this->seed['groups'][$run['scope']] : NULL;
     foreach ($record['registry'] as $entry) {
       if (!$entry['viewable']) {
         $fail("E1: registry holds {$entry['key']}, which the asker can't view", TRUE);
       }
-      if ($scope_group !== NULL && !in_array($scope_group, $entry['groups'], TRUE)) {
-        $fail("E1: registry holds {$entry['key']}, outside the scope group", TRUE);
+      if ($scope_group !== NULL && !in_array($scope_group, $entry['groups'], TRUE) && !$entry['shared']) {
+        $fail("E1: registry holds {$entry['key']}, another group's page that is not shared", TRUE);
+      }
+      if ($scope_group === NULL && !$entry['shared']) {
+        $fail("E1: registry holds {$entry['key']} in a site-wide answer, and it is not shared", TRUE);
       }
     }
 

@@ -68,6 +68,14 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
   private const IN_SCOPE = ['G-PUB', 'G-COM', 'G-MO', 'G-MO-COMMENT', 'G-PUB-COMMENT'];
 
   /**
+   * Fixtures the whole community shares (public or community), any group.
+   *
+   * A question asked in G also gets these; access still decides
+   * whether a signed-out asker gets the community-only ones.
+   */
+  private const SHARED = ['G-PUB', 'G-COM', 'G-PUB-COMMENT', 'H-PUB'];
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -117,7 +125,7 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
       }
 
       foreach ($canaries as $key => $strings) {
-        $in_scope = in_array($key, self::IN_SCOPE, TRUE);
+        $in_scope = in_array($key, self::IN_SCOPE, TRUE) || in_array($key, self::SHARED, TRUE);
         $can_view = $this->fixtures[$key]->access('view', $account);
         if ($in_scope && $can_view) {
           continue;
@@ -126,7 +134,7 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
           $found = array_values(array_filter($strings, static fn (string $s): bool => str_contains($output, $s)));
           if ($found) {
             $kind = $can_view ? 'SCOPE LEAK' : 'VISIBILITY LEAK';
-            $why = $can_view ? 'viewable, but belongs to another group' : 'access denied' . ($in_scope ? '' : ', and another group');
+            $why = $can_view ? "viewable, but another group's members-only page" : 'access denied' . ($in_scope ? '' : ', and another group');
             $leaks[] = "$kind [$mode] $index_id: $persona got $key ($why): " . implode(', ', $found);
           }
         }
@@ -145,7 +153,7 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
       }
 
       // Door 2 (source registry): every labelled source is viewable by the
-      // asker and in group G; labels run R1..Rk with no gaps across both
+      // asker and in group G or shared; labels run R1..Rk with no gaps across both
       // indexes.
       $registry = $this->container->get('social_ai_indexing.source_registry');
       foreach ($registry->all() as $source) {
@@ -155,8 +163,8 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
         if (!$entity->access('view', $account)) {
           $leaks[] = "REGISTRY LEAK [$mode]: $persona has $fixture labelled " . $source->label() . ' (access denied).';
         }
-        if (!in_array((int) $this->groups['G']->id(), $this->groupIdsOf($target), TRUE)) {
-          $leaks[] = "REGISTRY LEAK [$mode]: $persona has $fixture labelled " . $source->label() . ' (not in group G).';
+        if (!in_array((int) $this->groups['G']->id(), $this->groupIdsOf($target), TRUE) && !in_array($fixture, self::SHARED, TRUE)) {
+          $leaks[] = "REGISTRY LEAK [$mode]: $persona has $fixture labelled " . $source->label() . ' (not in group G, and not shared).';
         }
       }
       $numbers = array_keys(self::labelLines(implode("\n", $outputs)));
@@ -175,47 +183,416 @@ final class LeakMatrixRagTest extends GroupAccessKernelTestBase {
   /**
    * KNOW-03 ordering edge: a hidden top result never consumes a label.
    *
-   * The stub ranks G-MO (hidden from P-NON) first and H-PUB (viewable, but
-   * group H) second. The visible G results still come out as [R1], [R2] in
-   * rank order, and the comments call continues the numbering.
+   * The stub ranks G-MO (hidden from P-NON) first, H-PUB (shared, group H)
+   * second and H-MO (P-NON is in H, but it is H's members-only page) above
+   * nothing it matters for. The asked group's own results come first as
+   * [R1], [R2] in rank order, then H-PUB with the group it is shared from;
+   * the comments call continues the numbering.
    */
   public function testHiddenTopResultsNeverConsumeLabels(): void {
     $this->setStubMode('ignore');
     $this->setStubScores([
       $this->itemId($this->fixtures['G-MO']) => 0.99,
       $this->itemId($this->fixtures['H-PUB']) => 0.98,
+      $this->itemId($this->fixtures['H-MO']) => 0.97,
       $this->itemId($this->fixtures['G-COM']) => 0.90,
       $this->itemId($this->fixtures['G-PUB']) => 0.80,
-      $this->itemId($this->fixtures['H-MO']) => 0.70,
       $this->itemId($this->fixtures['S-MO']) => 0.60,
       $this->itemId($this->fixtures['G-MO-COMMENT']) => 0.95,
       $this->itemId($this->fixtures['G-PUB-COMMENT']) => 0.85,
     ]);
     $group_g = (int) $this->groups['G']->id();
+    $shared_h = $this->fixtures['H-PUB']->label() . ' (shared from ' . $this->groups['H']->label() . ')';
 
     $posts = $this->runRagTool('social_posts', $this->personas['P-NON'], $group_g);
     $this->assertSame([
       1 => $this->fixtures['G-COM']->label(),
       2 => $this->fixtures['G-PUB']->label(),
-    ], self::labelLines($posts->getReadableOutput()), 'P-NON: the visible G results are [R1], [R2] in rank order.');
+      3 => $shared_h,
+    ], self::labelLines($posts->getReadableOutput()), 'P-NON: G results first in rank order, then the page H shares, named; never H-MO.');
 
     $comments = $this->runRagTool('social_comments', $this->personas['P-NON'], $group_g);
     $this->assertSame([
-      3 => 'Comment on ' . $this->fixtures['G-PUB']->label(),
-    ], self::labelLines($comments->getReadableOutput()), 'P-NON: the comments call continues at [R3]; the hidden comment ranked first takes no number.');
+      4 => 'Comment on ' . $this->fixtures['G-PUB']->label(),
+    ], self::labelLines($comments->getReadableOutput()), 'P-NON: the comments call continues at [R4]; the hidden comment ranked first takes no number.');
 
     // Structured output carries the labelled sources, not the dropped ones.
     $structured = $posts->getStructuredOutput();
-    $this->assertSame([1, 2], array_column($structured['results'], 'n'));
-    $this->assertSame(['node:' . $this->fixtures['G-COM']->id(), 'node:' . $this->fixtures['G-PUB']->id()], array_map(
+    $this->assertSame([1, 2, 3], array_column($structured['results'], 'n'));
+    $this->assertSame(['node:' . $this->fixtures['G-COM']->id(), 'node:' . $this->fixtures['G-PUB']->id(), 'node:' . $this->fixtures['H-PUB']->id()], array_map(
       static fn (array $r): string => $r['entityType'] . ':' . $r['entityId'],
       $structured['results'],
     ));
+    // The citation title stays the page title; only the model's header names
+    // the group.
+    $this->assertSame($this->fixtures['H-PUB']->label(), $structured['results'][2]['title']);
 
     // A second call in the same run reuses the numbers (one per entity).
     $again = $this->runRagTool('social_posts', $this->personas['P-NON'], $group_g);
-    $this->assertSame([1 => $this->fixtures['G-COM']->label(), 2 => $this->fixtures['G-PUB']->label()], self::labelLines($again->getReadableOutput()));
-    $this->assertSame(3, $this->container->get('social_ai_indexing.source_registry')->count());
+    $this->assertSame([1 => $this->fixtures['G-COM']->label(), 2 => $this->fixtures['G-PUB']->label(), 3 => $shared_h], self::labelLines($again->getReadableOutput()));
+    $this->assertSame(4, $this->container->get('social_ai_indexing.source_registry')->count());
+  }
+
+  /**
+   * A member of G and H asking in G never gets H's members-only page.
+   *
+   * Entity access passes on H-MO for this asker, so only the scope rule can
+   * stop it; the stub ignores the query filter to test the check after the
+   * search alone.
+   */
+  public function testDualMemberGetsSharedNotMembersOnly(): void {
+    $this->setStubMode('ignore');
+    $group_g = (int) $this->groups['G']->id();
+    $output = $this->runRagTool('social_posts', $this->personas['P-MEMH'], $group_g)->getReadableOutput();
+    $this->assertStringNotContainsString(self::HK3_BODY, $output, "LEAK: H's members-only text reached a question asked in G.");
+    $this->assertStringContainsString($this->fixtures['H-PUB']->label() . ' (shared from ' . $this->groups['H']->label() . ')', $output);
+    $this->assertStringContainsString(self::ZQ7_BODY, $output, "G's own members-only page still reaches a member of G.");
+  }
+
+  /**
+   * A hidden group shares nothing: no page, no name, no address.
+   *
+   * S is the secret group. Its community page S-COM is readable by any
+   * signed-in person through normal page access, and its address names S
+   * (Open Social's alias pattern puts the group in a page's address). So a
+   * page is shared only when the asker can view its group: nothing of S
+   * reaches a non-member, scoped or site-wide, in the excerpt, the header,
+   * the structured URLs or the registry (SHARED PAGES FIX 1). H-PUB gets an
+   * alias with H's name too, as the control that the URL check can see an
+   * alias.
+   */
+  public function testHiddenGroupSharesNothing(): void {
+    $this->fixtures['S-COM'] = $this->createGroupTopic($this->groups['S'], 'Fictional S community notice', 'SC4-BODY a fictional community notice in secret group S.', 'community');
+    $this->fixtures['S-COM-COMMENT'] = $this->createComment($this->fixtures['S-COM'], 'SC4-REPLY a fictional reply in secret group S.');
+    $this->fixtures['S-MO-COMMENT'] = $this->createComment($this->fixtures['S-MO'], 'SX9-REPLY a fictional members reply in secret group S.');
+    $this->aliasInGroup($this->fixtures['S-COM'], 'fictional-group-s');
+    $this->aliasInGroup($this->fixtures['H-PUB'], 'fictional-group-h');
+    $this->reindexBoth();
+    $this->assertTrue($this->fixtures['S-COM']->access('view', $this->personas['P-NON']), 'Precondition: a signed-in non-member can read S-COM by its address.');
+    $this->assertStringContainsString('fictional-group-s', $this->fixtures['S-COM']->toUrl()->toString(), "Precondition: S-COM's address names S.");
+    $group_s = (string) $this->groups['S']->label();
+    $hidden = [$group_s, 'fictional-group-s', 'SC4-', 'SX9-', self::SX9_BODY, 'Fictional S ', '/node/' . $this->fixtures['S-COM']->id()];
+    foreach (['ignore', 'honour'] as $mode) {
+      $this->setStubMode($mode);
+      foreach (['P-MEM', 'P-NON', 'P-ANON'] as $persona) {
+        foreach (['scoped' => (int) $this->groups['G']->id(), 'site-wide' => NULL] as $where => $scope) {
+          $this->resetSourceRegistry();
+          $seen = '';
+          foreach (self::INDEXES as $index_id) {
+            $tool = $this->runRagTool($index_id, $this->personas[$persona], $scope);
+            $seen .= $tool->getReadableOutput() . "\n" . json_encode($tool->getStructuredOutput()) . "\n";
+          }
+          foreach ($this->container->get('social_ai_indexing.source_registry')->all() as $source) {
+            $seen .= json_encode($source->toArray()) . "\n";
+          }
+          foreach ($hidden as $canary) {
+            $this->assertStringNotContainsString($canary, $seen, "[$mode] $persona $where: LEAK of the hidden group ($canary).");
+          }
+          if ($persona !== 'P-ANON') {
+            // The control: a viewable group's alias does reach the URLs.
+            $this->assertStringContainsString('fictional-group-h', $seen, "[$mode] $persona $where: H-PUB's aliased URL.");
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * A page narrowed to members-only while the index still says public.
+   *
+   * H-PUB becomes members-only and is not reindexed, so the stub's stored
+   * visibility (and the 'honour' filter) still says public. A dual member
+   * and a manager of H can read the page, so only the live visibility check
+   * keeps it out of a question asked in G and of a site-wide question.
+   */
+  public function testNarrowedPageStaysOutWhileIndexIsStale(): void {
+    $manager = $this->createPersona('fictional_p_mgr_h');
+    $this->groups['H']->addMember(\Drupal\user\Entity\User::load($manager->id()), ['group_roles' => ['flexible_group-group_manager']]);
+    $this->addMember($this->groups['G'], $manager);
+    $this->fixtures['H-PUB']->set('field_content_visibility', 'group')->save();
+    foreach (['P-MEMH' => $this->personas['P-MEMH'], 'H manager' => $manager] as $who => $account) {
+      $this->assertTrue($this->fixtures['H-PUB']->access('view', $account), "Precondition: $who can read the narrowed page.");
+      foreach (['ignore', 'honour'] as $mode) {
+        $this->setStubMode($mode);
+        foreach (['scoped in G' => (int) $this->groups['G']->id(), 'site-wide' => NULL] as $where => $scope) {
+          $this->resetSourceRegistry();
+          $output = $this->runRagTool('social_posts', $account, $scope)->getReadableOutput();
+          $this->assertStringNotContainsString('public notice for group H', $output, "[$mode] $who $where: LEAK of a page now members-only.");
+          $this->assertStringContainsString('public notice for group G', $output, "[$mode] $who $where: control, G's public page.");
+        }
+      }
+      // Asked inside H, it is H's own members-only page: a member gets it.
+      $this->resetSourceRegistry();
+      $this->setStubMode('ignore');
+      $output = $this->runRagTool('social_posts', $account, (int) $this->groups['H']->id())->getReadableOutput();
+      $this->assertStringContainsString('public notice for group H', $output, "$who in H: H's own page.");
+    }
+  }
+
+  /**
+   * A page in two groups: each group's own, for that group's members.
+   *
+   * A members-only page in G and H reaches a member of G asked in G and a
+   * member of H asked in H, but never a member of H asked in G (who can read
+   * it, but is not a member of G: the query filter gives them none of G's
+   * members-only pages either), and never site-wide. A community page in G
+   * and the hidden group S reaches nobody outside S.
+   */
+  public function testTwoGroupPage(): void {
+    $both = $this->createGroupTopic($this->groups['G'], 'Fictional GH members notes', 'TW2-BODY fictional members notes in G and H.', 'group');
+    $this->groups['H']->addRelationship($both, 'group_node:topic');
+    $with_s = $this->createGroupTopic($this->groups['G'], 'Fictional GS community notice', 'TS5-BODY fictional community notice in G and S.', 'community');
+    $this->groups['S']->addRelationship($with_s, 'group_node:topic');
+    $this->reindexBoth();
+    $g = (int) $this->groups['G']->id();
+    $h = (int) $this->groups['H']->id();
+    $this->assertTrue($both->access('view', $this->personas['P-NON']), 'Precondition: P-NON (in H) can read the G and H page.');
+    $this->assertTrue($with_s->access('view', $this->personas['P-MEM']), 'Precondition: P-MEM can read the G and S page.');
+    $rows = [
+      ['P-MEM', $g, TRUE],
+      ['P-MEMH', $g, TRUE],
+      ['P-NON', $h, TRUE],
+      ['P-NON', $g, FALSE],
+      ['P-MEM', NULL, FALSE],
+      ['P-MEMH', NULL, FALSE],
+    ];
+    foreach (['ignore', 'honour'] as $mode) {
+      $this->setStubMode($mode);
+      foreach ($rows as [$persona, $scope, $expected]) {
+        $this->resetSourceRegistry();
+        $output = $this->runRagTool('social_posts', $this->personas[$persona], $scope)->getReadableOutput();
+        $where = $scope === NULL ? 'site-wide' : ($scope === $g ? 'in G' : 'in H');
+        if ($expected) {
+          $this->assertStringContainsString('TW2-BODY', $output, "[$mode] $persona $where: the group's own members-only page.");
+        }
+        else {
+          $this->assertStringNotContainsString('TW2-BODY', $output, "[$mode] $persona $where: LEAK of a members-only page.");
+        }
+        $this->assertStringNotContainsString('TS5-BODY', $output, "[$mode] $persona $where: LEAK of a page in the hidden group S.");
+      }
+    }
+  }
+
+  /**
+   * A page with no visibility value never comes back.
+   */
+  public function testMissingVisibilityNeverComesBack(): void {
+    $blank = $this->createGroupTopic($this->groups['G'], 'Fictional G blank notice', 'BL6-BODY a fictional notice with no visibility.', 'public');
+    $this->reindexBoth();
+    // Blanked after indexing: the stub still holds 'public'.
+    $blank->set('field_content_visibility', NULL)->save();
+    $this->assertSame('', (string) $blank->get('field_content_visibility')->value);
+    $this->setStubMode('ignore');
+    foreach (['P-MEM' => (int) $this->groups['G']->id(), 'P-NON' => NULL] as $persona => $scope) {
+      $this->resetSourceRegistry();
+      $output = $this->runRagTool('social_posts', $this->personas[$persona], $scope)->getReadableOutput();
+      $this->assertStringNotContainsString('BL6-BODY', $output, "$persona: a page with no visibility.");
+      $this->assertStringContainsString('public notice for group G', $output, "$persona: control.");
+    }
+  }
+
+  /**
+   * A public page in no group is shared everywhere, with no group note.
+   */
+  public function testNoGroupPageIsSharedWithoutANote(): void {
+    $page = \Drupal\node\Entity\Node::create([
+      'type' => 'topic',
+      'title' => 'Fictional site-wide notice',
+      'body' => ['value' => 'NG9-BODY a fictional notice in no group.', 'format' => 'plain_text'],
+      'field_content_visibility' => 'public',
+      'uid' => $this->siteOwner->id(),
+      'status' => 1,
+    ]);
+    $page->save();
+    $this->reindexBoth();
+    $this->setStubMode('ignore');
+    foreach (['P-MEM', 'P-NON', 'P-ANON'] as $persona) {
+      foreach (['scoped' => (int) $this->groups['G']->id(), 'site-wide' => NULL] as $mode => $scope) {
+        $this->resetSourceRegistry();
+        $output = $this->runRagTool('social_posts', $this->personas[$persona], $scope)->getReadableOutput();
+        $this->assertStringContainsString('NG9-BODY', $output, "[$persona $mode] a public page in no group.");
+        $this->assertStringNotContainsString($page->label() . ' (shared from', $output, "[$persona $mode] no group note.");
+        $this->assertTrue($this->isRegisteredKey('node:' . $page->id()), "[$persona $mode] registered as a source.");
+      }
+    }
+  }
+
+  /**
+   * File text indexed with its page follows the page's rule.
+   *
+   * FileContentExtractor indexes an attached file's text into its host's
+   * record; the stub record's content stands in for it here.
+   */
+  public function testAttachedFileTextFollowsItsPage(): void {
+    $this->appendIndexedText($this->fixtures['H-PUB'], 'FL7-SHARED fictional attachment text on H public notice.');
+    $this->appendIndexedText($this->fixtures['H-MO'], 'FL7-HIDDEN fictional attachment text on H members notes.');
+    $this->setStubMode('ignore');
+    foreach (['P-MEM', 'P-MEMH', 'P-NON'] as $persona) {
+      $this->resetSourceRegistry();
+      $output = $this->runRagTool('social_posts', $this->personas[$persona], (int) $this->groups['G']->id())->getReadableOutput();
+      $this->assertStringContainsString('FL7-SHARED', $output, "$persona: a shared page's file text.");
+      $this->assertStringNotContainsString('FL7-HIDDEN', $output, "$persona: LEAK of file text on H's members-only page.");
+    }
+  }
+
+  /**
+   * An event follows the same rule as a Topic.
+   *
+   * Checked by title: the Kernel site has no event display for the body.
+   */
+  public function testEventFollowsTheSameRule(): void {
+    $this->installEventBundle();
+    $shared = $this->createGroupNode($this->groups['H'], 'event', 'Fictional H public event', 'EV8-SHARED a fictional public event in H.', 'public');
+    $members = $this->createGroupNode($this->groups['H'], 'event', 'Fictional H members event', 'EV8-HIDDEN a fictional members event in H.', 'group');
+    $this->reindexBoth();
+    $this->assertTrue($members->access('view', $this->personas['P-MEMH']), 'Precondition: a member of H can read the members-only event.');
+    foreach (['ignore', 'honour'] as $mode) {
+      $this->setStubMode($mode);
+      foreach (['in G' => (int) $this->groups['G']->id(), 'site-wide' => NULL] as $where => $scope) {
+        $this->resetSourceRegistry();
+        $output = $this->runRagTool('social_posts', $this->personas['P-MEMH'], $scope)->getReadableOutput();
+        $this->assertStringContainsString('Fictional H public event', $output, "[$mode] $where: H's public event.");
+        $this->assertStringNotContainsString('Fictional H members event', $output, "[$mode] $where: LEAK of H's members-only event.");
+      }
+      $this->resetSourceRegistry();
+      $output = $this->runRagTool('social_posts', $this->personas['P-MEMH'], (int) $this->groups['H']->id())->getReadableOutput();
+      $this->assertStringContainsString('Fictional H members event', $output, "[$mode] in H: H's own members-only event.");
+    }
+  }
+
+  /**
+   * A person who left H gets H's shared pages and none of its members-only
+   * pages, their own included (those they read by direct address only).
+   *
+   * A comment record carries its parent's title, not its own body (see
+   * mirrorCommentPayloads()), so the reply is checked by its registry key
+   * and the payload it really carries, H-MO's title.
+   */
+  public function testFormerMemberGetsOnlySharedPages(): void {
+    $left = $this->createPersona('fictional_p_left');
+    $h = $this->groups['H'];
+    $this->addMember($h, $left);
+    $own = $this->createGroupTopic($h, 'Fictional H notes by a former member', 'LF2-BODY fictional members notes written in H.', 'group');
+    $own->setOwnerId($left->id())->save();
+    $reply = $this->createComment($this->fixtures['H-MO'], 'LF2-REPLY a fictional members reply written in H.');
+    $reply->setOwnerId($left->id())->save();
+    $this->reindexBoth();
+    // Control while still a member, asked in H: the reply and its payload
+    // come back, so the checks below can see them.
+    $this->setStubMode('ignore');
+    $this->resetSourceRegistry();
+    $output = $this->runRagTool('social_comments', $left, (int) $h->id())->getReadableOutput();
+    $this->assertStringContainsString('Fictional H members notes', $output, 'Control: the reply payload reaches a member asked in H.');
+    $this->assertTrue($this->isRegisteredKey('comment:' . $reply->id()), 'Control: the reply is registered for a member asked in H.');
+
+    $h->removeMember(\Drupal\user\Entity\User::load($left->id()));
+    foreach (['ignore', 'honour'] as $mode) {
+      $this->setStubMode($mode);
+      $this->resetSourceRegistry();
+      $output = '';
+      foreach (self::INDEXES as $index_id) {
+        $output .= $this->runRagTool($index_id, $left, (int) $this->groups['G']->id())->getReadableOutput() . "\n";
+      }
+      $this->assertStringContainsString($this->fixtures['H-PUB']->label() . ' (shared from ' . $h->label() . ')', $output, "[$mode] H's shared page.");
+      foreach (['LF2-BODY', self::HK3_BODY, 'Fictional H members notes'] as $canary) {
+        $this->assertStringNotContainsString($canary, $output, "[$mode] LEAK: a former member got H's members-only text ($canary).");
+      }
+      $this->assertFalse($this->isRegisteredKey('comment:' . $reply->id()), "[$mode] LEAK: the former member's reply on H's members-only page is registered.");
+    }
+  }
+
+  /**
+   * Indexes every item again on both indexes, after adding fixtures.
+   */
+  private function reindexBoth(): void {
+    $storage = $this->container->get('entity_type.manager')->getStorage('search_api_index');
+    foreach (self::INDEXES as $index_id) {
+      $this->indexAllItems($storage->load($index_id));
+    }
+    $this->mirrorCommentPayloads();
+  }
+
+  /**
+   * Gives a page the address Open Social's pattern would: its group first.
+   */
+  private function aliasInGroup($node, string $group_slug): void {
+    \Drupal\path_alias\Entity\PathAlias::create([
+      'path' => '/node/' . $node->id(),
+      'alias' => '/group/' . $group_slug . '/topic/' . $node->id(),
+      'langcode' => $node->language()->getId(),
+    ])->save();
+  }
+
+  /**
+   * Whether an entity key is in the request-wide registry.
+   */
+  private function isRegisteredKey(string $key): bool {
+    foreach ($this->container->get('social_ai_indexing.source_registry')->all() as $source) {
+      if ($source->key() === $key) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Adds text to a page's stored index record (as file text would be).
+   */
+  private function appendIndexedText($node, string $text): void {
+    $store = $this->container->get('keyvalue')->get('social_ai_indexing_test.stub_items');
+    $found = FALSE;
+    foreach ($store->getAll() as $key => $record) {
+      if ($record['index_id'] === 'social_posts' && str_starts_with((string) ($record['extra']['drupal_entity_id'] ?? $key), 'entity:node/' . $node->id() . ':')) {
+        $record['extra']['content'] = ($record['extra']['content'] ?? '') . "\n" . $text;
+        $store->set($key, $record);
+        $found = TRUE;
+      }
+    }
+    $this->assertTrue($found, 'The page has a stored index record.');
+  }
+
+  /**
+   * Adds Open Social's event type, its visibility field and group relation.
+   */
+  private function installEventBundle(): void {
+    $this->installShippedConfig('social_event', [
+      'node.type.event',
+      'field.field.node.event.body',
+      'field.field.node.event.field_content_visibility',
+    ]);
+    $group_type = $this->groups['G']->getGroupType();
+    $this->container->get('entity_type.manager')->getStorage('group_content_type')
+      ->createFromPlugin($group_type, 'group_node:event')->save();
+    foreach (['flexible_group-member', 'flexible_group-group_manager'] as $role_id) {
+      $role = \Drupal\group\Entity\GroupRole::load($role_id);
+      $role->grantPermission('view group_node:event entity')->save();
+    }
+    foreach (['flexible_group-outsider', 'flexible_group-anonymous', 'flexible_group-verified'] as $role_id) {
+      $role = \Drupal\group\Entity\GroupRole::load($role_id);
+      if ($role !== NULL && $role->hasPermission('view group_node:topic entity')) {
+        $role->grantPermission('view group_node:event entity')->save();
+      }
+    }
+    user_role_grant_permissions(\Drupal\user\RoleInterface::ANONYMOUS_ID, ['view node.event.field_content_visibility:public content']);
+    user_role_grant_permissions(\Drupal\user\RoleInterface::AUTHENTICATED_ID, ['view node.event.field_content_visibility:public content']);
+    user_role_grant_permissions('verified', ['view node.event.field_content_visibility:community content']);
+  }
+
+  /**
+   * Creates a node of any bundle in a group.
+   */
+  private function createGroupNode($group, string $bundle, string $title, string $body, string $visibility) {
+    $node = \Drupal\node\Entity\Node::create([
+      'type' => $bundle,
+      'title' => $title,
+      'body' => ['value' => $body, 'format' => 'plain_text'],
+      'field_content_visibility' => $visibility,
+      'uid' => $this->siteOwner->id(),
+      'status' => 1,
+    ]);
+    $node->save();
+    $group->addRelationship($node, 'group_node:' . $bundle);
+    return $node;
   }
 
   /**
