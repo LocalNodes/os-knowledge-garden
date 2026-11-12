@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BrowserContext } from '@playwright/test';
 import { confirmPrompts, promptRefusal, SETUP_SIGN_PROMPT, SHARE_PROMPT, SIGN_PROMPT, SWITCH_PROMPT, type ExpectedPrompt, type PromptLog } from './metamask-steps';
+import { forSite } from './governance/judge-wallet';
 
 const EXT = 'fakeextensionid';
 const CLOSED = 'page.waitForTimeout: Target page, context or browser has been closed';
@@ -474,6 +475,14 @@ describe('promptRefusal (recorded MetaMask 13.13.1 prompts)', () => {
     expect(promptRefusal(SWITCH_TO_SEPOLIA, '#connect/x/confirm-permissions', REC.switchNew)).toBeUndefined();
     expect(promptRefusal(SETUP_SIGN, '#confirm-transaction/x/signature-request', REC.typedSign)).toBeUndefined();
   });
+  it('names a site with a port by its host name, as the connect page shows it', () => {
+    const page = { url: () => 'http://localhost:8080/user/login' };
+    const share = forSite(SHARE_PROMPT, page);
+    expect(share.origin).toBe('localhost');
+    // The connect page as MetaMask titles a localhost:8080 site (hostname only).
+    expect(promptRefusal(share, '#connect/x', REC.share.replace('fresh3.test', 'localhost'))).toBeUndefined();
+    expect(promptRefusal(share, '#connect/x', REC.share.replace('fresh3.test', 'evil.example'))).toBe('it does not name the site localhost');
+  });
   it('refuses a prompt from another site', () => {
     expect(promptRefusal({ ...SHARE_PROMPT, origin: SITE }, '#connect/x', REC.share.replace('fresh3.test', 'evil.example'))).toBe('it does not name the site fresh3.test');
   });
@@ -494,7 +503,10 @@ describe('confirmPrompts: same-route requests that are not the expected one', ()
     const other = fakePrompt('confirm-btn', { route: 'connect', text: REC.share.replace('fresh3.test', 'evil.example') });
     const log: PromptLog = { clicks: [], warnings: [] };
     await expect(confirmPrompts(fakeContext(() => [other.page]), EXT, 'shareAccount', log, { ...reopen, expect: { ...SHARE_PROMPT, origin: SITE } }))
-      .rejects.toThrow('shareAccount: the open wallet prompt is not the expected request (it does not name the site fresh3.test); it was not confirmed');
+      .rejects.toThrow(/^shareAccount: the open wallet prompt is not the expected request \(it does not name the site fresh3\.test\); it was not confirmed$/);
+    // The prompt's own text (here the other site's name) stays out of the error and the CI log.
+    await expect(confirmPrompts(fakeContext(() => [other.page]), EXT, 'shareAccount', log, { ...reopen, expect: { ...SHARE_PROMPT, origin: SITE } }))
+      .rejects.toThrow(expect.objectContaining({ message: expect.not.stringContaining('evil.example') }));
     expect(other.state.confirms).toBe(0);
   }, 30_000);
   it('add-network during a switch is refused, unconfirmed', async () => {

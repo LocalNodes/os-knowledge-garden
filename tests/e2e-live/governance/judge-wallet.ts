@@ -27,9 +27,13 @@ export async function bounded<T>(p: Promise<T>, ms: number, what: string): Promi
 
 type Eip1193Window = { ethereum: { request(a: unknown): Promise<unknown> } };
 
-/** The expected prompt, with the site's host, which the prompt must name. */
-export function forSite(prompt: ExpectedPrompt, page: Page): ExpectedPrompt {
-  const host = /^https?:/.test(page.url()) ? new URL(page.url()).host : '';
+/**
+ * The expected prompt, with the site's host name, which the prompt must name. MetaMask
+ * 13.13.1 titles its connect page with transformOriginToTitle, which is the URL's hostname:
+ * no port, so a site on localhost:8080 shows as "localhost".
+ */
+export function forSite(prompt: ExpectedPrompt, page: Pick<Page, 'url'>): ExpectedPrompt {
+  const host = /^https?:/.test(page.url()) ? new URL(page.url()).hostname : '';
   return host ? { ...prompt, origin: host } : prompt;
 }
 
