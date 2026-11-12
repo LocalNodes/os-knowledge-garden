@@ -1,0 +1,12 @@
+{
+  "Rules": [
+    {
+      "ID": "localnodes-backup-expiry",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "localnodes-backup/" },
+      "Expiration": { "Days": 14 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}

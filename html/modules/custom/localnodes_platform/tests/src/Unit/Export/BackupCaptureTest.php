@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\localnodes_platform\Unit\Export;
+
+use Drupal\localnodes_platform\Backup\BackupCapture;
+use Drupal\localnodes_platform\Backup\BackupPause;
+use Drupal\Tests\UnitTestCase;
+
+/** @group localnodes_platform */
+final class BackupCaptureTest extends UnitTestCase {
+
+  public function testFailureReleasesOnlyItsPauseAndLocks(): void {
+    $base = sys_get_temp_dir() . '/export-capture-' . bin2hex(random_bytes(8));
+    $pause = new BackupPause($base);
+    try {
+      try {
+        (new BackupCapture())->run($pause, 'export', 60, 0, 0, function (float $deadline) use ($pause): void {
+          $this->assertSame('export', $pause->active()['reason']);
+          $this->assertGreaterThan(microtime(TRUE), $deadline);
+          throw new \RuntimeException('fixture');
+        });
+        $this->fail('The copy failure must propagate.');
+      }
+      catch (\RuntimeException $e) {
+        $this->assertSame('fixture', $e->getMessage());
+      }
+      $this->assertNull($pause->active());
+      $theirs = $pause->create('restore', NULL);
+      try {
+        (new BackupCapture())->run($pause, 'export', 60, 0, 0, fn () => $this->fail('An existing pause refuses the copy.'));
+      }
+      catch (\RuntimeException) {}
+      $this->assertSame($theirs, $pause->active()['token']);
+      $pause->release($theirs);
+    }
+    finally {
+      foreach (glob($base . '/.localnodes/*') ?: [] as $file) @unlink($file);
+      @rmdir($base . '/.localnodes');
+      @rmdir($base);
+    }
+  }
+
+}

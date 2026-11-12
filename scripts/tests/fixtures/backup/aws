@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Fake aws (s3api only) for the backup shell tests. Objects live under
+# $FAKE_S3/<bucket>/<key>, their metadata beside them in $FAKE_S3.meta.
+#   FAKE_LIFECYCLE  file holding the bucket's lifecycle JSON (absent: none)
+#   FAKE_VERSIONING Enabled, Suspended, denied (the call fails) or empty
+#                   (an empty body); absent: never versioned
+#   FAKE_S3_CORRUPT 1: store a truncated copy of what was sent
+#   FAKE_S3_FAIL_KEY  a key part; put-object of a matching key fails
+set -u
+printf '%s | creds=%s\n' "$*" "${AWS_SHARED_CREDENTIALS_FILE:-}" >> "$FAKE_LOG_DIR/aws.log"
+args=("$@")
+op=""; bucket=""; key=""; body=""; md5=""; meta=""; prefix=""; out=""
+i=0
+while [ $i -lt ${#args[@]} ]; do
+  a="${args[$i]}"
+  case "$a" in
+    --endpoint-url|--output) i=$((i+1)) ;;
+    s3api) ;;
+    --bucket) i=$((i+1)); bucket="${args[$i]}" ;;
+    --key) i=$((i+1)); key="${args[$i]}" ;;
+    --body) i=$((i+1)); body="${args[$i]}" ;;
+    --content-md5) i=$((i+1)); md5="${args[$i]}" ;;
+    --metadata) i=$((i+1)); meta="${args[$i]}" ;;
+    --prefix) i=$((i+1)); prefix="${args[$i]}" ;;
+    -*) echo "fake aws: unknown option $a" >&2; exit 2 ;;
+    *) if [ -z "$op" ]; then op="$a"; else out="$a"; fi ;;
+  esac
+  i=$((i+1))
+done
+store="$FAKE_S3/$bucket"; metas="$FAKE_S3.meta/$bucket"
+case "$op" in
+  put-object)
+    if [ -n "${FAKE_S3_FAIL_KEY:-}" ] && [[ "$key" == *"$FAKE_S3_FAIL_KEY"* ]]; then echo "An error occurred (InternalError)" >&2; exit 254; fi
+    [ "$(openssl dgst -md5 -binary "$body" | base64)" = "$md5" ] || { echo "BadDigest" >&2; exit 254; }
+    mkdir -p "$(dirname "$store/$key")" "$(dirname "$metas/$key")"
+    if [ "${FAKE_S3_CORRUPT:-}" = 1 ]; then head -c 10 "$body" > "$store/$key"; else cp "$body" "$store/$key"; fi
+    printf '%s' "${meta#sha256=}" > "$metas/$key"
+    echo '{"ETag":"\"x\""}'
+    ;;
+  head-object)
+    [ -f "$store/$key" ] || { echo "Not Found" >&2; exit 254; }
+    jq -n --argjson n "$(stat -c %s "$store/$key")" --arg s "$(cat "$metas/$key")" '{ContentLength: $n, Metadata: {sha256: $s}}'
+    ;;
+  get-object)
+    [ -f "$store/$key" ] || { echo "NoSuchKey" >&2; exit 254; }
+    cp "$store/$key" "$out"; echo '{}'
+    ;;
+  list-objects-v2)
+    if [ -d "$store" ]; then
+      (cd "$store" && find . -type f | sed 's|^\./||' | grep "^$prefix" | sort) | jq -R . | jq -s '{Contents: map({Key: .})}'
+    else echo '{}'; fi
+    ;;
+  get-bucket-lifecycle-configuration)
+    [ -n "${FAKE_LIFECYCLE:-}" ] && [ -f "$FAKE_LIFECYCLE" ] || { echo "NoSuchLifecycleConfiguration" >&2; exit 254; }
+    cat "$FAKE_LIFECYCLE"
+    ;;
+  get-bucket-versioning)
+    case "${FAKE_VERSIONING:-}" in
+      "") echo '{}' ;;
+      denied) echo "An error occurred (AccessDenied)" >&2; exit 254 ;;
+      empty) ;;
+      *) jq -n --arg s "$FAKE_VERSIONING" '{Status: $s}' ;;
+    esac
+    ;;
+  *) echo "fake aws: unexpected $op" >&2; exit 2 ;;
+esac

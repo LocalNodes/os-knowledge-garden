@@ -1,0 +1,6 @@
+name: 'LocalNodes backup pause (test only)'
+type: module
+description: 'A page that page cache can store, so BackupPauseTest can prove a cached page is not served during a pause. Never enable on a real site.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

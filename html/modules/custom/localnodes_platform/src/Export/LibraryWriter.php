@@ -355,6 +355,12 @@ final class LibraryWriter {
       return NULL;
     }
     $real = realpath($root . '/' . $target);
+    $private = realpath((string) Settings::get('file_private_path', ''));
+    if ($real && $private) {
+      foreach (['site-exports', '.localnodes'] as $reserved) {
+        if ($real === $private . '/' . $reserved || str_starts_with($real, $private . '/' . $reserved . '/')) return NULL;
+      }
+    }
     if ($real === FALSE || !is_file($real) || !is_readable($real) || !str_starts_with($real, rtrim($root, '/') . '/')) {
       return NULL;
     }

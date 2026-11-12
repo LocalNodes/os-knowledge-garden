@@ -55,3 +55,23 @@ localnodes_platform.activate:
     _access: 'TRUE'
   options:
     no_cache: TRUE
+
+localnodes_platform.site_export:
+  path: '/admin/config/system/site-export'
+  defaults:
+    _form: '\Drupal\localnodes_platform\Form\SiteExportForm'
+    _title: 'Export this site'
+  requirements:
+    _custom_access: 'localnodes_platform.export_access::access'
+  options:
+    no_cache: TRUE
+localnodes_platform.site_export_confirm:
+  path: '/admin/config/system/site-export/confirm/{operation}'
+  defaults:
+    _form: '\Drupal\localnodes_platform\Form\SiteExportForm'
+    _title: 'Export this site'
+  requirements:
+    _custom_access: 'localnodes_platform.export_access::access'
+    operation: 'request|download|delete'
+  options:
+    no_cache: TRUE

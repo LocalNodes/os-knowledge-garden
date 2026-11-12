@@ -1,0 +1,7 @@
+localnodes_backup_pause_test.probe:
+  path: '/pause-probe'
+  defaults:
+    _controller: '\Drupal\localnodes_backup_pause_test\ProbeController::page'
+  methods: [GET, POST]
+  requirements:
+    _access: 'TRUE'

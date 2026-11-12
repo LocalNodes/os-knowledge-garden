@@ -1,0 +1,126 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * @file
+ * The site's backup pause, from the command line, without Drupal.
+ *
+ * A restore uses it while the database may be empty or half loaded, so it
+ * cannot go through drush. It reads and writes the same pause file as the
+ * site (BackupPause), in <private files>/.localnodes. Run it as the web user.
+ *
+ * Usage:
+ *   localnodes-pause status          "open", or the pause's reason and end
+ *   localnodes-pause create-restore  close the site with no end time; prints
+ *                                    the token that lifts it. Refuses while
+ *                                    a backup runs or another pause is in
+ *                                    force.
+ *   localnodes-pause release TOKEN   lift the pause only if it is that token's
+ *   localnodes-pause clear           lift any pause (the operator's recovery)
+ *   localnodes-pause wait-worker N   wait up to N seconds for a running worker
+ *                                    pass to finish
+ *   localnodes-pause wait-web N      wait up to N seconds for web requests that
+ *                                    began before the pause to finish
+ *
+ * Env: PRIVATE_FILES_DIR (default /var/www/private), LOCALNODES_APP_ROOT
+ * (default /var/www/html).
+ */
+
+declare(strict_types=1);
+
+$backup_src = rtrim(getenv('LOCALNODES_APP_ROOT') ?: '/var/www/html', '/') . '/html/modules/custom/localnodes_platform/src/Backup';
+require $backup_src . '/BackupWrite.php';
+require $backup_src . '/BackupPause.php';
+
+use Drupal\localnodes_platform\Backup\BackupPause;
+
+$fail = static function (string $message, int $code = 1): never {
+  fwrite(STDERR, "localnodes-pause: $message\n");
+  exit($code);
+};
+
+$pause = new BackupPause(getenv('PRIVATE_FILES_DIR') ?: '/var/www/private');
+$command = $argv[1] ?? '';
+
+switch ($command) {
+  case 'status':
+    $active = $pause->active();
+    echo $active === NULL ? "open\n" : 'paused reason=' . $active['reason'] . ' until=' . ($active['until'] === NULL ? 'none' : gmdate('Y-m-d\TH:i:s\Z', $active['until'])) . "\n";
+    exit(0);
+
+  case 'create-restore':
+    try {
+      $lock = $pause->openLock('backup.lock');
+    }
+    catch (\RuntimeException $e) {
+      $fail($e->getMessage());
+    }
+    // A backup holds this lock for its whole run; never close the site under it.
+    if (!flock($lock, LOCK_EX | LOCK_NB)) {
+      $fail('a backup or restore is running; nothing was changed');
+    }
+    try {
+      echo $pause->create('restore', NULL) . "\n";
+    }
+    catch (\RuntimeException $e) {
+      $fail($e->getMessage() . ' Nothing was changed.');
+    }
+    finally {
+      flock($lock, LOCK_UN);
+      fclose($lock);
+    }
+    exit(0);
+
+  case 'release':
+    $token = (string) ($argv[2] ?? '');
+    if ($pause->release($token)) {
+      echo "released\n";
+      exit(0);
+    }
+    $fail('no pause with that token; nothing was changed');
+
+  case 'clear':
+    if ($pause->clear()) {
+      echo "cleared\n";
+      exit(0);
+    }
+    $fail('cannot remove the pause file');
+
+  case 'wait-worker':
+    $seconds = (int) ($argv[2] ?? 0);
+    if ($seconds < 1) {
+      $fail('wait-worker needs a number of seconds', 2);
+    }
+    $lock = $pause->openLock('worker.lock');
+    $deadline = microtime(TRUE) + $seconds;
+    while (!flock($lock, LOCK_EX | LOCK_NB)) {
+      if (microtime(TRUE) >= $deadline) {
+        $fail("the worker did not finish its pass within $seconds seconds");
+      }
+      usleep(250000);
+    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    echo "worker idle\n";
+    exit(0);
+
+  case 'wait-web':
+    $seconds = (int) ($argv[2] ?? 0);
+    if ($seconds < 1) {
+      $fail('wait-web needs a number of seconds', 2);
+    }
+    if ($pause->active() === NULL) {
+      $fail('the site is not paused, so web requests would not stop; nothing was changed');
+    }
+    try {
+      $pause->waitForRequests(microtime(TRUE) + $seconds);
+    }
+    catch (\RuntimeException) {
+      $fail("web requests were still running after $seconds seconds");
+    }
+    echo "web idle\n";
+    exit(0);
+
+  default:
+    $fail('usage: localnodes-pause status|create-restore|release TOKEN|clear|wait-worker SECONDS|wait-web SECONDS', 2);
+}

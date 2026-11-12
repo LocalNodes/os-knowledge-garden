@@ -13,6 +13,7 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Site\Settings;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -67,6 +68,7 @@ final class SiteExporter {
     'semaphore',
     'batch',
     'key_value_expire',
+    'localnodes_site_export',
     'ultimate_cron_log',
     'ultimate_cron_lock',
     'ultimate_cron_signal',
@@ -112,7 +114,23 @@ final class SiteExporter {
   /**
    * Top-level folders of the private files left out.
    */
-  public const PRIVATE_SKIP = ['styles', 'php', 'tmp', '.localnodes'];
+  public const PRIVATE_SKIP = ['styles', 'php', 'tmp', '.localnodes', 'site-exports'];
+
+  /**
+   * The message when a run passes its deadline.
+   */
+  public const DEADLINE_MESSAGE = 'The export ran past its time limit and was stopped. The archive was deleted.';
+
+  /**
+   * Unix time by which the current export() must be done, or NULL.
+   *
+   * Set only for the length of one export() call. The nightly backup passes
+   * one so the whole capture fits inside its pause; the export command does
+   * not.
+   */
+  private ?float $deadline = NULL;
+
+  private mixed $progress = NULL;
 
   public function __construct(
     private readonly Connection $database,
@@ -160,6 +178,12 @@ final class SiteExporter {
     }
     foreach ($roots as $label => $root) {
       $root = rtrim(realpath($root) ?: $root, '/');
+      if ($label === 'the private files') {
+        try {
+          if ((new ExportFiles($root, DRUPAL_ROOT))->directory(basename($real)) === $real) continue;
+        }
+        catch (\Throwable) {}
+      }
       if ($real === $root || str_starts_with($real . '/', $root . '/')) {
         return "it is inside $label ($root)";
       }
@@ -397,6 +421,7 @@ final class SiteExporter {
     $tail = '';
     try {
       while (!(str_ends_with($path, '.gz') ? gzeof($handle) : feof($handle))) {
+        $this->checkDeadline();
         $chunk = str_ends_with($path, '.gz') ? gzread($handle, 1 << 20) : fread($handle, 1 << 20);
         if ($chunk === FALSE) {
           throw new \RuntimeException('Cannot read a file of the archive to check it for secrets. The archive was deleted.');
@@ -462,11 +487,16 @@ final class SiteExporter {
    * @param callable|null $library
    *   function (string $dir): array. Writes the library folder and returns
    *   its counts; NULL leaves the library out.
+   * @param float|null $deadline
+   *   Unix time by which the archive must be complete. Each step checks it,
+   *   every tool's time limit is cut to what is left, and passing it stops
+   *   the run and deletes everything it wrote. The dumper enforces it for
+   *   its own tool (it gets no deadline; the caller builds it with one).
    *
    * @return array
    *   'path' => the archive's path, 'manifest' => the manifest.
    */
-  public function export(string $destination, callable $dumper, ?callable $library = NULL): array {
+  public function export(string $destination, callable $dumper, ?callable $library = NULL, ?float $deadline = NULL, ?callable $progress = NULL): array {
     if ($why = $this->refuseDestination($destination)) {
       throw new \RuntimeException("Refusing to write the archive to $destination: $why.");
     }
@@ -482,8 +512,13 @@ final class SiteExporter {
     }
 
     $old_umask = umask(0077);
+    $this->deadline = $deadline;
+    $this->progress = $progress;
     try {
       return $this->build($destination, $dumper, $library, $secrets, $forms, $site_name, $slug);
+    }
+    catch (ProcessTimedOutException $e) {
+      throw new \RuntimeException(self::DEADLINE_MESSAGE);
     }
     catch (ProcessFailedException $e) {
       // A tool the dumper ran: its stderr can quote a file name in an escaped
@@ -502,6 +537,17 @@ final class SiteExporter {
     }
     finally {
       umask($old_umask);
+      $this->deadline = NULL;
+      $this->progress = NULL;
+    }
+  }
+
+  /**
+   * Stops the run when the deadline has passed.
+   */
+  private function checkDeadline(): void {
+    if ($this->deadline !== NULL && microtime(TRUE) >= $this->deadline) {
+      throw new \RuntimeException(self::DEADLINE_MESSAGE);
     }
   }
 
@@ -536,11 +582,14 @@ final class SiteExporter {
       // dumper gets the tables' real names, with the database prefix.
       $prefix = $this->database->getPrefix();
       $sql = $work . '/database.sql';
+      $this->checkDeadline();
       $dumper($sql, array_map(fn (string $table): string => $prefix . $table, array_merge($left_out, ['config'])));
+      $this->checkDeadline();
       $handle = fopen($sql, 'ab');
       $scrubbed = $this->writeScrubbedConfig($handle, $secrets);
       fclose($handle);
       $this->run(['gzip', '-n', $sql]);
+      if ($this->progress) ($this->progress)('records', (int) filesize($sql . '.gz'));
 
       // Files.
       $public = (string) $this->fileSystem->realpath('public://');
@@ -550,10 +599,17 @@ final class SiteExporter {
         'private' => $private !== '' ? $this->packFiles($private, $work . '/private-files.tar.gz', self::PRIVATE_SKIP, $destination) : 0,
       ];
 
+      if ($this->progress) ($this->progress)('files', (int) filesize($work . '/public-files.tar.gz') + (is_file($work . '/private-files.tar.gz') ? (int) filesize($work . '/private-files.tar.gz') : 0));
+      $this->checkDeadline();
       $library_counts = NULL;
       if ($library) {
         mkdir($work . '/library', 0700);
         $library_counts = $library($work . '/library');
+        if ($this->progress) {
+          $bytes = 0;
+          foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($work . '/library', \FilesystemIterator::SKIP_DOTS)) as $file) if ($file->isFile()) $bytes += $file->getSize();
+          ($this->progress)('library', $bytes);
+        }
       }
 
       // The gate, part one: no known secret in any part.
@@ -583,8 +639,10 @@ final class SiteExporter {
         }
       }
 
+      $this->checkDeadline();
       $staged = $staging . '/' . $name . '.tar';
       $this->run(['tar', '-C', $staging, '-cf', $staged, $name]);
+      $this->checkDeadline();
       if (!chmod($staged, 0600)) {
         throw new \RuntimeException('Cannot make the archive private (chmod 0600). The archive was deleted.');
       }
@@ -674,6 +732,9 @@ final class SiteExporter {
       'format_version' => self::FORMAT_VERSION,
       'created' => $created->format(\DateTimeInterface::ATOM),
       'site_name' => $site_name,
+      // The site's own id: a restore refuses a copy whose id is not the one
+      // it was told to expect, whatever the site is called.
+      'site_uuid' => (string) $this->configFactory->get('system.site')->get('uuid'),
       'build' => [
         'commit' => $commit,
         'image' => 'ghcr.io/localnodes/os-knowledge-garden',
@@ -774,8 +835,9 @@ final class SiteExporter {
    * secret in a name reaches stderr in a form the secret scan does not match.
    */
   private function run(array $command): Process {
+    $this->checkDeadline();
     $process = new Process($command);
-    $process->setTimeout(3600);
+    $process->setTimeout($this->deadline === NULL ? 3600 : max(1, min(3600, $this->deadline - microtime(TRUE))));
     $process->run();
     if (!$process->isSuccessful()) {
       throw self::toolFailed($command[0], (int) $process->getExitCode());
