@@ -37,9 +37,9 @@ const SOURCE = resolve(repoRoot, 'html/modules/custom/localnodes_platform/tokens
 const OVERRIDES_REL = 'html/modules/custom/localnodes_platform/css/ln-overrides.css';
 const IMAGES_REL = 'html/modules/custom/localnodes_platform/images';
 const GENERATED_CSS_REL = 'html/modules/custom/localnodes_platform/css/ln-tokens.css';
-const OPTIONS = ['a', 'b', 'c'];
-/** The option Tom chose (BRAND.md section 12, card P, 2026-11-06). */
-const CHOSEN = 'b';
+const OPTIONS = ['a', 'b', 'c', 'teal'];
+/** The palette the token source holds: the landing page's teal (BRAND.md section 5, 2026-11-12), which replaced option B. */
+const CHOSEN = 'teal';
 
 const nuxtRepo = process.env.LN_SWAP_NUXT_REPO ?? resolve(repoRoot, '../localnodes-onboarding');
 const nuxtRef = process.env.LN_SWAP_NUXT_REF ?? 'origin/main';

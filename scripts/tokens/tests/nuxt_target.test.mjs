@@ -106,17 +106,18 @@ test(':root holds every light --ui-* role and .dark every dark one, from targets
   assert.match(dark, /--ui-primary: #[0-9a-f]{6};/);
 });
 
-test('the .dark roles are the approved landing band, not zinc (22.1-12, BRAND.md section 5, Tom card 7)', () => {
+test('the .dark roles are the landing page\'s dark band: near-black surfaces, mint primary, amber focus (BRAND.md section 5, 2026-11-12)', () => {
   const dark = block(read(generatedSibling()), '.dark');
+  const d = (name) => source.primitive.color.dark[name].$value.toLowerCase();
   const hex = (shade) => source.primitive.color.brand[shade].$value.toLowerCase();
-  // semantic.band.* names brand 950 (band), white (text), brand 200 (muted text) and brand 950 (button text). The answer card (brand 900)
-  // is not a --ui-bg-elevated role: that fill would fail P9 for the primary and error text.
-  assert.equal(source.semantic.band.bg.$value, '{primitive.color.brand.950}', 'the band the .dark roles must follow');
-  assert.match(dark, new RegExp(`--ui-bg: ${hex('950')};`), 'the band background is brand 950');
-  assert.match(dark, new RegExp(`--ui-text-muted: ${hex('200')};`), 'the band muted text is brand 200');
+  // semantic.band.* names the dark group's background, text and muted text, and brand 950 for the button text.
+  assert.equal(source.semantic.band.bg.$value, '{primitive.color.dark.bg}', 'the band the .dark roles must follow');
+  assert.match(dark, new RegExp(`--ui-bg: ${d('bg')};`), 'the band background is the landing near-black');
+  assert.match(dark, new RegExp(`--ui-text: ${d('text')};`), 'the band text');
+  assert.match(dark, new RegExp(`--ui-text-muted: ${d('muted')};`), 'the band muted text');
   assert.match(dark, new RegExp(`--ui-text-inverted: ${hex('950')};`), 'the band button text is brand 950');
-  assert.match(dark, /--ui-text: #ffffff;/, 'the band text is white');
-  assert.doesNotMatch(dark, /--ui-bg: #09090b;/, 'the zinc 950 interim band is gone');
+  assert.match(dark, new RegExp(`--ui-secondary: ${d('highlight')};`), 'the amber highlight');
+  assert.doesNotMatch(dark, /--ui-bg: #082f49;/, 'the palette B band blue is gone');
 });
 
 test('--check passes on a fresh file and prints OK for the Nuxt target', () => {

@@ -1,0 +1,161 @@
+{
+  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: the landing page's teal, replacing CANVAS-BRIEF.md palette B (chosen 2026-11-12, replacing the 11-06 blue). Brand 50-950 is the teal scale of the sign-up site's home-v5.css; the three socialblue chrome fields that were blue take teals of their own (drupal/color replaces by value, so its 15 fields must differ: the section bar #0e6f68 sits between 700 and 800, the second line is 950 with #0a3f3b, between 900 and 950, as its active text); the tint takes the app-look mock's Day tint; the dark roles take the landing's near-black surfaces, mint primary and amber focus. Deep-merged over localnodes.tokens.json by the swap proof; the same values are then the token source. It also sets targets.nuxt.light.--ui-bg-accented to neutral 100: the teal primary is 4.31:1 on Nuxt UI's default accented fill (neutral 200), 4.99:1 on the 100.",
+  "primitive": {
+    "color": {
+      "brand": {
+        "50": {
+          "$value": "#f0fdfa"
+        },
+        "100": {
+          "$value": "#ccfbf1"
+        },
+        "200": {
+          "$value": "#99f6e4"
+        },
+        "300": {
+          "$value": "#5eead4"
+        },
+        "400": {
+          "$value": "#2dd4bf"
+        },
+        "500": {
+          "$value": "#14b8a6"
+        },
+        "600": {
+          "$value": "#0d9488"
+        },
+        "700": {
+          "$value": "#0f766e"
+        },
+        "800": {
+          "$value": "#115e59"
+        },
+        "900": {
+          "$value": "#134e4a"
+        },
+        "950": {
+          "$value": "#042f2e"
+        }
+      },
+      "neutral": {
+        "tint": {
+          "$value": "#f0fdfa"
+        }
+      },
+      "chrome": {
+        "navbar-sec-bg": {
+          "$value": "#0e6f68"
+        },
+        "line2-bg": {
+          "$value": "#042f2e"
+        },
+        "line2-active-text": {
+          "$value": "#0a3f3b"
+        }
+      },
+      "dark": {
+        "$description": "The landing page's dark-band values (home-v5.css, .home-dark): near-black page and raised surfaces, warm off-white text, its muted text and lines, and the amber that marks focus and the secondary role there.",
+        "bg": {
+          "$value": "#09090b",
+          "$type": "color"
+        },
+        "well": {
+          "$value": "#0c0f0e",
+          "$type": "color"
+        },
+        "surface": {
+          "$value": "#121514",
+          "$type": "color"
+        },
+        "raised": {
+          "$value": "#1a1e1c",
+          "$type": "color"
+        },
+        "line": {
+          "$value": "#2a2f2c",
+          "$type": "color"
+        },
+        "line-strong": {
+          "$value": "#7d847f",
+          "$type": "color"
+        },
+        "text": {
+          "$value": "#fafaf9",
+          "$type": "color"
+        },
+        "muted": {
+          "$value": "#a9aeaa",
+          "$type": "color"
+        },
+        "highlight": {
+          "$value": "#fbbf24",
+          "$type": "color"
+        }
+      }
+    }
+  },
+  "semantic": {
+    "dark": {
+      "secondary": {
+        "$value": "{primitive.color.dark.highlight}"
+      },
+      "text-dimmed": {
+        "$value": "{primitive.color.dark.muted}"
+      },
+      "text-highlighted": {
+        "$value": "{primitive.color.dark.text}"
+      },
+      "bg-muted": {
+        "$value": "{primitive.color.dark.well}"
+      },
+      "bg-elevated": {
+        "$value": "{primitive.color.dark.surface}"
+      },
+      "bg-accented": {
+        "$value": "{primitive.color.dark.raised}"
+      },
+      "border": {
+        "$value": "{primitive.color.dark.line}"
+      },
+      "border-accented": {
+        "$value": "{primitive.color.dark.line-strong}"
+      }
+    },
+    "band": {
+      "bg": {
+        "$value": "{primitive.color.dark.bg}"
+      },
+      "text": {
+        "$value": "{primitive.color.dark.text}"
+      },
+      "text-muted": {
+        "$value": "{primitive.color.dark.muted}"
+      },
+      "link": {
+        "$value": "{primitive.color.brand.300}"
+      },
+      "button": {
+        "$value": "{primitive.color.brand.100}"
+      },
+      "button-text": {
+        "$value": "{primitive.color.brand.950}"
+      },
+      "focus": {
+        "$value": "{primitive.color.dark.highlight}"
+      },
+      "answer-card": {
+        "$value": "{primitive.color.dark.surface}"
+      },
+      "answer-card-text": {
+        "$value": "{primitive.color.dark.text}"
+      }
+    }
+  },
+  "targets": {
+    "nuxt": {
+      "light": {
+        "--ui-bg-accented": "{primitive.color.neutral.100}"
+      }
+    }
+  }
+}

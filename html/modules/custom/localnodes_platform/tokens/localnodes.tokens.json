@@ -4,18 +4,18 @@
   "primitive": {
     "color": {
       "brand": {
-        "$description": "Palette B, the darker Open Social blue (Tom, 2026-11-06, card P). Shades 50-600 and 950 are the 11-shade scale BRAND.md section 12 lists; 700/800/900 are the socialblue primary, link and secondary.",
-        "50": { "$value": "#f0f9ff", "$type": "color" },
-        "100": { "$value": "#e0f2fe", "$type": "color" },
-        "200": { "$value": "#bae6fd", "$type": "color" },
-        "300": { "$value": "#7dd3fc", "$type": "color" },
-        "400": { "$value": "#38bdf8", "$type": "color" },
-        "500": { "$value": "#0ea5e9", "$type": "color" },
-        "600": { "$value": "#0284c7", "$type": "color" },
-        "700": { "$value": "#176c93", "$type": "color" },
-        "800": { "$value": "#145f82", "$type": "color" },
-        "900": { "$value": "#0f4f6d", "$type": "color" },
-        "950": { "$value": "#082f49", "$type": "color" }
+        "$description": "The landing page's teal (chosen 2026-11-12), replacing palette B, the darker Open Social blue of 2026-11-06. The 11-shade scale is the sign-up site's home-v5.css teal: 700 is the primary, 800 the link, 900 the strong primary; 100 and 950 are the dark band's button and its text. Teal is the accent, used as sparingly as the blue was.",
+        "50": { "$value": "#f0fdfa", "$type": "color" },
+        "100": { "$value": "#ccfbf1", "$type": "color" },
+        "200": { "$value": "#99f6e4", "$type": "color" },
+        "300": { "$value": "#5eead4", "$type": "color" },
+        "400": { "$value": "#2dd4bf", "$type": "color" },
+        "500": { "$value": "#14b8a6", "$type": "color" },
+        "600": { "$value": "#0d9488", "$type": "color" },
+        "700": { "$value": "#0f766e", "$type": "color" },
+        "800": { "$value": "#115e59", "$type": "color" },
+        "900": { "$value": "#134e4a", "$type": "color" },
+        "950": { "$value": "#042f2e", "$type": "color" }
       },
       "accent": {
         "$description": "The highlight scale. 400 is socialblue's own #ffc142, so the Drupal accent and the Nuxt badge colour are one value.",
@@ -50,17 +50,29 @@
         "divider": { "$value": "#e6e6e6", "$type": "color" },
         "canvas": { "$value": "#f3f3f3", "$type": "color" },
         "white": { "$value": "#ffffff", "$type": "color" },
-        "tint": { "$value": "#f2f5f9", "$type": "color" }
+        "tint": { "$value": "#f0fdfa", "$type": "color", "$description": "The light tint behind the AI overview, import panels and notes: the app-look mock's Day tint (2026-11-12), the 50 teal."  }
       },
       "chrome": {
-        "$description": "socialblue's navigation fields that palette B keeps at their stock values (BRAND.md section 12), plus the section navbar background B changes.",
+        "$description": "socialblue's navigation fields. The dark top bar keeps its stock greys. The section bar and the second line were blue and are teal since 2026-11-12. drupal/color replaces colours by value, so these must differ from the 15 other fields: the section bar #0e6f68 sits between brand 700 and 800, the second line is brand 950, its active text #0a3f3b sits between 900 and 950.",
         "navbar-bg": { "$value": "#333333", "$type": "color" },
         "navbar-active-bg": { "$value": "#1f1f1f", "$type": "color" },
-        "navbar-sec-bg": { "$value": "#1d749a", "$type": "color" },
+        "navbar-sec-bg": { "$value": "#0e6f68", "$type": "color" },
         "navbar-sec-text": { "$value": "#f9f9f9", "$type": "color" },
-        "line2-bg": { "$value": "#004494", "$type": "color" },
+        "line2-bg": { "$value": "#042f2e", "$type": "color" },
         "line2-text": { "$value": "#fffff1", "$type": "color" },
-        "line2-active-text": { "$value": "#002f67", "$type": "color" }
+        "line2-active-text": { "$value": "#0a3f3b", "$type": "color" }
+      },
+      "dark": {
+        "$description": "The landing page's dark-band values (the sign-up site's home-v5.css, .home-dark; 2026-11-12): near-black page and raised surfaces, warm off-white text, its muted text and lines, and the amber that marks focus there. They serve the landing's dark bands and Nuxt UI's .dark roles; the app has no dark mode.",
+        "bg": { "$value": "#09090b", "$type": "color" },
+        "well": { "$value": "#0c0f0e", "$type": "color" },
+        "surface": { "$value": "#121514", "$type": "color" },
+        "raised": { "$value": "#1a1e1c", "$type": "color" },
+        "line": { "$value": "#2a2f2c", "$type": "color" },
+        "line-strong": { "$value": "#7d847f", "$type": "color" },
+        "text": { "$value": "#fafaf9", "$type": "color" },
+        "muted": { "$value": "#a9aeaa", "$type": "color" },
+        "highlight": { "$value": "#fbbf24", "$type": "color" }
       },
       "status": {
         "danger": { "$value": "#b42318", "$type": "color" },
@@ -162,27 +174,27 @@
     "dark": {
       "$description": "Nuxt UI's .dark role values. The sign-up site's task pages are all light; these serve the landing page's dark bands only (BRAND.md section 5). Since 22.1-12 the page, text, muted text, button text and primary roles are the approved semantic.band values (Tom, card 7); the answer card (band.answer-card) is drawn with the ln-brand-900 palette utility, because pointing --ui-bg-elevated at it would put the primary and error text roles under 4.5:1 on that fill (P9).",
       "primary": { "$value": "{semantic.band.button}" },
-      "secondary": { "$value": "{primitive.color.accent.400}" },
+      "secondary": { "$value": "{primitive.color.dark.highlight}" },
       "text": { "$value": "{semantic.band.text}" },
       "text-muted": { "$value": "{semantic.band.text-muted}" },
       "text-toned": { "$value": "{primitive.color.neutral.300}" },
       "text-dimmed": {
-        "$value": "{primitive.color.neutral.400}",
+        "$value": "{primitive.color.dark.muted}",
         "$description": "Nuxt UI's own dark dimmed text is the 500 neutral (4.12:1 on the page, fails 4.5:1); the 400 neutral passes (CANVAS-BRIEF section 4, P9)."
       },
-      "text-highlighted": { "$value": "{primitive.color.neutral.white}" },
+      "text-highlighted": { "$value": "{primitive.color.dark.text}" },
       "text-inverted": { "$value": "{semantic.band.button-text}" },
       "bg": { "$value": "{semantic.band.bg}" },
-      "bg-muted": { "$value": "{primitive.color.neutral.900}" },
-      "bg-elevated": { "$value": "{primitive.color.neutral.800}" },
-      "bg-accented": { "$value": "{primitive.color.neutral.700}" },
+      "bg-muted": { "$value": "{primitive.color.dark.well}" },
+      "bg-elevated": { "$value": "{primitive.color.dark.surface}" },
+      "bg-accented": { "$value": "{primitive.color.dark.raised}" },
       "border": {
-        "$value": "{primitive.color.neutral.800}",
+        "$value": "{primitive.color.dark.line}",
         "decorative": true,
         "reason": "Nuxt UI's --ui-border draws a hairline between sections on the dark page. Like the light divider it is never a control's only boundary (the input outline is border-accented, which has its own 3:1 pairing), so it carries no contrast pairing."
       },
       "border-accented": {
-        "$value": "{primitive.color.neutral.400}",
+        "$value": "{primitive.color.dark.line-strong}",
         "$description": "main.css set the 700 neutral here (1.91:1 on the zinc page, fails 3:1); CANVAS-BRIEF section 4 P9 proposed the 500 neutral. On the approved band blue (22.1-12) the 500 neutral is 2.87:1 and fails 3:1, so the 400 neutral is used."
       },
       "error": { "$value": "{primitive.color.status.danger-on-dark}" },
@@ -191,15 +203,15 @@
     },
     "band": {
       "$description": "The landing page's dark hero band (Tom, 2026-11-06, card 7): BRAND.md section 5 'Dark mode' roles, every pairing measured in CANVAS-BRIEF section 4 'Option B dark band'.",
-      "bg": { "$value": "{primitive.color.brand.950}" },
-      "text": { "$value": "{primitive.color.neutral.white}" },
-      "text-muted": { "$value": "{primitive.color.brand.200}" },
-      "link": { "$value": "{primitive.color.brand.400}" },
-      "button": { "$value": "{primitive.color.brand.400}" },
+      "bg": { "$value": "{primitive.color.dark.bg}" },
+      "text": { "$value": "{primitive.color.dark.text}" },
+      "text-muted": { "$value": "{primitive.color.dark.muted}" },
+      "link": { "$value": "{primitive.color.brand.300}" },
+      "button": { "$value": "{primitive.color.brand.100}" },
       "button-text": { "$value": "{primitive.color.brand.950}" },
-      "focus": { "$value": "{primitive.color.accent.400}" },
-      "answer-card": { "$value": "{primitive.color.brand.900}" },
-      "answer-card-text": { "$value": "{primitive.color.brand.50}" },
+      "focus": { "$value": "{primitive.color.dark.highlight}" },
+      "answer-card": { "$value": "{primitive.color.dark.surface}" },
+      "answer-card-text": { "$value": "{primitive.color.dark.text}" },
       "source-chip": { "$value": "{primitive.color.brand.100}" },
       "source-chip-text": { "$value": "{primitive.color.brand.950}" },
       "coming-chip": { "$value": "{primitive.color.accent.400}" },
@@ -268,7 +280,7 @@
       "--ln-chat-clearance": "{primitive.layout.chat-clearance}"
     },
     "nuxt": {
-      "$description": "Nuxt UI --ui-* roles for the sign-up site (22.1-08 renders them). Light is the task pages; dark and band serve the landing page.",
+      "$description": "Nuxt UI --ui-* roles for the sign-up site (22.1-08 renders them). Light is the task pages; dark and band serve the landing page. Light --ui-bg-accented is the 100 neutral, not Nuxt UI's 200: the teal primary is 4.31:1 on the 200 and 4.99:1 on the 100 (the same route palette A took).",
       "dark-mode-rendered": {
         "$value": false,
         "$description": "Is Nuxt dark mode rendered as a page theme? false today (22.1-08: the sign-up pages are light; the dark bands never reach --ui-bg-accented). While false, check_contrast.mjs EXCLUDES three dark pairs that fail on --ui-bg-accented (pairings.mjs EXCLUDED). Set it to true when a dark theme ships and the gate fails until those pairs pass. Not a colour and not generated into any file."
@@ -285,7 +297,7 @@
         "--ui-bg": "{semantic.surface}",
         "--ui-bg-muted": "{semantic.canvas}",
         "--ui-bg-elevated": "{primitive.color.neutral.100}",
-        "--ui-bg-accented": "{primitive.color.neutral.200}",
+        "--ui-bg-accented": "{primitive.color.neutral.100}",
         "--ui-border": "{semantic.divider}",
         "--ui-border-accented": "{semantic.border-control}",
         "--ui-error": "{semantic.danger}",
