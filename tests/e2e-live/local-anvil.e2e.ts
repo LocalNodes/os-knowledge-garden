@@ -85,6 +85,9 @@ const test = base.extend<MetaMaskFixtures>({
       recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } },
       viewport: { width: 1280, height: 720 },
     });
+    // A persistent context does not take the config's action and navigation limits; set them here.
+    context.setDefaultTimeout(testInfo.project.use.actionTimeout ?? 60_000);
+    context.setDefaultNavigationTimeout(testInfo.project.use.navigationTimeout ?? 60_000);
     // Diagnostics (21-45 MetaMask set-up RCA): every request and failure from pages and, with
     // PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1, from MetaMask's service worker; and
     // every console line. Written next to the trace, pass or fail.

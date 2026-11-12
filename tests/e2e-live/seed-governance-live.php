@@ -22,6 +22,8 @@
  *
  * - Module safe_governance_group (the Votes tab and its routes) is enabled when it isn't:
  *   localnodes_web3 doesn't depend on it.
+ * - When siwe_login_waap is on, its show_siwe_wallet_button setting is turned on, so the
+ *   browser-wallet sign-in button the judge clicks is on the sign-in page.
  * - Users, active and verified:
  *   - ci-organizer ("Nightly Organizer"), linked to account 1, with a role holding
  *     'administer safe governance' (the admin-only test-group overrides, D-16, D-21, D-32);
@@ -86,6 +88,15 @@ if (!$handler->moduleExists('safe_governance')) {
 }
 if (!$handler->moduleExists('safe_governance_group')) {
   \Drupal::service('module_installer')->install(['safe_governance_group']);
+}
+
+// The judge signs in with a browser wallet (the "Sign in with Ethereum" button). When WaaP
+// sign-in is on, siwe_login_waap hides that button unless this setting allows it, so the judge
+// would wait for a button that never comes. WaaP sign-in itself is checked by hand, not here.
+if ($handler->moduleExists('siwe_login_waap')) {
+  \Drupal::configFactory()->getEditable('siwe_login_waap.settings')
+    ->set('show_siwe_wallet_button', TRUE)
+    ->save();
 }
 
 // The role that shows the admin-only test-group overrides on "Set up group voting".
