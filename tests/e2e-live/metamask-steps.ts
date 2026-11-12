@@ -100,7 +100,7 @@ function notificationPage(context: BrowserContext, extensionId: string): Page | 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** The value of `p`, or 'timeout' if it hasn't settled within `ms`. A rejection is passed on. */
-async function within<T>(p: Promise<T>, ms: number): Promise<{ value: T } | 'timeout'> {
+export async function within<T>(p: Promise<T>, ms: number): Promise<{ value: T } | 'timeout'> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -116,6 +116,18 @@ async function within<T>(p: Promise<T>, ms: number): Promise<{ value: T } | 'tim
 
 /** How long closing one page opened here may take. */
 const CLOSE_MS = 5_000;
+
+/**
+ * How long a call on a prompt window may take beyond its own Playwright timeout, and how long a
+ * check with no timeout of its own (isVisible) may take. A window that doesn't answer within
+ * this has stopped answering: the rest of that pass is skipped, never retried in the same pass.
+ */
+const SLACK_MS = 2_000;
+const PROBE_MS = 5_000;
+/** How long the caller's own `done()` check may take; a slower answer counts as "not yet". */
+const DONE_MS = 10_000;
+/** How long promptState waits on each of its checks. */
+const STATE_MS = 1_000;
 
 /**
  * The request a prompt window shows, from its address. MetaMask routes each request by its id
@@ -137,7 +149,9 @@ async function promptState(open: Page | undefined): Promise<string> {
   if (!open || open.isClosed()) return 'no prompt open';
   const shown: string[] = [];
   for (const id of STATE_IDS) {
-    if (await open.getByTestId(id).isVisible().catch(() => false)) shown.push(id);
+    const seen = await within(open.getByTestId(id).isVisible(), STATE_MS).catch(() => ({ value: false }));
+    if (seen === 'timeout') return 'a prompt is open and not answering';
+    if (seen.value) shown.push(id);
   }
   return `a prompt is open, showing ${shown.join(' ') || 'none of the known buttons'}`;
 }
@@ -168,6 +182,15 @@ function isClosedError(e: unknown): boolean {
  * checked at the top of every pass. At `timeoutMs` it throws: nothing showed up, `done()` is
  * still false, or a prompt is still open and unconfirmed. Opening and closing a page are bounded
  * too, and it never returns while a page it opened is still open.
+ *
+ * A prompt window can stop answering: a call on it neither returns nor fails. So every call on
+ * it is also raced against a timer of our own. A call that loses the race is a stall: the rest
+ * of that pass is skipped and the stall is counted, never taken as closed, done or clicked.
+ * A click that stalls is not counted as a press, but it may have run, so that button is never
+ * pressed again on that request. `done()` is raced too; a slow answer counts as "not yet". At
+ * the deadline the error says how many times the window stopped answering. Closing the window
+ * to get it answering again is not done: MetaMask refuses the pending request when its window
+ * is closed by anything but itself.
  */
 export async function confirmPrompts(
   context: BrowserContext,
@@ -202,13 +225,28 @@ export async function confirmPrompts(
   };
   const notClosed = () => new Error(`${kind}: a wallet page opened here could not be closed within ${CLOSE_MS} ms`);
   let failed = false;
+  // Calls on the prompt window that neither returned nor failed in time, and `done()` checks
+  // that didn't answer in time.
+  let stalls = 0;
+  let doneStalls = 0;
+  const pastDeadline = () => Date.now() - start > timeoutMs;
+  const isDone = async (): Promise<boolean> => {
+    if (!opts.done) return false;
+    const check = opts.done;
+    const answer = await within(Promise.resolve().then(() => check()), DONE_MS);
+    if (answer !== 'timeout') return answer.value;
+    doneStalls++;
+    return false;
+  };
+  const stallNote = () =>
+    (stalls ? `; the prompt window stopped answering ${stalls} time(s)` : '') + (doneStalls ? `; the done check didn't answer ${doneStalls} time(s)` : '');
   try {
     for (;;) {
-      if (opts.done && (await opts.done())) return;
+      if (await isDone()) return;
       const open = notificationPage(context, extensionId);
-      if (Date.now() - start > timeoutMs) {
-        if (opts.done) throw new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s); ${await promptState(open)})`);
-        if (open) throw new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms`);
+      if (pastDeadline()) {
+        if (opts.done) throw new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s); ${await promptState(open)}${stallNote()})`);
+        if (open) throw new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms${stallNote()}`);
         if (clicks === 0) throw new Error(`no MetaMask prompt to confirm for ${kind} within ${timeoutMs} ms`);
         return;
       }
@@ -216,15 +254,27 @@ export async function confirmPrompts(
       if (prompt) {
         // Each step on the prompt goes through `on`: it skips the step once the page is closed,
         // and turns a "has been closed" error into `gone`, so the closed page is left alone.
-        // Any other error is thrown: it isn't evidence that the prompt was confirmed.
+        // Any other error is thrown: it isn't evidence that the prompt was confirmed. A step
+        // that doesn't settle within `capMs` sets `hung`, and every later step in this pass is
+        // skipped; so is every step once the deadline has passed.
         let gone = false;
-        const on = async <T>(fallback: T, step: () => Promise<T>): Promise<T> => {
+        let hung = false;
+        const on = async <T>(fallback: T, step: () => Promise<T>, capMs: number): Promise<T> => {
           if (gone || prompt.isClosed()) {
             gone = true;
             return fallback;
           }
+          if (hung || pastDeadline()) return fallback;
           try {
-            return await step();
+            const settled = await within(step(), capMs);
+            if (settled !== 'timeout') return settled.value;
+            if (prompt.isClosed()) {
+              gone = true;
+              return fallback;
+            }
+            hung = true;
+            stalls++;
+            return fallback;
           } catch (e) {
             if (prompt.isClosed() || isClosedError(e)) {
               gone = true;
@@ -234,41 +284,66 @@ export async function confirmPrompts(
             throw categorized(e);
           }
         };
-        await on(undefined, () => prompt.waitForLoadState('domcontentloaded', { timeout: left(30_000) }));
+        // A Playwright call with its own timeout is raced a little longer, so its own timeout
+        // normally ends it first; a check with no timeout of its own gets PROBE_MS.
+        const timed = (ms: number) => {
+          const timeout = left(ms);
+          return { timeout, capMs: timeout + SLACK_MS };
+        };
+        const load = timed(30_000);
+        await on(undefined, () => prompt.waitForLoadState('domcontentloaded', { timeout: load.timeout }), load.capMs);
         // A plain timer, not prompt.waitForTimeout: the window may close during this wait.
-        if (!gone) await sleep(1_500);
-        const text = (await on('', () => prompt.locator('body').innerText({ timeout: left(10_000) }))).replace(/[ \t]+/g, ' ');
+        if (!gone && !hung) await sleep(1_500);
+        const read = timed(10_000);
+        const text = (await on('', () => prompt.locator('body').innerText({ timeout: read.timeout }), read.capMs)).replace(/[ \t]+/g, ' ');
         const request = requestOf(prompt);
         const pressed = confirmed?.page === prompt && confirmed.request === request ? confirmed.buttons : new Set<string>();
         let clicked = '';
-        if (!gone) {
+        if (!gone && !hung) {
           const scroll = prompt.getByTestId('confirm-scroll-to-bottom__button');
-          if (await on(false, () => scroll.isVisible())) {
-            await on(undefined, () => scroll.click({ timeout: left(10_000) }));
+          if (await on(false, () => scroll.isVisible(), PROBE_MS)) {
+            const press = timed(10_000);
+            await on(undefined, () => scroll.click({ timeout: press.timeout }), press.capMs);
             await sleep(1_000);
             continue; // the deadline check at the top bounds a scroll button that stays visible
           }
           const ack = prompt.getByTestId('alert-modal-acknowledge-checkbox');
-          if (await on(false, () => ack.isVisible())) await on(undefined, () => ack.check({ timeout: left(10_000) }));
+          if (await on(false, () => ack.isVisible(), PROBE_MS)) {
+            const tick = timed(10_000);
+            await on(undefined, () => ack.check({ timeout: tick.timeout }), tick.capMs);
+          }
           for (const id of CONFIRM_BUTTONS) {
-            if (gone) break;
+            if (gone || hung) break;
             const button = prompt.getByTestId(id);
-            if ((await on(false, () => button.isVisible())) && (await on(false, () => button.isEnabled({ timeout: left(5_000) })))) {
+            const enabled = timed(5_000);
+            if ((await on(false, () => button.isVisible(), PROBE_MS)) && (await on(false, () => button.isEnabled({ timeout: enabled.timeout }), enabled.capMs))) {
               // Already pressed on this request: it must close or move on before anything else.
               if (pressed.has(id)) break;
               // Counts if the click resolved, or if it ran and the window closed on it (MetaMask
               // closes the prompt on the confirm). A click skipped because the page was already
-              // closed doesn't count, and any other error is thrown by `on`.
+              // closed doesn't count, and any other error is thrown by `on`. A click that ran and
+              // stalled isn't counted either, but it may have pressed the button, so the button
+              // is latched for this request and never pressed again.
               let ran = false;
-              const resolved = await on(false, () => {
-                ran = true;
-                return button.click({ timeout: left(30_000) }).then(() => true);
-              });
+              const press = timed(30_000);
+              const resolved = await on(
+                false,
+                () => {
+                  ran = true;
+                  return button.click({ timeout: press.timeout }).then(() => true);
+                },
+                press.capMs,
+              );
               if (resolved || (ran && gone)) clicked = id;
+              else if (ran && hung) {
+                pressed.add(id);
+                confirmed = { page: prompt, request, buttons: pressed };
+              }
               break;
             }
           }
         }
+        if (hung) console.log(`[metamask] ${kind}: the prompt window stopped answering (${stalls} time(s) so far)`);
         if (gone && !clicked) {
           // The prompt closed under us (MetaMask closes it after a confirm): it's done. Restart
           // the idle clock so the next prompt in a chain has `idleMs` to open.
@@ -307,7 +382,9 @@ export async function confirmPrompts(
         openedAt = Date.now();
         last = Date.now();
         const url = `chrome-extension://${extensionId}/notification.html`;
-        const loaded = await page.goto(url, { timeout: left(15_000) }).then(() => true, () => false);
+        const gotoMs = left(15_000);
+        const reached = await within(page.goto(url, { timeout: gotoMs }).then(() => true, () => false), gotoMs + SLACK_MS);
+        const loaded = reached !== 'timeout' && reached.value;
         // A page that didn't reach the prompt page isn't found as a prompt: close it now.
         if ((!loaded || page.isClosed() || !page.url().startsWith(url)) && !(await closeOwned(page))) throw notClosed();
       }

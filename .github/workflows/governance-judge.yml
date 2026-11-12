@@ -118,7 +118,7 @@ jobs:
         run: |
           set -uo pipefail
           for i in $(seq 1 120); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/user/login || true)
+            code=$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' http://localhost:8080/user/login || true)
             if [ "$code" = "200" ]; then echo "The site answered 200 after about $((i * 10)) s."; exit 0; fi
             if [ -z "$(docker compose -f docker-compose.yaml -f tests/e2e-live/compose.ci.yaml -f tests/e2e-live/compose.governance.yaml ps -q --status running opensocial)" ]; then
               echo "The opensocial container is not running." >&2

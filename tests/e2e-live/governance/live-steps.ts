@@ -2,8 +2,17 @@
 // real MetaMask. Log lines hold fixed fields only: the CI logs are public (failure-dump.ts).
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { approveAlertKey, setupRouteKey } from '../failure-dump';
-import { confirmPrompts, type PromptLog } from '../metamask-steps';
+import { confirmPrompts, within, type PromptLog } from '../metamask-steps';
 import { COPY, fill, pattern, setupProgress } from './pages';
+
+/** How long one check on the page may take; a slower one counts as "nothing seen yet". */
+const CHECK_MS = 5_000;
+
+/** `p`'s value, or `fallback` if it fails or hasn't settled within `ms`. */
+async function settle<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  const r = await within(p, ms).catch(() => 'timeout' as const);
+  return r === 'timeout' ? fallback : r.value;
+}
 
 /** Page errors a second round may follow: a passing fault on the site or in the wallet's RPC. */
 const RETRYABLE = ['server', 'wallet_rpc'];
@@ -46,7 +55,7 @@ export async function approveSetup(page: Page, context: BrowserContext, extensio
   let watching = true;
   const watch = (async () => {
     while (watching) {
-      for (const text of await page.getByText(pattern(COPY.confirmation, true)).allInnerTexts().catch(() => [])) {
+      for (const text of await settle(page.getByText(pattern(COPY.confirmation, true)).allInnerTexts(), CHECK_MS, [] as string[])) {
         const index = known.indexOf(text.trim());
         if (index >= 0) seen.add(index + 1);
         else others++;
@@ -61,7 +70,7 @@ export async function approveSetup(page: Page, context: BrowserContext, extensio
       await v7.approveTheSetup.click({ timeout: 30_000 });
       let started = false;
       for (const end = Date.now() + 15_000; !started && Date.now() < end; ) {
-        started = messagesAnswers > answersBefore || (await alert.count()) > 0 || (await v7.approveTheSetup.isHidden());
+        started = messagesAnswers > answersBefore || (await settle(alert.count(), CHECK_MS, 0)) > 0 || (await settle(v7.approveTheSetup.isHidden(), CHECK_MS, false));
         if (!started) await page.waitForTimeout(200);
       }
       if (!started) {
@@ -73,11 +82,11 @@ export async function approveSetup(page: Page, context: BrowserContext, extensio
       try {
         await confirmPrompts(context, extensionId, 'approveSetup', log, {
           done: async () => {
-            if (await alert.count()) {
+            if (await settle(alert.count(), CHECK_MS, 0)) {
               shown = approveAlertKey((await alert.first().textContent({ timeout: 5_000 })) ?? '');
               throw new Error(`${who}: the page showed the "${shown}" error`);
             }
-            return v7.youApprovedTheSetup.isVisible();
+            return settle(v7.youApprovedTheSetup.isVisible(), CHECK_MS, false);
           },
           timeoutMs: 300_000,
           reopenIdleMs: 20_000,
@@ -91,10 +100,10 @@ export async function approveSetup(page: Page, context: BrowserContext, extensio
     }
   } finally {
     watching = false;
-    await watch;
+    await settle(watch, 2 * CHECK_MS, undefined);
     page.off('response', onResponse);
-    const hidden = await v7.approveTheSetup.isHidden().catch(() => true);
-    const alerts = await alert.count().catch(() => -1);
+    const hidden = await settle(v7.approveTheSetup.isHidden(), CHECK_MS, true);
+    const alerts = await settle(alert.count(), CHECK_MS, -1);
     console.log(`[judge] ${who} approve: ${[...notes, `routes ${routes.join(' ') || 'none'}`, `button ${hidden ? 'hidden' : 'shown'}`, `alerts ${alerts}`, `confirmations seen ${[...seen].sort().join(',') || 'none'}`, `other confirmation texts ${others}`].join('; ')}`);
   }
   const sorted = [...seen].sort().map((n) => known[n - 1]);

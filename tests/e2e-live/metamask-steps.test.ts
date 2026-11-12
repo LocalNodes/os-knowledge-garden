@@ -15,6 +15,8 @@ interface FakePage {
   confirms: number;
   /** Calls made after the page closed; each one throws, and the test requires none. */
   callsAfterClose: string[];
+  /** Every call made, by name. */
+  calls: string[];
 }
 
 /**
@@ -25,9 +27,9 @@ interface FakePage {
  */
 function fakePrompt(
   button: string | null,
-  opts: { clickError?: string; scrollStays?: boolean; closeOnClick?: boolean; closeBeforeClick?: boolean; stays?: boolean; nextTexts?: string[]; drift?: boolean } = {},
+  opts: { clickError?: string; scrollStays?: boolean; closeOnClick?: boolean; closeBeforeClick?: boolean; stays?: boolean; nextTexts?: string[]; drift?: boolean; hang?: string } = {},
 ): { page: unknown; state: FakePage } {
-  const state: FakePage = { closed: false, confirms: 0, callsAfterClose: [] };
+  const state: FakePage = { closed: false, confirms: 0, callsAfterClose: [], calls: [] };
   // `stays`: the window stays open on the same screen after the confirm. `nextTexts`: the
   // window stays open and shows each of these requests in turn, one per confirm. `drift`: the
   // screen's incidental text (a fee estimate) changes on every read; the request stays the same.
@@ -37,7 +39,10 @@ function fakePrompt(
   const current = () => Math.min(state.confirms, texts.length - 1);
   // The one call that races the close throws but isn't counted: no caller can avoid it.
   // Every call after that, once isClosed() already says true, is counted.
+  // `hang`: the call of this name never settles, as on a prompt window that stopped answering.
+  const never = new Promise<never>(() => {});
   const guard = (name: string): void => {
+    state.calls.push(name);
     if (closing && !state.closed) {
       state.closed = true;
       throw new Error(CLOSED);
@@ -49,13 +54,14 @@ function fakePrompt(
   };
   const call = async <T>(name: string, value: T): Promise<T> => {
     guard(name);
+    if (name === opts.hang) return never;
     return value;
   };
   const locator = (id: string) => ({
     // `button: null` is a prompt with no confirm button (it stays unconfirmed); `scrollStays`
     // keeps the scroll-to-bottom button visible whatever is clicked.
     isVisible: () => call(`isVisible(${id})`, id === button || (!!opts.scrollStays && id === SCROLL)),
-    isEnabled: async () => {
+    isEnabled: async (_o?: unknown) => {
       const enabled = await call(`isEnabled(${id})`, true);
       // The window closes right after the check, before the confirm is clicked (rejected
       // elsewhere, or closed by MetaMask), so the click is skipped.
@@ -63,8 +69,9 @@ function fakePrompt(
       return enabled;
     },
     check: () => call(`check(${id})`, undefined),
-    click: async () => {
+    click: async (_o?: unknown) => {
       guard(`click(${id})`);
+      if (`click(${id})` === opts.hang) return never;
       if (id === SCROLL) return;
       if (opts.clickError) throw new Error(opts.clickError);
       state.confirms++;
@@ -292,5 +299,54 @@ describe('confirmPrompts', () => {
     // The page appears 9 s after it was asked for; give its close a moment after that.
     await new Promise((r) => setTimeout(r, askedAt + 9_500 - Date.now()));
     expect(late.state.closed).toBe(true);
+  }, 30_000);
+
+  // A prompt window that stops answering: one call on it never settles. Each case must end with
+  // the "not done" error near the deadline, never hang. On the old code these hung until the
+  // vitest timeout.
+  const BUTTON = 'confirm-footer-button';
+  const ACK = 'alert-modal-acknowledge-checkbox';
+  const HANGS = ['waitForLoadState', 'innerText', `isVisible(${SCROLL})`, `isVisible(${ACK})`, `isVisible(${BUTTON})`, `isEnabled(${BUTTON})`];
+  for (const hang of HANGS) {
+    it(`ends near the deadline when ${hang} never settles`, async () => {
+      const prompt = fakePrompt(BUTTON, { hang });
+      const log: PromptLog = { clicks: [], warnings: [] };
+      const began = Date.now();
+      await expect(
+        confirmPrompts(fakeContext(() => [prompt.page]), EXT, 'stuck window', log, { done: () => false, idleMs: 500, timeoutMs: 3_000 }),
+      ).rejects.toThrow(/^stuck window: not done within 3000 ms \(0 MetaMask click\(s\); .*; the prompt window stopped answering [1-9]\d* time\(s\)\)$/);
+      expect(Date.now() - began).toBeLessThan(3_000 + 8_000);
+      expect(prompt.state.confirms).toBe(0);
+      expect(log.clicks).toEqual([]);
+    }, 20_000);
+  }
+
+  it('says the prompt is not answering when its state check never settles', async () => {
+    const prompt = fakePrompt(BUTTON, { hang: `isVisible(${BUTTON})` });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(
+      confirmPrompts(fakeContext(() => [prompt.page]), EXT, 'stuck state', log, { done: () => false, idleMs: 500, timeoutMs: 3_000 }),
+    ).rejects.toThrow('a prompt is open and not answering');
+  }, 20_000);
+
+  it('presses a click that never settles only once, and does not count it', async () => {
+    const prompt = fakePrompt(BUTTON, { hang: `click(${BUTTON})` });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const began = Date.now();
+    await expect(
+      confirmPrompts(fakeContext(() => [prompt.page]), EXT, 'stuck click', log, { done: () => false, idleMs: 500, timeoutMs: 8_000 }),
+    ).rejects.toThrow(/^stuck click: not done within 8000 ms \(0 MetaMask click\(s\); a prompt is open, showing confirm-footer-button; the prompt window stopped answering 1 time\(s\)\)$/);
+    expect(Date.now() - began).toBeLessThan(8_000 + 8_000);
+    expect(prompt.state.calls.filter((c) => c === `click(${BUTTON})`)).toHaveLength(1);
+    expect(log.clicks).toEqual([]);
+  }, 30_000);
+
+  it('treats a done() check that never settles as "not yet", and still ends at the deadline', async () => {
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const began = Date.now();
+    await expect(
+      confirmPrompts(fakeContext(() => []), EXT, 'stuck done', log, { done: () => new Promise<boolean>(() => {}), idleMs: 500, timeoutMs: 3_000 }),
+    ).rejects.toThrow(/^stuck done: not done within 3000 ms \(0 MetaMask click\(s\); no prompt open; the done check didn't answer 1 time\(s\)\)$/);
+    expect(Date.now() - began).toBeLessThan(3_000 + 10_000 + 3_000);
   }, 30_000);
 });

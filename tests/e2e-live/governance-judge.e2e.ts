@@ -52,7 +52,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { liveBrowserArgs } from './cache-live';
 import { GOVERNANCE_CACHE_NAME } from './cache-governance';
 import { ACCOUNT_NAMES, GOVERNANCE_WALLET_PASSWORD } from './wallet-setup/live/governance.setup';
-import { confirmPrompts, openHome, switchAccount, type PromptLog } from './metamask-steps';
+import { confirmPrompts, openHome, switchAccount, within, type PromptLog } from './metamask-steps';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup } from './governance/live-steps';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -298,6 +298,9 @@ const test = base.extend<{ extensionId: string }>({
       baseURL: testInfo.project.use.baseURL,
       viewport: { width: 1280, height: 720 },
     });
+    // A persistent context does not take the config's action and navigation limits; set them here.
+    context.setDefaultTimeout(testInfo.project.use.actionTimeout ?? 60_000);
+    context.setDefaultNavigationTimeout(testInfo.project.use.navigationTimeout ?? 60_000);
     try {
       const extensionId = await getExtensionId(context, 'MetaMask');
       const page = context.pages()[0] ?? (await context.newPage());
@@ -323,14 +326,29 @@ function metaMaskDriver(context: BrowserContext, extensionId: string, log: Promp
 }
 
 /** What MetaMask shares with the site's page, in its order (the selected account first). */
+/** How long a read from the wallet through the site's page may take. */
+const WALLET_READ_MS = 30_000;
+
+/** `p`'s value; an error with a fixed message if it hasn't settled within `ms`. */
+async function bounded<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  const r = await within(p, ms);
+  if (r === 'timeout') throw new Error(`${what} did not answer within ${ms} ms`);
+  return r.value;
+}
+
 async function siteAccounts(page: Page): Promise<string[]> {
-  return (await page.evaluate(() =>
-    (window as unknown as { ethereum: { request(a: unknown): Promise<string[]> } }).ethereum.request({ method: 'eth_accounts' }),
-  ).catch(fixed)) as string[];
+  return (await bounded(
+    page.evaluate(() =>
+      (window as unknown as { ethereum: { request(a: unknown): Promise<string[]> } }).ethereum.request({ method: 'eth_accounts' }),
+    ).catch(fixed),
+    WALLET_READ_MS,
+    'the wallet (eth_accounts)',
+  )) as string[];
 }
 
 /** SIWE through the site's own button (copied from live-sepolia.e2e.ts). */
 async function signInWithMetaMask(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<void> {
+  console.log('[judge] sign in: opening the sign-in page');
   await page.goto('/user/login');
   const button = page.locator('#siwe-login-button');
   await button.waitFor({ state: 'visible' });
@@ -338,16 +356,23 @@ async function signInWithMetaMask(page: Page, context: BrowserContext, extension
   const nav = page
     .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 180_000 })
     .then(() => { navigated = true; }, () => undefined);
+  console.log('[judge] sign in: pressing the sign-in button');
   await button.click();
   await confirmPrompts(context, extensionId, 'signIn', log, { done: () => navigated, timeoutMs: 180_000 });
   await nav;
+  console.log('[judge] sign in: the page moved on');
   await page.waitForLoadState('load');
   await expect(page.locator('#siwe-login-button')).toHaveCount(0);
 }
 
 /** Asks MetaMask, from the site's page, to put this site on Ethereum Sepolia (EIP-3326). */
 async function switchSiteToSepolia(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<string> {
-  const chain = () => page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' })).catch(fixed);
+  const chain = () =>
+    bounded(
+      page.evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<string> } }).ethereum.request({ method: 'eth_chainId' })).catch(fixed),
+      WALLET_READ_MS,
+      'the wallet (eth_chainId)',
+    );
   if ((await chain()) === SEPOLIA_HEX) return SEPOLIA_HEX;
   let done = false;
   const ask = page
@@ -363,16 +388,26 @@ async function switchSiteToSepolia(page: Page, context: BrowserContext, extensio
  * the site's page to share it (wallet_requestPermissions), and checks the site sees it first.
  */
 async function useAccount(page: Page, context: BrowserContext, extensionId: string, log: PromptLog, index: 0 | 1 | 2, address: string): Promise<void> {
-  const wallet = await context.newPage();
+  console.log(`[judge] use account ${index + 1}: selecting it in the wallet`);
+  const wallet = await bounded(context.newPage(), 30_000, 'a new wallet page');
   try {
-    await openHome(wallet, extensionId, GOVERNANCE_WALLET_PASSWORD);
-    await switchAccount(wallet, ACCOUNT_NAMES[index]);
+    await bounded(
+      (async () => {
+        await openHome(wallet, extensionId, GOVERNANCE_WALLET_PASSWORD);
+        await switchAccount(wallet, ACCOUNT_NAMES[index]);
+      })(),
+      120_000,
+      'the wallet home page',
+    );
   } finally {
-    await wallet.close();
+    // Bounded, and never in place of an error from the steps above.
+    if ((await within(wallet.close(), 10_000).catch(() => 'timeout' as const)) === 'timeout') console.log('[judge] the wallet home page did not close within 10000 ms');
   }
-  await page.bringToFront();
+  await bounded(page.bringToFront(), 10_000, 'bringing the site page to the front');
   if (!/^https?:/.test(page.url())) await page.goto('/user/login');
+  console.log(`[judge] use account ${index + 1}: reading the accounts the site sees`);
   const shared = await siteAccounts(page);
+  console.log(`[judge] use account ${index + 1}: ${shared[0]?.toLowerCase() === address.toLowerCase() ? 'already shared' : 'asking the wallet to share it'}`);
   if (shared[0]?.toLowerCase() !== address.toLowerCase()) {
     let done = false;
     const ask = page
@@ -380,6 +415,7 @@ async function useAccount(page: Page, context: BrowserContext, extensionId: stri
       .catch(fixed)
       .finally(() => { done = true; });
     await Promise.all([ask, confirmPrompts(context, extensionId, 'shareAccount', log, { done: () => done, timeoutMs: 120_000 })]);
+    console.log(`[judge] use account ${index + 1}: the wallet answered the share request`);
   }
   expect((await siteAccounts(page))[0]?.toLowerCase(), `MetaMask shares ${ACCOUNT_NAMES[index]} with the site first`).toBe(address.toLowerCase());
 }
@@ -429,7 +465,9 @@ test.describe.serial('live governance judge', () => {
   });
   test.afterEach(async ({ page }, info) => {
     if (info.status !== info.expectedStatus) {
-      await dump.print(page).catch(() => console.log('[judge] failure dump: page read failed'));
+      const printed = await within(dump.print(page), 60_000).catch(() => 'failed' as const);
+      if (printed !== 'timeout' && printed !== 'failed') return;
+      console.log(`[judge] failure dump: page read ${printed === 'timeout' ? 'did not finish within 60000 ms' : 'failed'}`);
     }
   });
 
