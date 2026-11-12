@@ -257,16 +257,19 @@ function _localnodes_quick_poll_save_answer(array &$form, FormStateInterface $fo
     throw new \LogicException('Quick poll answers are saved for signed-in members only.');
   }
   $database = \Drupal::database();
+  // The table's key is (poll, account, address), and a member's answer is
+  // always stored with an empty address, so the database itself keeps one
+  // answer per member. The read only spares the common case an error; two
+  // forms sent at once both pass it, and the second insert is refused.
+  // No locking read: two members answering for the first time at once
+  // would each lock the same gap and could deadlock on their inserts.
+  $answered = $database->query('SELECT 1 FROM {poll_vote} WHERE pid = :pid AND uid = :uid', [
+    ':pid' => $poll->id(),
+    ':uid' => $uid,
+  ])->fetchField();
   $saved = FALSE;
-  $transaction = $database->startTransaction();
-  try {
-    // Lock this member's answers to the poll, so two forms sent at once
-    // cannot both find none.
-    $answered = $database->query('SELECT 1 FROM {poll_vote} WHERE pid = :pid AND uid = :uid FOR UPDATE', [
-      ':pid' => $poll->id(),
-      ':uid' => $uid,
-    ])->fetchField();
-    if (!$answered) {
+  if (!$answered) {
+    try {
       $database->insert('poll_vote')->fields([
         'chid' => $form_state->getValue('choice'),
         'uid' => $uid,
@@ -276,15 +279,10 @@ function _localnodes_quick_poll_save_answer(array &$form, FormStateInterface $fo
       ])->execute();
       $saved = TRUE;
     }
+    catch (IntegrityConstraintViolationException) {
+      // This member's answer was saved by another form a moment ago.
+    }
   }
-  catch (IntegrityConstraintViolationException) {
-    // The same answer row already exists: the member has answered.
-  }
-  catch (\Throwable $e) {
-    $transaction->rollBack();
-    throw $e;
-  }
-  unset($transaction);
 
   if ($saved) {
     \Drupal::service('cache_tags.invalidator')->invalidateTags(['poll-votes:' . $poll->id()]);

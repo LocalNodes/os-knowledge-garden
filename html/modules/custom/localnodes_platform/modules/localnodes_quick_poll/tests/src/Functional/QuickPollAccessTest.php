@@ -11,6 +11,7 @@ use Drupal\poll\PollInterface;
 use Drupal\search_api\Entity\Server;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\user\UserInterface;
+use Symfony\Component\Process\Process;
 
 /**
  * Quick polls are seen and answered by their group's members only.
@@ -427,6 +428,94 @@ final class QuickPollAccessTest extends BrowserTestBase {
       $pdo->exec("DROP TRIGGER IF EXISTS {$table}_no_address");
       $pdo->exec("DROP TRIGGER IF EXISTS {$table}_no_change");
     }
+  }
+
+  /**
+   * Two members answering for the first time at the same moment both save.
+   *
+   * The other answer comes from a separate process on its own database
+   * connection. It does what an answer save that locks before inserting
+   * does: it reads the other member's answer with a lock, waits, then
+   * inserts. The member's own answer goes through the site meanwhile.
+   * A save that also locks before inserting deadlocks with it, and the
+   * database aborts one of the two answers.
+   *
+   * Both connections use REPEATABLE READ, the database's own default and
+   * what a site without Drupal's recommended setting runs. Under READ
+   * COMMITTED a locking read of a missing row takes no gap lock, so the
+   * deadlock does not show there, and a save must not rely on either.
+   */
+  public function testTwoFirstAnswersAtOnceBothSave(): void {
+    $poll = $this->createPoll();
+    $other = $this->createAccount('quick_poll_other');
+    $this->group->addMember($other);
+    $database = $this->container->get('database');
+    $options = $database->getConnectionOptions();
+    $settings['databases']['default']['default']['isolation_level'] = (object) [
+      'value' => 'REPEATABLE READ',
+      'required' => TRUE,
+    ];
+    $this->writeSettings($settings);
+    $script = <<<'PHP'
+$pdo = new PDO(sprintf('mysql:host=%s;port=%s;dbname=%s', getenv('QP_HOST'), getenv('QP_PORT') ?: '3306', getenv('QP_DB')), getenv('QP_USER'), getenv('QP_PASS'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$table = getenv('QP_TABLE');
+try {
+  $pdo->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+  $pdo->beginTransaction();
+  $pdo->query("SELECT 1 FROM `$table` WHERE pid = " . (int) getenv('QP_PID') . " AND uid = " . (int) getenv('QP_UID') . " FOR UPDATE")->fetchAll();
+  echo "locked\n";
+  flush();
+  sleep(2);
+  $pdo->prepare("INSERT INTO `$table` (chid, uid, pid, hostname, timestamp) VALUES (?, ?, ?, '', ?)")->execute([(int) getenv('QP_CHID'), (int) getenv('QP_UID'), (int) getenv('QP_PID'), time()]);
+  $pdo->commit();
+  echo "saved\n";
+}
+catch (Throwable $e) {
+  echo 'failed: ', $e->getCode(), "\n";
+}
+PHP;
+    $other_answer = new Process([PHP_BINARY, '-r', $script], NULL, [
+      'QP_HOST' => $options['host'] ?? 'localhost',
+      'QP_PORT' => (string) ($options['port'] ?? ''),
+      'QP_DB' => $options['database'],
+      'QP_USER' => $options['username'],
+      'QP_PASS' => $options['password'] ?? '',
+      'QP_TABLE' => $database->getPrefix() . 'poll_vote',
+      'QP_PID' => (string) $poll->id(),
+      'QP_UID' => (string) $other->id(),
+      'QP_CHID' => $this->choiceId($poll, 'Tuesday'),
+    ], NULL, 30);
+    $this->drupalLogin($this->member);
+    $this->drupalGet('/poll/' . $poll->id());
+    $other_answer->start();
+    try {
+      $deadline = microtime(TRUE) + 10;
+      while (!str_contains($other_answer->getOutput(), 'locked') && $other_answer->isRunning() && microtime(TRUE) < $deadline) {
+        usleep(50000);
+      }
+      $this->assertStringContainsString('locked', $other_answer->getOutput(), 'The other answer started: ' . $other_answer->getErrorOutput());
+      $this->submitForm(['choice' => $this->choiceId($poll, 'Thursday')], 'Answer');
+      $other_answer->wait();
+    }
+    finally {
+      if ($other_answer->isRunning()) {
+        $other_answer->stop(0);
+      }
+    }
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Your answer has been saved.');
+    $this->assertStringContainsString('saved', $other_answer->getOutput(), 'The other answer was saved too.');
+    $rows = $database->select('poll_vote', 'v')
+      ->fields('v', ['uid', 'hostname'])
+      ->condition('pid', $poll->id())
+      ->orderBy('uid')
+      ->execute()->fetchAll(\PDO::FETCH_ASSOC);
+    $expected = [
+      ['uid' => (string) $this->member->id(), 'hostname' => ''],
+      ['uid' => (string) $other->id(), 'hostname' => ''],
+    ];
+    usort($expected, fn ($a, $b) => (int) $a['uid'] <=> (int) $b['uid']);
+    $this->assertSame($expected, array_map(fn ($row) => array_map('strval', $row), $rows));
   }
 
   /**
