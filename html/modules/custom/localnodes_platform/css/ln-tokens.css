@@ -12,9 +12,9 @@
 
 :root {
   /* Colour */
-  --ln-color-primary: #176c93;
-  --ln-color-primary-strong: #0f4f6d;
-  --ln-color-link: #145f82;
+  --ln-color-primary: #0f766e;
+  --ln-color-primary-strong: #134e4a;
+  --ln-color-link: #115e59;
   --ln-color-highlight: #ffc142;
   --ln-color-on-highlight: #343434;
   --ln-color-text: #343434;
@@ -23,14 +23,14 @@
   --ln-color-divider: #e6e6e6;
   --ln-color-surface: #ffffff;
   --ln-color-canvas: #f3f3f3;
-  --ln-color-tint: #f2f5f9;
+  --ln-color-tint: #f0fdfa;
   --ln-color-danger: #b42318;
   --ln-color-danger-bg: #fef3f2;
   --ln-color-success: #1e6b2e;
   --ln-color-success-bg: #ecfdf3;
   --ln-color-warning-text: #8a5a00;
   --ln-color-warning-bg: #fffbeb;
-  --ln-color-focus: #176c93;
+  --ln-color-focus: #0f766e;
   --ln-color-focus-on-dark: #ffc142;
   --ln-color-on-primary: #ffffff;
   --ln-color-on-danger: #ffffff;

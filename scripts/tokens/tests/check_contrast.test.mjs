@@ -94,7 +94,7 @@ test('the checker passes on the repo: no FAIL, no UNCOVERED, no STALE, exit 0, a
   assert.equal(lines(r.out, 'STALE ').length, 0, r.out);
   assert.equal(lines(r.out, 'TRIPWIRE ').length, 0, r.out);
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /RESULT: PASS \(\d+ OK, 5 EXCLUDED\)/);
+  assert.match(r.out, /RESULT: PASS \(\d+ OK, 3 EXCLUDED\)/);
 });
 
 test('stock socialblue fails: exit 1, FAIL lines, RESULT: FAIL', () => {
@@ -419,6 +419,7 @@ const ACCENT_IDS = [
 ];
 const NUXT_SECONDARY_ID = 'P8.nuxt.light.--ui-text-inverted.on.nuxt.light.--ui-secondary';
 // 22.1-12: the muted text is the band's muted text now (7.87:1 on this fill), so its exclusion is gone.
+// The teal palette's dark greys lift the last two dark pairs over 4.5:1, so no dark pair is excluded any more.
 const DARK_IDS = [
   'P9.nuxt.dark.--ui-text-dimmed.on.nuxt.dark.--ui-bg-accented',
   'P9.nuxt.dark.--ui-error.on.nuxt.dark.--ui-bg-accented',
@@ -520,33 +521,32 @@ test('Group A: every re-colouring rule in ln-overrides.css uses a var(), never a
   assert.equal([...block.matchAll(/\{[^}]*\}/g)].length, 9, 'nine rules');
 });
 
-test('Group B: the two dark pairs are EXCLUDED with a reason and their ratio, never OK, never FAIL', () => {
+test('Group B: the two dark pairs that used to be excluded are measured and OK at 4.5:1 or better', () => {
   const r = run([]);
-  for (const [id, ratio] of [[DARK_IDS[0], '4.07'], [DARK_IDS[1], '3.78']]) {
+  for (const id of DARK_IDS) {
     const l = lineFor(r.out, id);
     assert.ok(l, `${id} is printed`);
-    assert.ok(l.startsWith(`EXCLUDED ${id} ${ratio} (`), l);
-    assert.match(l, /dark mode not rendered \(22\.1-08: sign-up pages are light\)/);
-    assert.ok(!r.out.split('\n').some((x) => (x.startsWith('OK ') || x.startsWith('FAIL ')) && x.split(' ')[1] === id), `${id} is not also OK or FAIL`);
+    assert.ok(l.startsWith(`OK ${id} `), l);
+    assert.ok(Number(l.split(' ')[2]) >= 4.5, l);
   }
-  assert.equal(lines(r.out, 'EXCLUDED ').filter((l) => DARK_IDS.includes(l.split(' ')[1])).length, 2);
+  assert.equal(lines(r.out, 'EXCLUDED ').filter((l) => DARK_IDS.includes(l.split(' ')[1])).length, 0);
 });
 
 test('Group B: the exclusion list is frozen, has an id and a reason on every entry, and an id that is no pairing is an error', async () => {
   const { EXCLUDED, declaredPairings, assertExclusionsKnown } = await import('../pairings.mjs');
   assert.ok(Object.isFrozen(EXCLUDED));
-  assert.deepEqual(EXCLUDED.map((e) => e.id), [...DARK_IDS, ...FILL_IDS]);
+  assert.deepEqual(EXCLUDED.map((e) => e.id), FILL_IDS);
   for (const e of EXCLUDED) assert.ok(typeof e.reason === 'string' && e.reason.length > 20, `${e.id} has a reason`);
   assert.throws(() => assertExclusionsKnown([{ id: 'P9.nuxt.dark.--ui-nothing.on.nuxt.dark.--ui-bg', reason: 'x'.repeat(30) }], []), /no such pairing/);
   assert.throws(() => assertExclusionsKnown([{ id: 'a', reason: '' }], [{ id: 'a' }]), /reason/);
   void declaredPairings;
 });
 
-test('Group B tripwire: the token-source flag, when it says dark mode is rendered, voids the exclusion and the two pairs FAIL', () => {
+test('Group B tripwire: the token-source flag, when it says dark mode is rendered, still fails the gate; the decorative fills keep their exclusion', () => {
   const r = run(['--palette', overlay('dark-on.json', { targets: { nuxt: { 'dark-mode-rendered': { $value: true } } } })]);
   assert.equal(r.code, 1, r.out);
-  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'only the dark exclusions are void; the decorative fills keep theirs');
-  assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]).filter((id) => DARK_IDS.includes(id)), DARK_IDS);
+  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'the decorative fills do not depend on dark mode');
+  assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]).filter((id) => DARK_IDS.includes(id)), []);
   assert.ok(lines(r.out, 'TRIPWIRE ').some((l) => l.includes('dark-mode-rendered')), r.out);
 });
 
@@ -569,8 +569,8 @@ test('Group B tripwire: a Nuxt page without colorMode light renders in the defau
   const r = run(['--nuxt', dir]);
   assert.equal(r.code, 1, r.out);
   assert.ok(lines(r.out, 'TRIPWIRE ').some((l) => l.includes('app/pages/new-page.vue')), r.out);
-  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'the dark exclusion is void once a page renders dark; the decorative fills keep theirs');
-  assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]), DARK_IDS);
+  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'the decorative fills keep their exclusion');
+  assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]), [], 'every dark pair passes, so only the TRIPWIRE line fails the run');
 });
 
 test('Group B tripwire: a dark-scoped component that uses the accented fill (bg-accented, soft or subtle buttons) fails the gate', () => {
@@ -591,9 +591,9 @@ test('Group B tripwire: with no Nuxt checkout the page scan is skipped, visibly,
 });
 
 test('Group B: an exclusion that no longer fails is STALE and fails the run, so the list cannot rot', () => {
-  const r = run(['--palette', overlay('dark-fixed.json', { semantic: { dark: { 'bg-accented': { $value: '#27272a' } } } })]);
+  const r = run(['--palette', overlay('accent-fixed.json', { targets: { socialblue: { 'brand-accent': { $value: '#8a6100' } } } })]);
   assert.equal(r.code, 1, r.out);
-  assert.deepEqual(lines(r.out, 'STALE ').map((l) => l.split(' ')[1]), DARK_IDS);
+  assert.deepEqual(lines(r.out, 'STALE ').map((l) => l.split(' ')[1]), FILL_IDS);
   assert.match(lines(r.out, 'STALE ')[0], /remove it from EXCLUDED/);
 });
 
@@ -621,7 +621,7 @@ test('Q3: the three amber fills are declared as non-text pairs at 3:1 and are EX
     assert.ok(l.endsWith(` | focus ring ${FOCUS_IDS[i]} ${focusRatio.get(FOCUS_IDS[i]).toFixed(2)} >= 3`), `the line carries the measured focus ring: ${l}`);
     assert.ok(!r.out.split('\n').some((x) => (x.startsWith('OK ') || x.startsWith('FAIL ')) && x.split(' ')[1] === id), `${id} is not also OK or FAIL`);
   });
-  assert.equal(lines(r.out, 'EXCLUDED ').length, 5);
+  assert.equal(lines(r.out, 'EXCLUDED ').length, 3);
 });
 
 test('Q3: each of the three controls has a focus pair, the colour that applies to it on the background it sits on, and it is OK at 3:1 or better', () => {
@@ -659,7 +659,7 @@ test('Q3: the declared pairs use the right kind, bar and tokens (T-22.1-16)', as
   assert.equal(new Set(ps.map((x) => x.id)).size, ps.length, 'the six ids are distinct, so none collapses into another pair');
 });
 
-test('Q3: each decorative exclusion names its focus twin, each dark exclusion names its tripwire, and nothing else may be excluded', async () => {
+test('Q3: each decorative exclusion names its focus twin, and nothing else is excluded', async () => {
   const { EXCLUDED } = await import('../pairings.mjs');
   assert.ok(Object.isFrozen(EXCLUDED));
   const byId = new Map(EXCLUDED.map((e) => [e.id, e]));
@@ -670,7 +670,7 @@ test('Q3: each decorative exclusion names its focus twin, each dark exclusion na
     assert.equal(e.focusTwin, FOCUS_IDS[i]);
     assert.ok(Object.isFrozen(e));
   });
-  for (const id of DARK_IDS) assert.equal(byId.get(id).voidedBy, 'dark-mode');
+  assert.equal(byId.size, FILL_IDS.length);
 });
 
 test('Q3 guard: an exclusion with a focus twin fails the gate when the twin is missing or is not a focus pair', async () => {
@@ -755,7 +755,7 @@ test('22.1-17: the header name, the bar text and the bar rings are declared P13 
     assert.ok(l.startsWith('OK '), l);
   }
   assert.ok(lines(r.out, 'OK P13.').length >= 5);
-  assert.equal(lines(r.out, 'EXCLUDED ').length, 5, 'no exclusion was added (Q12)');
+  assert.equal(lines(r.out, 'EXCLUDED ').length, 3, 'no exclusion was added (Q12)');
 });
 
 test('22.1-17: the bar ring pair names both bar controls, and the header text sits on --ln-color-text', async () => {
@@ -847,7 +847,7 @@ test('22.1-17: the gate prints no UNMAPPED and no STALE-PARTNER on the repo, and
   assert.equal(lines(r.out, 'STALE-PARTNER ').length, 0, r.out);
   assert.ok(lines(r.out, 'OK ').length > 216, 'every declaration of the four stylesheets adds pairs');
   assert.ok(lines(r.out, 'DECORATIVE ').length >= 5, 'the divider lines print DECORATIVE');
-  assert.match(r.out, /RESULT: PASS \(\d+ OK, 5 EXCLUDED\)/);
+  assert.match(r.out, /RESULT: PASS \(\d+ OK, 3 EXCLUDED\)/);
 });
 
 test('22.1-17 guard: a colour rule that no partner names is UNMAPPED, the line says where to name it, and the run FAILs', () => {

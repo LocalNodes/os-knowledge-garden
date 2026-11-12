@@ -38,7 +38,9 @@ mkdirSync(BUILD_DIR, { recursive: true });
 
 const WIDE = { width: 1440, height: 900 };
 const PHONE = { width: 400, height: 860 };
-const TEAL_LIGHT = 'rgb(23, 108, 147)'; // #176c93, the sign-up pages' primary
+// #0f766e, the sign-up pages' primary since the app took the landing page's teal (it was #176c93).
+// Until the sign-up site regenerates ln-tokens.css from the token source, the checks below that use it fail.
+const TEAL_LIGHT = 'rgb(15, 118, 110)';
 
 test.beforeAll(async () => {
   await requireOnboardingSite(test.skip);
@@ -324,7 +326,7 @@ test.describe('JavaScript off', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community shares, decides and funds');
     expect(await page.evaluate(() => document.documentElement.classList.contains('ln-home'))).toBe(true);
-    // the teal: the page's primary is the home teal (#0f766e), not the sign-up pages' #176c93, and the
+    // the teal: the page's primary is the home teal (#0f766e), the same as the sign-up pages', and the
     // hero button takes the dark band's pale mint, both without a script
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ui-primary').trim())).toBe('#0f766e');
     expect(await page.locator('.home-row a').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(204, 251, 241)');
@@ -364,7 +366,7 @@ test.describe('navigation isolation', () => {
     expect(await homeClass(), 'ln-home gone on /invite').toBe(false);
     const other = await page.evaluate(() => getComputedStyle(document.querySelector('button[type="submit"], a[class*="bg-primary"], button') as Element).backgroundColor);
     const ref = await primary();
-    // the sign-up page's primary button is #176c93 (light)
+    // the sign-up page's primary button is #0f766e (light)
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: 'Use Your Invite' })).toBeVisible();
     const fresh = await primary();
@@ -379,10 +381,10 @@ test.describe('navigation isolation', () => {
       await nuxt.$router.push('/invite');
     });
     await expect(page.getByRole('heading', { level: 1, name: 'Use Your Invite' })).toBeVisible();
-    // The button eases between colours, so wait for it to settle; it must end on #176c93.
+    // The button eases between colours, so wait for it to settle; it must end on #0f766e.
     await expect.poll(
       () => page.getByRole('button', { name: 'Send my sign-in link' }).evaluate((e) => getComputedStyle(e).backgroundColor),
-      { message: 'the sign-up button is still #176c93 after leaving "/" by client navigation', timeout: 3000 }
+      { message: 'the sign-up button is still #0f766e after leaving "/" by client navigation', timeout: 3000 }
     ).toBe(TEAL_LIGHT);
     await page.goBack();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Where your community shares');

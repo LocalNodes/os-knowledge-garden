@@ -96,15 +96,12 @@ const fillId = (d) => `P12.${d.key}.socialblue.brand-accent.on.surface`;
  *                          The twin must exist and be a focus pair (assertExclusionsKnown), and if it fails the
  *                          exclusion is void (check_contrast.mjs): the exclusion rests on something measured.
  * check_contrast.mjs also fails when an excluded pair now passes (STALE: remove it).
- * The two dark pairs must be fixed before any dark mode ships: .planning/WINDOWS.md (22.1-12 removed the muted-text pair,
- * which passes now that the dark muted text is the band's).
+ * No dark pair is excluded since the teal palette (2026-11-12): on the landing's dark values every Nuxt dark pair
+ * passes, so the two that were excluded (dimmed text and error on the accented fill) are measured like any other.
+ * voidedBy stays supported, and the tripwire still fails the gate when dark mode is rendered.
  */
 export const EXCLUDED = Object.freeze(
   [
-    ...[
-      'P9.nuxt.dark.--ui-text-dimmed.on.nuxt.dark.--ui-bg-accented',
-      'P9.nuxt.dark.--ui-error.on.nuxt.dark.--ui-bg-accented',
-    ].map((id) => ({ id, reason: 'dark mode not rendered (22.1-08: sign-up pages are light)', voidedBy: 'dark-mode' })),
     ...DECORATIVE_FILLS.map((d) => ({ id: fillId(d), reason: DECORATIVE_REASON, focusTwin: focusTwinId(d) })),
   ].map((e) => Object.freeze(e)),
 );
