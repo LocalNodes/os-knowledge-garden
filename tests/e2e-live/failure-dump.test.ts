@@ -1,5 +1,5 @@
-// Unit guard for the live suite's failure dump (21-46). The dump goes to a public CI log.
-// Ruling after Codex (5629e71..610091c): an allowlist. Only fixed fields and known keys are
+// Unit guard for the live suite's failure dump. The dump goes to a public CI log, so it is an
+// allowlist. Only fixed fields and known keys are
 // printed; redact() stays as defence in depth for the one free-form path left (none today).
 import { describe, expect, it } from 'vitest';
 import {
@@ -14,6 +14,8 @@ import {
   receiptOutcome,
   redact,
   routeKey,
+  approveAlertKey,
+  setupRouteKey,
   txHashText,
   updateDeploymentLine,
 } from './failure-dump';
@@ -51,7 +53,7 @@ describe('redact', () => {
   });
 });
 
-// Codex on 5629e71..610091c (three P1s); ruling: an allowlist. The dump prints fixed fields
+// The dump prints fixed fields
 // and known keys only, never text from MetaMask, the console or Drupal. Each hostile input below
 // must leave no trace in the output.
 const HOSTILE = [
@@ -97,6 +99,7 @@ describe('allowlist: no input echoes', () => {
     expect(consoleKey('error', '[Safe Deployment] update-deployment refused: 403 nope')).toBe('safe:update_refused');
     expect(consoleKey('error', '[Safe Deployment] Entity update error: TypeError')).toBe('safe:entity_update_error');
     expect(consoleKey('log', '[Safe SDK] something')).toBe('safe:other');
+    expect(consoleKey('error', '[Safe] Wallet or network error: secret')).toBe('safe:wallet_error');
     expect(consoleKey('log', 'hello')).toBeNull();
     for (const h of HOSTILE) {
       const out = String(consoleKey('error', h));
@@ -134,13 +137,13 @@ describe('allowlist: no input echoes', () => {
   });
 });
 
-// Codex round 2 on 610091c..7db5cac (FIX): route keys, never path segments; provider and
+// Route keys, never path segments; provider and
 // Playwright errors as a fixed category plus the error's name, never its message.
 describe('routeKey', () => {
   it('maps known routes to fixed keys', () => {
     expect(routeKey('http://localhost:8080/group/1/treasury/create')).toBe('group_treasury_create');
     expect(routeKey('http://localhost:8080/group/12/treasury')).toBe('group_treasury');
-    // The exact routes the live spec visits (Codex round 3: the payment route is singular).
+    // The exact routes the live spec visits (the payment route is singular).
     expect(routeKey('http://localhost:8080/group/1/treasury/propose')).toBe('group_treasury_propose');
     expect(routeKey('http://localhost:8080/group/1/treasury/transaction/7')).toBe('group_treasury_payment');
     expect(routeKey('http://localhost:8080/group/1/treasury/transactions/7')).toBe('other');
@@ -187,7 +190,7 @@ describe('categorized errors', () => {
   });
 });
 
-// Codex round 3 on 7db5cac..1d9f759 (FIX): RPC results are checked before use, so a malformed
+// RPC results are checked before use, so a malformed
 // result can't reach an error message.
 describe('RPC result checks', () => {
   it('hexQuantity accepts a hex quantity only', () => {
@@ -260,3 +263,22 @@ describe('page errors', () => {
   });
 });
 
+
+describe('voting setup keys', () => {
+  it('names only the two setup routes', () => {
+    expect(setupRouteKey('https://x.test/group/1/votes/setup/messages')).toBe('setup_messages');
+    expect(setupRouteKey('http://localhost:8080/group/12/votes/setup/approve/')).toBe('setup_approve');
+    expect(setupRouteKey('http://localhost:8080/group/1/votes/setup')).toBeNull();
+    expect(setupRouteKey('not a url')).toBeNull();
+  });
+
+  it('turns the approve alert into a known key and never returns its text', () => {
+    expect(approveAlertKey("Something went wrong on our side, so your approval wasn't saved.")).toBe('server');
+    expect(approveAlertKey("The account in your wallet isn't one of this group fund's approvers. Switch to the account you use on this site, then approve again.")).toBe('not_approver');
+    expect(approveAlertKey('Your wallet is on a different network. Switch it to Sepolia, then approve again.')).toBe('wrong_network');
+    expect(approveAlertKey("You didn't confirm it in your wallet, so the setup isn't approved yet.")).toBe('rejected');
+    expect(approveAlertKey('The approvals ran out of time. Approvals for the voting rules last 6 days, so organizers need to approve again.')).toBe('expired');
+    expect(approveAlertKey('Your wallet ran into a problem. Check your wallet, then try again.')).toBe('wallet_rpc');
+    expect(approveAlertKey('secret 0xabc words')).toBe('other');
+  });
+});
