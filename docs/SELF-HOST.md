@@ -86,9 +86,11 @@ Then open `.env` in an editor (`nano .env`) and fill in the rest of the first bl
 | `DRUPAL_ADMIN_EMAIL` | Your own email address, for the first administrator account. |
 | `DEMO_MODULE` | Leave it as `none` for an empty site. Any other value fills the site with made-up demo people and pages, which is only for looking around. |
 
-You can leave the mail and AI keys empty for now (step 6). Leave every setting that is not in `.env.example` unset. In particular, never set `ORGANIZER_EMAIL` or any `PROVISION_*` variable: they belong to LocalNodes' own sign-up service.
+You can leave the mail and AI keys empty for now (step 6). Leave other settings unset unless this guide describes them. In particular, never set `ORGANIZER_EMAIL` or any `PROVISION_*` variable: they belong to LocalNodes' own sign-up service.
 
 Do not change `DB_PASSWORD`, `DB_ROOT_PASSWORD` or `DRUPAL_HASH_SALT` after the first start. The database keeps the first passwords, and a different salt can break sign-in links.
+
+`WEB3_ENABLED` is off by default; leave it off for a library-only site. On a fresh site with `WEB3_ENABLED=true`, members also get a **Sign in** button that opens WaaP for email or Google sign-in; the existing email-and-password form stays available. Leave `WAAP_ENVIRONMENT` blank to use WaaP's staging service for testing, or set `WAAP_ENVIRONMENT=production` for a live site. No WalletConnect project ID is needed for email or Google; set `WALLETCONNECT_PROJECT_ID` if you also want the **Browser Wallet** choice inside WaaP. WalletConnect's QR-code option is unavailable in this build. See the [WaaP setup reference](https://docs.waap.human.tech/for-apps/methods/evm) (checked 2026-11-11); test sign-in on your site's address before inviting members.
 
 ## 3. Make the site reachable
 

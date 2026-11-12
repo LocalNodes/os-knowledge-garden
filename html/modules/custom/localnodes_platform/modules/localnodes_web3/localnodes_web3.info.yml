@@ -5,6 +5,7 @@ core_version_requirement: ^10
 package: 'LocalNodes'
 dependencies:
   - siwe_login:siwe_login
+  - siwe_login:siwe_login_waap
   - safe_smart_accounts:safe_smart_accounts
   - safe_governance:safe_governance
   - safe_governance:safe_governance_group

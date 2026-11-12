@@ -13,11 +13,11 @@ use PHPUnit\Framework\TestCase;
  * The entrypoint enables localnodes_web3 alone when WEB3_ENABLED=true, so
  * everything a web3 site needs comes in through its .info.yml. The Votes tab
  * lives in safe_governance's submodule safe_governance_group, so
- * localnodes_web3 depends on it too;
- * without it a web3 site has group funds but no Votes tab.
+ * localnodes_web3 depends on it too. The WaaP connector is also a dependency,
+ * so a fresh web3 site offers its Sign in button without a manual enable step.
  *
- * Kernel tests can't check this: they enable localnodes_web3 without its
- * dependencies, which pull in Open Social.
+ * Full dependency installation pulls in Open Social. This pins the complete
+ * declaration; WaapWithWeb3Test checks the sign-in dependency and rendering.
  *
  * @group localnodes_web3
  */
@@ -28,6 +28,7 @@ final class ModuleDependenciesTest extends TestCase {
    */
   private const EXPECTED = [
     'siwe_login:siwe_login',
+    'siwe_login:siwe_login_waap',
     'safe_smart_accounts:safe_smart_accounts',
     'safe_governance:safe_governance',
     'safe_governance:safe_governance_group',
@@ -41,6 +42,13 @@ final class ModuleDependenciesTest extends TestCase {
    */
   public function testVotesTabComesWithWeb3(): void {
     $this->assertContains('safe_governance:safe_governance_group', $this->dependencies(), 'localnodes_web3 must enable safe_governance_group, the Votes tab (25-27 Q3).');
+  }
+
+  /**
+   * WEB3_ENABLED also brings in the email/Google sign-in connector.
+   */
+  public function testWaapComesWithWeb3(): void {
+    $this->assertContains('siwe_login:siwe_login_waap', $this->dependencies());
   }
 
   /**
