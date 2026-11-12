@@ -86,7 +86,7 @@ STATUS_FILE=$W/state/site.status
 EOF
   chmod 600 "$W/backup.conf"
   LIFECYCLE="$TMP/rules/good"
-  unset FAKE_VERSIONING FAKE_DRUSH FAKE_UUID FAKE_S3_CORRUPT FAKE_S3_FAIL_KEY FAKE_DOCKER_PS FAKE_DOCKER_DOWN
+  unset FAKE_VERSIONING FAKE_DRUSH FAKE_SECRET FAKE_UUID FAKE_S3_CORRUPT FAKE_S3_FAIL_KEY FAKE_DOCKER_PS FAKE_DOCKER_DOWN
 }
 
 job() {  # runs the job on $W/backup.conf; sets RC and OUT
@@ -204,6 +204,14 @@ job
 check "an archive that does not match its checksum is refused" step_is copy-out
 check "...with no set stored" no_sets
 check "...and no plaintext left" nothing_left
+
+for kind in empty short; do
+  fresh; export FAKE_SECRET=$kind
+  job
+  check "a secret record that is $kind is refused before it is encrypted" step_is copy-out
+  check "...($kind) with no set stored" no_sets
+  check "...($kind) and no plaintext left" nothing_left
+done
 
 fresh; export FAKE_S3_CORRUPT=1
 job

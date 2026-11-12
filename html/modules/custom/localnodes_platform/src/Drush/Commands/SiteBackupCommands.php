@@ -6,6 +6,7 @@ namespace Drupal\localnodes_platform\Drush\Commands;
 
 use Drupal\Core\Site\Settings;
 use Drupal\localnodes_platform\Backup\BackupPause;
+use Drupal\localnodes_platform\Backup\BackupWrite;
 use Drupal\localnodes_platform\Export\SiteExporter;
 use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
@@ -136,9 +137,10 @@ class SiteBackupCommands extends DrushCommands {
       'The site is already paused by another backup or restore.',
       'web requests that began before the pause were still running at the time limit',
       'Cannot make the folder for the pause file.',
-      'Cannot write the pause file (another writer may have made one).',
+      'Cannot write the pause file.',
       'Cannot make the folder for the lock files.',
       'Cannot write the secret record (the name is taken).',
+      'Cannot write the secret record.',
     ];
     if (in_array($e->getMessage(), $own, TRUE)) {
       return rtrim($e->getMessage(), '.');
@@ -224,13 +226,16 @@ class SiteBackupCommands extends DrushCommands {
       if ($handle === FALSE) {
         throw new \RuntimeException('Cannot write the secret record (the name is taken).');
       }
-      fwrite($handle, json_encode([
+      $json = json_encode([
         'hash_salt' => (string) Settings::get('hash_salt', ''),
         'provision_id' => (string) ($provision['id'] ?? ''),
         'provision_callback_token' => (string) ($provision['callback_token'] ?? ''),
-      ], JSON_UNESCAPED_SLASHES) . "\n");
-      fclose($handle);
-      chmod($file, 0600);
+      ], JSON_UNESCAPED_SLASHES);
+      // A short or empty record must fail the capture: a restore needs it.
+      if ($json === FALSE || !BackupWrite::all($handle, $json . "\n") || !@chmod($file, 0600)) {
+        @unlink($file);
+        throw new \RuntimeException('Cannot write the secret record.');
+      }
     }
     finally {
       umask($old_umask);

@@ -72,3 +72,6 @@ systemctl daemon-reload
 echo "installed. Next, per site: write /etc/localnodes-backup/<name>.conf (mode 600),"
 echo "run 'localnodes-backup /etc/localnodes-backup/<name>.conf' once by hand,"
 echo "then: systemctl enable --now localnodes-backup@<name>.timer"
+echo "The bucket needs an expiry rule first (bucket-lifecycle.json is one). It deletes"
+echo "everything under localnodes-backup/ after 14 days, for every site in the bucket,"
+echo "and anything else kept under that folder: keep other data out of it."

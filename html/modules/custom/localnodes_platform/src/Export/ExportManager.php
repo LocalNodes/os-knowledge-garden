@@ -10,6 +10,7 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Site\Settings;
+use Drupal\Core\StreamWrapper\PublicStream;
 use Drupal\localnodes_platform\Backup\BackupCapture;
 use Drupal\localnodes_platform\Backup\BackupPause;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -126,6 +127,9 @@ class ExportManager {
 
   /** CLI only; no Drupal queue plugin or web cron can invoke a capture. */
   public function work(): void {
+    // An install older than the export has no table: nothing to do, nothing
+    // to log, and no query against it.
+    if (!$this->access->installed()) return;
     $this->files()->root(TRUE);
     $pause = new BackupPause((string) Settings::get('file_private_path', ''));
     $consumer = $pause->openLock('export-consumer.lock');
@@ -219,7 +223,7 @@ class ExportManager {
       $db = (int) $this->database->query('PRAGMA page_count')->fetchField() * (int) $this->database->query('PRAGMA page_size')->fetchField();
     }
     $bytes = 0;
-    foreach ([(string) Settings::get('file_public_path', ''), (string) Settings::get('file_private_path', '')] as $path) {
+    foreach ([$this->publicPath(), (string) Settings::get('file_private_path', '')] as $path) {
       if (!$path || !is_dir($path)) continue;
       $root = realpath($path);
       $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
@@ -231,6 +235,12 @@ class ExportManager {
     // Avoid rendering every library page during preflight. Allow one further
     // copy of eligible file bytes for library attachments, independent of pages.
     return max(1048576, $db + 2 * $bytes);
+  }
+
+  /** Drupal's own public files folder, also when file_public_path is unset. */
+  protected function publicPath(): string {
+    $path = (string) PublicStream::basePath();
+    return $path === '' || str_starts_with($path, '/') ? $path : DRUPAL_ROOT . '/' . $path;
   }
 
   protected function space(): void {

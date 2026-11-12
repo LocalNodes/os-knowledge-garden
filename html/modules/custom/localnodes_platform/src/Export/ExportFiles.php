@@ -11,9 +11,11 @@ final class ExportFiles {
 
   public function root(bool $create = FALSE): string {
     if ($this->private === '' || $this->web === '') throw new \RuntimeException('Export storage is unavailable.');
+    // The configured root is resolved once and may itself be a link (DDEV
+    // links /var/www/private); everything beneath it must not be one.
     $private = realpath($this->private);
     $web = realpath($this->web);
-    if (!$private || !$web || $private === $web || str_starts_with($private . '/', $web . '/') || is_link($this->private)) {
+    if (!$private || !$web || !is_dir($private) || $private === $web || str_starts_with($private . '/', $web . '/')) {
       throw new \RuntimeException('Export storage is unavailable.');
     }
     $root = $private . '/site-exports';

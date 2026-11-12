@@ -8,6 +8,7 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\localnodes_backup_pause_test\RequestPolicyForTests;
 use Drupal\localnodes_platform\Backup\BackupPause;
+use Drupal\localnodes_platform\Backup\BackupWrite;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -162,6 +163,41 @@ final class BackupPauseTest extends KernelTestBase {
     mkdir($this->private . '/.localnodes', 0700, TRUE);
     file_put_contents($this->private . '/.localnodes/backup-pause', 'not json');
     $this->assertClosed($this->send('GET', '/pause-probe'));
+  }
+
+  /**
+   * A pause is published whole: a failed write leaves no pause file.
+   *
+   * Today a malformed pause file still closes the site with no end (see
+   * testUnreadablePauseCloses); the writer can no longer leave one.
+   */
+  public function testFailedPauseWriteLeavesNoPause(): void {
+    $pause = new BackupPause($this->private);
+    // A full disk: half the bytes land, then the write fails.
+    BackupWrite::$writer = static function ($handle, string $data): bool {
+      fwrite($handle, substr($data, 0, intdiv(strlen($data), 2)));
+      fclose($handle);
+      return FALSE;
+    };
+    try {
+      $pause->create('backup', time() + 600);
+      $this->fail('A failed write must throw.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertSame('Cannot write the pause file.', $e->getMessage());
+    }
+    finally {
+      BackupWrite::$writer = NULL;
+    }
+    $this->assertFileDoesNotExist($pause->file());
+    $this->assertSame(['.', '..'], array_values(array_filter(scandir($this->private . '/.localnodes'), fn ($f) => str_starts_with($f, '.'))), 'No temporary file is left.');
+    $this->assertNull($pause->active());
+    $this->assertSame(200, $this->send('GET', '/pause-probe')->getStatusCode());
+    // A good write publishes the whole line, readable by the web user.
+    $token = $pause->create('backup', time() + 600);
+    $this->assertSame($token, $pause->read()['token']);
+    $this->assertSame(0644, fileperms($pause->file()) & 0777);
+    $this->assertSame(['backup-pause'], array_values(array_diff(scandir($this->private . '/.localnodes'), ['.', '..'])));
   }
 
   /**

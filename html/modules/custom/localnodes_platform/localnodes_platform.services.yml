@@ -63,7 +63,7 @@ services:
 
   localnodes_platform.export_access:
     class: Drupal\localnodes_platform\Export\ExportAccess
-    arguments: ['@state', '@entity_type.manager']
+    arguments: ['@state', '@entity_type.manager', '@database']
   localnodes_platform.export_identity:
     class: Drupal\localnodes_platform\Export\ExportIdentity
     arguments: ['@localnodes_platform.export_access', '@password', '@flood']

@@ -18,7 +18,7 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 FAILED=0
 N=0
-TOTAL=22
+TOTAL=24
 
 echo "TAP version 13"
 echo "1..$TOTAL"
@@ -64,6 +64,7 @@ n=\$(cat "$DRUSH_COUNT" 2>/dev/null || echo 0)
 n=\$((n + 1))
 echo "\$n" > "$DRUSH_COUNT"
 [ -e /proc/self/fd/9 ] && echo "FD9-INHERITED" >> "$TMP/fd9.log"
+[ -n "\${STUB_SLEEP:-}" ] && sleep "\$STUB_SLEEP"
 echo "MEMBERS-ONLY-TITLE indexed"
 echo "MEMBERS-ONLY-TITLE warning" >&2
 [ "\$n" -eq 2 ] && exit 1
@@ -220,12 +221,30 @@ wait "$WORKER_PID"
 assert_eq "once the lock is free: unlock plus one pass" "4" \
   "$(wc -l < "$DRUSH_LOG" | tr -d ' ')"
 
-# --- Scenario J: drush never inherits the lock's descriptor ---
-if [ -e "$TMP/fd9.log" ]; then
-  not_ok "drush runs without the worker lock's descriptor" "no fd 9 in drush" "$(wc -l < "$TMP/fd9.log") call(s) had fd 9"
+# --- Scenario J: drush inherits the lock's descriptor, so the lock lives as
+# long as the drush call does. ---
+if [ -s "$TMP/fd9.log" ]; then
+  ok "drush runs holding the worker lock's descriptor"
 else
-  ok "drush runs without the worker lock's descriptor"
+  not_ok "drush runs holding the worker lock's descriptor" "fd 9 open in drush" "no call had fd 9"
 fi
+
+# --- Scenario K: a worker shell killed mid-call leaves the lock held until
+# drush ends, so a backup cannot start under a pass still writing. ---
+new_private k
+: > "$DRUSH_LOG"
+rm -f "$DRUSH_COUNT"
+STUB_SLEEP=3 DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=1 \
+  bash "$WORKER" > "$TMP/out-k.log" 2>&1 &
+WORKER_PID=$!
+for _ in $(seq 1 40); do [ -s "$DRUSH_LOG" ] && break; sleep 0.1; done
+kill -9 "$WORKER_PID" 2>/dev/null
+wait "$WORKER_PID" 2>/dev/null
+if flock -n "$PRIV/.localnodes/worker.lock" true; then HELD=free; else HELD=held; fi
+assert_eq "after the worker shell is killed, the lock stays held while drush runs" "held" "$HELD"
+for _ in $(seq 1 60); do flock -n "$PRIV/.localnodes/worker.lock" true && break; sleep 0.1; done
+if flock -n "$PRIV/.localnodes/worker.lock" true; then HELD=free; else HELD=held; fi
+assert_eq "...and is free once drush ends" "free" "$HELD"
 
 # --- Scenario C: DRUSH empty is a configuration error ---
 DRUSH="" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=1 \

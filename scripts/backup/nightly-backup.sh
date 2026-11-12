@@ -155,6 +155,9 @@ mkdir "$STAGE/out"
 C_STAGE=""
 ARCHIVE="$(jq -r '.archive' <<<"$line")"
 [ -f "$STAGE/out/$ARCHIVE" ] && [ -f "$STAGE/out/secret-record.json" ] || failed "the archive or the secret record is missing"
+# An empty or cut-short record would encrypt and upload fine and restore nothing.
+jq -e 'type == "object" and (.hash_salt | type == "string" and length > 0)' "$STAGE/out/secret-record.json" >/dev/null 2>&1 \
+  || failed "the secret record is empty or unreadable"
 [ "$(sha256sum "$STAGE/out/$ARCHIVE" | cut -d' ' -f1)" = "$(jq -r '.archive_sha256' <<<"$line")" ] \
   || failed "the archive does not match the checksum drush printed"
 

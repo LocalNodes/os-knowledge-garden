@@ -28,7 +28,9 @@
 
 declare(strict_types=1);
 
-require rtrim(getenv('LOCALNODES_APP_ROOT') ?: '/var/www/html', '/') . '/html/modules/custom/localnodes_platform/src/Backup/BackupPause.php';
+$backup_src = rtrim(getenv('LOCALNODES_APP_ROOT') ?: '/var/www/html', '/') . '/html/modules/custom/localnodes_platform/src/Backup';
+require $backup_src . '/BackupWrite.php';
+require $backup_src . '/BackupPause.php';
 
 use Drupal\localnodes_platform\Backup\BackupPause;
 

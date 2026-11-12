@@ -187,6 +187,31 @@ restore --target house-a --set "$FORGED"
 check "an archive that does not match identity.json is refused" bash -c '[ "$1" = 1 ] && grep -q "checksum in identity.json" <<<"$2"' _ "$RC" "$ERR"
 check "...before any container call, no plaintext left" bash -c '[ ! -s "$1" ] && [ -z "$(ls -A "$2")" ]' _ "$W/log/docker.log" "$W/tmp"
 
+# An archive tar cannot unpack, with a message that would name its members
+# (a hard link to a member that is missing): refused without printing them.
+fresh "$A"
+mkdir "$W/forge"
+gpg --homedir "$TMP/gpg" --batch --quiet --output "$W/forge/set.tar" --decrypt "$S3/test-bucket/$SET_A" 2>/dev/null
+tar -xf "$W/forge/set.tar" -C "$W/forge"
+arch="$(jq -r .archive "$W/forge/identity.json")"
+folder="${arch%.tar}"
+mkdir -p "$W/forge/in/$folder"
+echo a > "$W/forge/in/$folder/f1"; ln "$W/forge/in/$folder/f1" "$W/forge/in/$folder/f2"
+tar -cf "$W/forge/$arch" -C "$W/forge/in" "$folder"
+tar --delete -f "$W/forge/$arch" "$folder/f1"
+jq --arg s "$(sha256sum "$W/forge/$arch" | cut -d' ' -f1)" '.archive_sha256 = $s' "$W/forge/identity.json" > "$W/forge/id.json"
+mv "$W/forge/id.json" "$W/forge/identity.json"
+tar -cf "$W/forge/new.tar" -C "$W/forge" "$arch" identity.json
+gpg --homedir "$TMP/gpg" --batch --quiet --trust-model always --recipient-file "$TMP/operator.pub" --output "$W/forge/new.tar.gpg" --encrypt "$W/forge/new.tar"
+BROKEN="localnodes-backup/$A/sets/20261113T093000Z.tar.gpg"
+cp "$W/forge/new.tar.gpg" "$S3/test-bucket/$BROKEN"
+sha256sum "$W/forge/new.tar.gpg" | cut -d' ' -f1 | tr -d '\n' > "$S3.meta/test-bucket/$BROKEN"
+restore --target house-a --set "$BROKEN"
+check "an archive tar cannot unpack is refused" bash -c '[ "$1" = 1 ] && grep -q "could not be unpacked" <<<"$2"' _ "$RC" "$ERR"
+check "...without printing the archive's member names" bash -c '! grep -qF "$1" <<<"$2$3"' _ "$folder" "$ERR" "$OUT"
+check "...before any container call, no plaintext left" bash -c '[ ! -s "$1" ] && [ -z "$(ls -A "$2")" ]' _ "$W/log/docker.log" "$W/tmp"
+rm -f "$S3/test-bucket/$BROKEN" "$S3.meta/test-bucket/$BROKEN"
+
 fresh "$A"
 OUT="$(env DOCKER_BIN="$FIX/docker" AWS_BIN="$FIX/aws" FAKE_ROOT="$R" FAKE_S3="$S3" FAKE_LOG_DIR="$W/log" LOCK_DIR="$W/lock" TMPDIR="$W/tmp" \
   bash "$RESTORE" --registry "$W/registry" --storage "$TMP/storage.conf" --private-key "$TMP/stranger.key" --drain-seconds 0 --target house-a --set "$SET_A" 2>&1)"

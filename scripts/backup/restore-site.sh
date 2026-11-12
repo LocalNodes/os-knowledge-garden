@@ -140,7 +140,7 @@ CAPTURE="$(jq -r '.capture_start // empty' "$WORK/set/identity.json")"
 
 FOLDER="${ARCHIVE%.tar}"
 mkdir "$WORK/x"
-tar -xf "$WORK/set/$ARCHIVE" -C "$WORK/x" --no-same-owner || refuse "the archive could not be unpacked"
+tar -xf "$WORK/set/$ARCHIVE" -C "$WORK/x" --no-same-owner 2>/dev/null || refuse "the archive could not be unpacked"
 rm -f -- "$WORK/set/$ARCHIVE"
 D="$WORK/x/$FOLDER"
 [ -f "$D/SHA256SUMS" ] && [ -f "$D/manifest.json" ] || refuse "the archive is not a site export"

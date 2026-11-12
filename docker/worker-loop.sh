@@ -55,6 +55,11 @@ if [ -z "$DRUSH" ]; then
 fi
 
 # run_drush <drush args...>: run one drush command, log only its exit code.
+# Drush inherits the worker lock's descriptor (fd 9) on purpose: if this
+# shell is killed mid-call, the lock stays held until drush itself ends, so a
+# backup cannot start while a pass is still writing. Nothing drush runs here
+# locks worker.lock itself (only localnodes:backup does, and the host runs
+# that), and the export call below runs after the lock is released.
 run_drush() {
   if [ -n "$WORKER_RUN_AS" ]; then
     # www-data's login shell is nologin, so name bash explicitly. `su` without
@@ -62,11 +67,10 @@ run_drush() {
     # Each argument is shell-quoted so an empty one survives the -c string.
     local args
     args="$(printf '%q ' "$@")"
-    # 9>&-: drush does not inherit the worker lock's descriptor.
-    su -s /bin/bash "$WORKER_RUN_AS" -c "HOME=/tmp $DRUSH ${args% }" >/dev/null 2>&1 9>&-
+    su -s /bin/bash "$WORKER_RUN_AS" -c "HOME=/tmp $DRUSH ${args% }" >/dev/null 2>&1
   else
     # $DRUSH is deliberately unquoted: it is a command plus its options.
-    HOME="${HOME:-/tmp}" $DRUSH "$@" >/dev/null 2>&1 9>&-
+    HOME="${HOME:-/tmp}" $DRUSH "$@" >/dev/null 2>&1
   fi
   local rc=$?
   log "drush $* exit=$rc"

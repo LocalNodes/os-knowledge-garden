@@ -7,6 +7,7 @@ namespace Drupal\Tests\localnodes_platform\Kernel;
 use Drupal\Core\Site\Settings;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\localnodes_platform\Backup\BackupPause;
+use Drupal\localnodes_platform\Backup\BackupWrite;
 use Drupal\localnodes_platform\Drush\Commands\SiteBackupCommands;
 use Drupal\localnodes_platform\Export\SiteExporter;
 use Drush\Log\DrushLoggerManager;
@@ -278,6 +279,33 @@ final class BackupCommandTest extends KernelTestBase {
       $this->assertNothingLeft($this->base . '/out');
       $this->assertNull($this->pause()->read(), "$kind: the site is open again.");
     }
+  }
+
+  /**
+   * A short secret record fails the run: no success, nothing left, site open.
+   */
+  public function testShortSecretRecordFailsTheRun(): void {
+    BackupWrite::$writer = static function ($handle, string $data): bool {
+      if (!str_ends_with((string) stream_get_meta_data($handle)['uri'], SiteBackupCommands::SECRET_RECORD)) {
+        $written = fwrite($handle, $data);
+        return fclose($handle) && $written === strlen($data);
+      }
+      // A full disk: the record is cut short.
+      fwrite($handle, substr($data, 0, 10));
+      fclose($handle);
+      return FALSE;
+    };
+    try {
+      [$code, $printed] = $this->backup($this->sql(), ['with-secret-record' => TRUE]);
+    }
+    finally {
+      BackupWrite::$writer = NULL;
+    }
+    $this->assertSame(1, $code);
+    $this->assertSame('', $printed, 'No success line is printed.');
+    $this->assertStringContainsString('Backup failed: Cannot write the secret record', (string) end($this->logged));
+    $this->assertNothingLeft($this->base . '/out');
+    $this->assertNull($this->pause()->read(), 'The site is open again.');
   }
 
   /**

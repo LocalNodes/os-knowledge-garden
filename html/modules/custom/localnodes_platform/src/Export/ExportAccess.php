@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\localnodes_platform\Export;
 
 use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
@@ -13,7 +14,17 @@ use Drupal\user\UserInterface;
 /** Ownership is a recorded account, never an administrative bypass. */
 final class ExportAccess {
 
-  public function __construct(private readonly StateInterface $state, private readonly EntityTypeManagerInterface $entities) {}
+  public function __construct(private readonly StateInterface $state, private readonly EntityTypeManagerInterface $entities, private readonly ?Connection $database = NULL) {}
+
+  /**
+   * Whether this install has the export table.
+   *
+   * A site installed before the export existed and redeployed in place
+   * (updatedb, no update hook: fresh installs only) lacks it.
+   */
+  public function installed(): bool {
+    return $this->database === NULL || $this->database->schema()->tableExists('localnodes_site_export');
+  }
 
   public function account(int $uid): ?UserInterface {
     if ($uid <= 0) return NULL;
@@ -45,6 +56,8 @@ final class ExportAccess {
   }
 
   public function access(AccountInterface $account): AccessResult {
+    // Refuse before any query touches the missing table.
+    if (!$this->installed()) return AccessResult::forbidden()->setCacheMaxAge(0);
     $user = $this->account((int) $account->id());
     $explanation = !$this->hasOwner() && $user && $user->isActive() && in_array('sitemanager', $user->getRoles(), TRUE);
     return AccessResult::allowedIf($explanation || $this->allows((int) $account->id()))->setCacheMaxAge(0);

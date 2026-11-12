@@ -9,5 +9,10 @@ S3_ENDPOINT=https://fsn1.your-objectstorage.com
 S3_BUCKET=example-bucket
 S3_REGION=auto
 S3_CREDENTIALS=/etc/localnodes-backup/aws-credentials
+# The bucket needs an expiry rule; scripts/backup/bucket-lifecycle.json is one.
+# That rule deletes everything under localnodes-backup/ after 14 days: every
+# site's copies in this bucket, not just this one's, and anything else stored
+# under that folder. Keep other data out of that folder; a bucket that holds
+# anything else there needs its own prefix here and in the rule.
 S3_PREFIX=localnodes-backup
 KEEP_DAYS=14

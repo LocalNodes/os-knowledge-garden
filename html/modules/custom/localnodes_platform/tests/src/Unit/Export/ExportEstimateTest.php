@@ -6,6 +6,7 @@ namespace Drupal\Tests\localnodes_platform\Unit\Export;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\StatementInterface;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryInterface;
@@ -59,6 +60,43 @@ final class ExportEstimateTest extends UnitTestCase {
       new Settings($settings);
       unlink($base . '/public/upload.bin');
       rmdir($base . '/public'); rmdir($base . '/private'); rmdir($base);
+    }
+  }
+
+  /** With file_public_path unset, Drupal's default public folder still counts. */
+  public function testPublicUploadsCountWhenThePublicPathIsUnset(): void {
+    $base = sys_get_temp_dir() . '/export-estimate-' . bin2hex(random_bytes(8));
+    mkdir($base . '/files', 0700, TRUE);
+    mkdir($base . '/private', 0700);
+    $file = fopen($base . '/files/upload.bin', 'wb');
+    $this->assertTrue(ftruncate($file, 6442450944));
+    fclose($file);
+    try { Settings::getInstance(); $settings = Settings::getAll(); }
+    catch (\BadMethodCallException) { $settings = []; }
+    $without = $settings;
+    unset($without['file_public_path']);
+    new Settings(['file_private_path' => $base . '/private'] + $without);
+    // The site folder is $base, so Drupal's default public path is $base/files.
+    $container = new ContainerBuilder();
+    $container->set('kernel', new \stdClass());
+    $container->setParameter('site.path', $base);
+    \Drupal::setContainer($container);
+    try {
+      $statement = $this->createMock(StatementInterface::class);
+      $statement->method('fetchField')->willReturn(10000000);
+      $database = $this->createMock(Connection::class);
+      $database->method('databaseType')->willReturn('mysql');
+      $database->method('query')->willReturn($statement);
+      $manager = $this->getMockBuilder(ExportManager::class)->disableOriginalConstructor()->onlyMethods(['freeBytes'])->getMock();
+      $manager->method('freeBytes')->willReturn(PHP_FLOAT_MAX);
+      (new \ReflectionProperty(ExportManager::class, 'database'))->setValue($manager, $database);
+      $this->expectException(ExportSpaceException::class);
+      (new \ReflectionMethod($manager, 'space'))->invoke($manager);
+    }
+    finally {
+      new Settings($settings);
+      unlink($base . '/files/upload.bin');
+      rmdir($base . '/files'); rmdir($base . '/private'); rmdir($base);
     }
   }
 

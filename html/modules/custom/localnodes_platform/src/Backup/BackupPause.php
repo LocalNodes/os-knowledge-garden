@@ -242,8 +242,11 @@ final class BackupPause {
   /**
    * Writes a new pause and returns its token.
    *
-   * The caller holds the backup lock. An expired pause left by a killed run
-   * is removed first; a pause still in force refuses.
+   * The caller holds the backup lock, so no other writer runs. An expired
+   * pause left by a killed run is removed first; a pause still in force
+   * refuses. The JSON goes to a temporary file in the same folder, which is
+   * renamed over the pause name only when every byte was written and the
+   * file closed: a failed write leaves no pause file and throws.
    *
    * @param string $reason
    *   "backup" or "restore".
@@ -265,14 +268,16 @@ final class BackupPause {
       @unlink($this->file());
     }
     $token = bin2hex(random_bytes(16));
-    // 'x': fails if another writer got there first, never replaces a file.
-    $handle = @fopen($this->file(), 'x');
+    $temporary = $dir . '/.backup-pause.' . bin2hex(random_bytes(8));
+    $handle = @fopen($temporary, 'x');
     if ($handle === FALSE) {
-      throw new \RuntimeException('Cannot write the pause file (another writer may have made one).');
+      throw new \RuntimeException('Cannot write the pause file.');
     }
-    fwrite($handle, json_encode(['token' => $token, 'until' => $until, 'reason' => $reason]) . "\n");
-    fclose($handle);
-    @chmod($this->file(), 0644);
+    $json = json_encode(['token' => $token, 'until' => $until, 'reason' => $reason]) . "\n";
+    if (!BackupWrite::all($handle, $json) || !@chmod($temporary, 0644) || !@rename($temporary, $this->file())) {
+      @unlink($temporary);
+      throw new \RuntimeException('Cannot write the pause file.');
+    }
     return $token;
   }
 
