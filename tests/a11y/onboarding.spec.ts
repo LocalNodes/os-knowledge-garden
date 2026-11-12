@@ -1,13 +1,12 @@
-// Phase 23 sign-up screens on the Nuxt site (23-20; D-24, ROADMAP SC9;
-// 23-UI-SPEC.md "Accessibility checklist" rows 1 to 7).
+// Sign-up screens on the Nuxt site.
 //
 // axe (WCAG 2.2 AA tags) over every new or changed sign-up screen state:
 // invite entry, link landing, the sign-up form, /success (progress,
-// failure and retry, stopped, welcome; 23-37: the payment step, held for the
-// owner and for another session, declined, payment not confirmed; 23-43 Task 7:
+// failure and retry, stopped, welcome; the payment step, held for the
+// owner and for another session, declined, payment not confirmed;
 // removing, refunding, refunded) and
-// /unsubscribe (23-19 follow-up).
-// Each result is saved to the Phase 23 folder as axe-<screen>-<state>.json.
+// /unsubscribe.
+// Each result is saved to the folder set by PHASE23_RESULTS_DIR as axe-<screen>-<state>.json.
 //
 // Runs in the "onboarding" project against the Nuxt dev server, with no
 // Drupal and no DDEV:
@@ -18,21 +17,21 @@
 // No live calls: the dev server runs with no Stripe, Resend, Upstash, Gemini,
 // OpenRouter, Coolify or GitHub keys, and every sign-up API the browser calls
 // is answered with page.route (helpers/onboarding-mocks.ts). Two reads happen while the server renders
-// /onboarding (room and price, 23-19): with no Redis the room read fails and the
+// /onboarding (room and price): with no Redis the room read fails and the
 // page shows "Waiting for Room". So the form states load /invite first, answer
 // the room and price reads in the browser, and move to /onboarding with the
 // client router, which runs those reads in the browser.
 //
-// F8 (23-39; orchestrator 2026-11-08; 23-UI-SPEC sections 2 and 5): the
+// Focus boxes: the
 // expired-link box and the failure box take focus and carry no alert role, so
 // the focus move reads them once. They are found by their text inside their
-// tabindex -1 div (named by tag: main also has tabindex -1 since 23-39 and
+// tabindex -1 div (named by tag: main also has tabindex -1 and
 // contains every alert's text). Alerts that take no focus keep the role.
 //
 // The mouse is moved off any button before a scan, so a state is scanned as it
 // is, not as a hover left over from a click shows it. The hover colours have
 // their own check at the end ("pointer hover keeps text contrast"): Nuxt UI's
-// primary hover was 3.49:1 (23-19 finding), fixed in 23-29.
+// primary hover was 3.49:1, now fixed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
@@ -64,7 +63,7 @@ import {
 } from './helpers/onboarding-mocks';
 
 // The sign-up API answers, open() (which waits for hydration) and openForm()
-// live in helpers/onboarding-mocks.ts, shared with 23-29's keyboard and
+// live in helpers/onboarding-mocks.ts, shared with the sign-up keyboard and
 // screen-reader specs.
 
 // Picked with --project onboarding, a sign-up site that isn't running fails the
@@ -75,7 +74,7 @@ test.beforeAll(async () => {
   await requireOnboardingSite(test.skip);
 });
 
-/** A box that takes focus (tabindex -1), found by its text, not by role (F8, 23-39). */
+/** A box that takes focus (tabindex -1), found by its text, not by role. */
 const focusedBox = (page: Page, text: string) => page.locator('div[tabindex="-1"]').filter({ hasText: text });
 
 // --- 0. Landing page (/) -----------------------------------------------------------
@@ -189,7 +188,7 @@ test.describe('link landing', () => {
     await page.getByRole('button', { name: 'Continue to sign-up' }).click();
     await expect(page.getByText('This link has expired or was already used. Ask for a new one.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Get a new sign-in link' })).toBeVisible();
-    // F8: focused, read once by the focus move, no alert role.
+    // Focused, read once by the focus move, no alert role.
     const box = focusedBox(page, 'This link has expired or was already used.');
     await expect(box).toBeFocused();
     expect(await box.getAttribute('role'), 'the focused box has no role').toBeNull();
@@ -363,7 +362,7 @@ test.describe('success page', () => {
     await checkA11y(page, 'success', 'no-session', SCAN);
   });
 
-  // 23-20 follow-up (2026-11-08): a session id the server does not know (no
+  // A session id the server does not know (no
   // state and no checkout marker) answers notFound, and the page shows the
   // same empty state, never the build steps.
   test('progress, unknown session', async ({ page }) => {
@@ -391,7 +390,7 @@ test.describe('success page', () => {
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toContainText('We couldn\'t start your site.');
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByText('Try setting up your site once more. If it still doesn\'t work, we\'ll stop. You won\'t be charged.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Retry site setup' })).toBeVisible();
@@ -405,7 +404,7 @@ test.describe('success page', () => {
     const alert = focusedBox(page, 'Something went wrong on our side.');
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     await checkA11y(page, 'success', 'reason-unknown', SCAN);
   });
 
@@ -438,14 +437,13 @@ test.describe('success page', () => {
 
   test('failed, no retry yet and not stopped', async ({ page }) => {
     // Attempt 2: a site's own failure inside its 10-minute window, or a stop
-    // still running (23-14). The next-step line shows under the alert (23-38;
-    // orchestrator rule C and ruling point 1 (c), 2026-11-08).
+    // still running. The next-step line shows under the alert.
     await status(page, { status: 'failed', siteUrl: null, reason: 'install_failed', canRetry: false, stopped: false, attempt: 2 });
     await open(page, `/success?session_id=${SESSION}`);
     const alert = focusedBox(page, 'We couldn\'t finish setting up your site.');
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     const line = page.getByText('We\'re finishing up and will email you about what happens next.', { exact: true });
     await expect(line).toBeVisible();
     await expect(line).toHaveCount(1);
@@ -457,13 +455,13 @@ test.describe('success page', () => {
   });
 
   test('failed, no retry yet and not stopped, attempt 1', async ({ page }) => {
-    // Attempt 1 inside its window: the alert only; the window ends in the free retry (23-38).
+    // Attempt 1 inside its window: the alert only; the window ends in the free retry.
     await status(page, { status: 'failed', siteUrl: null, reason: 'install_failed', canRetry: false, stopped: false, attempt: 1 });
     await open(page, `/success?session_id=${SESSION}`);
     const alert = focusedBox(page, 'We couldn\'t finish setting up your site.');
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     await expect(page.getByText('finishing up', { exact: false })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Retry site setup' })).toHaveCount(0);
     await checkA11y(page, 'success', 'failed-no-retry-attempt-1', SCAN);
@@ -481,10 +479,10 @@ test.describe('success page', () => {
     await checkA11y(page, 'success', 'stopped', SCAN);
   });
 
-  // --- 23-37: the first payment (B-1; 23-UI-SPEC sections 4, 6a and 6b) ----------
+  // --- The first payment -----------------------------------------------------------
   // The held screen's "Confirm my payment" is a form POST shown only to the
-  // browser that made the sign-up (canConfirm, Tom's answer 3); the hosted
-  // invoice address is in no page's HTML, for either session (T-23-188).
+  // browser that made the sign-up (canConfirm); the hosted
+  // invoice address is in no page's HTML, for either session.
 
   test('payment step (ready)', async ({ page }) => {
     await status(page, statusReply('ready', { pilot: false }));
@@ -554,7 +552,7 @@ test.describe('success page', () => {
   });
 
   test('payment not confirmed (the 3DS hold ran out)', async ({ page }) => {
-    // 23-43 Task 7: "removed" only once the delete is confirmed; "You weren't charged" only with noCapture.
+    // "removed" only once the delete is confirmed; "You weren't charged" only with noCapture.
     await status(page, statusReply('declined', { heldExpired: true, removed: true, noCapture: true, refundProven: false }));
     await open(page, `/success?session_id=${SESSION}`);
     const h1 = heading(page, 'We\'ve Removed Your Site');
@@ -569,7 +567,7 @@ test.describe('success page', () => {
     await checkA11y(page, 'success', 'not-confirmed', SCAN);
   });
 
-  // 23-43 Task 7 (23-UI-SPEC.md "Billing copy additions for 23-43", P3, P6, P2).
+  // Removing, refunding and refunded: the billing copy for a removed site.
   test('removing (the 3DS hold ran out, the delete not yet confirmed)', async ({ page }) => {
     await status(page, statusReply('declined', { heldExpired: true, removed: false, noCapture: true, refundProven: false }));
     await open(page, `/success?session_id=${SESSION}`);
@@ -624,7 +622,7 @@ test.describe('success page', () => {
     await expect(page.getByText('Check your email for your sign-in link.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open your site (opens another site)' })).toHaveAttribute('href', SITE);
     await expect(page.getByRole('link', { name: /Read the organizer guide/ })).toHaveAttribute('href', `${SITE}/guide`);
-    // No sign-in link or password button anywhere (D-13).
+    // No sign-in link or password button anywhere.
     await expect(page.getByRole('link', { name: /sign in|log in|password/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /password/i })).toHaveCount(0);
     await checkA11y(page, 'success', 'welcome', SCAN);
@@ -640,7 +638,7 @@ test.describe('success page', () => {
   });
 });
 
-// --- /unsubscribe (23-19 follow-up; 23-UI-SPEC "Unsubscribe page") ---------------
+// --- /unsubscribe -------------------------------------------------------------------
 
 test.describe('unsubscribe page', () => {
   // A token-shaped value: the page only checks the shape, and every POST is
@@ -684,11 +682,11 @@ test.describe('unsubscribe page', () => {
     await answerPost(page, 400, { ok: false, message: 'Bad Request' });
     await openPage(page);
     await page.getByRole('button', { name: 'Unsubscribe' }).click();
-    // F8 (23-39, orchestrator Q1): focused, read once by the focus move, no alert role.
+    // Focused, read once by the focus move, no alert role.
     const alert = focusedBox(page, REFUSED);
     await expect(alert).toBeVisible();
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Unsubscribe' })).toHaveCount(0);
     await mouseOff(page);
@@ -699,11 +697,11 @@ test.describe('unsubscribe page', () => {
     await answerPost(page, 503, { ok: false, message: 'Service Unavailable' });
     await openPage(page);
     await page.getByRole('button', { name: 'Unsubscribe' }).click();
-    // F8 (23-39, orchestrator Q1): focused, read once by the focus move, no alert role.
+    // Focused, read once by the focus move, no alert role.
     const alert = focusedBox(page, SERVER);
     await expect(alert).toBeVisible();
     await expect(alert).toBeFocused();
-    expect(await alert.getAttribute('role'), 'the focused box has no role (F8)').toBeNull();
+    expect(await alert.getAttribute('role'), 'the focused box has no role').toBeNull();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Unsubscribe' })).toBeEnabled();
     await mouseOff(page);
@@ -711,7 +709,7 @@ test.describe('unsubscribe page', () => {
   });
 });
 
-// --- Before scripts run (23-29 finding 2; 23-20 hand-off) ------------------------
+// --- Before scripts run -----------------------------------------------------------
 //
 // What a screen reader gets from the server's HTML before Nuxt hydrates it (or
 // with scripts off): every field on /invite has its label.
@@ -728,7 +726,7 @@ test.describe('server HTML, before scripts', () => {
     expect(unlabelled, 'every label points at a field that exists').toEqual([]);
   });
 
-  // 23-39 (F2b): the sign-up form's fields keep UFormField's ids, so every
+  // The sign-up form's fields keep UFormField's ids, so every
   // label matches its field in the server HTML. The form only renders when the
   // room read during server rendering succeeds, so this test brings its own
   // loopback Upstash stub (it reports room) and a second built sign-up server
@@ -775,7 +773,7 @@ test.describe('server HTML, before scripts', () => {
   });
 });
 
-// --- Pointer hover (23-29 finding 1; 23-19 deferred item) -----------------------
+// --- Pointer hover -----------------------------------------------------------------
 //
 // Every other state above moves the mouse away before its scan. This block does
 // the opposite: it rests the pointer on each button and link of the page in
@@ -832,7 +830,7 @@ test.describe('pointer hover keeps text contrast', () => {
       for (let i = 0; i < count; i++) {
         const target = targets.nth(i);
         if (await target.evaluate((el) => !!el.closest('#nuxt-devtools-container, nuxt-devtools-frame'))) continue;
-        // The skip link (23-39) is hidden until it has focus, so no pointer can
+        // The skip link is hidden until it has focus, so no pointer can
         // rest on it. Its focused look has its own axe scan (keyboard-phase23.spec.ts,
         // axe-skip-link-focused.json).
         if (await target.evaluate((el) => el.getAttribute('href') === '#main-content')) continue;

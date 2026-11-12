@@ -10,10 +10,9 @@ use Drupal\Core\Url;
 /**
  * The "Hacked or phished? Get help" link, by Approve and the sign-in.
  *
- * Tom's ruling of 2026-11-09 (22.1-15): someone about to approve a payment,
- * and someone signing in with a wallet, reaches the "Hacked or Phished?"
- * page in one click. The words are the approved 22.1-15-UI-SPEC-PROPOSAL.md
- * row. The page is localnodes_platform's route; without it (the module off)
+ * Someone about to approve a payment, and someone signing in, reaches the
+ * "Hacked or Phished?" page in one click, at the moment a scam would strike.
+ * The page is localnodes_platform's route; without it (the module off)
  * there is no link, and nothing fails.
  *
  * preRender() is appended to the siwe_login block's #pre_render in
@@ -29,6 +28,14 @@ final class SiweHelpLink implements TrustedCallbackInterface {
    * The help page's route (localnodes_platform).
    */
   public const ROUTE = 'localnodes_platform.safety_help';
+
+  /**
+   * Regions that make up the top bar, where the sign-in block gets no link.
+   *
+   * Open Social's themes put the account menu, and with it the sign-in
+   * block, in "header".
+   */
+  public const TOP_BAR_REGIONS = ['header'];
 
   /**
    * {@inheritdoc}

@@ -5,7 +5,12 @@
  * Hooks for the LocalNodes Web3 module.
  */
 
+use Drupal\block\BlockInterface;
 use Drupal\Core\Block\BlockPluginInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\localnodes_web3\SignIn;
 use Drupal\localnodes_web3\SiweHelpLink;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
 use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
@@ -14,10 +19,10 @@ use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
  * Implements hook_library_info_alter().
  *
  * Hangs the LocalNodes treasury styles (localnodes_web3/treasury) off the
- * shared Phase 21 components library, so every page that shows the Test
+ * shared safe_smart_accounts components library, so every page that shows the Test
  * network banner, a receipt panel or a Short ID gets the LocalNodes look.
  * safe_smart_accounts and group_treasury stay theme-neutral and never
- * reference this library or any --ln-* token (D-04).
+ * reference this library or any --ln-* token.
  */
 function localnodes_web3_library_info_alter(array &$libraries, $extension) {
   if ($extension !== 'safe_smart_accounts' || !isset($libraries['components'])) {
@@ -33,12 +38,11 @@ function localnodes_web3_library_info_alter(array &$libraries, $extension) {
 /**
  * Implements hook_mail_alter().
  *
- * The organizers' vote-result emails from safe_governance_group (25-25,
- * V9) end with the generic line "Sent by ‹site name›": that module names
- * no distribution (D-03). On a LocalNodes site every mail goes out in the
- * LocalNodes mail template, whose footer under the card reads
- * "Sent by ‹community› · a community on LocalNodes", once (agreed
- * wording; 23-13 T-5). So the generic line is taken out here, and the footer of
+ * The organizers' vote-result emails from safe_governance_group end with
+ * the generic line "Sent by ‹site name›": that module names no
+ * distribution. On a LocalNodes site every mail goes out in the LocalNodes
+ * mail template, whose footer under the card reads
+ * "Sent by ‹community› · a community on LocalNodes", once. So the generic line is taken out here, and the footer of
  * these emails is the template's. Other mails are left alone.
  */
 function localnodes_web3_mail_alter(array &$message) {
@@ -63,7 +67,7 @@ function localnodes_web3_mail_alter(array &$message) {
  * Implements hook_safe_smart_accounts_approve_help().
  *
  * "Hacked or phished? Get help" right after "Approve payment", on payments
- * and settings changes alike (Tom's ruling of 2026-11-09, 22.1-15). It
+ * and settings changes alike. It
  * links localnodes_platform's "Hacked or Phished?" page; without that page
  * there is no link.
  */
@@ -75,13 +79,56 @@ function localnodes_web3_safe_smart_accounts_approve_help(SafeTransactionInterfa
 /**
  * Implements hook_block_view_BASE_BLOCK_ID_alter() for siwe_login_block.
  *
- * The same link under the wallet sign-in (22.1-15). It is added in a
+ * The same link under the sign-in. It is added in a
  * #pre_render callback, which runs once the block content is built and
  * after siwe_login_waap's own callback, so it lands after the final
  * content: see SiweHelpLink.
  */
 function localnodes_web3_block_view_siwe_login_block_alter(array &$build, BlockPluginInterface $block): void {
+  // Places the sign-in's "Opening sign-in…" line under the fixed top bar.
+  $build['#attached']['library'][] = SignIn::LIBRARY;
+  // Not in the top bar: there the link sat under the button, made the bar
+  // taller and was dark on dark. The footer links the help page on every
+  // page, and the log-in and sign-up pages show it under their own button.
+  $placed = $build['#block'] ?? NULL;
+  if ($placed instanceof BlockInterface && in_array($placed->getRegion(), SiweHelpLink::TOP_BAR_REGIONS, TRUE)) {
+    return;
+  }
   $build['#pre_render'][] = [SiweHelpLink::class, 'preRender'];
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * The log-in and sign-up pages lead with the sign-in button; the password
+ * form stays underneath it (see SignIn). Open Social serves the log-in page
+ * with its own social_user_login_form in place of core's user_login_form.
+ * The sign-up form gets it only for a signed-out visitor: an administrator
+ * adding an account at /admin/people/create gets no button.
+ */
+function localnodes_web3_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  if (!in_array($form_id, SignIn::FORM_IDS, TRUE) || !SignIn::available()) {
+    return;
+  }
+  if ($form_id === 'user_register_form' && !\Drupal::currentUser()->isAnonymous()) {
+    return;
+  }
+  $form['ln_signin'] = SignIn::formElement();
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view_alter() for block_content.
+ *
+ * The front-page welcome block (Open Social's hero_call_to_action_block)
+ * shows "Sign in" and a quiet "Use a password" link in place of its stored
+ * "Sign up" and "Login" buttons. The stored links are left alone, so the
+ * block shows them again when this module is off.
+ */
+function localnodes_web3_block_content_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display): void {
+  if ($entity->bundle() !== 'hero_call_to_action_block' || !isset($build['field_call_to_action_link']) || !SignIn::available()) {
+    return;
+  }
+  $build['field_call_to_action_link'] = SignIn::heroLinks($build['field_call_to_action_link']['#weight'] ?? 0);
 }
 
 /**

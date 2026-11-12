@@ -34,6 +34,7 @@ use GuzzleHttp\Middleware;
  *   siwe_login_waap with show_siwe_wallet_button TRUE and FALSE. With FALSE,
  *   WaaP's own #pre_render replaces the whole block content, so the help
  *   link has to be added after it (review 15-M1).
+ * - In the top bar ("header") the sign-in block gets no link.
  * - Without localnodes_platform the route is missing: no link, no error.
  * - Every network this module ships gets group_treasury's "Open in Safe
  *   app" link, which the help page's "If this site is down" section names.
@@ -201,6 +202,23 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
   }
 
   /**
+   * In the top bar the sign-in block has no link, so the bar keeps its height.
+   *
+   * The link is dark text under the button there, which made the bar taller.
+   * The footer links the help page on every page, and the log-in and sign-up
+   * pages show it under their own button (SignInEntryTest).
+   */
+  public function testTopBarSignInHasNoLink(): void {
+    $this->enable('localnodes_platform', 'localnodes_web3', 'siwe_login_waap');
+    $this->installConfig(['siwe_login_waap']);
+
+    $xpath = self::dom($this->signInBlock('header'));
+    $this->assertSame(1, $xpath->query('//*[@id="siwe-login-waap"]')->length, 'The sign-in is still there.');
+    $this->assertSame(0, $xpath->query('//a[normalize-space(.)="' . self::LINK_TEXT . '"]')->length, 'No help link in the top bar.');
+    $this->assertSame(0, $xpath->query('//*[contains(@class, "ln-safety-help-link")]')->length);
+  }
+
+  /**
    * Without localnodes_platform the block has no link and still renders.
    */
   public function testNoHelpRouteNoSignInLink(): void {
@@ -261,13 +279,16 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
 
   /**
    * Places the siwe_login block and renders it through the block pipeline.
+   *
+   * @param string $region
+   *   The stark region to place it in; "header" is the top bar.
    */
-  private function signInBlock(): string {
+  private function signInBlock(string $region = 'content'): string {
     $block = Block::create([
       'id' => 'siwe_login',
       'plugin' => 'siwe_login_block',
       'theme' => 'stark',
-      'region' => 'content',
+      'region' => $region,
       'settings' => [
         'label' => 'SIWE Login',
         'label_display' => FALSE,
