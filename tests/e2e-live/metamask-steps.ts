@@ -83,6 +83,66 @@ const CONFIRM_BUTTONS = [
   'page-container-footer-next', // older pages
 ];
 
+/** Buttons on an alert over a request; allowed on any request a call expects. */
+const ALERT_BUTTONS = ['confirm-alert-modal-submit-button', 'alert-modal-button'];
+
+/**
+ * The one kind of request a call may confirm. `route` is how MetaMask routes it:
+ * `confirmation` (add or switch network), `connect` (share an account, or a switch to a
+ * network the site may not use yet) or `confirm-transaction` (sends, signatures and, in
+ * 13.13.1, add-network). `buttons` are the buttons that confirm it; the alert buttons are
+ * allowed on top. The rest narrows the request inside its route (see promptRefusal):
+ * `origin` is the site's host, which the prompt must name; `network` is the network name a
+ * switch prompt must show; `signatureOnly` refuses anything on the route but a signature.
+ */
+export interface ExpectedPrompt {
+  route: 'confirmation' | 'connect' | 'confirm-transaction';
+  /** Other routes the same request can take (a switch can open on `connect`). */
+  alsoRoutes?: ReadonlyArray<'confirmation' | 'connect' | 'confirm-transaction'>;
+  buttons: readonly string[];
+  origin?: string;
+  network?: string;
+  signatureOnly?: boolean;
+}
+
+/**
+ * A network switch the site asked for. MetaMask 13.13.1 (local recording, 11-12) opens a
+ * switch to a network the site may not use yet as connect/.../confirm-permissions ("Use your
+ * enabled networks", the network's name, Confirm = page-container-footer-next).
+ */
+export const SWITCH_PROMPT: ExpectedPrompt = { route: 'confirmation', alsoRoutes: ['connect'], buttons: ['confirmation-submit-button', 'page-container-footer-next'] };
+/** A signature or a send (MetaMask routes both as confirm-transaction). */
+export const SIGN_PROMPT: ExpectedPrompt = { route: 'confirm-transaction', buttons: ['confirm-footer-button'] };
+/** A signature only: the voting-setup approval signs and never sends. */
+export const SETUP_SIGN_PROMPT: ExpectedPrompt = { ...SIGN_PROMPT, signatureOnly: true };
+/** Sharing an account with the site (wallet_requestPermissions). */
+export const SHARE_PROMPT: ExpectedPrompt = { route: 'connect', buttons: ['confirm-btn'] };
+
+/** What an add-network prompt says (13.13.1 routes it as confirm-transaction). */
+const ADD_NETWORK_TEXT = /suggesting additional network details/i;
+/** What an account-sharing prompt says (connect route, like a switch to a new network). */
+const SHARE_TEXT = /connect this website/i;
+
+/**
+ * Why an open prompt on the expected route is still not the expected request, or undefined
+ * when it is. The markers come from the local recording of MetaMask 13.13.1 (11-12):
+ * - every prompt names the site's host ("Request from fresh3.test", "fresh3.test is asking");
+ * - signatures (typed data and personal_sign) end their address in /signature-request; a send
+ *   and an add-network prompt share the route and the Confirm button but not that ending;
+ * - a switch names the network; add-network says "suggesting additional network details";
+ *   sharing an account says "Connect this website".
+ */
+export function promptRefusal(expected: ExpectedPrompt, url: string, text: string): string | undefined {
+  if (expected.origin && !text.includes(expected.origin)) return `it does not name the site ${expected.origin}`;
+  if (expected.signatureOnly && !/\/signature-request(?:[/?#]|$)/.test(url)) return 'it is not a signature request (a send or a network request)';
+  if (expected.network !== undefined) {
+    if (ADD_NETWORK_TEXT.test(text)) return 'it adds a network instead of switching';
+    if (SHARE_TEXT.test(text)) return 'it shares an account instead of switching';
+    if (!text.includes(expected.network)) return `it does not name the network ${expected.network}`;
+  }
+  return undefined;
+}
+
 const WARNING_WORDS = /warning|suspicious|deceptive|doesn.t match|mismatch|not the same|risk|unknown address|alert/i;
 
 export interface PromptLog {
@@ -135,6 +195,11 @@ const STATE_MS = 1_000;
  * id stays the same while fee estimates and other screen text change. An address without an
  * id stands for itself.
  */
+/** The route of the request a prompt shows, or undefined while its address has none yet. */
+function routeOf(page: Page): string | undefined {
+  return /#\/?(confirm-transaction|confirmation|connect)\//.exec(page.url())?.[1];
+}
+
 function requestOf(page: Page): string {
   const url = page.url();
   const match = /#\/?(confirm-transaction|confirmation|connect)\/([^/?#]+)/.exec(url);
@@ -197,8 +262,12 @@ export async function confirmPrompts(
   extensionId: string,
   kind: string,
   log: PromptLog,
-  opts: { done?: () => Promise<boolean> | boolean; idleMs?: number; timeoutMs?: number; reopenIdleMs?: number } = {},
+  opts: { done?: () => Promise<boolean> | boolean; idleMs?: number; timeoutMs?: number; reopenIdleMs?: number; reopenBeforeClick?: boolean; expect?: ExpectedPrompt } = {},
 ): Promise<void> {
+  // Opening the prompt page shows whatever request is pending, which may not be this call's.
+  // So a call that opens it must say which request it expects, and nothing else is clicked.
+  if (opts.reopenIdleMs && !opts.expect) throw new Error(`${kind}: opening the wallet's prompt page needs the expected request`);
+  const expected = opts.expect;
   const idleMs = opts.idleMs ?? 6_000;
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const start = Date.now();
@@ -210,7 +279,9 @@ export async function confirmPrompts(
   let confirmed: { page: Page; request: string; buttons: Set<string> } | undefined;
   // reopenIdleMs: MetaMask can leave a request that arrives while the last prompt window is
   // closing pending with no window. After that long with no prompt (once a click ran, `done`
-  // still false), open the wallet's prompt page ourselves; it shows the pending request. Every
+  // still false), open the wallet's prompt page ourselves; reopenBeforeClick does the same
+  // before any click, for a request sent just after another step's prompt closed (for example
+  // the network switch right after the sign-in signature, with no window for 120 s); it shows the pending request. Every
   // page opened here is kept until it is closed: at once if its navigation fails, after 8 s if
   // it shows no known button, and in any case when this returns. It stays owned until it is
   // seen closed; one that won't close within CLOSE_MS is an error.
@@ -299,7 +370,19 @@ export async function confirmPrompts(
         const request = requestOf(prompt);
         const pressed = confirmed?.page === prompt && confirmed.request === request ? confirmed.buttons : new Set<string>();
         let clicked = '';
-        if (!gone && !hung) {
+        // With an expected request, nothing is pressed until the prompt's address shows its
+        // route, and a prompt for any other request is refused, unconfirmed, with an error.
+        let allowed = true;
+        if (expected && !gone && !hung) {
+          const route = routeOf(prompt);
+          if (route === undefined || !text.trim()) allowed = false;
+          else if (route !== expected.route && !expected.alsoRoutes?.includes(route as ExpectedPrompt['route'])) throw new Error(`${kind}: the open wallet prompt is a ${route} request, not the expected ${expected.route} request; it was not confirmed`);
+          else {
+            const why = promptRefusal(expected, prompt.url(), text);
+            if (why) throw new Error(`${kind}: the open wallet prompt is not the expected request (${why}); it was not confirmed`);
+          }
+        }
+        if (!gone && !hung && allowed) {
           const scroll = prompt.getByTestId('confirm-scroll-to-bottom__button');
           if (await on(false, () => scroll.isVisible(), PROBE_MS)) {
             const press = timed(10_000);
@@ -314,6 +397,7 @@ export async function confirmPrompts(
           }
           for (const id of CONFIRM_BUTTONS) {
             if (gone || hung) break;
+            if (expected && !ALERT_BUTTONS.includes(id) && !expected.buttons.includes(id)) continue;
             const button = prompt.getByTestId(id);
             const enabled = timed(5_000);
             if ((await on(false, () => button.isVisible(), PROBE_MS)) && (await on(false, () => button.isEnabled({ timeout: enabled.timeout }), enabled.capMs))) {
@@ -363,11 +447,12 @@ export async function confirmPrompts(
           for (const line of warned) log.warnings.push(`${kind}: ${line}`);
           // Fixed fields only: the CI log is public, so MetaMask's own text stays in `log`. The
           // local recording reads it from there.
-          console.log(`[metamask] ${kind}: clicked ${clicked}; warning lines ${warned.length}`);
+          const named = expected?.origin ? '; site named yes' : '';
+          console.log(`[metamask] ${kind}: clicked ${clicked}; warning lines ${warned.length}${named}`);
         }
       } else if (!opts.done && clicks > 0 && Date.now() - last > idleMs) {
         return;
-      } else if (opts.done && opts.reopenIdleMs && clicks > 0 && owned.length === 0 && Date.now() - last > opts.reopenIdleMs) {
+      } else if (opts.done && opts.reopenIdleMs && (clicks > 0 || opts.reopenBeforeClick) && owned.length === 0 && Date.now() - last > opts.reopenIdleMs) {
         console.log(`[metamask] ${kind}: no prompt for ${opts.reopenIdleMs} ms; opening the wallet's prompt page`);
         const openMs = left(10_000);
         const opening = context.newPage();

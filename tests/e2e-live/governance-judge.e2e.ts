@@ -52,8 +52,8 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { liveBrowserArgs } from './cache-live';
 import { GOVERNANCE_CACHE_NAME } from './cache-governance';
 import { ACCOUNT_NAMES, GOVERNANCE_WALLET_PASSWORD } from './wallet-setup/live/governance.setup';
-import { confirmPrompts, openHome, within, type PromptLog } from './metamask-steps';
-import { bounded, signInAs as signInAsAccount, signInWithMetaMask as signInWithWallet, useAccount as shareAccount, WALLET_READ_MS, type JudgeWallet } from './governance/judge-wallet';
+import { confirmPrompts, openHome, SWITCH_PROMPT, within, type PromptLog } from './metamask-steps';
+import { bounded, forSite, networkOf, REOPEN, signInAs as signInAsAccount, signInWithMetaMask as signInWithWallet, useAccount as shareAccount, WALLET_READ_MS, type JudgeWallet } from './governance/judge-wallet';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup } from './governance/live-steps';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -349,7 +349,7 @@ async function switchSiteToSepolia(page: Page, context: BrowserContext, extensio
     .evaluate((chainId) => (window as unknown as { ethereum: { request(a: unknown): Promise<unknown> } }).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] }), SEPOLIA_HEX)
     .catch(fixed)
     .finally(() => { done = true; });
-  await Promise.all([ask, confirmPrompts(context, extensionId, 'switchNetwork', log, { done: () => done, timeoutMs: 120_000 })]);
+  await Promise.all([ask, confirmPrompts(context, extensionId, 'switchNetwork', log, { done: () => done, timeoutMs: 120_000, ...REOPEN, expect: { ...forSite(SWITCH_PROMPT, page), ...networkOf(SEPOLIA_HEX) } })]);
   return chain();
 }
 

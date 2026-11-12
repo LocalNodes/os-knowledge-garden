@@ -3,7 +3,13 @@
 // same code. Errors from the site's page carry a fixed category only (failure-dump.ts).
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { categorized } from '../failure-dump';
-import { confirmPrompts, openHome, switchAccount, within, type PromptLog } from '../metamask-steps';
+import { confirmPrompts, openHome, SHARE_PROMPT, switchAccount, SWITCH_PROMPT, within, type ExpectedPrompt, type PromptLog } from '../metamask-steps';
+
+/**
+ * A request sent just after another prompt closed can wait in MetaMask with no window.
+ * After this long with no prompt, the wallet's prompt page is opened to show it.
+ */
+export const REOPEN = { reopenIdleMs: 15_000, reopenBeforeClick: true } as const;
 
 /** How long a read from the wallet through the site's page may take. */
 export const WALLET_READ_MS = 30_000;
@@ -20,6 +26,21 @@ export async function bounded<T>(p: Promise<T>, ms: number, what: string): Promi
 }
 
 type Eip1193Window = { ethereum: { request(a: unknown): Promise<unknown> } };
+
+/** The expected prompt, with the site's host, which the prompt must name. */
+export function forSite(prompt: ExpectedPrompt, page: Page): ExpectedPrompt {
+  const host = /^https?:/.test(page.url()) ? new URL(page.url()).host : '';
+  return host ? { ...prompt, origin: host } : prompt;
+}
+
+/** Network names MetaMask shows on a switch prompt, by chain id (hex, lower case). */
+const NETWORK_NAMES: Record<string, string> = { '0xaa36a7': 'Sepolia' };
+
+/** The network a switch prompt must name, when the judge knows the name. */
+export function networkOf(chainId: string): { network?: string } {
+  const name = NETWORK_NAMES[chainId.toLowerCase()];
+  return name ? { network: name } : {};
+}
 
 /** One wallet request from the site's page, bounded, with a fixed error. */
 async function pageRequest(page: Page, method: string, params: unknown[] | undefined, ms: number): Promise<unknown> {
@@ -48,7 +69,7 @@ export async function switchSiteChain(page: Page, w: JudgeWallet, chainId: strin
     .evaluate((id) => (window as unknown as Eip1193Window).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: id }] }), chainId)
     .catch(fixed)
     .finally(() => { done = true; });
-  await Promise.all([ask, confirmPrompts(w.context, w.extensionId, 'switchNetwork', w.log, { done: () => done, timeoutMs: 120_000 })]);
+  await Promise.all([ask, confirmPrompts(w.context, w.extensionId, 'switchNetwork', w.log, { done: () => done, timeoutMs: 120_000, ...REOPEN, expect: { ...forSite(SWITCH_PROMPT, page), ...networkOf(chainId) } })]);
   const now = await siteChain(page);
   if (now !== chainId.toLowerCase()) throw new Error(`the site is on network ${now}, not ${chainId}, after the switch`);
 }
@@ -104,7 +125,7 @@ export async function useAccount(page: Page, w: JudgeWallet, name: string, addre
       .evaluate(() => (window as unknown as Eip1193Window).ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] }))
       .catch(fixed)
       .finally(() => { done = true; });
-    await Promise.all([ask, confirmPrompts(w.context, w.extensionId, 'shareAccount', w.log, { done: () => done, timeoutMs: 120_000 })]);
+    await Promise.all([ask, confirmPrompts(w.context, w.extensionId, 'shareAccount', w.log, { done: () => done, timeoutMs: 120_000, ...REOPEN, expect: forSite(SHARE_PROMPT, page) })]);
     console.log(`[judge] use ${name}: the wallet answered the share request`);
     if (chainBefore !== null && (await siteChain(page)) !== chainBefore) {
       console.log(`[judge] use ${name}: the site's network changed with its access; switching it back`);
