@@ -5,7 +5,9 @@
 // allowlist. The dump prints only fixed, structured fields: integers, known enum values, yes or
 // no flags, counts, and the keys of known UI strings. It never prints free text from MetaMask,
 // the console or Drupal, so nothing a page, a wallet or an RPC provider writes can reach the log.
-// redact() stays as defence in depth; no dump line depends on it.
+// The site's alerts print the same way: the key of a known site message (SITE_ALERTS), or
+// "unrecognised site message" with a word count. redact() stays as defence in depth; no dump
+// line depends on it.
 import type { Page } from '@playwright/test';
 
 const MAX_LINE = 600;
@@ -161,6 +163,83 @@ export function approveAlertKey(text: string): string {
   return 'other';
 }
 
+/** The site's alert regions on the page under test; the outermost match of each is read. */
+export const ALERT_SELECTOR = '[role="alert"], .alert-danger, .messages--error, .messages--warning';
+
+/** The receipt panel, which can hold a wallet's error copy: an alert in it or around it is skipped. */
+const RECEIPT_PANEL = '#safe-deployment-status-container';
+
+/** At most this many alerts are printed. */
+const MAX_ALERTS = 5;
+
+/**
+ * The site's own alert messages the judge can meet, by key, verbatim from the modules' source
+ * (safe_governance at the pinned commit: VotesController, VotesList, ApproveMembersForm,
+ * VotingSetupForm, ProposalFormBase and the propose, vote, approve-members and setup-approve
+ * scripts; the approve flow's wallet errors from safe_smart_accounts' wallet-errors.js). A
+ * runtime value is matched by a pattern, never printed.
+ */
+const SITE_ALERTS: ReadonlyArray<[string, string | RegExp]> = [
+  // The voting setup page.
+  ['setup_failed', "Setting up voting didn't go through. Nothing changed. Organizers need to approve it again."],
+  ['rules_refused', "The voting rules weren't accepted. Organizers need to approve them again."],
+  ['setup_fee_refused', "The community's network fee account refused this step, so nothing was sent."],
+  ['setup_fee_limit', "The community's network fee limit is reached"],
+  ['setup_name_taken', /Someone reserved .+ first\. Choose another name, then organizers approve again\./],
+  ['setup_unknown', 'Something went wrong on our side. Refresh this page to try again.'],
+  ['setup_start_failed', 'Something went wrong on our side. Try setting up voting again in a minute.'],
+  ['approvals_expired', 'The approvals ran out of time. Approvals for the voting rules last 6 days, so organizers need to approve again.'],
+  ['host_control', "Something gives this site's host control over the group's votes, so new proposals are paused."],
+  ['host_unread_setup', "Couldn't check the group's voting setup right now."],
+  ['host_unread_approvers', "Couldn't check the group fund's approvers right now."],
+  ['approve_rejected', "You didn't confirm it in your wallet, so the setup isn't approved yet."],
+  ['approve_wrong_network', /Your wallet is on a different network\. Switch it to .+, then approve again\./],
+  ['approve_not_approver', "The account in your wallet isn't one of this group fund's approvers. Switch to the account you use on this site, then approve again."],
+  ['approve_not_connected', "Your wallet isn't connected in this browser. Connect it, then come back to this page."],
+  ['approve_wallet_problem', 'Your wallet ran into a problem. Check your wallet, then try again.'],
+  ['approve_server', "Something went wrong on our side, so your approval wasn't saved."],
+  // Approving members.
+  ['members_failed', "These changes didn't go through. Nothing changed. Approve them again."],
+  ['members_server', "Something went wrong on our side, so the changes weren't sent for approval. Try again in a minute."],
+  ['members_rejected', "You didn't confirm it in your wallet, so the changes aren't approved yet."],
+  // The votes list.
+  ['votes_unread', "Couldn't load the votes right now."],
+  ['votes_stale', "Couldn't load the latest votes right now."],
+  // A proposal.
+  ['publish_hub_failed', "We couldn't publish the proposal right now. Your draft is saved. Try publishing again in a minute."],
+  ['publish_not_yet', 'You can propose a minute or so after organizers approve you. Try publishing again shortly.'],
+  ['publish_server', "Something went wrong on our side, so the proposal wasn't published. Your draft is saved."],
+  ['publish_rejected', "You didn't confirm it in your wallet, so the proposal wasn't published."],
+  ['publish_wrong_account', "The account in your wallet isn't the one linked to your profile here. Switch to it, then publish again."],
+  // A vote.
+  ['vote_busy', 'Lots of votes are arriving right now. Try casting it again in a minute.'],
+  ['vote_hub_failed', "We couldn't record your vote right now. Try casting it again in a minute."],
+  ['vote_server', "Something went wrong on our side, so your vote wasn't recorded."],
+  ['vote_ended', "Voting ended before your vote arrived, so it wasn't counted."],
+  ['vote_rejected', "You didn't confirm your vote, so it wasn't counted."],
+  ['vote_wrong_account', "The account in your wallet isn't the one linked to your profile here. Switch to it, then cast your vote again."],
+  ['vote_not_yet', 'You were approved to vote after this one started, so you can vote on the next one.'],
+  ['vote_choose', 'Choose For, Against or Abstain.'],
+];
+
+/** Whitespace collapsed and curly apostrophes straightened, for matching only. */
+function plain(text: string): string {
+  return String(text ?? '').replace(/[\u2018\u2019]/g, "'").replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * One site alert as a dump line: the keys of the known site messages it holds, else
+ * "unrecognised site message" and its length in words. No word, number or hex from the page is
+ * ever printed. Empty text prints nothing.
+ */
+export function alertLine(text: string): string | null {
+  const t = plain(text);
+  if (!t) return null;
+  const keys = SITE_ALERTS.filter(([, m]) => (typeof m === 'string' ? t.includes(m) : m.test(t))).map(([key]) => key);
+  if (keys.length) return `alert: ${keys.join(',')}`;
+  return `alert: unrecognised site message (${t.split(' ').length} words)`;
+}
+
 /** A JSON-RPC hex quantity as a bigint; anything else throws "rpc_error (bad_result)". */
 export function hexQuantity(value: unknown): bigint {
   if (typeof value !== 'string' || !/^0x[0-9a-f]+$/i.test(value)) throw new Error('rpc_error (bad_result)');
@@ -302,6 +381,22 @@ export class FailureDump {
       }
       const count = (sel: string) => page.locator(sel).count().catch(() => -1);
       out.push(`messages: status=${await count('.messages--status')} warning=${await count('.messages--warning')} error=${await count('.messages--error')} alerts=${await count('[role="alert"]')} danger=${await count('.alert-danger')}`);
+      const texts = await page
+        .locator(ALERT_SELECTOR)
+        .evaluateAll(
+          (els, [sel, panel]) =>
+            els
+              .filter((el) => !el.parentElement?.closest(sel) && !el.closest(panel) && !el.querySelector(panel))
+              .map((el) => (el as HTMLElement).innerText ?? el.textContent ?? ''),
+          [ALERT_SELECTOR, RECEIPT_PANEL] as const,
+        )
+        .catch(() => null);
+      if (texts === null) out.push('alert text: read failed');
+      else {
+        const lines = texts.map(alertLine).filter((l): l is string => l !== null);
+        out.push(...lines.slice(0, MAX_ALERTS));
+        if (lines.length > MAX_ALERTS) out.push(`alert text: ${lines.length - MAX_ALERTS} more not printed`);
+      }
     }
     catch {
       out.push('page read failed');
