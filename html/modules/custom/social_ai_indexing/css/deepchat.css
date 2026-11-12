@@ -19,6 +19,12 @@
 .ai-deepchat .ln-chat-bar .ai-deepchat--header {
   flex: 1 1 auto;
   min-height: 44px;
+  /* The 44px minimum sets a one-line bar's height. Thin vertical padding
+     keeps a renamed assistant's two-line name from making the docked bar
+     much taller, where it reached up over the last links of a short page
+     (the AI overview's Sources). */
+  padding-top: 4px;
+  padding-bottom: 4px;
   border: none;
   border-radius: 0 8px 0 0;
   background: var(--ln-color-text);
@@ -105,18 +111,13 @@
 /*
  * The header name (EU AI Act Art. 50): the visible
  * assistant name, then an "AI" label that is always there. A site can rename
- * the assistant (Site information), so the name is capped and ends in an
- * ellipsis rather than pushing the launcher off a narrow window or over page
- * links; the label is never squeezed. The full name stays in the accessible
- * name (visually-hidden span in the template), so the cap hides nothing from
- * a screen reader.
- *
- * Desktop cap: 6.5rem wide, up to two lines. The closed bar must stay clear
- * of the AI overview's Sources links at 1280px (overview.spec.ts): a
- * one-line cap that clears them (about 6rem) would cut the default
- * "LocalNodes LiAIson" to "LocalNodes L...", so the default wraps after
- * "LocalNodes" and shows whole. Phone cap: 11rem on one line, which shows
- * the default whole at 320px (about 142px at the phone's 14px type).
+ * the assistant (Site information), so the name is capped at 12rem (less on
+ * a narrow window) and two lines, and a longer name ends in an ellipsis
+ * rather than pushing the launcher off a narrow window; the label is never
+ * squeezed. The default "LocalNodes LiAIson" sits on one line wherever the
+ * bar has room for it. The full name stays in the accessible name
+ * (visually-hidden span in the template), so the cap hides nothing from a
+ * screen reader.
  */
 .ai-deepchat .ai-deepchat--label {
   display: flex;
@@ -126,22 +127,16 @@
 }
 .ai-deepchat .ln-assistant-name {
   min-width: 0;
-  max-width: 6.5rem;
-  overflow-wrap: anywhere;
+  /* The window less the bar's other parts (menu, padding, dot, label, toggle,
+     inset; about 160px when open), so a long name never pushes the bar past
+     a 320px window. A single word too long for the cap breaks. */
+  max-width: min(12rem, calc(100vw - 160px));
+  overflow-wrap: break-word;
   overflow: hidden;
   line-height: 1.25;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-@media (max-width: 767px) {
-  .ai-deepchat .ln-assistant-name {
-    max-width: 11rem;
-    overflow-wrap: normal;
-    display: block;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
 }
 .ai-deepchat .ln-ai-label {
   flex: none;
@@ -152,12 +147,58 @@
   font-weight: 600;
   line-height: 1.5;
 }
-/* The always-shown line under the input: what is sent to the AI service. */
+/* The always-shown line under the input: what is sent to the AI service.
+   Fine print, inside the chat box's width: "width: 0; min-width: 100%" keeps
+   the sentence from widening the panel (as one line it is wider than the
+   chat box) and lets it wrap to the box instead. text-muted on surface is
+   AA at this size. */
 .ai-deepchat .ln-chat-disclosure {
+  box-sizing: border-box;
+  width: 0;
+  min-width: 100%;
   margin: 0;
   padding: 4px 8px 8px;
   background-color: var(--ln-color-surface);
   color: var(--ln-color-text-muted);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.4;
+}
+
+/* ai_chatbot writes the configured size (500px) inline on the panel body and
+   on deep-chat; ai_chatbot opens the panel at the window's full width up to
+   768px (sticky-chatbot.css), so on a phone the chat box was wider than the
+   window and cut off on the right. There the chat box takes the panel's
+   width. */
+@media (max-width: 768px) {
+  .ai-deepchat .chat-element {
+    min-width: 0 !important;
+  }
+  .ai-deepchat deep-chat {
+    width: 100% !important;
+  }
+  /* There the open panel is 80% of the window's height and clips what
+     overflows, so on a short phone the bar plus the 500px chat box pushed
+     the line under the input out of sight. The panel stacks its parts in a
+     column and the chat box gives up height (never more than its 500px, and
+     never below the room for one exchange); the bar and the line keep
+     theirs, so the line always ends inside the panel. */
+  .ai-deepchat.chat-container:not(.chat-collapsed) {
+    display: flex;
+    flex-direction: column;
+  }
+  .ai-deepchat.chat-container:not(.chat-collapsed) .ln-chat-bar,
+  .ai-deepchat.chat-container:not(.chat-collapsed) .ln-chat-disclosure {
+    flex: none;
+  }
+  .ai-deepchat.chat-container:not(.chat-collapsed) .chat-element {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .ai-deepchat.chat-container:not(.chat-collapsed) deep-chat {
+    flex: 0 1 500px;
+    min-height: 200px;
+    height: auto !important;
+  }
 }

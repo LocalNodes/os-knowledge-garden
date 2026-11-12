@@ -59,6 +59,8 @@ STEWARD_SPECS.push(...PHASE23_STATE_SPECS);
 MEMBER_SPECS.push('governance.spec.ts');
 // 22.1-17: the DeepChat bar's computed keyboard focus ring, as the member (the chat shows on the group page).
 MEMBER_SPECS.push('chat-focus-ring.spec.ts');
+// The chat panel's width, the line under the input, and the assistant's name (default and long), at 320 to 1280.
+MEMBER_SPECS.push('chat-panel-size.spec.ts');
 // 25-26: the keyboard walk and screen-reader evidence, as the steward (the
 // vote blocks switch to the voter).
 STEWARD_SPECS.push('governance-keyboard.spec.ts');
