@@ -74,12 +74,20 @@ final class RagQueryOptionsTest extends GroupAccessKernelTestBase {
       $this->assertNotNull($query, "$index_id: the query reached the backend.");
       $this->assertNull($query['search_api_bypass_access'], "$index_id: search_api_bypass_access is not set.");
       $this->assertNotSame(QueryInterface::PROCESSING_NONE, $query['processing_level'], "$index_id: processing level is not PROCESSING_NONE.");
-      $this->assertSame(10, (int) $query['limit'], "$index_id: the amount becomes the query limit.");
+      // Scoped, the search fetches twice the amount (at most 50), so the
+      // group's own pages are not crowded out by pages shared from other
+      // groups; the tool keeps the amount after putting its own first.
+      $this->assertSame(20, (int) $query['limit'], "$index_id: a scoped query fetches twice the amount.");
       // QUERY_PRE_EXECUTE ran: SearchQuerySubscriber's conditions are there.
       $conditions = $this->lastStubConditions();
       $this->assertContains(['field' => 'group_id', 'value' => $group_g, 'operator' => '='], $this->findConditions($conditions, 'group_id'), "$index_id: the scope condition reached the backend.");
       $this->assertNotEmpty($this->findConditions($conditions, 'field_content_visibility'), "$index_id: the visibility condition reached the backend.");
     }
+
+    // Site-wide, the amount is the query limit.
+    $this->resetStubConditions();
+    $this->runRagTool('social_posts', $this->personas['P-MEM'], NULL);
+    $this->assertSame(10, (int) $this->lastStubQuery()['limit'], 'Site-wide, the amount becomes the query limit.');
   }
 
   /**

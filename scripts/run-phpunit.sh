@@ -10,6 +10,8 @@
 #   scripts/run-phpunit.sh --group phase22 html/modules/custom/social_ai_indexing
 #   scripts/run-phpunit.sh --filter RenderedItemMembersOnlyTest html/modules/custom/social_ai_indexing
 #
+# For a time limit, wrap it: timeout -k 10s 1700 scripts/run-phpunit.sh …
+#
 # Kernel tests use prefixed tables (test<random>), so dev site content is not
 # modified. Exit status is phpunit's.
 #
@@ -113,7 +115,9 @@ if [ "$asked_functional" = false ] && [ "$has_exclude" = false ]; then
   echo "run-phpunit: sidecar mode, excluding @group phase22_functional (run those with PHPUNIT_MODE=web)" >&2
 fi
 
-exec docker run --rm --network "$NETWORK" \
+# --init: PHP as process 1 ignores the stop signal, so a `timeout` around
+# this script would never end the run. tini as process 1 passes it on.
+exec docker run --rm --init --network "$NETWORK" \
   --user "$(id -u):$(id -g)" \
   -e HOME=/tmp \
   -e SIMPLETEST_DB="${SIMPLETEST_DB:-mysql://db:db@db:3306/db}" \

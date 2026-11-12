@@ -17,6 +17,7 @@ use Drupal\search_api\Query\ResultSetInterface;
 use Drupal\social_ai_indexing\Access\RetrievalAccessCache;
 use Drupal\social_ai_indexing\Citation\RetrievedSource;
 use Drupal\social_ai_indexing\Citation\SourceRegistry;
+use Drupal\social_ai_indexing\Service\PermissionFilterService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -33,9 +34,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - every result's entity is loaded and checked with access('view') for the
  *   person asking, in this code, so it doesn't depend on the vector DB filter
  *   (which can fail open, AI-SPEC pitfall 1) or on a backend option;
- * - when the assistant runner context carries a Group scope, a result whose
- *   group (a comment's: its parent's) isn't that group is dropped, because
- *   access alone lets another group's public page through;
+ * - the page's live visibility (a comment's: its parent's) decides the
+ *   rest, not the index: shared pages (public, or community when signed in)
+ *   anywhere; members-only pages only inside their own group, to its
+ *   members; nothing from a group the asker can't view (isAllowed());
  * - a missing entity (stale index) or an orphan comment is skipped;
  * - survivors are labelled [R1], [R2]... through the request-wide
  *   SourceRegistry, across both indexes and every call, in rank order, at
@@ -111,6 +113,16 @@ class PermissionAwareRagTool extends RagTool {
   protected LoggerInterface $logger;
 
   /**
+   * Works out the asker's group memberships, on the server.
+   */
+  protected PermissionFilterService $permissionFilter;
+
+  /**
+   * Whether the asker is a member of the scope group (this call only).
+   */
+  protected bool $scopeMember = FALSE;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): FunctionCallInterface|static {
@@ -119,6 +131,7 @@ class PermissionAwareRagTool extends RagTool {
     $instance->currentUser = $container->get('current_user');
     $instance->assistantRunner = $container->get('ai_assistant_api.runner');
     $instance->logger = $container->get('logger.channel.social_ai_indexing');
+    $instance->permissionFilter = $container->get('social_ai_indexing.permission_filter');
     return $instance;
   }
 
@@ -162,6 +175,9 @@ class PermissionAwareRagTool extends RagTool {
       $this->finish('invalid_scope', 0, []);
       return;
     }
+    // The same membership the query filter uses for the group's own
+    // members-only pages (PermissionFilterService::applyPermissionFilters()).
+    $this->scopeMember = $scope !== NULL && in_array($scope, $this->permissionFilter->getAccessibleGroupIds($this->currentUser), TRUE);
 
     $index = in_array($this->index, self::ALLOWED_INDEXES, TRUE)
       ? $this->entityTypeManager->getStorage('search_api_index')->load($this->index)
@@ -172,7 +188,10 @@ class PermissionAwareRagTool extends RagTool {
     }
 
     try {
-      $query = $index->query(['limit' => $amount]);
+      // Inside a group, fetch twice the amount so the group's own pages are
+      // not pushed out by shared pages from elsewhere before buildBlocks()
+      // puts them first and cuts back to the amount.
+      $query = $index->query(['limit' => $scope === NULL ? $amount : min(50, 2 * $amount)]);
       // Chunks rather than whole entities. Never set the bypass-access option
       // or PROCESSING_NONE here (AI-SPEC pitfall 4).
       $query->setOption('search_api_ai_get_chunks_result', TRUE);
@@ -191,18 +210,24 @@ class PermissionAwareRagTool extends RagTool {
       return;
     }
 
-    $blocks = $this->buildBlocks($result_set, $min_score, $scope);
+    $blocks = $this->buildBlocks($result_set, $min_score, $scope, $amount);
     $this->finish(NULL, count($result_set->getResultItems()), $blocks);
   }
 
   /**
    * Turns results into labelled, fenced blocks, in rank order.
    *
-   * @return array<string, array{source: \Drupal\social_ai_indexing\Citation\RetrievedSource, texts: string[]}>
+   * Inside a group, the group's own results come first, each part in rank
+   * order, before any label is given; so its pages take the first numbers
+   * and the source budget. A block from elsewhere carries a note naming the
+   * group it is shared from.
+   *
+   * @return array<string, array{source: \Drupal\social_ai_indexing\Citation\RetrievedSource, texts: string[], note: string}>
    *   Blocks keyed by entity key, in first-seen (rank) order.
    */
-  protected function buildBlocks(ResultSetInterface $result_set, float $min_score, ?int $scope): array {
-    $blocks = [];
+  protected function buildBlocks(ResultSetInterface $result_set, float $min_score, ?int $scope, ?int $amount = NULL): array {
+    $own = [];
+    $shared = [];
     foreach ($result_set->getResultItems() as $item) {
       if ($item->getScore() < $min_score) {
         continue;
@@ -213,25 +238,60 @@ class PermissionAwareRagTool extends RagTool {
         if ($entity === NULL || !$this->isAllowed($entity, $scope)) {
           continue;
         }
+        $target = $entity instanceof CommentInterface ? $entity->getCommentedEntity() : $entity;
+        $in_scope = $scope === NULL || $this->belongsToGroup($target, $scope);
+      }
+      catch (\Throwable) {
+        // Anything we can't load or check is never shown (fail closed).
+        continue;
+      }
+      if ($in_scope) {
+        $own[] = [$item, $entity];
+      }
+      else {
+        $shared[] = [$item, $entity];
+      }
+    }
+    $candidates = array_merge($own, $shared);
+    if ($amount !== NULL) {
+      $candidates = array_slice($candidates, 0, $amount);
+    }
+
+    $blocks = [];
+    foreach ($candidates as $index => [$item, $entity]) {
+      try {
         $key = $entity->getEntityTypeId() . ':' . (int) $entity->id();
         if (!isset($blocks[$key]) && !$this->isRegistered($key) && $this->sourceRegistry->count() >= self::MAX_SOURCES) {
           // The request's source budget is used up (AI-SPEC §4b).
           continue;
         }
+        $note = $index < count($own) ? '' : $this->sharedFrom($entity);
         $source = $this->sourceRegistry->register($entity, $this->citationType($entity, $item->getExtraData('citation_type')));
       }
       catch (\Throwable) {
-        // Anything we can't load, check or link is never shown (fail closed).
+        // Anything we can't link is never shown (fail closed).
         continue;
       }
-      $blocks[$key] ??= ['source' => $source, 'texts' => []];
+      $blocks[$key] ??= ['source' => $source, 'texts' => [], 'note' => $note];
       $blocks[$key]['texts'][] = (string) ($item->getExtraData('content') ?? '');
     }
     return $blocks;
   }
 
   /**
-   * Whether the asker may see the entity here: access, then scope.
+   * Whether the asker may see the entity here: access, then the live rule.
+   *
+   * Read from the entity itself (a comment's: its parent page), so the rule
+   * holds even if the query filter was lost or the index is stale:
+   * - every group the page is in must be one the asker can view, because
+   *   the page's address names its group (Open Social's alias patterns), so
+   *   a hidden group shares nothing (SHARED PAGES FIX 1);
+   * - a page the whole community shares (public, or community when signed
+   *   in) comes back inside any group and site-wide;
+   * - a members-only page comes back only inside its own group, to a member
+   *   of that group; never site-wide, never into another group's answers;
+   * - a page with no visibility value never comes back (the query filter
+   *   excludes it too).
    */
   protected function isAllowed(ContentEntityInterface $entity, ?int $scope): bool {
     $parent = NULL;
@@ -247,10 +307,65 @@ class PermissionAwareRagTool extends RagTool {
     if (!$entity->access('view', $this->currentUser)) {
       return FALSE;
     }
-    if ($scope === NULL) {
+    $page = $parent ?? $entity;
+    $group_ids = [];
+    foreach ($this->entityTypeManager->getStorage('group_content')->loadByEntity($page) as $relationship) {
+      $group = $relationship->getGroup();
+      // A missing group has no name to give away; a hidden one does.
+      if ($group instanceof GroupInterface && !$group->access('view', $this->currentUser)) {
+        return FALSE;
+      }
+      $group_ids[] = (int) $relationship->getGroupId();
+    }
+    $visibility = $this->liveVisibility($page);
+    if (in_array($visibility, $this->sharedVisibilities(), TRUE)) {
       return TRUE;
     }
-    return $this->belongsToGroup($parent ?? $entity, $scope);
+    return $visibility === 'group'
+      && $scope !== NULL
+      && $this->scopeMember
+      && in_array($scope, $group_ids, TRUE);
+  }
+
+  /**
+   * The page's own visibility value now, or '' when it has none.
+   */
+  protected function liveVisibility(ContentEntityInterface $page): string {
+    if (!$page->hasField('field_content_visibility')) {
+      return '';
+    }
+    return (string) $page->get('field_content_visibility')->value;
+  }
+
+  /**
+   * The visibility values the whole community shares, for the asker.
+   *
+   * @return string[]
+   *   'public', plus 'community' when signed in.
+   */
+  protected function sharedVisibilities(): array {
+    return $this->currentUser->isAnonymous() ? ['public'] : ['public', 'community'];
+  }
+
+  /**
+   * The note for a block shared from elsewhere: the group it comes from.
+   *
+   * isAllowed() already dropped pages in a group the asker can't view, so
+   * the fallback is only for a relationship whose group is missing.
+   */
+  protected function sharedFrom(ContentEntityInterface $entity): string {
+    $page = $entity instanceof CommentInterface ? $entity->getCommentedEntity() : $entity;
+    $storage = $this->entityTypeManager->getStorage('group_content');
+    $missing = FALSE;
+    foreach ($storage->loadByEntity($page) as $relationship) {
+      $group = $relationship->getGroup();
+      if ($group instanceof GroupInterface && $group->access('view', $this->currentUser)) {
+        return '(shared from ' . $group->label() . ')';
+      }
+      $missing = TRUE;
+    }
+    // A page in no group needs no note.
+    return $missing ? '(shared from another group)' : '';
   }
 
   /**
@@ -531,7 +646,7 @@ class PermissionAwareRagTool extends RagTool {
       $source = $block['source'];
       $this->results[] = $source->toArray();
       $labels[] = 'R' . $source->n;
-      $rendered[] = $this->renderBlock($source, $block['texts']);
+      $rendered[] = $this->renderBlock($source, $block['texts'], $block['note'] ?? '');
     }
 
     $this->setOutput($rendered
@@ -552,8 +667,13 @@ class PermissionAwareRagTool extends RagTool {
   /**
    * One labelled, fenced source block.
    */
-  protected function renderBlock(RetrievedSource $source, array $texts): string {
+  protected function renderBlock(RetrievedSource $source, array $texts, string $note = ''): string {
     $title = trim((string) preg_replace('/\s+/u', ' ', self::stripFences($source->title)));
+    $note = trim((string) preg_replace('/\s+/u', ' ', self::stripFences($note)));
+    if ($note !== '') {
+      // For the model only; the citation title stays the page title.
+      $title .= ' ' . $note;
+    }
     $excerpt = self::excerpt($texts);
     $this->sourceRegistry->addExcerpt($source, $excerpt);
     return $source->label() . ' ' . $title . "\n" . self::FENCE_OPEN . "\n" . $excerpt . "\n" . self::FENCE_CLOSE;

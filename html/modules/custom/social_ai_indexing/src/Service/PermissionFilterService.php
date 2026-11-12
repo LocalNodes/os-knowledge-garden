@@ -139,12 +139,23 @@ class PermissionFilterService {
    * Every query gets a field_content_visibility IN (...) condition:
    * - anonymous: public;
    * - logged in: public, community;
-   * - plus group (members-only) when the scope group is one the account
-   *   belongs to. Membership is worked out here, on the server.
+   * - with a scope group the account belongs to, also that group's
+   *   members-only pages: (visibility IN the above) OR (group_id = scope AND
+   *   visibility = group). Membership is worked out here, on the server.
+   *
+   * Inside a group the assistant answers from the group's own pages and from
+   * pages shared with the whole community; another group's
+   * members-only pages never come back. For a non-member the scoped filter
+   * is the site-wide one.
+   *
+   * This filter works on indexed values only. It still fetches shared-looking
+   * pages from groups the account cannot view, and pages whose live
+   * visibility has narrowed since indexing; PermissionAwareRagTool::isAllowed()
+   * (safeguard 2) drops those per result (SHARED PAGES FIX 1).
    *
    * The scope group is a hint from the client (DeepChat contexts.group_id or
-   * the ai_search_scope_group_id query option). It only narrows the search:
-   * it adds group_id = hint. A hinted group that does not exist, or that the
+   * the ai_search_scope_group_id query option). It never widens past the
+   * account's own rights. A hinted group that does not exist, or that the
    * account cannot view (for example a secret group), aborts the query, so
    * the search returns nothing (fails closed).
    *
@@ -164,22 +175,31 @@ class PermissionFilterService {
   public function applyPermissionFilters(QueryInterface $query, AccountInterface $account, ?int $scopeGroupId = NULL): void {
     $visible = $account->isAnonymous() ? ['public'] : ['public', 'community'];
 
-    if ($scopeGroupId !== NULL) {
-      $group = $scopeGroupId > 0 ? $this->entityTypeManager->getStorage('group')->load($scopeGroupId) : NULL;
-      if (!$group instanceof GroupInterface || !$group->access('view', $account)) {
-        $query->abort(self::ABORT_SCOPE_UNAVAILABLE);
-        return;
-      }
-      if (in_array($scopeGroupId, $this->getAccessibleGroupIds($account), TRUE)) {
-        $visible[] = 'group';
-      }
-      // group_id comes from the GroupMetadata processor (not the entity's
-      // computed 'groups' field) because processor fields reliably reach
-      // the vector DB payload.
-      $query->addCondition('group_id', $scopeGroupId);
+    if ($scopeGroupId === NULL) {
+      $query->addCondition('field_content_visibility', $visible, 'IN');
+      return;
     }
 
-    $query->addCondition('field_content_visibility', $visible, 'IN');
+    $group = $scopeGroupId > 0 ? $this->entityTypeManager->getStorage('group')->load($scopeGroupId) : NULL;
+    if (!$group instanceof GroupInterface || !$group->access('view', $account)) {
+      $query->abort(self::ABORT_SCOPE_UNAVAILABLE);
+      return;
+    }
+    // Shared pages from anywhere: public, plus community when
+    // signed in, in any group or none.
+    $scoped = $query->createConditionGroup('OR', ['social_ai_indexing_scope']);
+    $scoped->addCondition('field_content_visibility', $visible, 'IN');
+    if (in_array($scopeGroupId, $this->getAccessibleGroupIds($account), TRUE)) {
+      // A member also gets this group's members-only pages, and no other
+      // group's. group_id comes from the GroupMetadata processor (not the
+      // entity's computed 'groups' field) because processor fields reliably
+      // reach the vector DB payload.
+      $own = $query->createConditionGroup('AND');
+      $own->addCondition('group_id', $scopeGroupId);
+      $own->addCondition('field_content_visibility', 'group');
+      $scoped->addConditionGroup($own);
+    }
+    $query->addConditionGroup($scoped);
   }
 
   /**

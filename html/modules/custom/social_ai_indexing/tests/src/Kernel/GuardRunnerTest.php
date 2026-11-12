@@ -149,7 +149,7 @@ final class GuardRunnerTest extends GroupAccessKernelTestBase {
    */
   public function testRegistryIsResetPerRun(): void {
     $first = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), 'What do the notes say?', $this->citeEverythingScript('What do the notes say?'));
-    $this->assertCount(5, $first['sources'], 'Three Topics and two comments in group G for a member.');
+    $this->assertCount(6, $first['sources'], 'Three Topics and two comments in group G for a member, and the public page group H shares.');
 
     $second = $this->askAssistant($this->personas['P-MEM'], $this->scopeValue('G'), 'And the replies?', [
       self::searchTurn('social_comments', 'replies'),

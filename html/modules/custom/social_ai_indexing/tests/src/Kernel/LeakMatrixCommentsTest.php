@@ -39,7 +39,7 @@ final class LeakMatrixCommentsTest extends GroupAccessKernelTestBase {
   /**
    * Comment fixtures on social_comments.
    */
-  private const COMMENTS = ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT', 'S-MO-COMMENT'];
+  private const COMMENTS = ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT', 'S-MO-COMMENT', 'H-MO-COMMENT', 'H-PUB-COMMENT'];
 
   /**
    * The shipped social_comments index on the stub server.
@@ -58,6 +58,9 @@ final class LeakMatrixCommentsTest extends GroupAccessKernelTestBase {
     // members-only Topic.
     $this->fixtures['G-COM-COMMENT'] = $this->createComment($this->fixtures['G-COM'], 'A fictional community reply.');
     $this->fixtures['S-MO-COMMENT'] = $this->createComment($this->fixtures['S-MO'], 'A fictional secret group reply.');
+    // Group H's replies: shared ones reach a question asked in G.
+    $this->fixtures['H-MO-COMMENT'] = $this->createComment($this->fixtures['H-MO'], 'A fictional H members reply.');
+    $this->fixtures['H-PUB-COMMENT'] = $this->createComment($this->fixtures['H-PUB'], 'A fictional H public reply.');
     $this->assertSame(count(self::COMMENTS), $this->indexAllItems($this->index), 'Every comment fixture is indexed.');
     $this->setStubMode('honour');
   }
@@ -70,15 +73,18 @@ final class LeakMatrixCommentsTest extends GroupAccessKernelTestBase {
    */
   public static function cases(): array {
     return [
-      'P-MEM in G' => ['P-MEM', 'G', ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT']],
-      'P-MEMH in G' => ['P-MEMH', 'G', ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT']],
-      'P-NON in G' => ['P-NON', 'G', ['G-PUB-COMMENT', 'G-COM-COMMENT']],
-      'P-ANON in G' => ['P-ANON', 'G', ['G-PUB-COMMENT']],
+      // Inside a group, its own replies plus shared replies from any
+      // group; never another group's members-only replies.
+      'P-MEM in G' => ['P-MEM', 'G', ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT', 'H-PUB-COMMENT']],
+      'P-MEMH in G' => ['P-MEMH', 'G', ['G-MO-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT', 'H-PUB-COMMENT']],
+      'P-MEMH in H' => ['P-MEMH', 'H', ['H-MO-COMMENT', 'H-PUB-COMMENT', 'G-PUB-COMMENT', 'G-COM-COMMENT']],
+      'P-NON in G' => ['P-NON', 'G', ['G-PUB-COMMENT', 'G-COM-COMMENT', 'H-PUB-COMMENT']],
+      'P-ANON in G' => ['P-ANON', 'G', ['G-PUB-COMMENT', 'H-PUB-COMMENT']],
       // Site-wide (no hint): nobody gets members-only comments, and
       // anonymous askers get no community-only comment either.
-      'P-MEM site-wide' => ['P-MEM', NULL, ['G-PUB-COMMENT', 'G-COM-COMMENT']],
-      'P-NON site-wide' => ['P-NON', NULL, ['G-PUB-COMMENT', 'G-COM-COMMENT']],
-      'P-ANON site-wide' => ['P-ANON', NULL, ['G-PUB-COMMENT']],
+      'P-MEM site-wide' => ['P-MEM', NULL, ['G-PUB-COMMENT', 'G-COM-COMMENT', 'H-PUB-COMMENT']],
+      'P-NON site-wide' => ['P-NON', NULL, ['G-PUB-COMMENT', 'G-COM-COMMENT', 'H-PUB-COMMENT']],
+      'P-ANON site-wide' => ['P-ANON', NULL, ['G-PUB-COMMENT', 'H-PUB-COMMENT']],
     ];
   }
 

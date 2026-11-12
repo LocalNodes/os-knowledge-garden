@@ -28,6 +28,11 @@ use Drupal\Tests\social_ai_indexing\Traits\StubSearchTrait;
  *    CitationInvariants::check().
  * 4. No-answer reply: byte-identical to the reply for a nonsense question.
  *
+ * Asked inside group G, a persona may also get pages the whole community
+ * shares from other groups (public, or community when signed in):
+ * those are not leaks, and H-PUB must reach every non-forged persona, named
+ * as shared from H. Another group's members-only page never may.
+ *
  * Both stub backend modes run: 'ignore' (the vector filter fails open, so
  * only the tool's own checks stand between the model and hidden pages) and
  * 'honour' (both safeguards).
@@ -133,7 +138,7 @@ final class AgentLeakMatrixTest extends GroupAccessKernelTestBase {
       foreach ($run['sources'] as $source) {
         $entity = $this->container->get('entity_type.manager')->getStorage($source->entityType)->load($source->entityId);
         $key = $this->fixtureKeyOf($source->key());
-        if (in_array($key, $hidden, TRUE) || !$entity->access('view', $account) || !$this->inGroupG($entity)) {
+        if (in_array($key, $hidden, TRUE) || !$entity->access('view', $account) || (!$this->inGroupG($entity) && !$this->isSharedFor($entity, $account))) {
           $leaks[] = "DOOR 2 $tag: the registry holds $key as " . $source->label() . '.';
         }
         foreach ($forbidden as $canary) {
@@ -171,6 +176,13 @@ final class AgentLeakMatrixTest extends GroupAccessKernelTestBase {
       // Every non-forged persona can see G-PUB, so every answer is cited.
       if (!str_contains($run['answer'], "\n" . CitedAnswer::SOURCES_HEADING . "\n")) {
         $structure[] = "$tag: expected a cited answer with Sources, got: " . substr($run['answer'], 0, 120);
+      }
+
+      // Positive control: a page group H shares with everyone reaches the
+      // model, labelled with the group it comes from.
+      $shared_label = $this->fixtures['H-PUB']->label() . ' (shared from ' . $this->groups['H']->label() . ')';
+      if (!str_contains(implode("\n", $run['inputs']), $shared_label)) {
+        $missing[] = "MISSING $tag: the shared H-PUB should reach the model as '$shared_label'.";
       }
 
       // Positive controls: members of G get the members-only Topic and the
@@ -237,16 +249,56 @@ final class AgentLeakMatrixTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * A hidden group's community page never reaches a final answer.
+   *
+   * S-COM sits in the secret group S, is readable by any signed-in person by
+   * its address, and its address names S (Open Social's alias pattern). The
+   * model cites everything it is given; nothing of S may appear in what the
+   * model read, the answer and its Sources links, or the registry, asked in
+   * G or site-wide (SHARED PAGES FIX 1). H-PUB's aliased link is the control
+   * that an alias does reach the Sources list.
+   *
+   * @dataProvider modes
+   */
+  public function testHiddenGroupNeverInFinalAnswer(string $mode): void {
+    $this->setStubMode($mode);
+    $s_com = $this->createGroupTopic($this->groups['S'], 'Fictional S community notice', 'SC4-BODY a fictional community notice in secret group S.', 'community');
+    foreach (['S-COM' => [$s_com, 'fictional-group-s'], 'H-PUB' => [$this->fixtures['H-PUB'], 'fictional-group-h']] as [$node, $slug]) {
+      \Drupal\path_alias\Entity\PathAlias::create(['path' => '/node/' . $node->id(), 'alias' => '/group/' . $slug . '/topic/' . $node->id(), 'langcode' => $node->language()->getId()])->save();
+    }
+    $storage = $this->container->get('entity_type.manager')->getStorage('search_api_index');
+    foreach (['social_posts', 'social_comments'] as $index_id) {
+      $this->indexAllItems($storage->load($index_id));
+    }
+    $this->mirrorCommentPayloads();
+    $account = $this->personas['P-NON'];
+    $this->assertTrue($s_com->access('view', $account), 'Precondition: a signed-in non-member can read S-COM.');
+    $question = 'What notices are there?';
+    foreach (['in G' => $this->scopeValue('G'), 'site-wide' => NULL] as $where => $scope) {
+      $this->resetSourceRegistry();
+      $run = $this->askAssistant($account, $scope, $question, $this->citeEverythingScript($question));
+      $seen = $run['answer'] . "\n" . implode("\n", $run['inputs']) . "\n" . implode("\n", array_map(static fn ($source): string => json_encode($source->toArray()), $run['sources']));
+      foreach ([(string) $this->groups['S']->label(), 'fictional-group-s', 'SC4-', 'Fictional S ', '/node/' . $s_com->id()] as $canary) {
+        $this->assertStringNotContainsString($canary, $seen, "[$mode] $where: LEAK of the hidden group ($canary).");
+      }
+      $this->assertContains('/group/fictional-group-h/topic/' . $this->fixtures['H-PUB']->id(), self::answerUrls($run['answer']), "[$mode] $where: control, H-PUB's aliased link is in Sources.");
+      $this->assertSame([], $run['violations'], "[$mode] $where");
+    }
+  }
+
+  /**
    * Fixture keys a persona must not receive in a Group G answer.
    *
    * @return list<string>
    *   Hidden fixture keys: everything for a forged scope; otherwise what the
-   *   persona can't view, plus everything outside group G.
+   *   persona can't view, plus everything outside group G that is not shared
+   *   with the whole community.
    */
   private function hiddenFixtures(AccountInterface $account, bool $forged): array {
     $hidden = [];
     foreach ($this->fixtures as $key => $entity) {
-      if ($forged || !in_array($key, self::IN_SCOPE, TRUE) || !$entity->access('view', $account)) {
+      $outside = !in_array($key, self::IN_SCOPE, TRUE) && !$this->isSharedFor($entity, $account);
+      if ($forged || $outside || !$entity->access('view', $account)) {
         $hidden[] = $key;
       }
     }
@@ -264,6 +316,21 @@ final class AgentLeakMatrixTest extends GroupAccessKernelTestBase {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Whether a page (a comment: its parent) is shared with this persona.
+   *
+   * Shared means public, or community for a signed-in persona: the rule the
+   * scoped search and the tool's own check apply to other groups' pages.
+   */
+  private function isSharedFor($entity, AccountInterface $account): bool {
+    $target = $entity instanceof CommentInterface ? $entity->getCommentedEntity() : $entity;
+    if (!$target->hasField('field_content_visibility')) {
+      return FALSE;
+    }
+    $shared = $account->isAuthenticated() ? ['public', 'community'] : ['public'];
+    return in_array((string) $target->get('field_content_visibility')->value, $shared, TRUE);
   }
 
   /**
