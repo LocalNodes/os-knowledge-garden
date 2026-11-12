@@ -92,7 +92,7 @@ const ALERT_BUTTONS = ['confirm-alert-modal-submit-button', 'alert-modal-button'
  * network the site may not use yet) or `confirm-transaction` (sends, signatures and, in
  * 13.13.1, add-network). `buttons` are the buttons that confirm it; the alert buttons are
  * allowed on top. The rest narrows the request inside its route (see promptRefusal):
- * `origin` is the site's host, which the prompt must name; `network` is the network name a
+ * `origin` is the site's host name (no port), which the prompt must name; `network` is the network name a
  * switch prompt must show; `signatureOnly` refuses anything on the route but a signature.
  */
 export interface ExpectedPrompt {
