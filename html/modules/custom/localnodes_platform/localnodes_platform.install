@@ -14,6 +14,9 @@
  * our stack requires (Gemini models, Qdrant connection, Solr connection).
  */
 function localnodes_platform_install() {
+  if ($role = \Drupal\user\Entity\Role::load('sitemanager')) {
+    $role->grantPermission('export localnodes site')->save();
+  }
   _localnodes_platform_configure_ai_defaults();
   // Environment-specific overrides (Solr host, Qdrant host, etc.) are handled
   // by $config[] overrides in settings.php, which take effect at runtime without
@@ -661,4 +664,18 @@ function localnodes_platform_requirements($phase) {
     ];
   }
   return $requirements;
+}
+
+/**
+ * Implements hook_schema().
+ */
+function localnodes_platform_schema(): array {
+  return ['localnodes_site_export' => [
+    'description' => 'The current site export and last successful attribution.',
+    'fields' => [
+      'id' => ['type' => 'varchar', 'length' => 16, 'not null' => TRUE],
+      'data' => ['type' => 'blob', 'size' => 'big', 'not null' => TRUE],
+    ],
+    'primary key' => ['id'],
+  ]];
 }

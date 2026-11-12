@@ -1,0 +1,44 @@
+<section class="ln-export" aria-label="{{ 'Export this site'|t }}">
+<span class="ln-export-owner">{{ 'Site owners only'|t }}</span>
+<p class="intro">{{ 'Take your community’s records to another server or keep a readable copy.'|t }}</p>
+<aside class="ln-export-warning" aria-label="{{ 'Private records in this copy'|t }}"><p>{{ 'Includes every group’s private records and members’ email addresses and protected passwords. Other site managers are told when you request a copy.'|t }}</p></aside>
+{% set active = parts.records is null ? 'records' : (parts.files is null ? 'files' : 'library') %}
+<h2>{{ 'What is in your copy'|t }}</h2><ul class="ln-export-rows">
+{% set done = parts.records is not null %}
+<li class="ln-export-row {{ done ? 'is-complete' : '' }}"><span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% if done %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>{% else %}<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>{% endif %}</svg>
+<span class="visually-hidden">{{ done ? 'Complete:'|t : 'Included:'|t }}</span></span><span><strong>{{ 'Records and member accounts'|t }}</strong><span class="ln-export-description">{{ 'Pages, settings and members’ sign-in details.'|t }}</span></span><span class="ln-export-meta">{% if done %}{{ parts.records }}{% elseif status == 'running' and active == 'records' %}{{ 'In progress'|t }}{% elseif status in ['queued', 'running'] %}{{ 'Waiting'|t }}{% endif %}</span></li>
+{% set done = parts.files is not null %}
+<li class="ln-export-row {{ done ? 'is-complete' : '' }}"><span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% if done %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>{% else %}<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>{% endif %}</svg>
+<span class="visually-hidden">{{ done ? 'Complete:'|t : 'Included:'|t }}</span></span><span><strong>{{ 'Uploaded files'|t }}</strong><span class="ln-export-description">{{ 'Documents, photos and private attachments.'|t }}</span></span><span class="ln-export-meta">{% if done %}{{ parts.files }}{% elseif status == 'running' and active == 'files' %}{{ 'In progress'|t }}{% elseif status in ['queued', 'running'] %}{{ 'Waiting'|t }}{% endif %}</span></li>
+{% set done = parts.library is not null %}
+<li class="ln-export-row {{ done ? 'is-complete' : '' }}"><span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{% if done %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>{% else %}<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/>{% endif %}</svg>
+<span class="visually-hidden">{{ done ? 'Complete:'|t : 'Included:'|t }}</span></span><span><strong>{{ 'Library as readable files'|t }}</strong><span class="ln-export-description">{{ 'Published pages you can open as plain text.'|t }}</span></span><span class="ln-export-meta">{% if done %}{{ parts.library }}{% elseif status == 'running' and active == 'library' %}{{ 'In progress'|t }}{% elseif status in ['queued', 'running'] %}{{ 'Waiting'|t }}{% endif %}</span></li>
+</ul>
+{% if status == 'failed' %}<p class="ln-export-error"><strong>{% if failure == 'space' %}{{ 'We could not prepare your copy: not enough room.'|t }}{% else %}{{ 'We could not prepare your copy.'|t }}{% endif %}</strong><br>{{ 'Your site and its records are still here.'|t }}</p>{% endif %}
+{{ actions }}
+{% if status == 'never' %}<p>{{ 'We’ll email you when it is ready; the download lasts 24 hours.'|t }}</p>
+{% elseif status == 'queued' %}<p><strong>{{ 'Your export is waiting to start.'|t }}</strong></p>
+{% elseif status == 'running' %}<p><strong>{{ 'Preparing your copy.'|t }}</strong> {{ 'We’ll email you when it is ready.'|t }}</p>
+{% elseif status == 'ready' %}<p><strong>{{ 'Available until @date.'|t({'@date': expires}) }}</strong></p>
+{% elseif status == 'expired' %}<p>{{ 'This download is no longer available. Request another copy when you need one.'|t }}</p>{% endif %}
+{% if last_at %}<p>{{ 'Last exported by @name · @date'|t({'@name': last_by, '@date': last_at}) }}</p>{% endif %}
+{% if status in ['queued', 'running'] %}<p>{{ 'Requested by @name · @date'|t({'@name': requested_by, '@date': requested_at}) }}</p>{% endif %}
+{% if status == 'running' %}<p>{{ 'Members may briefly be unable to use the site while we make the copy.'|t }}</p>{% endif %}
+{% if status == 'failed' %}<p>{{ 'Last attempt by @name · @date'|t({'@name': requested_by, '@date': requested_at}) }} · {{ reference }}</p>{% endif %}
+<details><summary>For the person helping you move</summary>
+<div class="helper-content">
+<p>The download includes a <strong>restore guide</strong>, a contents and <strong>software-version record (manifest)</strong>, and checksums to check the files arrived intact.</p>
+<p><a href="https://github.com/LocalNodes/os-knowledge-garden">View the public source software</a>. The software is not copied into the download; use the exact version named in the manifest.</p>
+<p>Use your own server and accounts for email and the assistant. Rebuild search after restoring; rebuilding the assistant’s search sends text to the AI provider you choose. Keep this copy private and delete copies you no longer need. The server download expires after 24 hours and is removed at the next cleanup; downloaded copies are yours to look after.</p>
+<h5>Move to another server</h5>
+<ol><li>Get the matching public software, prepare a separate empty server and follow the archive’s restore guide to load the records and files. This restores accounts, groups and history.</li><li>Check sign-in, private-group access, attached files, search and the assistant. Sign-in services may need setting up for the new address; reapply any access removals made since the copy.</li><li>Agree when edits stop, take a final copy, and check the new site before arranging the old site’s closure with the host.</li></ol>
+<p>This needs server commands and a trusted technical helper. Exporting does not close or delete the site or cancel hosting.</p>
+<h5>Start a fresh site and bring your library</h5>
+<ol><li>Create an empty site from the public software, with new accounts and groups. Do not load the old database into this new site.</li><li>Follow the readable library’s guide: import each folder’s Markdown files into its matching group with the right audience. Try one private page and check access first.</li><li>Add attachments and images that need manual work; check the records and search before inviting members again.</li></ol>
+<p>The readable library holds current published topics, pages and events in their original language. It omits accounts, memberships, comments, drafts, older versions and author names. Imported text stays in attached Markdown files, attachments need reconnecting, and events return as topics with dates in the file. Do not upload the whole archive to a group.</p>
+</div>
+</details>
+</section>

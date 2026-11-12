@@ -36,6 +36,24 @@ if ($configured_hash_salt !== FALSE && $configured_hash_salt !== '' && $configur
 }
 $settings['config_sync_directory'] = '../config/sync';
 $settings['file_private_path'] = '/var/www/private';
+// While a nightly backup or a restore holds the pause file, every web request
+// gets a 503 from here, before Drupal starts. A restore empties the database
+// before loading the copy; Drupal cannot start on an empty database, so its
+// own pause check would not run and visitors would be sent to the installer.
+// Otherwise the request holds a shared lock until it ends, so a backup or
+// restore can wait for requests already running before it copies or deletes.
+if (PHP_SAPI !== 'cli' && is_file($app_root . '/modules/custom/localnodes_platform/src/Backup/BackupPause.php')) {
+  require_once $app_root . '/modules/custom/localnodes_platform/src/Backup/BackupPause.php';
+  $localnodes_pause_answer = (new \Drupal\localnodes_platform\Backup\BackupPause($settings['file_private_path']))->enterWebRequest($_SERVER);
+  if ($localnodes_pause_answer !== NULL) {
+    http_response_code($localnodes_pause_answer[0]);
+    foreach ($localnodes_pause_answer[1] as $name => $value) {
+      header("$name: $value");
+    }
+    echo $localnodes_pause_answer[2];
+    exit;
+  }
+}
 $settings['update_free_access'] = FALSE;
 $settings['container_yamls'][] = $app_root . '/' . $site_path . '/services.yml';
 

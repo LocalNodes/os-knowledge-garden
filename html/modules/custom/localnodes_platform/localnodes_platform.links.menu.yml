@@ -6,3 +6,9 @@ localnodes_platform.guide:
   route_name: localnodes_platform.guide
   parent: system.admin
   weight: -98
+
+localnodes_platform.site_export:
+  title: 'Export this site'
+  route_name: localnodes_platform.site_export
+  parent: system.admin_config_system
+  weight: 20

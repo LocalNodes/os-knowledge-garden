@@ -43,10 +43,17 @@ final class DbLogWithoutQuery implements LoggerInterface {
   public function log($level, string|\Stringable $message, array $context = []): void {
     foreach (['request_uri', 'referer', '@uri'] as $key) {
       if (isset($context[$key]) && is_string($context[$key])) {
-        $context[$key] = self::withoutSearchWords(self::withoutQuery($context[$key]));
+        $context[$key] = self::withoutExportRoute(self::withoutSearchWords(self::withoutQuery($context[$key])));
       }
     }
     $this->inner->log($level, $message, $context);
+  }
+
+  /** Export endpoints and denied private artifacts never retain their URL. */
+  public static function withoutExportRoute(string $url): string {
+    $decoded = rawurldecode($url);
+    if (preg_match('#/(?:admin/+config/+system/+site-export|system/+files/+(?:site-exports|\.localnodes))(?:/|$)#i', $decoded)) return '[private-export]';
+    return $url;
   }
 
   /**

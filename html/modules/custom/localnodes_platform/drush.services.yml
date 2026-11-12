@@ -15,3 +15,7 @@ services:
     class: Drupal\localnodes_platform\Drush\Commands\SiteExportCommands
     tags:
       - { name: drush.command }
+  localnodes_platform.backup.drush.commands:
+    class: Drupal\localnodes_platform\Drush\Commands\SiteBackupCommands
+    tags:
+      - { name: drush.command }

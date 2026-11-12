@@ -632,4 +632,27 @@ final class SiteExportTest extends KernelTestBase {
     $this->assertNotNull($exporter->refuseDestination($this->base . '/x/../public/y'));
   }
 
+  public function testReservedExportStorageIsExcludedFromEveryCopy(): void {
+    $this->installSchema('localnodes_platform', ['localnodes_site_export']);
+    $this->container->get('database')->insert('localnodes_site_export')->fields(['id' => 'current', 'data' => 'pending private export'])->execute();
+    $old = $this->base . '/private/site-exports/' . str_repeat('b', 32);
+    mkdir($old, 0700, TRUE);
+    file_put_contents($old . '/old.tar', 'OLD-ARCHIVE-CANARY');
+    $destination = $this->base . '/private/site-exports/' . str_repeat('a', 32);
+    $this->assertNull($this->exporter()->refuseDestination($destination));
+    $seen = []; $progress = [];
+    $result = $this->exporter()->export($destination, $this->dumper($seen), $this->library(), NULL, function ($part, $bytes) use (&$progress): void { $progress[$part] = $bytes; });
+    $this->assertSame(['records', 'files', 'library'], array_keys($progress));
+    $this->assertContains($this->container->get('database')->getPrefix() . 'localnodes_site_export', $seen);
+    $folder = $this->unpack($result['path']);
+    $this->assertStringNotContainsString('OLD-ARCHIVE-CANARY', $this->everything($folder));
+    $list = new Process(['tar', '-tzf', $folder . '/private-files.tar.gz']); $list->mustRun();
+    $this->assertStringNotContainsString('site-exports', $list->getOutput());
+    // A later nightly/ordinary export also excludes the entire reserved tree.
+    $other = $this->exporter()->export($this->base . '/elsewhere', $this->dumper($seen));
+    $folder = $this->unpack($other['path']);
+    $list = new Process(['tar', '-tzf', $folder . '/private-files.tar.gz']); $list->mustRun();
+    $this->assertStringNotContainsString('site-exports', $list->getOutput());
+  }
+
 }

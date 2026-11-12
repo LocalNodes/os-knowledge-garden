@@ -132,6 +132,10 @@ function localnodes_platform_mailer_user__status_activated_build(EmailInterface 
  */
 function localnodes_platform_theme($existing, $type, $theme, $path): array {
   return [
+    'localnodes_site_export' => [
+      'variables' => array_fill_keys(['status', 'parts', 'actions', 'failure', 'requested_by', 'requested_at', 'last_by', 'last_at', 'expires', 'reference'], NULL),
+      'template' => 'localnodes-site-export',
+    ],
     'email__localnodes' => [
       'base hook' => 'email',
       'template' => 'email--localnodes',
@@ -404,4 +408,12 @@ function localnodes_platform_form_user_form_alter(array &$form, FormStateInterfa
   // (social_user, which moves itself to run last) sends the member to their
   // profile, and this one has to come after it.
   $form['#after_build'][] = [InviteLanding::class, 'afterBuild'];
+}
+
+/**
+ * Implements hook_file_download().
+ */
+function localnodes_platform_file_download($uri) {
+  $target = rawurldecode((string) \Drupal\Core\StreamWrapper\StreamWrapperManager::getTarget($uri));
+  if (preg_match('#(?:^|/)(?:site-exports|\.localnodes)(?:/|$)#', $target)) return -1;
 }

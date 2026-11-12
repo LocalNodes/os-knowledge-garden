@@ -30,6 +30,8 @@ cat > "$CONF" <<'EOF'
 SetEnvIf Request_URI "^(.*)$" LOCALNODES_LOG_PATH=$1
 SetEnvIfNoCase Request_URI "^((?:/+index\.php)?(?:/+[a-z]{2,3}(?:-[a-z0-9]+)?)?/+search/+[^/]+)/+[^/]" LOCALNODES_LOG_PATH=$1/-
 SetEnvIfExpr "unescape(%{REQUEST_URI}) =~ m#^((?:/+index\.php)?(?:/+[a-z]{2,3}(?:-[a-z0-9]+)?)?/+search/+[^/]+)/+[^/]#i" LOCALNODES_LOG_PATH=$1/-
+SetEnvIfNoCase Request_URI "/(?:admin/+config/+system/+site-export|system/+files/+(?:site-exports|\\.localnodes))(?:/|$)" LOCALNODES_LOG_PATH=[private-export]
+SetEnvIfExpr "unescape(%{REQUEST_URI}) =~ m#/(?:admin/+config/+system/+site-export|system/+files/+(?:site-exports|\\.localnodes))(?:/|$)#i" LOCALNODES_LOG_PATH=[private-export]
 LogFormat "%h %l %u %t \"%m %<{LOCALNODES_LOG_PATH}e %H\" %>s %O \"%{User-Agent}i\"" localnodes_no_query
 
 # Apache's default error line format, without the Referer it appends.

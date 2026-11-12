@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Fake docker for the backup and restore shell tests. The "container" is the
+# folder $FAKE_ROOT: container paths are mapped under it. Its site is the file
+# $FAKE_ROOT/site-uuid (the database's system.site uuid) and its database is
+# $FAKE_ROOT/db.sql. Every call is logged to $FAKE_LOG_DIR/docker.log.
+#
+#   FAKE_DRUSH        localnodes:backup behaviour: ok (default), fail, badsum
+#   FAKE_UUID         the uuid localnodes:backup reports (default the test's)
+#   FAKE_DOCKER_PS    what "docker ps" prints
+#   FAKE_DOCKER_DOWN  1: the container is not running
+#   FAKE_FAIL_AT      a restore step that fails: wait-worker, wait-web,
+#                     sql:cli, find, tar, updatedb, cr, search-api:clear,
+#                     search-check. Each failure prints SENTINEL-DIAG, standing
+#                     for a member's file name or row, on stderr first.
+#   FAKE_BACKUP_RUNNING  1: create-restore finds the backup lock held
+#   FAKE_UUID_AFTER_PAUSE  the site uuid config:get reports once a restore
+#                     pause exists (the container was swapped under us)
+set -u
+printf '%s\n' "$*" >> "$FAKE_LOG_DIR/docker.log"
+PAUSE="$FAKE_ROOT/var/www/private/.localnodes/backup-pause"
+fail_at() { [ "${FAKE_FAIL_AT:-}" = "$1" ]; }
+diag() { echo "$1: cannot finish 'SENTINEL-DIAG minutes.pdf'" >&2; }
+
+cmd="$1"; shift
+case "$cmd" in
+  ps) printf '%s' "${FAKE_DOCKER_PS:-}"; exit 0 ;;
+  inspect)
+    case "$2" in
+      '{{.State.Running}}') [ -n "${FAKE_DOCKER_DOWN:-}" ] && echo false || echo true ;;
+      '{{.Image}}') echo "sha256:0123456789abcdef" ;;
+      '{{.Config.Image}}') echo "localnodes:test" ;;
+    esac
+    exit 0 ;;
+  cp) cp -a "$FAKE_ROOT${1#*:}" "$2"; exit $? ;;
+  exec) ;;
+  *) echo "fake docker: unexpected $cmd" >&2; exit 1 ;;
+esac
+
+while [ "$1" = -u ] || [ "$1" = -e ] || [ "$1" = -i ]; do
+  if [ "$1" = -i ]; then shift; else shift 2; fi
+done
+shift  # the container
+prog="$1"; shift
+
+# The site's export archive, shaped like localnodes:export's.
+make_archive() {  # make_archive DEST NAME UUID
+  local d="$1/${2%.tar}" uuid="$3"
+  mkdir -p "$d" "$1/pub" "$1/priv/docs"
+  printf -- '-- site_uuid: %s\nINSERT INTO users VALUES (SENTINEL-ARCHIVE);\n' "$uuid" | gzip > "$d/database.sql.gz"
+  echo "picture" > "$1/pub/avatar.png"
+  echo "private minutes" > "$1/priv/docs/minutes.txt"
+  tar -czf "$d/public-files.tar.gz" -C "$1/pub" .
+  tar -czf "$d/private-files.tar.gz" -C "$1/priv" .
+  printf '{"site_uuid":"%s"}\n' "$uuid" > "$d/manifest.json"
+  (cd "$d" && sha256sum database.sql.gz public-files.tar.gz private-files.tar.gz manifest.json > SHA256SUMS)
+  tar -cf "$1/$2" -C "$1" "${2%.tar}"
+  rm -rf "$d" "$1/pub" "$1/priv"
+}
+
+case "$prog" in
+  rm) rm -rf -- "$FAKE_ROOT${3}"; exit 0 ;;
+  find)  # find DIR -mindepth 1 -maxdepth 1 ! -name .localnodes -exec rm -rf -- {} +
+    fail_at find && { diag rm; exit 1; }
+    dir="$FAKE_ROOT$1"; shift
+    exec find "$dir" "$@" ;;
+  tar)  # tar -xzf - -C DIR [--exclude=...]
+    fail_at tar && { cat >/dev/null; echo "tar: broken" >&2; exit 2; }
+    args=()
+    while [ $# -gt 0 ]; do
+      if [ "$1" = -C ]; then args+=(-C "$FAKE_ROOT$2"); shift 2; else args+=("$1"); shift; fi
+    done
+    exec tar "${args[@]}" ;;
+  localnodes-pause)
+    case "$1" in
+      create-restore)
+        [ -n "${FAKE_BACKUP_RUNNING:-}" ] && { echo "localnodes-pause: a backup or restore is running; nothing was changed" >&2; exit 1; }
+        [ -e "$PAUSE" ] && { echo "localnodes-pause: a pause is already in force. Nothing was changed." >&2; exit 1; }
+        mkdir -p "$(dirname "$PAUSE")"
+        tok="$(openssl rand -hex 16)"
+        printf '{"token":"%s","until":null,"reason":"restore"}\n' "$tok" > "$PAUSE"
+        echo "$tok" ;;
+      release)
+        [ -e "$PAUSE" ] && [ "$(jq -r .token "$PAUSE")" = "$2" ] || { echo "no pause with that token" >&2; exit 1; }
+        rm -f "$PAUSE"; echo released ;;
+      clear) rm -f "$PAUSE"; echo cleared ;;
+      status) [ -e "$PAUSE" ] && echo "paused reason=restore until=none" || echo open ;;
+      wait-worker) fail_at wait-worker && { echo "worker busy" >&2; exit 1; }; echo "worker idle" ;;
+      wait-web)
+        [ -e "$PAUSE" ] || { echo "localnodes-pause: the site is not paused" >&2; exit 1; }
+        fail_at wait-web && { echo "localnodes-pause: web requests were still running" >&2; exit 1; }
+        echo "web idle" ;;
+    esac
+    exit 0 ;;
+  /var/www/html/vendor/bin/drush) shift 2 ;;  # -r /var/www/html/html
+  *) echo "fake docker: unexpected exec $prog $*" >&2; exit 1 ;;
+esac
+
+# drush SUBCOMMAND ...
+sub="$1"; shift
+case "$sub" in
+  config:get)
+    if [ -e "$PAUSE" ] && [ -n "${FAKE_UUID_AFTER_PAUSE:-}" ]; then echo "$FAKE_UUID_AFTER_PAUSE"; else cat "$FAKE_ROOT/site-uuid" 2>/dev/null; fi ;;
+  sql:drop) : > "$FAKE_ROOT/db.sql"; : > "$FAKE_ROOT/site-uuid" ;;
+  sql:cli)
+    fail_at sql:cli && { head -c 10 > "$FAKE_ROOT/db.sql"; echo "ERROR 1114 at line 2: INSERT INTO users VALUES (SENTINEL-ARCHIVE)" >&2; exit 1; }
+    cat > "$FAKE_ROOT/db.sql"
+    sed -n 's/^-- site_uuid: //p' "$FAKE_ROOT/db.sql" > "$FAKE_ROOT/site-uuid" ;;
+  updatedb) fail_at updatedb && { diag updatedb; exit 1; }; echo "No pending updates." ;;
+  cr) fail_at cr && { diag cr; exit 1; }; echo "Cache rebuild complete." ;;
+  search-api:clear) fail_at search-api:clear && { diag search-api:clear; exit 1; }; echo cleared > "$FAKE_ROOT/search-cleared" ;;
+  php:eval) fail_at search-check && { diag php:eval; exit 1; }; echo checked > "$FAKE_ROOT/search-checked" ;;
+  sql:query) grep -c '^INSERT INTO users' "$FAKE_ROOT/db.sql" ;;
+  localnodes:backup)
+    dest=""
+    for a in "$@"; do case "$a" in --destination=*) dest="${a#*=}" ;; esac; done
+    mkdir -p "$FAKE_ROOT$dest"
+    echo "drush log line" >&2
+    if [ "${FAKE_DRUSH:-ok}" = fail ]; then
+      echo "half" > "$FAKE_ROOT$dest/partial.tmp"
+      exit 1
+    fi
+    uuid="${FAKE_UUID:-5f0c2a8e-1b7d-4c3e-9a61-0d4e8b2f7c19}"
+    name="localnodes-export-test-20261111-093000.tar"
+    make_archive "$FAKE_ROOT$dest" "$name" "$uuid"
+    printf '{"hash_salt":"SENTINEL-SALT-91c3","provision_id":"p1","provision_callback_token":"SENTINEL-TOKEN-55a"}\n' > "$FAKE_ROOT$dest/secret-record.json"
+    sum="$(sha256sum "$FAKE_ROOT$dest/$name" | cut -d' ' -f1)"
+    [ "${FAKE_DRUSH:-ok}" = badsum ] && sum="0000"
+    printf '{"site_uuid":"%s","site_name":"Juniper Test House","provision_id":"p1","capture_start":"2026-11-11T09:30:00Z","capture_end":"2026-11-11T09:31:00Z","archive":"%s","archive_sha256":"%s","archive_bytes":%s,"build_commit":"abc1234"}\n' \
+      "$uuid" "$name" "$sum" "$(stat -c %s "$FAKE_ROOT$dest/$name")" ;;
+  *) echo "fake drush: unexpected $sub" >&2; exit 1 ;;
+esac

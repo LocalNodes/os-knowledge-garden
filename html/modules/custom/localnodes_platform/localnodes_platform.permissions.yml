@@ -1,0 +1,4 @@
+export localnodes site:
+  title: 'Export the whole community site'
+  description: 'Includes all private groups and member accounts. Also requires recorded site ownership.'
+  restrict access: true

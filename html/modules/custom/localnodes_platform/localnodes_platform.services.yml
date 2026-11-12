@@ -53,3 +53,27 @@ services:
     decorates: logger.dblog
     decoration_on_invalid: ignore
     arguments: ['@.inner']
+  # Closes the site while a backup or restore holds the pause file: after the
+  # reverse proxy (300), before page cache (200) and session (50).
+  localnodes_platform.backup_pause_middleware:
+    class: Drupal\localnodes_platform\StackMiddleware\BackupPauseMiddleware
+    arguments: ['@settings']
+    tags:
+      - { name: http_middleware, priority: 250 }
+
+  localnodes_platform.export_access:
+    class: Drupal\localnodes_platform\Export\ExportAccess
+    arguments: ['@state', '@entity_type.manager']
+  localnodes_platform.export_identity:
+    class: Drupal\localnodes_platform\Export\ExportIdentity
+    arguments: ['@localnodes_platform.export_access', '@password', '@flood']
+  localnodes_platform.backup_capture:
+    class: Drupal\localnodes_platform\Backup\BackupCapture
+  localnodes_platform.export_manager:
+    class: Drupal\localnodes_platform\Export\ExportManager
+    arguments: ['@database', '@config.factory', '@entity_type.manager', '@localnodes_platform.export_access', '@datetime.time', '@localnodes_platform.site_exporter', '@localnodes_platform.library_writer', '@localnodes_platform.backup_capture', '@logger.factory', '@?email_factory']
+
+  localnodes_platform.export_notice_logger_factory:
+    class: Drupal\localnodes_platform\Logger\ExportNoticeLoggerFactory
+    decorates: logger.factory
+    arguments: ['@.inner']

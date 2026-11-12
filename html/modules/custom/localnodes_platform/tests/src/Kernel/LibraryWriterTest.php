@@ -598,4 +598,15 @@ final class LibraryWriterTest extends ImportKernelTestBase {
     return $targets;
   }
 
+  public function testReservedArtifactsCannotBeLibraryAttachments(): void {
+    $private = (string) Settings::get('file_private_path');
+    @mkdir($private . '/site-exports/reserved', 0700, TRUE);
+    file_put_contents($private . '/site-exports/reserved/copy.tar', 'PRIVATE EXPORT');
+    $writer = new LibraryWriter($this->container->get('entity_type.manager'), $this->container->get('request_stack'));
+    $this->assertNull($writer->confinedPath('private://site-exports/reserved/copy.tar'));
+    @mkdir($private . '/ordinary', 0700, TRUE);
+    symlink($private . '/site-exports/reserved/copy.tar', $private . '/ordinary/alias.tar');
+    $this->assertNull($writer->confinedPath('private://ordinary/alias.tar'));
+  }
+
 }

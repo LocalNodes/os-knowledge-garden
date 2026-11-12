@@ -1,0 +1,18 @@
+# The nightly backup of one site. %i names its config file,
+# /etc/localnodes-backup/%i.conf. Started by localnodes-backup@%i.timer.
+[Unit]
+Description=LocalNodes nightly backup (%i)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/localnodes-backup /etc/localnodes-backup/%i.conf
+# Files it writes are private to root; the plaintext staging folder in
+# /var/tmp is private to this run.
+UMask=0077
+PrivateTmp=yes
+ProtectHome=yes
+NoNewPrivileges=yes
+Nice=10
+TimeoutStartSec=3h

@@ -156,7 +156,8 @@ RUN chown -R www-data:www-data /var/www/html/html/sites/default/files \
 # Copy and configure entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/worker-loop.sh /usr/local/bin/worker-loop.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/worker-loop.sh
+COPY docker/localnodes-pause /usr/local/bin/localnodes-pause
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/worker-loop.sh /usr/local/bin/localnodes-pause
 
 # The commit this image was built from, for drush localnodes:export's
 # manifest (the archive names the image a community restores with). CI passes

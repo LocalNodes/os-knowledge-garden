@@ -1,0 +1,13 @@
+# /etc/localnodes-backup/<name>.conf, mode 600, owned by root.
+# Holds no secret value; it names where they are. See nightly-backup.sh.
+# The app container: a name, or label:<key>=<value> that matches exactly one
+# running container. A redeploy can change the name; a label stays.
+CONTAINER=label:example.key=example-value
+SITE_UUID=00000000-0000-0000-0000-000000000000
+RECIPIENT_KEY=/etc/localnodes-backup/operator.pub.asc
+S3_ENDPOINT=https://fsn1.your-objectstorage.com
+S3_BUCKET=example-bucket
+S3_REGION=auto
+S3_CREDENTIALS=/etc/localnodes-backup/aws-credentials
+S3_PREFIX=localnodes-backup
+KEEP_DAYS=14

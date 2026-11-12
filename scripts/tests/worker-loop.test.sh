@@ -18,7 +18,7 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 FAILED=0
 N=0
-TOTAL=12
+TOTAL=22
 
 echo "TAP version 13"
 echo "1..$TOTAL"
@@ -63,6 +63,7 @@ echo >> "$DRUSH_LOG"
 n=\$(cat "$DRUSH_COUNT" 2>/dev/null || echo 0)
 n=\$((n + 1))
 echo "\$n" > "$DRUSH_COUNT"
+[ -e /proc/self/fd/9 ] && echo "FD9-INHERITED" >> "$TMP/fd9.log"
 echo "MEMBERS-ONLY-TITLE indexed"
 echo "MEMBERS-ONLY-TITLE warning" >&2
 [ "\$n" -eq 2 ] && exit 1
@@ -83,8 +84,18 @@ count_lines() {
   grep -cxF -- "$1" "$2" 2>/dev/null || true
 }
 
+# Each scenario gets its own private files folder (the pause and lock live
+# in <private>/.localnodes).
+new_private() {
+  PRIV="$TMP/private-$1"
+  mkdir -p "$PRIV/.localnodes"
+  export PRIVATE_FILES_DIR="$PRIV"
+}
+
 # --- Scenario A: direct mode (WORKER_RUN_AS empty), stub fails on call 2 ---
 OUT_A="$TMP/out-a.log"
+new_private a
+rm -rf "$PRIV/.localnodes"
 : > "$DRUSH_LOG"
 rm -f "$DRUSH_COUNT"
 DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=3 \
@@ -102,7 +113,7 @@ assert_eq "three cron:run search_api_cron --force calls" "3" \
   "$(count_lines '-r /x --uri=http://y cron:run search_api_cron --force' "$DRUSH_LOG")"
 assert_eq "three cron calls" "3" \
   "$(count_lines '-r /x --uri=http://y cron' "$DRUSH_LOG")"
-assert_eq "seven drush calls in total (1 unlock + 3 x 2)" "7" \
+assert_eq "ten drush calls in total (1 unlock + 3 x 3)" "10" \
   "$(wc -l < "$DRUSH_LOG" 2>/dev/null | tr -d ' ')"
 
 if grep -q 'MEMBERS-ONLY-TITLE' "$OUT_A" 2>/dev/null; then
@@ -118,6 +129,9 @@ else
     "[worker] <UTC ts> ... cron:run search_api_cron --force exit=1" \
     "$(head -n 3 "$OUT_A" 2>/dev/null | tr '\n' '|')"
 fi
+
+assert_eq "dedicated export consumer runs once each pass" "3" \
+  "$(count_lines '-r /x --uri=http://y localnodes:site-export-process' "$DRUSH_LOG")"
 
 # --- Scenario B: default WORKER_RUN_AS (www-data) goes through su with HOME=/tmp ---
 STUB_BIN="$TMP/bin"
@@ -135,6 +149,7 @@ chmod +x "$STUB_BIN/su"
 : > "$DRUSH_LOG"
 rm -f "$DRUSH_COUNT"
 OUT_B="$TMP/out-b.log"
+new_private b
 ( unset WORKER_RUN_AS
   PATH="$STUB_BIN:$PATH" DRUSH="$DRUSH_CMD" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=1 \
     run_bounded bash "$WORKER" > "$OUT_B" 2>&1 )
@@ -145,8 +160,72 @@ assert_eq "default run-as goes through su -s /bin/bash www-data -c with HOME=/tm
   "$(head -n 1 "$SU_LOG" 2>/dev/null)"
 assert_eq "su mode keeps the empty job name as an argument" "-r /x --uri=http://y cron:unlock '' --all" \
   "$(head -n 1 "$DRUSH_LOG" 2>/dev/null)"
-assert_eq "su mode runs unlock + one iteration (3 su calls) and exits 0" "3 0" \
+assert_eq "su mode runs unlock + one iteration (4 su calls) and exits 0" "4 0" \
   "$(wc -l < "$SU_LOG" 2>/dev/null | tr -d ' ') $RC_B"
+
+# --- Scenarios D-F: a pause in force means no drush call at all, not even
+# the startup unlock. ---
+pause_run() {
+  # pause_run <name> <pause file contents>: two passes; prints "<calls> <rc>".
+  new_private "$1"
+  printf '%s\n' "$2" > "$PRIV/.localnodes/backup-pause"
+  : > "$DRUSH_LOG"
+  rm -f "$DRUSH_COUNT"
+  DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=2 \
+    run_bounded bash "$WORKER" > "$TMP/out-$1.log" 2>&1
+  echo "$(wc -l < "$DRUSH_LOG" | tr -d ' ') $?"
+}
+FUTURE=$(( $(date +%s) + 3600 ))
+assert_eq "a backup pause in force: no drush call, loop still ends 0" "0 0" \
+  "$(pause_run d "{\"token\":\"t\",\"until\":$FUTURE,\"reason\":\"backup\"}")"
+assert_eq "a skipped pass is logged" "2" \
+  "$(grep -c 'site paused for a backup or restore; pass skipped' "$TMP/out-d.log")"
+assert_eq "a restore pause (no end time): no drush call" "0 0" \
+  "$(pause_run e '{"token":"t","until":null,"reason":"restore"}')"
+assert_eq "an unreadable pause file: no drush call" "0 0" \
+  "$(pause_run f 'not json')"
+PAST=$(( $(date +%s) - 10 ))
+assert_eq "an expired pause is ignored: unlock plus two passes" "7 0" \
+  "$(pause_run g "{\"token\":\"t\",\"until\":$PAST,\"reason\":\"backup\"}")"
+
+# --- Scenario H: the startup unlock waits for the first pass that is not
+# paused. ---
+new_private h
+SOON=$(( $(date +%s) + 2 ))
+printf '{"token":"t","until":%s,"reason":"backup"}\n' "$SOON" > "$PRIV/.localnodes/backup-pause"
+: > "$DRUSH_LOG"
+rm -f "$DRUSH_COUNT"
+DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=1 WORKER_MAX_ITERATIONS=5 \
+  run_bounded bash "$WORKER" > "$TMP/out-h.log" 2>&1
+assert_eq "after a pause ends, the unlock runs once, first" \
+  "1 -r /x --uri=http://y cron:unlock '' --all" \
+  "$(count_lines "-r /x --uri=http://y cron:unlock '' --all" "$DRUSH_LOG") $(head -n 1 "$DRUSH_LOG")"
+
+# --- Scenario I: a held worker lock holds back every drush call, the
+# startup unlock included. ---
+new_private i
+: > "$DRUSH_LOG"
+rm -f "$DRUSH_COUNT"
+flock "$PRIV/.localnodes/worker.lock" sleep 3 &
+HOLDER=$!
+sleep 0.5
+DRUSH="$DRUSH_CMD" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=1 \
+  run_bounded bash "$WORKER" > "$TMP/out-i.log" 2>&1 &
+WORKER_PID=$!
+sleep 1.5
+assert_eq "no drush call while another process holds the worker lock" "0" \
+  "$(wc -l < "$DRUSH_LOG" | tr -d ' ')"
+wait "$HOLDER"
+wait "$WORKER_PID"
+assert_eq "once the lock is free: unlock plus one pass" "4" \
+  "$(wc -l < "$DRUSH_LOG" | tr -d ' ')"
+
+# --- Scenario J: drush never inherits the lock's descriptor ---
+if [ -e "$TMP/fd9.log" ]; then
+  not_ok "drush runs without the worker lock's descriptor" "no fd 9 in drush" "$(wc -l < "$TMP/fd9.log") call(s) had fd 9"
+else
+  ok "drush runs without the worker lock's descriptor"
+fi
 
 # --- Scenario C: DRUSH empty is a configuration error ---
 DRUSH="" WORKER_RUN_AS="" WORKER_INTERVAL=0 WORKER_MAX_ITERATIONS=1 \
