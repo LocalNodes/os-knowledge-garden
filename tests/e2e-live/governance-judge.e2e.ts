@@ -52,7 +52,8 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { liveBrowserArgs } from './cache-live';
 import { GOVERNANCE_CACHE_NAME } from './cache-governance';
 import { ACCOUNT_NAMES, GOVERNANCE_WALLET_PASSWORD } from './wallet-setup/live/governance.setup';
-import { confirmPrompts, openHome, switchAccount, within, type PromptLog } from './metamask-steps';
+import { confirmPrompts, openHome, within, type PromptLog } from './metamask-steps';
+import { bounded, signInAs as signInAsAccount, signInWithMetaMask as signInWithWallet, useAccount as shareAccount, WALLET_READ_MS, type JudgeWallet } from './governance/judge-wallet';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup } from './governance/live-steps';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -325,44 +326,13 @@ function metaMaskDriver(context: BrowserContext, extensionId: string, log: Promp
   };
 }
 
-/** What MetaMask shares with the site's page, in its order (the selected account first). */
-/** How long a read from the wallet through the site's page may take. */
-const WALLET_READ_MS = 30_000;
-
-/** `p`'s value; an error with a fixed message if it hasn't settled within `ms`. */
-async function bounded<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
-  const r = await within(p, ms);
-  if (r === 'timeout') throw new Error(`${what} did not answer within ${ms} ms`);
-  return r.value;
+function judgeWallet(context: BrowserContext, extensionId: string, log: PromptLog): JudgeWallet {
+  return { context, extensionId, password: GOVERNANCE_WALLET_PASSWORD, log };
 }
 
-async function siteAccounts(page: Page): Promise<string[]> {
-  return (await bounded(
-    page.evaluate(() =>
-      (window as unknown as { ethereum: { request(a: unknown): Promise<string[]> } }).ethereum.request({ method: 'eth_accounts' }),
-    ).catch(fixed),
-    WALLET_READ_MS,
-    'the wallet (eth_accounts)',
-  )) as string[];
-}
-
-/** SIWE through the site's own button (copied from live-sepolia.e2e.ts). */
+/** SIWE through the site's own button (governance/judge-wallet.ts). */
 async function signInWithMetaMask(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<void> {
-  console.log('[judge] sign in: opening the sign-in page');
-  await page.goto('/user/login');
-  const button = page.locator('#siwe-login-button');
-  await button.waitFor({ state: 'visible' });
-  let navigated = false;
-  const nav = page
-    .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 180_000 })
-    .then(() => { navigated = true; }, () => undefined);
-  console.log('[judge] sign in: pressing the sign-in button');
-  await button.click();
-  await confirmPrompts(context, extensionId, 'signIn', log, { done: () => navigated, timeoutMs: 180_000 });
-  await nav;
-  console.log('[judge] sign in: the page moved on');
-  await page.waitForLoadState('load');
-  await expect(page.locator('#siwe-login-button')).toHaveCount(0);
+  await signInWithWallet(page, judgeWallet(context, extensionId, log));
 }
 
 /** Asks MetaMask, from the site's page, to put this site on Ethereum Sepolia (EIP-3326). */
@@ -383,49 +353,14 @@ async function switchSiteToSepolia(page: Page, context: BrowserContext, extensio
   return chain();
 }
 
-/**
- * Makes `index` the account MetaMask uses for this site: selects it in MetaMask, then asks from
- * the site's page to share it (wallet_requestPermissions), and checks the site sees it first.
- */
+/** Makes `index` the account MetaMask shares with the site first (governance/judge-wallet.ts). */
 async function useAccount(page: Page, context: BrowserContext, extensionId: string, log: PromptLog, index: 0 | 1 | 2, address: string): Promise<void> {
-  console.log(`[judge] use account ${index + 1}: selecting it in the wallet`);
-  const wallet = await bounded(context.newPage(), 30_000, 'a new wallet page');
-  try {
-    await bounded(
-      (async () => {
-        await openHome(wallet, extensionId, GOVERNANCE_WALLET_PASSWORD);
-        await switchAccount(wallet, ACCOUNT_NAMES[index]);
-      })(),
-      120_000,
-      'the wallet home page',
-    );
-  } finally {
-    // Bounded, and never in place of an error from the steps above.
-    if ((await within(wallet.close(), 10_000).catch(() => 'timeout' as const)) === 'timeout') console.log('[judge] the wallet home page did not close within 10000 ms');
-  }
-  await bounded(page.bringToFront(), 10_000, 'bringing the site page to the front');
-  if (!/^https?:/.test(page.url())) await page.goto('/user/login');
-  console.log(`[judge] use account ${index + 1}: reading the accounts the site sees`);
-  const shared = await siteAccounts(page);
-  console.log(`[judge] use account ${index + 1}: ${shared[0]?.toLowerCase() === address.toLowerCase() ? 'already shared' : 'asking the wallet to share it'}`);
-  if (shared[0]?.toLowerCase() !== address.toLowerCase()) {
-    let done = false;
-    const ask = page
-      .evaluate(() => (window as unknown as { ethereum: { request(a: unknown): Promise<unknown> } }).ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] }))
-      .catch(fixed)
-      .finally(() => { done = true; });
-    await Promise.all([ask, confirmPrompts(context, extensionId, 'shareAccount', log, { done: () => done, timeoutMs: 120_000 })]);
-    console.log(`[judge] use account ${index + 1}: the wallet answered the share request`);
-  }
-  expect((await siteAccounts(page))[0]?.toLowerCase(), `MetaMask shares ${ACCOUNT_NAMES[index]} with the site first`).toBe(address.toLowerCase());
+  await shareAccount(page, judgeWallet(context, extensionId, log), ACCOUNT_NAMES[index], address);
 }
 
 /** Signs out of the site (its session cookie), then signs in as `index` with SIWE. */
 async function signInAs(page: Page, context: BrowserContext, extensionId: string, log: PromptLog, index: 0 | 1 | 2, address: string): Promise<void> {
-  await context.clearCookies();
-  await page.goto('/user/login');
-  await useAccount(page, context, extensionId, log, index, address);
-  await signInWithMetaMask(page, context, extensionId, log);
+  await signInAsAccount(page, judgeWallet(context, extensionId, log), ACCOUNT_NAMES[index], address);
 }
 
 function reportPrompts(info: TestInfo, step: string, log: PromptLog): number {
