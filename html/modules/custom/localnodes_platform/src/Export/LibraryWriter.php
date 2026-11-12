@@ -454,29 +454,33 @@ final class LibraryWriter {
     $out = <<<'MD'
 # The library: this site's pages as plain files
 
-Every published topic, event and page of the site, as a Markdown file you can open in any text editor, with the files it uses copied into a folder beside it. You do not need LocalNodes or Drupal to read it.
+Every published topic, event and page of the site, as a Markdown file you can open in any text editor. Current attachments that could be copied are beside each page. Check any `missing` list at the top of each page before relying on the copy. You do not need LocalNodes or Drupal to read it.
 
 ## Before you share any of it
 
-The pages are split by who could read them on the site:
+These folders record the pages' saved audience labels:
 
-- `public/`: pages anyone could read, signed in or not.
-- `members/`: pages only signed-in members of the site could read.
-- `group-only/`: pages only the members of their group could read.
+- `public/`: pages saved with a public audience.
+- `members/`: pages saved for signed-in members of the site.
+- `group-only/`: pages saved for the members of their group.
 
-Only `public/` is what the site already showed to everyone. Do not publish or hand on `members/` or `group-only/` without asking the people who wrote them.
+Check the pages, attachments and permission to share before publishing any copy. Keep the whole archive private.
 
 ## What is not here
 
-Unpublished drafts, older versions of pages, a page's versions in other languages (only its original language is here), comments, posts, albums, landing pages and the names of the people who wrote each page. All of them are still in the database part of this export, which restores the whole site.
+Unpublished drafts, older versions of pages, a page's versions in other languages (only its original language is here), comments, posts, albums and landing pages. Those records remain in the database part of this export, which restores the whole site.
+
+This readable folder has no separate author-name field. Names written in a page or its credit stay. The whole-site database still includes member accounts.
 
 The files here are copies: the same files are also in the export's files parts.
+
+At the top of each page, `address` is its path on the old site. Use the Index links in this folder to open the copied pages.
 
 ## Bringing it into a fresh LocalNodes site
 
 1. Create the groups first, one for each group folder (for `Not in a group`, pick an existing group or make one). Make sure each group allows the visibility of the folder you import into it.
 2. In each group, open *Import*, then *Upload files*. Choose the visibility that matches the folder (`public`, `members` or `group-only`), and upload that folder's `.md` files.
-3. Each `.md` file becomes one topic with the page's exact title and the file attached; its text is searchable, by search and by the assistant.
+3. Check each import result and preparation progress. Supported metadata supplies the title when it can be read. A short or unreadable file may not supply text for answers.
 
 What the importer does not do yet:
 

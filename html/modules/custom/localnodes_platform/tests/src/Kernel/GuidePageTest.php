@@ -55,14 +55,14 @@ final class GuidePageTest extends KernelTestBase {
    * follows the stock invite screens and a new member's walk through them.
    */
   private const STEPS = [
-    ['Set your password', ["Open the sign-in link in your welcome email. It brings you to your site and asks you to choose a password. Choose one and save it. You're signed in."]],
+    ['Set your password', ["Open the sign-in link in your welcome email. Choose Log in. Set your password, then choose Save."]],
     ['Open your group', ["Your group isn't ready yet. Get help."]],
     ['Upload your first files', ["To add documents, open your group's Import tab and choose Upload files. Choose your files, tick the box that says you have the right to share them, and press the Import button. Use files whose text you can select and copy: the assistant can't read image-only scans, and a very short file may be too short to use."]],
     ['Wait while your documents are prepared', ['The "Preparing documents for the assistant\'s search" panel on the Import tab shows how many are prepared, for example "18 of 21". This happens in the background. You can leave the page and come back.']],
-    ['Ask the AI assistant a question', ['Go to your group\'s page. The AI assistant, called "LocalNodes LiAIson", is at the bottom right. It isn\'t shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. The answer shows numbered sources: open one to check it, because the assistant can get things wrong.']],
+    ['Ask the AI assistant a question', ['Go to your group\'s page. The AI assistant, called "LocalNodes LiAIson", is at the bottom right. It isn\'t shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help.']],
     ['Bring in your members', [
       'To invite people, open your group\'s Manage members tab, choose Add members, then Invite users. Enter their email addresses, or their names if they are already on the site, and press "Send your invite(s) by email".',
-      'Each person gets an email. Someone new to the site creates an account from it, signs in with the link in the welcome email that follows, then accepts under Invites, in the menu behind their profile picture.',
+      'Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After setting a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.',
       'Your members read the documents in the group\'s Topics, where each original file can be opened. To ask, they go to the group\'s page and use the AI assistant at the bottom right. It looks for answers in the pages each member can see.',
     ]],
   ];
@@ -94,7 +94,7 @@ final class GuidePageTest extends KernelTestBase {
   /**
    * UI-SPEC section 8: the assistant section body.
    */
-  private const ASSISTANT_BODY = 'Ask the assistant about anything in your community\'s files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". Every answer lists its sources, so you can check it. It only sees what you\'re allowed to see: two people asking the same question can get different answers. It cannot act for the community, open your email inbox or browse other websites; it can read permitted library text, including an email address written in a document.';
+  private const ASSISTANT_BODY = 'Ask the assistant about anything in your community\'s files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help. It only sees what you\'re allowed to see: two people asking the same question can get different answers. It cannot act for the community, open your email inbox or browse other websites; it can read permitted library text, including an email address written in a document.';
 
   /**
    * UI-SPEC section 8: the help line.

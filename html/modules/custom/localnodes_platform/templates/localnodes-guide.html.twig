@@ -38,7 +38,7 @@
   <ol class="localnodes-guide__steps">
     <li>
       <h2>{% trans %}Set your password{% endtrans %}</h2>
-      <p>{% trans %}Open the sign-in link in your welcome email. It brings you to your site and asks you to choose a password. Choose one and save it. You're signed in.{% endtrans %}</p>
+      <p>{% trans %}Open the sign-in link in your welcome email. Choose Log in. Set your password, then choose Save.{% endtrans %}</p>
     </li>
     <li>
       <h2>{% trans %}Open your group{% endtrans %}</h2>
@@ -59,15 +59,15 @@
     <li>
       <h2>{% trans %}Ask the AI assistant a question{% endtrans %}</h2>
       {% if assistant_name %}
-        <p>{% trans %}Go to your group's page. The AI assistant, called "{{ assistant_name }}", is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. The answer shows numbered sources: open one to check it, because the assistant can get things wrong.{% endtrans %}</p>
+        <p>{% trans %}Go to your group's page. The AI assistant, called "{{ assistant_name }}", is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help.{% endtrans %}</p>
       {% else %}
-        <p>{% trans %}Go to your group's page. The AI assistant is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. The answer shows numbered sources: open one to check it, because the assistant can get things wrong.{% endtrans %}</p>
+        <p>{% trans %}Go to your group's page. The AI assistant is at the bottom right. It isn't shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help.{% endtrans %}</p>
       {% endif %}
     </li>
     <li>
       <h2>{% trans %}Bring in your members{% endtrans %}</h2>
       <p>{% trans %}To invite people, open your group's {{ members_link }}, choose Add members, then Invite users. Enter their email addresses, or their names if they are already on the site, and press "Send your invite(s) by email".{% endtrans %}</p>
-      <p>{% trans %}Each person gets an email. Someone new to the site creates an account from it, signs in with the link in the welcome email that follows, then accepts under Invites, in the menu behind their profile picture.{% endtrans %}</p>
+      <p>{% trans %}Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After setting a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.{% endtrans %}</p>
       <p>{% trans %}Your members read the documents in the group's Topics, where each original file can be opened. To ask, they go to the group's page and use the AI assistant at the bottom right. It looks for answers in the pages each member can see.{% endtrans %}</p>
     </li>
   </ol>
@@ -88,7 +88,7 @@
 
   <section class="localnodes-guide__section" aria-labelledby="localnodes-guide-assistant">
     <h2 id="localnodes-guide-assistant">{% trans %}Using the assistant{% endtrans %}</h2>
-    <p>{% trans %}Ask the assistant about anything in your community's files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". Every answer lists its sources, so you can check it. It only sees what you're allowed to see: two people asking the same question can get different answers. It cannot act for the community, open your email inbox or browse other websites; it can read permitted library text, including an email address written in a document.{% endtrans %}</p>
+    <p>{% trans %}Ask the assistant about anything in your community's files and posts, for example "When is the next meeting?" or "What did we decide about the budget?". When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help. It only sees what you're allowed to see: two people asking the same question can get different answers. It cannot act for the community, open your email inbox or browse other websites; it can read permitted library text, including an email address written in a document.{% endtrans %}</p>
   </section>
 
   <p class="localnodes-guide__help">{% trans %}Stuck? <a href="{{ get_help_url }}">Get help</a> is in the footer of every page.{% endtrans %}</p>

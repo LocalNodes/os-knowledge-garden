@@ -32,6 +32,7 @@ function localnodes_platform_install() {
   // 22.2 SC2: group affiliation and the customisable "Request to join"
   // message, on for every community (online-only and place-based).
   _localnodes_platform_enable_group_features();
+  _localnodes_platform_configure_event_calendar();
   // 22.2 D-05: keyword search shows new and edited content without cron.
   _localnodes_platform_index_solr_directly();
   // 23-26: members don't see each other's email unless they choose to.
@@ -39,6 +40,21 @@ function localnodes_platform_install() {
   // WINDOWS 47: the anonymous front-page hero speaks for the community, not
   // for Open Social.
   _localnodes_platform_configure_hero_copy();
+}
+
+/**
+ * Enables same-site iCalendar downloads without outside calendar links.
+ *
+ * The dependency supplies the plugins but no installed settings object.
+ * Create its settings here; a second call with these values saves nothing.
+ */
+function _localnodes_platform_configure_event_calendar(): void {
+  $config = \Drupal::configFactory()->getEditable('social_event_addtocal.settings');
+  if ($config->get('enable_add_to_calendar') !== TRUE || $config->get('allowed_calendars') !== ['ical']) {
+    $config->set('enable_add_to_calendar', TRUE)
+      ->set('allowed_calendars', ['ical'])
+      ->save(TRUE);
+  }
 }
 
 /**

@@ -31,8 +31,8 @@ use Drupal\localnodes_platform\Controller\SiteTermsController;
  * recordAgreement() keeps which terms a member agreed to, and when (23-41,
  * T-23-41): user.data under localnodes_platform holds terms_agreed_version
  * (SiteTermsController::TERMS_CHANGED) and terms_agreed_at (the request
- * time). The terms' Changes section promises "we'll ask you to agree to the
- * new version", and that needs the version each member agreed to. It runs
+ * time). This records the version accepted at registration; it does not add
+ * a later agreement prompt. It runs
  * after '::save', so the account has an id. It is never attached to a site
  * manager's Add user form, which has no box: a manager doesn't agree on
  * someone's behalf. Core's user module deletes a user's user.data rows with

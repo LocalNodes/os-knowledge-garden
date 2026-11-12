@@ -57,7 +57,7 @@ final class SiteTermsTest extends KernelTestBase {
     ['Taking content down', 'If someone tells us a page shouldn\'t be here, the organizers or the host can unpublish it. Use "Report a problem with this page" on any imported page.'],
     ['The AI assistant', 'The AI assistant and the AI overview write answers from pages on this site. They can be wrong. Check the sources they show.'],
     ['Your personal data', NULL],
-    ['Changes', 'If these terms change, we\'ll ask you to agree to the new version.'],
+    ['Changes', 'If these terms change, the date on this page changes and the organizers will tell you.'],
   ];
 
   /**
@@ -69,6 +69,14 @@ final class SiteTermsTest extends KernelTestBase {
     'The AI assistant: to prepare pages for search, this site sends the text of topics, events, posts and comments, and text from their attached files, to its AI service when they are saved. That includes private groups\' pages, even if nobody asks the assistant anything. The search index itself is kept with this site\'s other data. When you ask the assistant something, your question, the passages used and your recent conversation are sent to the same service. When the AI overview summarizes a search, your search words and the passages used are sent. The service may keep requests and answers for a time to check for abuse. Its rules for this site\'s account, including whether it may use them to improve its products, are being confirmed.',
     'Leaving: ask the site\'s organizers or hello@localnodes.xyz about closing your account or removing records; closing an account does not itself erase this community\'s records, recovery copies or AI-service logs. The host can also make a copy of the whole site, including every member\'s account and private pages, so the community can move it elsewhere. If this site was a three-month pilot that doesn\'t continue, it stays unchanged for 30 days, and the organizers get at least seven days\' written notice before it is removed. Removing the site deletes its pages, files and search data; backup copies and the AI service\'s logs are deleted on their own schedules, not at once.',
   ];
+
+  /**
+   * The first bullet on a site with the optional Web3 stack on.
+   *
+   * There a member can connect a wallet and the site keeps its public
+   * address; without the stack the bullet has no wallet word at all.
+   */
+  private const KEEPS_BULLET_WITH_WALLETS = 'What this site keeps: your account name, email address and password record, what you post or upload, and the public address of any wallet you connect.';
 
   /**
    * UI-SPEC section 9: the checkbox label and its error.
@@ -84,7 +92,7 @@ final class SiteTermsTest extends KernelTestBase {
    * makes the version date move with the words: change one without the
    * other and testVersionDateMovesWithTheText fails.
    */
-  private const TEMPLATE_TEXT_SHA256 = '546054cd81deb65698cdbb5de413cefc4e91dda93cb9a84962efe852f4203e2e';
+  private const TEMPLATE_TEXT_SHA256 = 'f3d492fb4c80c213b6c07c02cc5404d859ffaa5ebf82bc028bb0319c273d7268';
   private const TERMS_CHANGED_PIN = '2026-11-11';
 
   /**
@@ -224,6 +232,34 @@ final class SiteTermsTest extends KernelTestBase {
 
     $this->assertSame('Draft for review, November 11, 2026', end($paragraphs), 'The version line ends the page.');
     $this->assertSame(1, $xpath->query('(//section)[last()]/following::p[contains(@class, "localnodes-site-terms__version")]')->length, 'The version line comes after the sections.');
+  }
+
+  /**
+   * With the Web3 stack on, the first bullet names the wallet address.
+   *
+   * The stack's own dependencies are not loaded here; only whether the
+   * module is on decides the sentence, so the test registers it by name.
+   */
+  public function testWalletAddressBulletWhenWeb3IsOn(): void {
+    $this->assertFalse($this->container->get('module_handler')->moduleExists('localnodes_web3'), 'The stack starts off.');
+    $this->container->get('module_handler')->addModule('localnodes_web3', 'modules/custom/localnodes_platform/modules/localnodes_web3');
+
+    $xpath = $this->domXpath($this->renderTerms());
+    $bullets = [];
+    foreach ($xpath->query('//section[h2[normalize-space(.)="Your personal data"]]/ul/li') as $node) {
+      $bullets[] = $this->fold($node->textContent);
+    }
+    $expected = self::DATA_BULLETS;
+    $expected[0] = self::KEEPS_BULLET_WITH_WALLETS;
+    $this->assertSame($expected, $bullets, 'Only the first bullet changes, to the wallet sentence.');
+  }
+
+  /**
+   * With the Web3 stack off, no bullet mentions a wallet.
+   */
+  public function testNoWalletWordWhenWeb3IsOff(): void {
+    $text = $this->fold($this->domXpath($this->renderTerms())->query('//body')->item(0)->textContent);
+    $this->assertStringNotContainsStringIgnoringCase('wallet', $text);
   }
 
   /**

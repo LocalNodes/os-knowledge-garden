@@ -144,7 +144,7 @@ final class LibraryWriterTest extends ImportKernelTestBase {
       'public/Not in a group/Open letter.md',
     ], $targets);
     $readme = (string) file_get_contents("$this->out/README.md");
-    $this->assertStringContainsString('Do not publish or hand on `members/` or `group-only/`', $readme);
+    $this->assertStringContainsString('Keep the whole archive private.', $readme);
     $this->assertStringNotContainsString('Secret draft', $readme);
   }
 
