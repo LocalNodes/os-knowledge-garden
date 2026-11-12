@@ -139,7 +139,7 @@ function load(file: string, selectors: Record<string, unknown[]>) {
 /** The approval settings form: approver rows' "Remove" buttons come first. */
 function approvalSettings() {
   const remove = submitInput('signers_additional_signers_0_remove', 'Remove Ana');
-  const save = submitInput('op', 'Save approval settings', { 'data-safe-inflight-text': 'Saving…' });
+  const save = submitInput('op', 'Propose this change', { 'data-safe-inflight-text': 'Saving…' });
   const form = fakeForm([remove, save], save);
   const h = load(resolve(SSA, 'safe-configuration-manager.js'), { '#safe-account-manage-form': [form] });
   h.ctx.Drupal.behaviors.safeConfigurationManager.attach(h.context);
@@ -147,10 +147,10 @@ function approvalSettings() {
 }
 
 describe.skipIf(!present)('Approval settings: Save is posted with its own value (21-25 fix 14)', () => {
-  it('posts op=Save approval settings, then shows "Saving…"', () => {
+  it('posts op=Propose this change, then shows "Saving…"', () => {
     const { h, form, save } = approvalSettings();
     const posted = click(form, save);
-    expect(posted).toEqual([['op', 'Save approval settings']]);
+    expect(posted).toEqual([['op', 'Propose this change']]);
     h.flush();
     expect(save.disabled).toBe(true);
     expect(save.value).toBe('Saving…');
@@ -158,7 +158,7 @@ describe.skipIf(!present)('Approval settings: Save is posted with its own value 
 
   it('never posts twice on a double-click', () => {
     const { h, form, save } = approvalSettings();
-    expect(click(form, save)).toEqual([['op', 'Save approval settings']]);
+    expect(click(form, save)).toEqual([['op', 'Propose this change']]);
     // The second click lands before the in-flight timer ran.
     expect(click(form, save)).toBeNull();
     h.flush();
@@ -180,8 +180,8 @@ describe.skipIf(!present)('Approval settings: Save is posted with its own value 
     h.flush();
     h.pageshow(true);
     expect(save.disabled).toBe(false);
-    expect(save.value).toBe('Save approval settings');
-    expect(click(form, save)).toEqual([['op', 'Save approval settings']]);
+    expect(save.value).toBe('Propose this change');
+    expect(click(form, save)).toEqual([['op', 'Propose this change']]);
   });
 });
 

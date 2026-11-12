@@ -1,0 +1,8 @@
+# The calendar's fit to the page and its short empty days on a phone.
+calendar:
+  version: VERSION
+  css:
+    theme:
+      css/localnodes-events-calendar.css: {}
+  dependencies:
+    - calendar_view/calendar

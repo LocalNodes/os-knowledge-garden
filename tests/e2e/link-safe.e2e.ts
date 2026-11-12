@@ -57,7 +57,7 @@ function knownSafes(network: string): KnownSafes {
 }
 
 const FORK_ONLY = 'real pre-existing Safe exists only on a fork of the real chain (ruling 2026-11-06)';
-const LINKED = 'The account is linked. Its balance and approvers are shown below.';
+const LINKED = 'The group fund is linked.';
 const UNLINKED = 'The group fund was unlinked. Its account and money are unchanged.';
 const EMPTY = "This group doesn't have a group fund yet";
 

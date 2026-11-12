@@ -38,3 +38,7 @@ dependencies:
   - social:social_tagging
   - social:social_group_default_route
   - social:social_event_addtocal
+  # Month calendar of the events each visitor may see.
+  - localnodes_platform:localnodes_events_calendar
+  # Informal quick questions in a group, for its members only.
+  - localnodes_platform:localnodes_quick_poll

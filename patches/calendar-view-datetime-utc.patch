@@ -1,0 +1,39 @@
+--- a/src/Plugin/views/style/CalendarViewBase.php
++++ b/src/Plugin/views/style/CalendarViewBase.php
+@@ -6,6 +6,7 @@
+ use Drupal\Component\Utility\Xss;
+ use Drupal\Core\Datetime\DrupalDateTime;
+ use Drupal\Core\Field\FieldItemInterface;
++use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
+ use Drupal\Core\Form\FormStateInterface;
+ use Drupal\Core\Link;
+ use Drupal\Core\Render\Element;
+@@ -211,7 +212,27 @@
+     if ($field instanceof EntityField) {
+       $items = $field->getItems($row) ?? [];
+       $item = $items[$delta]['raw'] ?? $items[0]['raw'] ?? NULL;
+-      return $item instanceof FieldItemInterface ? $item->getValue() : [];
++      if (!$item instanceof FieldItemInterface) {
++        return [];
++      }
++      $values = $item->getValue();
++      // Date and time values are stored as UTC strings without an offset.
++      // Read them as UTC here: strtotime() would read them in PHP's default
++      // time zone, which Drupal sets to the site's or the user's, and move
++      // every event by that zone's offset. Date-only values have no time of
++      // day and stay as they are.
++      if ($item instanceof DateTimeItemInterface) {
++        foreach (['value', 'end_value'] as $key) {
++          $value = $values[$key] ?? NULL;
++          if (is_string($value) && str_contains($value, 'T')) {
++            $date = \DateTime::createFromFormat(DateTimeItemInterface::DATETIME_STORAGE_FORMAT, $value, new \DateTimeZone(DateTimeItemInterface::STORAGE_TIMEZONE));
++            if ($date !== FALSE) {
++              $values[$key] = $date->getTimestamp();
++            }
++          }
++        }
++      }
++      return $values;
+     }
+ 
+     return [];

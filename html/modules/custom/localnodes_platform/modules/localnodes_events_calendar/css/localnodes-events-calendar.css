@@ -1,0 +1,74 @@
+/**
+ * Events calendar: fit the month grid to the page and keep it short on phones.
+ *
+ * The calendar add-on sizes its grid columns by their content, so long
+ * weekday names and event titles widen some columns and push Saturday off the
+ * edge. Equal columns that may shrink keep all seven in view.
+ */
+@media (min-width: 48.0625rem) {
+  .calendar-view-table,
+  .calendar-view-table tr,
+  .calendar-view-table thead,
+  .calendar-view-table tbody {
+    grid-template-columns: repeat(var(--calendar-view-columns), minmax(0, 1fr));
+  }
+}
+
+.calendar-view-table thead th {
+  padding: 0.75rem 0.25rem;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The theme's table padding leaves an event less than half a day's width. */
+.calendar-view-table.table > tbody > tr > td {
+  padding: 0.375rem;
+}
+
+.calendar-view-table .calendar-view-day {
+  padding: 0;
+}
+
+.calendar-view-table .calendar-view-day__rows {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.calendar-view-table .calendar-view-day__row {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.calendar-view-pager {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.calendar-view-pager .pager__item::marker {
+  content: none;
+}
+
+.localnodes-events-switch {
+  margin-bottom: 1rem;
+}
+
+/* On a phone the add-on lists the month one day per row. A day without
+   events becomes one short line, so the days with events stand out. */
+@media (max-width: 48rem) {
+  .calendar-view-table.table > tbody > tr > td.empty {
+    min-height: 0;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .calendar-view-table td.empty .calendar-view-day__number {
+    margin-bottom: 0;
+  }
+
+  .calendar-view-table td.empty .calendar-view-day__rows {
+    display: none;
+  }
+}

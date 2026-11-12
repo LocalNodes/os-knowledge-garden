@@ -365,7 +365,7 @@ describe.skipIf(!present)('Send: the Safe\'s registry network first (ruling A)',
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(h.record.mount).toEqual([expect.objectContaining({ kind: 'receipt' })]);
     expect(h.record.inFlight).toEqual(['Sending…']);
-    expect(h.record.setState).toEqual([1, [2, 'Your wallet is sending the payment.'], 3]);
+    expect(h.record.setState).toEqual([1, [2, 'Sending the payment…'], 3]);
     expect(h.posted.execute).toEqual({ blockchain_tx_hash: HASH });
     expect(h.record.done).toEqual([{
       text: 'Payment sent.',
@@ -570,7 +570,7 @@ describe.skipIf(!present)('Send when the community covers sending (R5, 25-15)', 
     await h.send();
     expect(h.calls).toContain('kit:executeTransaction');
     expect(h.posted.execute).toEqual({ blockchain_tx_hash: HASH });
-    expect(h.record.setState).toEqual([1, [2, 'Your wallet is sending the payment.'], 3]);
+    expect(h.record.setState).toEqual([1, [2, 'Sending the payment…'], 3]);
   });
 
   it('a sent payment not yet on the record is read again from /status until confirmed', async () => {

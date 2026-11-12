@@ -1,0 +1,13 @@
+name: 'LocalNodes Events Calendar'
+type: module
+description: 'A month calendar of the events each visitor may see, for the community and for each group.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - calendar_view:calendar_view
+  - drupal:datetime
+  - drupal:views
+  - group:group
+  - social:social_event
+  - social:social_group
+  - social:social_group_flexible_group

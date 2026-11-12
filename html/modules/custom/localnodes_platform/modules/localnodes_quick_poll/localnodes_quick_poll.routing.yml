@@ -1,0 +1,25 @@
+localnodes_quick_poll.group_list:
+  path: '/group/{group}/quick-polls'
+  defaults:
+    _controller: '\Drupal\localnodes_quick_poll\Controller\QuickPollController::list'
+    _title: 'Quick polls'
+  requirements:
+    _custom_access: '\Drupal\localnodes_quick_poll\Controller\QuickPollController::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_quick_poll.group_add:
+  path: '/group/{group}/quick-polls/add'
+  defaults:
+    _controller: '\Drupal\localnodes_quick_poll\Controller\QuickPollController::add'
+    _title: 'Ask a quick question'
+  requirements:
+    _custom_access: '\Drupal\localnodes_quick_poll\Controller\QuickPollController::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group

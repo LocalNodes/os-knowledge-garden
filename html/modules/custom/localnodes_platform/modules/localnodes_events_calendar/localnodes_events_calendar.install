@@ -1,0 +1,45 @@
+<?php
+
+/**
+ * @file
+ * Install functions for the LocalNodes events calendar module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_events_calendar_install(): void {
+  _localnodes_events_calendar_show_group_blocks();
+}
+
+/**
+ * Shows the group header and side blocks on a group's calendar page.
+ *
+ * Open Social lists the group pages these theme blocks appear on by path, so
+ * without this the calendar page would lose the group's header, member count
+ * and "Create Event" button that its events list has. Blocks a site does not
+ * have are skipped, and a path already listed is not added twice.
+ */
+function _localnodes_events_calendar_show_group_blocks(): void {
+  $path = '/group/*/events/calendar';
+  $storage = \Drupal::entityTypeManager()->getStorage('block');
+  $ids = [
+    'socialblue_groupheroblock',
+    'socialblue_group_statistic_block',
+    'socialblue_group_add_event_block',
+  ];
+  foreach ($storage->loadMultiple($ids) as $block) {
+    $visibility = $block->getVisibility();
+    if (!isset($visibility['request_path']['pages'])) {
+      continue;
+    }
+    $pages = $visibility['request_path']['pages'];
+    $lines = array_map('trim', preg_split('/\R/', $pages));
+    if (in_array($path, $lines, TRUE)) {
+      continue;
+    }
+    $visibility['request_path']['pages'] = rtrim($pages) . "\n" . $path;
+    $block->setVisibilityConfig('request_path', $visibility['request_path']);
+    $block->save();
+  }
+}

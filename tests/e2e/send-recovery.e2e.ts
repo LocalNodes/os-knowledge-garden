@@ -58,7 +58,7 @@ import {
 } from './helpers/treasury';
 
 const FUND_WEI = 10n ** 16n; // 0.01 ETH into the fund
-const DROPPED_NOTE = 'The last send of this payment never reached the public record, so nothing was sent. It can be sent again.';
+const DROPPED_NOTE = "The last try to send this payment didn't go through, so no money moved. It can be sent again.";
 const WAITING = 'Waiting for the public record to confirm this.';
 // ChainTiming::DEFAULT_DROP_AFTER_BLOCKS, for an entry without drop_after_blocks.
 const DEFAULT_DROP_AFTER_BLOCKS = 300;

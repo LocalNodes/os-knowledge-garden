@@ -1,0 +1,25 @@
+/* Each quick poll sits on a card, as posts and events do. */
+.localnodes-quick-poll-ask {
+  margin: 0 0 1.25rem;
+}
+.localnodes-quick-poll.card,
+.poll-view.localnodes-quick-poll {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+/* The theme floats its radio buttons; without this the question's heading
+   runs into the first choice. */
+.localnodes-quick-poll .poll-question,
+.localnodes-quick-poll .poll-results-title {
+  margin: 0;
+  padding-bottom: 0.75rem;
+  line-height: 1.3;
+}
+.localnodes-quick-poll .form-radios,
+.localnodes-quick-poll dl {
+  clear: both;
+}
+.localnodes-quick-poll-back {
+  display: inline-block;
+  margin-top: 1rem;
+}

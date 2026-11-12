@@ -272,7 +272,7 @@ describe.skipIf(!present)('Send a configuration change: /data, then the network,
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(h.calls).not.toContain('tx:wait');
     expect(h.record.mount).toEqual([expect.objectContaining({ kind: 'receipt' })]);
-    expect(h.record.setState).toEqual([1, [2, 'Your wallet is sending the change.'], 3]);
+    expect(h.record.setState).toEqual([1, [2, 'Sending the change…'], 3]);
     expect(h.posted.execute).toEqual({ blockchain_tx_hash: HASH });
     expect(h.record.done).toEqual([{
       text: 'Change sent.',
