@@ -2,7 +2,7 @@ name: Governance judge (live Sepolia)
 
 # Phase 25, plan 25-27: the live judge for group governance (criteria 4 to 7). On demand only. The
 # job builds the site image from the checked-out commit and the gas-sponsor relayer from the commit
-# the run names, starts both with docker-compose.yaml, tests/e2e-live/compose.ci.yaml and
+# the run names (refused unless it is in the relayer's main history), starts both with docker-compose.yaml, tests/e2e-live/compose.ci.yaml and
 # tests/e2e-live/compose.governance.yaml, seeds the CI organizer, approver, member and group, builds
 # the CI test-operator wallet's MetaMask profile (accounts 1 to 3), and runs
 # tests/e2e-live/governance-judge.e2e.ts: group fund, voting setup, member approval, a payment
@@ -23,17 +23,13 @@ name: Governance judge (live Sepolia)
 #
 # Concurrency: account 1 is the same wallet nightly-wallet-e2e.yml and governance-smoke.yml pay
 # from, so this workflow joins their group sepolia-test-wallet (two senders could clash on its
-# nonce). The judge needs about 40 minutes; the job's limit is 90.
+# nonce). fund-practice-relayer.yml signs with the same CI relayer key and is in the group too. The judge needs about 40 minutes; the job's limit is 90.
 
 on:
   workflow_dispatch:
     inputs:
-      relayer_repo:
-        description: The relayer's GitHub repository, owner/name (the TA-5 route; 25-28 fills it)
-        required: true
-        type: string
       relayer_sha:
-        description: The relayer commit to build, a full 40-character SHA
+        description: The LocalNodes/gas-sponsor-relayer commit to build, a full 40-character lowercase SHA on its main branch
         required: true
         type: string
 
@@ -51,13 +47,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Check the relayer inputs
+      # The relayer repository is fixed, never an input: this job holds the wallet key, so it
+      # must never build and run code from a repository a dispatcher names.
+      - name: Check the relayer input
         env:
-          RELAYER_REPO: ${{ inputs.relayer_repo }}
           RELAYER_SHA: ${{ inputs.relayer_sha }}
         run: |
           set -euo pipefail
-          [[ "$RELAYER_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "relayer_repo must be owner/name" >&2; exit 1; }
           [[ "$RELAYER_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "relayer_sha must be a full 40-character lowercase SHA" >&2; exit 1; }
 
       - name: Checkout
@@ -85,10 +81,27 @@ jobs:
       - name: Checkout the relayer at the named commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ inputs.relayer_repo }}
+          repository: LocalNodes/gas-sponsor-relayer
           ref: ${{ inputs.relayer_sha }}
           path: .relayer-src
+          fetch-depth: 0
           persist-credentials: false
+
+      # GitHub serves a fork's commits under the upstream repository's name, so the SHA alone could
+      # name code that exists only in a fork. Nothing builds or runs the relayer until this passes,
+      # and no secret is in this step's environment.
+      - name: Check the relayer commit is on the relayer's main branch
+        env:
+          RELAYER_SHA: ${{ inputs.relayer_sha }}
+        run: |
+          set -euo pipefail
+          cd .relayer-src
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main \
+            || { echo "could not fetch main from the relayer repository" >&2; exit 1; }
+          [ "$(git rev-parse HEAD)" = "$RELAYER_SHA" ] \
+            || { echo "the relayer checkout is not at relayer_sha" >&2; exit 1; }
+          git merge-base --is-ancestor "$RELAYER_SHA" origin/main \
+            || { echo "relayer_sha is not in the relayer repository's main history" >&2; exit 1; }
 
       - name: Read the Ethereum Sepolia registry entry
         id: registry

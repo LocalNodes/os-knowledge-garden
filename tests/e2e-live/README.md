@@ -219,9 +219,10 @@ about 1, reporting the result about 2, the safety check 10, the waiting time 5, 
 Phase 21 nightly) and about 0.05 Sepolia ETH on the CI relayer (setup, member batch, reporting the
 result with its small bond, the payment). Account 2 must stay at exactly 0: never send it anything.
 
-**Inputs.** `relayer_repo` (owner/name) and `relayer_sha` (a full SHA): the relayer is built from
-that commit (`compose.governance.yaml`, `pull_policy: build`), never pulled. 25-28 fills them from
-the TA-5 route.
+**Input.** `relayer_sha` (a full 40-character lowercase SHA; anything else is refused): the relayer
+is built from that commit of `LocalNodes/gas-sponsor-relayer` (`compose.governance.yaml`,
+`pull_policy: build`), never pulled. The repository is fixed in the workflow, never an input,
+because the job holds the wallet key.
 
 **Secrets and variables (names only).** Besides the nightly's `SYNPRESS_SEED_PHRASE`,
 `SYNPRESS_WALLET_PASSWORD`, `SEPOLIA_RPC_URL` and `SYNPRESS_WALLET_ADDRESS`:
