@@ -1,0 +1,76 @@
+name: Security advisories
+
+# Runs `composer audit --locked` on the lock file
+# every hosted site is built from and goes red when a Drupal core, Open Social or contrib security
+# advisory affects a locked package. The script is scripts/ci/advisory-check.sh; advisories
+# accepted on purpose are listed with a reason under config.audit.ignore in composer.json.
+#
+# When: Thursdays 02:00 UTC (Wednesday evening in the Americas), after drupal.org's Wednesday
+# security release window, plus manual dispatch. No secrets, read-only token, no install, no
+# plugin runs; the only network use is Composer's advisory lookup. A failed lookup is red too.
+#
+# Proving it fires: dispatch with lock_ref set to a commit whose lock still has a known advisory
+# (red), then with lock_ref empty (green on the current lock).
+
+on:
+  schedule:
+    - cron: '0 2 * * 4'
+  workflow_dispatch:
+    inputs:
+      lock_ref:
+        description: Commit SHA whose composer.json and composer.lock to audit (empty = the checked-out commit)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-advisories
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          fetch-depth: ${{ inputs.lock_ref != '' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Pick the lock to audit
+        timeout-minutes: 2
+        env:
+          LOCK_REF: ${{ inputs.lock_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/audit"
+          if [ -z "${LOCK_REF:-}" ]; then
+            cp composer.json composer.lock "$RUNNER_TEMP/audit/"
+            echo "Auditing the lock at $(git rev-parse HEAD)"
+          else
+            if ! printf '%s' "$LOCK_REF" | grep -Eq '^[0-9a-f]{7,40}$'; then
+              echo "lock_ref must be a commit SHA (7 to 40 hex characters)" >&2
+              exit 2
+            fi
+            git show "$LOCK_REF:composer.json" > "$RUNNER_TEMP/audit/composer.json"
+            git show "$LOCK_REF:composer.lock" > "$RUNNER_TEMP/audit/composer.lock"
+            echo "Auditing the lock at $LOCK_REF"
+          fi
+
+      - name: Audit the lock
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          {
+            echo '## Security advisories'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          bash scripts/ci/advisory-check.sh "$RUNNER_TEMP/audit" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || status=$?
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
