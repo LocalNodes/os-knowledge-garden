@@ -1,5 +1,4 @@
-// Our own MetaMask 13.13.1 steps for the local recording (21-45 Task A, orchestrator ruling
-// path 2, 2026-11-07).
+// Our own MetaMask 13.13.1 steps for the local recording and the live suites.
 //
 // Synpress 4.1.2's helpers for these screens target an older MetaMask UI:
 // - accounts: it waits for the account popover; 13.13.1 shows the full-page Accounts list. Its
@@ -100,6 +99,49 @@ function notificationPage(context: BrowserContext, extensionId: string): Page | 
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The value of `p`, or 'timeout' if it hasn't settled within `ms`. A rejection is passed on. */
+async function within<T>(p: Promise<T>, ms: number): Promise<{ value: T } | 'timeout'> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      p.then((value) => ({ value })),
+      new Promise<'timeout'>((r) => {
+        timer = setTimeout(() => r('timeout'), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** How long closing one page opened here may take. */
+const CLOSE_MS = 5_000;
+
+/**
+ * The request a prompt window shows, from its address. MetaMask routes each request by its id
+ * (confirm-transaction/<id> for sends and signatures, connect/<id>, confirmation/<id>), and the
+ * id stays the same while fee estimates and other screen text change. An address without an
+ * id stands for itself.
+ */
+function requestOf(page: Page): string {
+  const url = page.url();
+  const match = /#\/?(confirm-transaction|confirmation|connect)\/([^/?#]+)/.exec(url);
+  return match ? `${match[1]}/${match[2]}` : url;
+}
+
+/** Test ids a stuck prompt is checked for; only their names are ever printed. */
+const STATE_IDS = [...CONFIRM_BUTTONS, 'confirm-scroll-to-bottom__button', 'alert-modal-acknowledge-checkbox'];
+
+/** Whether a prompt is open and which known test ids it shows: fixed names, never its text. */
+async function promptState(open: Page | undefined): Promise<string> {
+  if (!open || open.isClosed()) return 'no prompt open';
+  const shown: string[] = [];
+  for (const id of STATE_IDS) {
+    if (await open.getByTestId(id).isVisible().catch(() => false)) shown.push(id);
+  }
+  return `a prompt is open, showing ${shown.join(' ') || 'none of the known buttons'}`;
+}
+
 /** True when an error comes from a page, context or browser that has closed. */
 function isClosedError(e: unknown): boolean {
   return e instanceof Error && /has been closed/i.test(e.message);
@@ -116,102 +158,171 @@ function isClosedError(e: unknown): boolean {
  * Success is never assumed:
  * - only a "has been closed" error means a prompt is done; any other error is thrown;
  * - only a click that ran counts: it resolved, or the window closed on it;
+ * - a button is pressed at most once per request in a window: the request is known by the id in
+ *   the window's address, never by its text, so changing fee text doesn't bring a second press.
+ *   A second button on the same request (an alert's "Confirm" after the footer's) is allowed;
  * - with `done`, the loop returns only when `done()` is true (the idle exit is off), so a
  *   required follow-up prompt that never appears ends in an error;
  * - without `done`, it returns after `idleMs` with no prompt open, once a click succeeded.
- * The deadline is checked at the top of every pass. At `timeoutMs` it throws: nothing showed
- * up, `done()` is still false, or a prompt is still open and unconfirmed.
+ * Every awaited call on a page has a timeout capped by the time left, and the deadline is
+ * checked at the top of every pass. At `timeoutMs` it throws: nothing showed up, `done()` is
+ * still false, or a prompt is still open and unconfirmed. Opening and closing a page are bounded
+ * too, and it never returns while a page it opened is still open.
  */
 export async function confirmPrompts(
   context: BrowserContext,
   extensionId: string,
   kind: string,
   log: PromptLog,
-  opts: { done?: () => Promise<boolean> | boolean; idleMs?: number; timeoutMs?: number } = {},
+  opts: { done?: () => Promise<boolean> | boolean; idleMs?: number; timeoutMs?: number; reopenIdleMs?: number } = {},
 ): Promise<void> {
   const idleMs = opts.idleMs ?? 6_000;
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const start = Date.now();
+  /** A timeout for one awaited call: at most `cap`, never past the deadline. */
+  const left = (cap: number) => Math.max(1, Math.min(cap, start + timeoutMs - Date.now()));
   let last = Date.now();
   let clicks = 0;
-  for (;;) {
-    if (opts.done && (await opts.done())) return;
-    const open = notificationPage(context, extensionId);
-    if (Date.now() - start > timeoutMs) {
-      if (opts.done) throw new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s))`);
-      if (open) throw new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms`);
-      if (clicks === 0) throw new Error(`no MetaMask prompt to confirm for ${kind} within ${timeoutMs} ms`);
-      return;
-    }
-    const prompt = open;
-    if (prompt) {
-      // Each step on the prompt goes through `on`: it skips the step once the page is closed,
-      // and turns a "has been closed" error into `gone`, so the closed page is left alone.
-      // Any other error is thrown: it isn't evidence that the prompt was confirmed.
-      let gone = false;
-      const on = async <T>(fallback: T, step: () => Promise<T>): Promise<T> => {
-        if (gone || prompt.isClosed()) {
-          gone = true;
-          return fallback;
-        }
-        try {
-          return await step();
-        } catch (e) {
-          if (prompt.isClosed() || isClosedError(e)) {
+  // The last request confirmed, in which window, and the buttons pressed on it.
+  let confirmed: { page: Page; request: string; buttons: Set<string> } | undefined;
+  // reopenIdleMs: MetaMask can leave a request that arrives while the last prompt window is
+  // closing pending with no window. After that long with no prompt (once a click ran, `done`
+  // still false), open the wallet's prompt page ourselves; it shows the pending request. Every
+  // page opened here is kept until it is closed: at once if its navigation fails, after 8 s if
+  // it shows no known button, and in any case when this returns. It stays owned until it is
+  // seen closed; one that won't close within CLOSE_MS is an error.
+  const owned: Page[] = [];
+  let openedAt = 0;
+  const closeOwned = async (page: Page): Promise<boolean> => {
+    if (!page.isClosed()) await within(page.close(), CLOSE_MS).catch(() => undefined);
+    if (!page.isClosed()) return false;
+    const index = owned.indexOf(page);
+    if (index >= 0) owned.splice(index, 1);
+    return true;
+  };
+  const notClosed = () => new Error(`${kind}: a wallet page opened here could not be closed within ${CLOSE_MS} ms`);
+  let failed = false;
+  try {
+    for (;;) {
+      if (opts.done && (await opts.done())) return;
+      const open = notificationPage(context, extensionId);
+      if (Date.now() - start > timeoutMs) {
+        if (opts.done) throw new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s); ${await promptState(open)})`);
+        if (open) throw new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms`);
+        if (clicks === 0) throw new Error(`no MetaMask prompt to confirm for ${kind} within ${timeoutMs} ms`);
+        return;
+      }
+      const prompt = open;
+      if (prompt) {
+        // Each step on the prompt goes through `on`: it skips the step once the page is closed,
+        // and turns a "has been closed" error into `gone`, so the closed page is left alone.
+        // Any other error is thrown: it isn't evidence that the prompt was confirmed.
+        let gone = false;
+        const on = async <T>(fallback: T, step: () => Promise<T>): Promise<T> => {
+          if (gone || prompt.isClosed()) {
             gone = true;
             return fallback;
           }
-          // A fixed category and the error's name only (Codex round 2): never the message.
-          throw categorized(e);
+          try {
+            return await step();
+          } catch (e) {
+            if (prompt.isClosed() || isClosedError(e)) {
+              gone = true;
+              return fallback;
+            }
+            // A fixed category and the error's name only: never the message.
+            throw categorized(e);
+          }
+        };
+        await on(undefined, () => prompt.waitForLoadState('domcontentloaded', { timeout: left(30_000) }));
+        // A plain timer, not prompt.waitForTimeout: the window may close during this wait.
+        if (!gone) await sleep(1_500);
+        const text = (await on('', () => prompt.locator('body').innerText({ timeout: left(10_000) }))).replace(/[ \t]+/g, ' ');
+        const request = requestOf(prompt);
+        const pressed = confirmed?.page === prompt && confirmed.request === request ? confirmed.buttons : new Set<string>();
+        let clicked = '';
+        if (!gone) {
+          const scroll = prompt.getByTestId('confirm-scroll-to-bottom__button');
+          if (await on(false, () => scroll.isVisible())) {
+            await on(undefined, () => scroll.click({ timeout: left(10_000) }));
+            await sleep(1_000);
+            continue; // the deadline check at the top bounds a scroll button that stays visible
+          }
+          const ack = prompt.getByTestId('alert-modal-acknowledge-checkbox');
+          if (await on(false, () => ack.isVisible())) await on(undefined, () => ack.check({ timeout: left(10_000) }));
+          for (const id of CONFIRM_BUTTONS) {
+            if (gone) break;
+            const button = prompt.getByTestId(id);
+            if ((await on(false, () => button.isVisible())) && (await on(false, () => button.isEnabled({ timeout: left(5_000) })))) {
+              // Already pressed on this request: it must close or move on before anything else.
+              if (pressed.has(id)) break;
+              // Counts if the click resolved, or if it ran and the window closed on it (MetaMask
+              // closes the prompt on the confirm). A click skipped because the page was already
+              // closed doesn't count, and any other error is thrown by `on`.
+              let ran = false;
+              const resolved = await on(false, () => {
+                ran = true;
+                return button.click({ timeout: left(30_000) }).then(() => true);
+              });
+              if (resolved || (ran && gone)) clicked = id;
+              break;
+            }
+          }
         }
-      };
-      await on(undefined, () => prompt.waitForLoadState('domcontentloaded'));
-      // A plain timer, not prompt.waitForTimeout: the window may close during this wait.
-      if (!gone) await sleep(1_500);
-      const text = (await on('', () => prompt.locator('body').innerText({ timeout: 10_000 }))).replace(/[ \t]+/g, ' ');
-      const scroll = prompt.getByTestId('confirm-scroll-to-bottom__button');
-      if (await on(false, () => scroll.isVisible())) {
-        await on(undefined, () => scroll.click());
-        await sleep(1_000);
-        continue; // the deadline check at the top bounds a scroll button that stays visible
-      }
-      const ack = prompt.getByTestId('alert-modal-acknowledge-checkbox');
-      if (await on(false, () => ack.isVisible())) await on(undefined, () => ack.check());
-      let clicked = '';
-      for (const id of CONFIRM_BUTTONS) {
-        if (gone) break;
-        const button = prompt.getByTestId(id);
-        if ((await on(false, () => button.isVisible())) && (await on(false, () => button.isEnabled()))) {
-          // Counts if the click resolved, or if it ran and the window closed on it (MetaMask
-          // closes the prompt on the confirm). A click skipped because the page was already
-          // closed doesn't count, and any other error is thrown by `on`.
-          let ran = false;
-          const resolved = await on(false, () => {
-            ran = true;
-            return button.click().then(() => true);
-          });
-          if (resolved || (ran && gone)) clicked = id;
-          break;
+        if (gone && !clicked) {
+          // The prompt closed under us (MetaMask closes it after a confirm): it's done. Restart
+          // the idle clock so the next prompt in a chain has `idleMs` to open.
+          last = Date.now();
         }
-      }
-      if (gone && !clicked) {
-        // The prompt closed under us (MetaMask closes it after a confirm): it's done. Restart
-        // the idle clock so the next prompt in a chain has `idleMs` to open.
+        if (!clicked && !gone && owned.includes(prompt) && Date.now() - openedAt > 8_000) {
+          if (!(await closeOwned(prompt))) throw notClosed();
+          last = Date.now();
+        }
+        if (clicked) {
+          clicks++;
+          last = Date.now();
+          pressed.add(clicked);
+          confirmed = { page: prompt, request, buttons: pressed };
+          log.clicks.push({ kind, button: clicked, text: text.slice(0, 2000) });
+          const warned = text.split('\n').map((l) => l.trim()).filter((l) => l && WARNING_WORDS.test(l));
+          for (const line of warned) log.warnings.push(`${kind}: ${line}`);
+          // Fixed fields only: the CI log is public, so MetaMask's own text stays in `log`. The
+          // local recording reads it from there.
+          console.log(`[metamask] ${kind}: clicked ${clicked}; warning lines ${warned.length}`);
+        }
+      } else if (!opts.done && clicks > 0 && Date.now() - last > idleMs) {
+        return;
+      } else if (opts.done && opts.reopenIdleMs && clicks > 0 && owned.length === 0 && Date.now() - last > opts.reopenIdleMs) {
+        console.log(`[metamask] ${kind}: no prompt for ${opts.reopenIdleMs} ms; opening the wallet's prompt page`);
+        const openMs = left(10_000);
+        const opening = context.newPage();
+        const made = await within(opening, openMs);
+        if (made === 'timeout') {
+          // A page that opens after this gave up is closed as soon as it appears.
+          void opening.then((late) => within(late.close(), CLOSE_MS)).catch(() => undefined);
+          throw new Error(`${kind}: the wallet's prompt page did not open within ${openMs} ms`);
+        }
+        const page = made.value;
+        owned.push(page);
+        openedAt = Date.now();
         last = Date.now();
+        const url = `chrome-extension://${extensionId}/notification.html`;
+        const loaded = await page.goto(url, { timeout: left(15_000) }).then(() => true, () => false);
+        // A page that didn't reach the prompt page isn't found as a prompt: close it now.
+        if ((!loaded || page.isClosed() || !page.url().startsWith(url)) && !(await closeOwned(page))) throw notClosed();
       }
-      if (clicked) {
-        clicks++;
-        last = Date.now();
-        log.clicks.push({ kind, button: clicked, text: text.slice(0, 2000) });
-        const warned = text.split('\n').map((l) => l.trim()).filter((l) => l && WARNING_WORDS.test(l));
-        for (const line of warned) log.warnings.push(`${kind}: ${line}`);
-        // Fixed fields only: the CI log is public, so MetaMask's own text stays in `log` (21-46
-        // ruling after Codex). The local recording reads it from there.
-        console.log(`[metamask] ${kind}: clicked ${clicked}; warning lines ${warned.length}`);
-      }
-    } else if (!opts.done && clicks > 0 && Date.now() - last > idleMs) {
-      return;
+      await sleep(1_000);
     }
-    await sleep(1_000);
+  } catch (e) {
+    failed = true;
+    throw e;
+  } finally {
+    // MetaMask doesn't close a tab it didn't open, so every page opened here is closed. One that
+    // stays open turns a success into an error; after a failure, the first error is kept.
+    let stuck = 0;
+    for (const page of [...owned]) if (!(await closeOwned(page))) stuck++;
+    if (stuck) console.log(`[metamask] ${kind}: ${stuck} wallet page(s) opened here are still open`);
+    // eslint-disable-next-line no-unsafe-finally
+    if (stuck && !failed) throw notClosed();
   }
 }

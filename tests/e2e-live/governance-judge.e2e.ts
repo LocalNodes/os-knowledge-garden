@@ -1,34 +1,34 @@
-// The live governance judge (25-27; criteria 4 to 7; D-02, D-16, D-21, D-23, D-28 to D-35). CI only:
+// The live governance judge. CI only:
 // .github/workflows/governance-judge.yml runs it on demand against the site it built and started
 // on http://localhost:8080, on live Ethereum Sepolia, with the relayer built from the commit the
 // run names. live-global-setup.ts refuses anywhere else.
 //
-// One serial test with real MetaMask 13.13.1 and the CI test-operator wallet (D-02: never a personal wallet),
+// One serial test with real MetaMask 13.13.1 and the CI test-operator wallet (never a personal wallet),
 // whose seed exists only as a CI secret and is imported by wallet-setup/live/governance.setup.ts
 // when cache-governance.ts builds the profile (this file never reads it). Accounts:
-//   1  ci-organizer, a group manager and approver; pays the fund's deploy and funding (Phase 21);
-//   2  ci-member, the voting member; never holds ETH (criterion 5, UX-01);
+//   1  ci-organizer, a group manager and approver; pays the fund's deploy and funding;
+//   2  ci-member, the voting member; never holds ETH;
 //   3  ci-approver, the second group manager and approver.
-// Every Phase 25 step on the public record is sent and paid by the CI relayer (gas_sponsor).
+// Every voting step on the public record is sent and paid by the CI relayer (gas_sponsor).
 //
-// The flow, list to carried out, from the screens' labels (criterion 4, governance/pages.ts):
+// The flow, list to carried out, from the screens' labels (governance/pages.ts):
 //   sign in as 1; set up the group fund (2 of 2: accounts 1 and 3) and fund it with 0.0002 ETH;
 //   Set up group voting: 2 votes, 1 day, "Any member who can vote", a 1-hour safety check, the
-//   new-members box as it starts (checked, D-33), and the admin-only overrides 10 minutes, 600 s
-//   and 300 s, which make it a test group (D-16, D-21, D-32); approve the setup as 1 then 3, each
-//   reading "Confirmation 1 of 3" to "Confirmation 3 of 3" (D-35); wait for "Group voting is
+//   new-members box as it starts (checked), and the admin-only overrides 10 minutes, 600 s
+//   and 300 s, which make it a test group; approve the setup as 1 then 3, each
+//   reading "Confirmation 1 of 3" to "Confirmation 3 of 3"; wait for "Group voting is
 //   ready."; account 2 connects its wallet (its "Let them vote" row is queued already selected,
-//   "Selected because new members are added automatically.", D-33); 1 and 3 approve it; 3
-//   proposes paying 0.0001 ETH to account 1 ("Confirm in your wallet", 25-23 follow-up); 2 and 1
-//   vote For; "Carried out", with the Payment rows' "Pay to" reading the organizer's name (D-29).
+//   "Selected because new members are added automatically."); 1 and 3 approve it; 3
+//   proposes paying 0.0001 ETH to account 1 ("Confirm in your wallet"); 2 and 1
+//   vote For; "Carried out", with the Payment rows' "Pay to" reading the organizer's name.
 // Account 2's balance is exactly 0 before it votes and after the payment goes out.
 // Criterion 7: the Safe's owners, the top hat's wearer, the voting page name's owner and the
 // space's admins are read from the chain and the hub; any host power fails the run.
 //
 // Output lines (public chain data and the testnet sequencer's own words, nothing else):
 //   HASH <step> <hash>         every transaction hash the pages show or the run reads;
-//   RECORD <fact> <value>      addresses, for criterion 7;
-//   CAPTURE <name> <value>     the 25-27 addendum's live captures (see captureSequencer()).
+//   RECORD <fact> <value>      addresses, for the host-power check;
+//   CAPTURE <name> <value>     the live sequencer captures (see captureSequencer()).
 // The workflow copies these to the job summary. No trace, video or screenshot.
 //
 // Environment (set by the workflow): LN_LIVE_BASE_URL (playwright.config.ts), LN_LIVE_GROUP,
@@ -37,7 +37,7 @@
 // LN_LIVE_RELAYER_ADDRESS (the relayer's GET /status), LN_LIVE_WALLET_ADDRESS (optional; the
 // repository variable, checked against account 1).
 //
-// Steps that aren't Phase 25 screens use their own phases' helpers: SIWE sign-in (the
+// Steps that aren't voting screens use their own helpers: SIWE sign-in (the
 // #siwe-login-button, copied from live-sepolia.e2e.ts), the group fund set-up
 // (tests/e2e/helpers/treasury.ts) and siwe_login's own "Connect your wallet" button.
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -54,6 +54,7 @@ import { GOVERNANCE_CACHE_NAME } from './cache-governance';
 import { ACCOUNT_NAMES, GOVERNANCE_WALLET_PASSWORD } from './wallet-setup/live/governance.setup';
 import { confirmPrompts, openHome, switchAccount, type PromptLog } from './metamask-steps';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
+import { approveSetup } from './governance/live-steps';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
 import type { RegistryEntry } from '../e2e/helpers/chain';
 import {
@@ -61,8 +62,6 @@ import {
   approveMembers,
   carryOut,
   createProposal,
-  fill,
-  pattern,
   proposalPage,
   setupForm,
   setupProgress,
@@ -107,7 +106,7 @@ const PAY_TEXT = '0.0001';
 const ORGANIZER_NAME = 'Nightly Organizer';
 const MEMBER_NAME = 'Nightly Member';
 
-/** The admin-only test-group values (D-16, D-21): voting minutes, safety check s, waiting s. */
+/** The admin-only test-group values: voting minutes, safety check s, waiting s. */
 const TEST_GROUP = { votingMinutes: '10', safetyCheckSeconds: '600', waitingSeconds: '300' };
 
 /** Prints one public line for the job summary. */
@@ -171,7 +170,7 @@ async function waitForReceipt(hash: string, timeoutMs = 300_000): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------------------------
-// Chain reads for criterion 7 (viem encodes; the selectors are checked against the module's).
+// Chain reads for the host-power check (viem encodes; the selectors are checked against the module's).
 // ---------------------------------------------------------------------------------------------
 
 const SAFE_ABI = [{ type: 'function', name: 'getOwners', stateMutability: 'view', inputs: [], outputs: [{ type: 'address[]' }] }] as const;
@@ -237,7 +236,7 @@ async function hubSpace(hub: string, space: string): Promise<{ admins: string[];
 }
 
 // ---------------------------------------------------------------------------------------------
-// The sequencer captures (25-27 addendum).
+// The sequencer captures.
 // ---------------------------------------------------------------------------------------------
 
 /** safe_governance TypedData: the Snapshot domain and the vote and proposal types, verbatim. */
@@ -286,7 +285,7 @@ function strangerVote(space: string, proposal: string, timestamp: number): Recor
 const wallets = new WeakMap<BrowserContext, { extensionId: string }>();
 
 const test = base.extend<{ extensionId: string }>({
-  // Our own launch, as 21-45's live suite: the cached profile is copied, so the cache stays clean.
+  // Our own launch, as the live suite does: the cached profile is copied, so the cache stays clean.
   context: async ({}, use, testInfo) => {
     const cache = join(process.cwd(), CACHE_DIR_NAME, GOVERNANCE_CACHE_NAME);
     if (!existsSync(cache)) throw new Error(`no governance MetaMask cache at ${cache}: npm --prefix tests/e2e-live run cache:governance`);
@@ -330,7 +329,7 @@ async function siteAccounts(page: Page): Promise<string[]> {
   ).catch(fixed)) as string[];
 }
 
-/** SIWE through the site's own button (copied from live-sepolia.e2e.ts; Phase 19's screen). */
+/** SIWE through the site's own button (copied from live-sepolia.e2e.ts). */
 async function signInWithMetaMask(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<void> {
   await page.goto('/user/login');
   const button = page.locator('#siwe-login-button');
@@ -418,30 +417,6 @@ async function until(page: Page, what: string, ready: () => Promise<boolean>, st
   }
 }
 
-/** Approves the setup on V7 as the signed-in approver, recording each "Confirmation n of 3" (D-35). */
-async function approveSetup(page: Page, context: BrowserContext, extensionId: string, log: PromptLog, who: string): Promise<void> {
-  const v7 = setupProgress(page);
-  await expect(v7.approveTheSetup).toBeVisible({ timeout: 60_000 });
-  const seen = new Set<string>();
-  let watching = true;
-  const watch = (async () => {
-    while (watching) {
-      for (const text of await page.getByText(pattern(COPY.confirmation, true)).allInnerTexts().catch(() => [])) seen.add(text.trim());
-      await new Promise((r) => setTimeout(r, 250));
-    }
-  })();
-  try {
-    await v7.approveTheSetup.click();
-    await confirmPrompts(context, extensionId, 'approveSetup', log, { done: () => v7.youApprovedTheSetup.isVisible(), timeoutMs: 300_000 });
-  } finally {
-    watching = false;
-    await watch;
-  }
-  const expected = [1, 2, 3].map((n) => fill(COPY.confirmation, n, 3));
-  console.log(`[judge] ${who} saw ${JSON.stringify([...seen].sort())}`);
-  expect([...seen].sort(), `${who} read Confirmation 1 of 3 to 3 of 3 (D-35)`).toEqual(expected);
-}
-
 // ---------------------------------------------------------------------------------------------
 // The run.
 // ---------------------------------------------------------------------------------------------
@@ -478,7 +453,7 @@ test.describe.serial('live governance judge', () => {
     if (expected) expect(acc1.toLowerCase(), 'account 1 is the repository variable SYNPRESS_WALLET_ADDRESS').toBe(expected.toLowerCase());
     expect(new Set([acc1, acc2, acc3, relayer]).size, 'the three accounts and the relayer are four addresses').toBe(4);
 
-    const memberBalance = await test.step('account 2 holds no ETH (criterion 5)', async () => {
+    const memberBalance = await test.step('account 2 holds no ETH', async () => {
       const wei = await balanceWei(acc2);
       console.log(`[judge] account 2 holds ${wei} wei before anything`);
       expect(wei, 'account 2 starts with exactly 0').toBe(0n);
@@ -494,7 +469,7 @@ test.describe.serial('live governance judge', () => {
       expect(await balanceWei(acc1), 'account 1 can pay the fund deploy and funding (README: top it up)').toBeGreaterThan(5n * 10n ** 15n);
     });
 
-    const safe = await test.step('set up the group fund: 2 of 2, accounts 1 and 3 (Phase 21)', async () => {
+    const safe = await test.step('set up the group fund: 2 of 2, accounts 1 and 3', async () => {
       await setUpGroupFund(page, gid, { threshold: 2, driver, network: net.entry });
       await expect(receiptPanel(page).getByText('The group fund is ready.')).toBeVisible({ timeout: 300_000 });
       const deploy = await receiptPanel(page).getByRole('link', { name: /public record/ }).first().getAttribute('href').catch(() => null);
@@ -529,10 +504,10 @@ test.describe.serial('live governance judge', () => {
       await v6.votesNeeded.fill('2');
       await v6.votingLength(COPY.oneDay).check();
       await v6.anyMemberCanPropose.check();
-      // Every organizer fills the safety check; the override below wins only for a test group (D-32).
+      // Every organizer fills the safety check; the override below wins only for a test group.
       await v6.safetyCheckHours.fill('1');
-      // D-33: people join this group only when added, so the box starts checked; left as it is.
-      await expect(v6.newMembersAutomatically, 'the new-members box starts checked (D-33)').toBeChecked();
+      // People join this group only when added, so the box starts checked; left as it is.
+      await expect(v6.newMembersAutomatically, 'the new-members box starts checked').toBeChecked();
       await v6.adminDetails.click();
       await v6.votingPeriodMinutes.fill(TEST_GROUP.votingMinutes);
       await v6.safetyCheckSeconds.fill(TEST_GROUP.safetyCheckSeconds);
@@ -575,7 +550,7 @@ test.describe.serial('live governance judge', () => {
       return { module: id, topHatDomain: domain };
     });
 
-    await test.step('account 2 connects its wallet (siwe_login), and is queued already selected (D-33)', async () => {
+    await test.step('account 2 connects its wallet (siwe_login), and is queued already selected', async () => {
       await context.clearCookies();
       await page.goto(memberLogin);
       await page.goto(`/user/${memberUid}/wallet`);
@@ -597,7 +572,7 @@ test.describe.serial('live governance judge', () => {
       await setupProgress(page).approveNewMembers.click();
       const v8 = approveMembers(page);
       const row = v8.row(MEMBER_NAME, COPY.letThemVote);
-      await expect(row, 'the member\'s row loads already selected (D-33)').toBeChecked();
+      await expect(row, 'the member\'s row loads already selected').toBeChecked();
       await expect(v8.selectedBecauseNewMembers).toBeVisible();
       await v8.approveSelected.click();
       await v8.approveTheseChanges.click();
@@ -632,7 +607,7 @@ test.describe.serial('live governance judge', () => {
       });
       await v5.publish.click();
       await expect(v5.confirmInYourWallet).toBeVisible({ timeout: 60_000 });
-      // 25-23 follow-up: the wallet is asked only from this click.
+      // The wallet is asked only from this click.
       const before = context.pages().filter((p) => p.url().startsWith(`chrome-extension://${extensionId}/notification.html`)).length;
       out('CAPTURE', 'propose_prompt_before_click', before === 0 ? 'none' : 'open');
       expect(before, 'no wallet prompt opens before "Confirm in your wallet" is clicked').toBe(0);
@@ -656,7 +631,7 @@ test.describe.serial('live governance judge', () => {
       return id!;
     });
 
-    await test.step('account 2 still holds 0 before voting (criterion 5)', async () => {
+    await test.step('account 2 still holds 0 before voting', async () => {
       expect(await balanceWei(acc2), 'account 2 holds exactly 0 before it votes').toBe(memberBalance);
     });
 
@@ -710,11 +685,11 @@ test.describe.serial('live governance judge', () => {
       await expect(v4.amount).toBeVisible();
       await expect(v4.paidFrom).toBeVisible();
       await expect(v4.payTo).toBeVisible();
-      await expect(v4.payee(ORGANIZER_NAME), 'Pay to reads the organizer\'s name (D-29)').toBeVisible();
+      await expect(v4.payee(ORGANIZER_NAME), 'Pay to reads the organizer\'s name').toBeVisible();
       const hash = await v4.transactionHash();
       out('HASH', 'payment_execution', hash);
       await expect(proposalPage(page).outcomePassed).toBeVisible();
-      // The carry-out event's topic1 (25-24 confirmation): the module that carried it out.
+      // The carry-out event's topic1: the module that carried it out.
       const receipt = (await rpc('eth_getTransactionReceipt', [hash])) as { status?: string; logs?: Array<{ address: string; topics: string[] }> } | null;
       expect(receipt?.status, 'the payment\'s receipt succeeded').toBe('0x1');
       const topic0 = keccak256(toHex('ExecutionFromModuleSuccess(address)'));
@@ -723,13 +698,13 @@ test.describe.serial('live governance judge', () => {
       expect(event && getAddress(`0x${event.topics[1].slice(-40)}`), 'the fund\'s carry-out event names the group\'s module').toBe(module);
     });
 
-    await test.step('account 2 still holds 0 after the payment went out (criterion 5)', async () => {
+    await test.step('account 2 still holds 0 after the payment went out', async () => {
       const wei = await balanceWei(acc2);
       console.log(`[judge] account 2 holds ${wei} wei after the payment`);
       expect(wei, 'account 2 holds exactly 0 after the payment').toBe(0n);
     });
 
-    await test.step('criterion 7: no host power (D-02)', async () => {
+    await test.step('no host power', async () => {
       const owners = await safeOwners(safe);
       out('RECORD', 'safe_owners', owners.join(' '));
       expect(owners, 'the CI relayer is not an owner of the fund').not.toContain(relayer);
@@ -751,7 +726,7 @@ test.describe.serial('live governance judge', () => {
       expect(hub, 'the hub knows the voting page').not.toBeNull();
       out('RECORD', 'space_admins', hub!.admins.length ? hub!.admins.join(' ') : '[]');
       out('RECORD', 'space_moderators', hub!.moderators.length ? hub!.moderators.join(' ') : '[]');
-      expect(hub!.admins, 'the voting page has no admins (D-08)').toEqual([]);
+      expect(hub!.admins, 'the voting page has no admins').toEqual([]);
       expect(hub!.moderators.map((m) => m.toLowerCase()), 'the CI relayer is no moderator').not.toContain(relayer.toLowerCase());
     });
 

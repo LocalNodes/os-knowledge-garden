@@ -1,7 +1,7 @@
-// The live suite's failure dump (21-46, second dispatched run 42485195245).
+// The live suite's failure dump.
 //
 // The nightly run uploads no artifacts, so when a step fails the spec prints a short dump to the
-// CI log. The repo and its Actions logs are public. Ruling after Codex (5629e71..610091c): an
+// CI log. The repo and its Actions logs are public, so the dump is an
 // allowlist. The dump prints only fixed, structured fields: integers, known enum values, yes or
 // no flags, counts, and the keys of known UI strings. It never prints free text from MetaMask,
 // the console or Drupal, so nothing a page, a wallet or an RPC provider writes can reach the log.
@@ -89,6 +89,7 @@ export function consoleKey(type: string, text: string): string | null {
   const t = String(text);
   if (t.startsWith('[Safe Deployment] update-deployment refused')) return 'safe:update_refused';
   if (t.startsWith('[Safe Deployment] Entity update error')) return 'safe:entity_update_error';
+  if (t.startsWith('[Safe] Wallet or network error')) return 'safe:wallet_error';
   if (t.startsWith('[Safe')) return 'safe:other';
   if (type === 'error') return 'error';
   if (type === 'warning') return 'warning';
@@ -108,7 +109,7 @@ export function blockCategory(error: unknown): 'timeout' | 'rpc_error' | 'no_pro
   return 'rpc_error';
 }
 
-/** A page URL as a fixed route key; path segments are never printed (Codex round 2). */
+/** A page URL as a fixed route key; path segments are never printed. */
 export function routeKey(
   url: string,
 ): 'group_treasury_create' | 'group_treasury' | 'group_treasury_propose' | 'group_treasury_payment' | 'user_login' | 'other' {
@@ -125,6 +126,38 @@ export function routeKey(
   // The payment page is /group/N/treasury/transaction/N (singular; tests/e2e/helpers/treasury.ts).
   if (/^\/group\/\d+\/treasury\/transaction\/\d+$/.test(path)) return 'group_treasury_payment';
   if (path === '/user/login') return 'user_login';
+  return 'other';
+}
+
+/** The voting setup's two JSON routes as fixed keys, null for any other URL. */
+export function setupRouteKey(url: string): 'setup_messages' | 'setup_approve' | null {
+  let path: string;
+  try {
+    path = new URL(url).pathname.replace(/\/+$/, '');
+  }
+  catch {
+    return null;
+  }
+  if (/^\/group\/\d+\/votes\/setup\/messages$/.test(path)) return 'setup_messages';
+  if (/^\/group\/\d+\/votes\/setup\/approve$/.test(path)) return 'setup_approve';
+  return null;
+}
+
+/**
+ * The approve-the-setup error the page showed, as a fixed key: the alert's text is matched
+ * against the screen's known sentences and never printed.
+ */
+const APPROVE_ALERTS: ReadonlyArray<[string, RegExp]> = [
+  ['expired', /ran out of time/i],
+  ['rejected', /didn.t confirm it in your wallet/i],
+  ['wrong_network', /on a different network/i],
+  ['not_approver', /isn.t one of this group fund.s approvers/i],
+  ['wallet_rpc', /wallet ran into a problem/i],
+  ['server', /went wrong on our side/i],
+];
+
+export function approveAlertKey(text: string): string {
+  for (const [key, re] of APPROVE_ALERTS) if (re.test(text)) return key;
   return 'other';
 }
 
@@ -177,7 +210,7 @@ export function categorized(error: unknown): Error {
   return new Error(`${errorCategory(error)} (${name})`);
 }
 
-const SAFE_KEYS = ['safe:update_refused', 'safe:entity_update_error', 'safe:other'] as const;
+const SAFE_KEYS = ['safe:update_refused', 'safe:entity_update_error', 'safe:wallet_error', 'safe:other'] as const;
 
 /** Counts and fixed lines recorded while a test runs. */
 export class FailureDump {
@@ -268,7 +301,7 @@ export class FailureDump {
         out.push('receipt panel: absent');
       }
       const count = (sel: string) => page.locator(sel).count().catch(() => -1);
-      out.push(`messages: status=${await count('.messages--status')} warning=${await count('.messages--warning')} error=${await count('.messages--error')} alerts=${await count('[role="alert"]')}`);
+      out.push(`messages: status=${await count('.messages--status')} warning=${await count('.messages--warning')} error=${await count('.messages--error')} alerts=${await count('[role="alert"]')} danger=${await count('.alert-danger')}`);
     }
     catch {
       out.push('page read failed');
