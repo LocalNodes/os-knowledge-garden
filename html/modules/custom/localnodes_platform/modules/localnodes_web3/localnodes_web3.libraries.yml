@@ -1,4 +1,4 @@
-# LocalNodes visuals for the Phase 21 group fund components (D-04): the Test
+# LocalNodes visuals for the group fund components: the Test
 # network banner and panel left rules and a neutral Short ID, from --ln-*
 # tokens only. The generic drupal.org modules never name this library;
 # localnodes_web3_library_info_alter() adds it as a dependency of
@@ -9,4 +9,18 @@ treasury:
     theme:
       css/treasury.css: {}
   dependencies:
+    - localnodes_platform/tokens
+
+# The sign-in control above the password form and in the welcome block; its
+# click goes to the top-bar sign-in (see \Drupal\localnodes_web3\SignIn).
+signin:
+  version: VERSION
+  css:
+    theme:
+      css/signin.css: {}
+  js:
+    js/signin.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
     - localnodes_platform/tokens

@@ -20,24 +20,24 @@ function localnodes_platform_install() {
   // writing to the database. No need to apply them here.
   _localnodes_platform_grant_chatbot_access();
   _localnodes_platform_configure_mailer();
-  // 22.1 D-11: Open Social's footer out of every mail, Tom's subjects in.
+  // Open Social's footer out of every mail, our own mail subjects in.
   _localnodes_platform_configure_email();
-  // 22.1 criterion 6: Open Social's "#MadeToShare" footer block off.
+  // Open Social's "#MadeToShare" footer block off.
   _localnodes_platform_configure_branding();
-  // DES-01 brand tokens (22-UI-SPEC Part 1): socialblue scheme + shapes.
+  // Brand tokens: the socialblue colour scheme and shapes.
   _localnodes_platform_apply_brand_palette();
   _localnodes_platform_configure_theme_shape();
-  // D-27: the site-wide Gemini token ceiling (ai_usage_limits).
+  // The site-wide Gemini token ceiling (ai_usage_limits).
   _localnodes_platform_configure_ai_usage_limits();
-  // 22.2 SC2: group affiliation and the customisable "Request to join"
+  // Group affiliation and the customisable "Request to join"
   // message, on for every community (online-only and place-based).
   _localnodes_platform_enable_group_features();
   _localnodes_platform_configure_event_calendar();
-  // 22.2 D-05: keyword search shows new and edited content without cron.
+  // Keyword search shows new and edited content without cron.
   _localnodes_platform_index_solr_directly();
-  // 23-26: members don't see each other's email unless they choose to.
+  // Members don't see each other's email unless they choose to.
   _localnodes_platform_hide_profile_email();
-  // WINDOWS 47: the anonymous front-page hero speaks for the community, not
+  // The anonymous front-page hero speaks for the community, not
   // for Open Social.
   _localnodes_platform_configure_hero_copy();
 }
@@ -60,14 +60,15 @@ function _localnodes_platform_configure_event_calendar(): void {
 /**
  * Replaces Open Social's stock text on the anonymous front-page hero.
  *
- * WINDOWS 47. social_core_install() creates the hero as a block_content
+ * social_core_install() creates the hero as a block_content
  * (hero_call_to_action_block, uuid 8bb9d4bb-f182-4afc-b138-8a4b802824e4)
  * reading "This community is powered by Open Social, the plug-and-play
- * community solution for NGOs and semi-governmental organizations", against
- * BRAND.md section 3. Orchestrator ruling (22.1-ORCH-INBOX.md, 2026-11-09):
- * heading "[site name]", body "Your community's own space: a shared memory
- * with an assistant that knows your group's history, a shared fund, and a
- * fair way to decide together." No crypto words.
+ * community solution for NGOs and semi-governmental organizations": a
+ * visitor would meet someone else's product pitch, not the community. It reads
+ * instead: heading "Welcome to [site name]",
+ * body "Sign in to see what's new, find what the group knows and take part."
+ * No crypto words. The block's buttons are left to the theme; with the Web3
+ * stack on, localnodes_web3 swaps them for its sign-in at render time.
  *
  * Why this lives in hook_install: the hero is a content entity created by
  * Open Social's own install, so neither config/install nor config/optional can
@@ -87,7 +88,7 @@ function _localnodes_platform_configure_hero_copy() {
   if (!$block || !$block->hasField('field_text_block')) {
     return;
   }
-  $want = '<h3>[site:name]</h3><p>' . htmlspecialchars("Your community's own space: a shared memory with an assistant that knows your group's history, a shared fund, and a fair way to decide together.", ENT_QUOTES | ENT_HTML5) . '</p>';
+  $want = '<h3>Welcome to [site:name]</h3><p>' . htmlspecialchars("Sign in to see what's new, find what the group knows and take part.", ENT_QUOTES | ENT_HTML5) . '</p>';
   if ($block->get('field_text_block')->value === $want) {
     return;
   }
@@ -98,14 +99,13 @@ function _localnodes_platform_configure_hero_copy() {
 /**
  * Hides members' email addresses from other members, site-wide.
  *
- * The site terms (23-26, 23-UI-SPEC section 9) say: "Other members can't see
+ * The site terms say: "Other members can't see
  * your email unless you choose to show it on your profile." Open Social ships
  * social_profile.settings:social_profile_show_email TRUE, which shows every
  * member's address on their profile to every other member and locks each
  * member's own "Show my email on my profile" switch on. With it FALSE, only
  * people with "view profile email" (site managers) see an address, and each
- * member's own switch is unlocked and off by default (orchestrator ruling,
- * 2026-11-08, bullet 2 (a)).
+ * member's own switch is unlocked and off by default.
  *
  * Why this lives in hook_install: social_profile ships the settings object in
  * its own config/install, created by the Open Social profile before
@@ -125,7 +125,7 @@ function _localnodes_platform_hide_profile_email() {
 /**
  * Indexes Open Social's two Solr indexes at the end of each save request.
  *
- * Phase 22.2 D-05: keyword search should show a new or edited Topic, Event
+ * Keyword search should show a new or edited Topic, Event
  * or other content right away, not after the next cron run. Open Social ships
  * social_content and social_all with index_directly FALSE, so search_api
  * only tracks the item and cron indexes it later. With index_directly TRUE,
@@ -141,7 +141,7 @@ function _localnodes_platform_hide_profile_email() {
  *
  * Why only these two: they are Solr indexes, so indexing at request end costs
  * one Solr update and no Gemini call. The AI indexes (social_posts,
- * social_comments) keep their Phase 22 settings, and imports keep deferring
+ * social_comments) keep their own settings, and imports keep deferring
  * them (ImportBatch::DEFERRED_INDEXES).
  *
  * Idempotent: an index that is missing or already has the option is left
@@ -161,8 +161,8 @@ function _localnodes_platform_index_solr_directly() {
 /**
  * Turns on the two Open Social 13.1 group features that ship switched off.
  *
- * Phase 22.2 criterion 2 wants four group features on for every community.
- * Two already are in Open Social 13.1: custom-link online events and group
+ * Every community gets four group features. Two already are in Open Social
+ * 13.1: custom-link online events and group
  * managers editing or deleting members' content. This turns on the other two
  * for flexible_group, the group type every community uses:
  * - Group affiliation: members can name the group as an affiliation on their
@@ -216,7 +216,7 @@ function _localnodes_platform_enable_group_features() {
 /**
  * Sets the site-wide Gemini token ceiling in ai_usage_limits.
  *
- * D-27 (Tom, 2026-11-05): the last-resort spend stop across every AI
+ * The last-resort spend stop across every AI
  * feature. 30,000,000 tokens per 30-day window by default; each instance
  * can change it at /admin/config/ai/usage_limits.
  *
@@ -228,7 +228,7 @@ function _localnodes_platform_enable_group_features() {
  * included, so at the ceiling vector search and indexing pause too
  * (localnodes_platform's AiCeilingIndexingSubscriber keeps index runs
  * resumable). Per-user, anonymous and per-IP caps are flood control in
- * social_ai_indexing (22-31, 22-32).
+ * social_ai_indexing.
  *
  * Why this lives in hook_install: ai_usage_limits ships
  * ai_usage_limits.settings in its own config/install, so a module copy
@@ -263,8 +263,8 @@ function _localnodes_platform_configure_ai_usage_limits() {
  * Applies the LocalNodes brand palette to socialblue and regenerates its CSS.
  *
  * Stock socialblue fails WCAG AA (primary #29abe2 is 2.62:1 on white), so the
- * distribution ships the AA palette from 22-UI-SPEC Part 1 (DES-01, D-03:
- * keep socialblue, no sub-theme). The palette lives in this module's
+ * distribution ships an AA palette, keeping socialblue rather than adding a
+ * sub-theme. The palette lives in this module's
  * config/optional/color.theme.socialblue.yml and is read from there, so the
  * YAML stays the single source of truth.
  *
@@ -329,16 +329,16 @@ function _localnodes_platform_apply_brand_palette() {
 }
 
 /**
- * Sets the DES-01 control and card radius on socialblue.
+ * Sets the brand's control and card radius on socialblue.
  *
- * 22-UI-SPEC Part 1 "Shape": 6px for buttons and form controls, 8px for
+ * 6px for buttons and form controls, 8px for
  * cards (stock socialblue ships 10 / 5 / 10). improved_theme_settings renders
  * these theme settings into the page head, and social_swiftmail uses them in
  * emails.
  *
  * The values come from the token source (tokens/localnodes.tokens.json) through
  * its generated flat file, tokens/ln-tokens.flat.json: radius.control is the
- * button and form-control radius, radius.card the card radius (22.1-03, D-08).
+ * button and form-control radius, radius.card the card radius.
  * Run scripts/tokens/build_tokens.mjs after changing them.
  *
  * Why this lives in hook_install: socialblue ships socialblue.settings in its
@@ -434,20 +434,20 @@ function _localnodes_platform_configure_mailer() {
 }
 
 /**
- * Takes Open Social's footer out of every mail and sets Tom's mail subjects.
+ * Takes Open Social's footer out of every mail and sets our mail subjects.
  *
- * Phase 22.1 D-11 (criterion 6). Two settings that belong to other modules:
+ * Two settings that belong to other modules:
  * - social_swiftmail.settings:remove_open_social_branding TRUE. social_swiftmail
  *   then shows the community's own site name instead of the Open Social link,
  *   and leaves out the slogan and "#MadeToShare" sub-slogan. The object has a
  *   schema but no config/install file, and a copy here would collide with the
  *   object its own install writes (setDefaultDisabledGreetingKeys()).
- * - user.mail subjects, as Tom approved them on the canvas (BRAND.md section 9):
+ * - user.mail subjects, named for the site the person joined:
  *   "Reset your password for [site:name]" and, for the two welcome mails (an
  *   organizer-created account and a self-registration without approval),
  *   "Welcome to [site:name]". user.mail comes from core's config/install, so
  *   shipping a copy would be pre-existing config; it is edited here, as the
- *   other install helpers do (CLAUDE.md, D-10).
+ *   other install helpers do (CLAUDE.md).
  *
  * The look of the mail (the email--localnodes.html.twig wrapper) is not config;
  * localnodes_platform_theme() registers it. The transport is not touched: that
@@ -485,7 +485,7 @@ function _localnodes_platform_configure_email() {
 /**
  * Switches off Open Social's powered-by footer block on the community site.
  *
- * Phase 22.1 criterion 6 (Tom, card 11): every page's footer reads
+ * Every page's footer reads
  * "‹community› · a community on LocalNodes · Open source" instead of the
  * Open Social mark and "#MadeToShare by Open Social". The new footer is the
  * socialblue_localnodes_footer block in config/optional (the LocalNodesFooterBlock
@@ -500,7 +500,7 @@ function _localnodes_platform_configure_email() {
  *
  * Why this lives in hook_install: the block belongs to social_footer and is
  * created by the Open Social profile before `drush en localnodes_platform`, so
- * a config/install copy would be pre-existing config (CLAUDE.md, D-10).
+ * a config/install copy would be pre-existing config (CLAUDE.md).
  *
  * Idempotent: a block that is missing or already off is left alone.
  */
@@ -599,8 +599,7 @@ function _localnodes_platform_configure_ai_defaults() {
 /**
  * Implements hook_requirements().
  *
- * The G8 data-tier gate (AI-SPEC 1b, guardrail G8), as Tom chose it on
- * 2026-11-05: warn-and-provision. A status-report error when a non-demo site
+ * The data-tier gate: warn-and-provision. A status-report error when a non-demo site
  * hasn't declared a paid Gemini key, plus a check in
  * .github/workflows/provision-instance.yml. No runtime block.
  *

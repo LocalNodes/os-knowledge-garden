@@ -19,11 +19,9 @@ use Drupal\KernelTests\KernelTestBase;
  * Open Social's social_core_install() creates the hero block_content
  * (hero_call_to_action_block, uuid 8bb9d4bb-...) with the stock text "This
  * community is powered by Open Social, the plug-and-play community solution
- * for NGOs and semi-governmental organizations." The orchestrator ruled
- * (22.1-ORCH-INBOX.md, 2026-11-09): heading "[site name]", body "Your
- * community's own space: a shared memory with an assistant that knows your
- * group's history, a shared fund, and a fair way to decide together." No
- * crypto words.
+ * for NGOs and semi-governmental organizations." It reads instead: heading
+ * "Welcome to [site name]", body "Sign in to see what's new, find what the
+ * group knows and take part." No crypto words.
  *
  * The hero is a content entity, so config/install can't hold it:
  * _localnodes_platform_configure_hero_copy() rewrites it from
@@ -42,7 +40,7 @@ final class HeroCopyTest extends KernelTestBase {
 
   private const STOCK = '<h3>Become a member or log in to your community</h3><p>This community is powered by Open Social, the plug-and-play community solution for NGOs and semi-governmental organizations.</p>';
 
-  private const BODY = "Your community's own space: a shared memory with an assistant that knows your group's history, a shared fund, and a fair way to decide together.";
+  private const BODY = "Sign in to see what's new, find what the group knows and take part.";
 
   /**
    * {@inheritdoc}
@@ -130,14 +128,14 @@ final class HeroCopyTest extends KernelTestBase {
   }
 
   /**
-   * After the helper the hero reads heading = site name, body = the ruling.
+   * After the helper the hero greets visitors by the site's name.
    */
   public function testHeroShowsTheRuledCopy(): void {
     $this->runHelper();
     $html = $this->renderHero();
 
-    $this->assertMatchesRegularExpression('#<h3>\s*' . preg_quote(self::SITE_NAME, '#') . '\s*</h3>#', $html, 'Heading is the site name.');
-    $this->assertStringContainsString(htmlspecialchars(self::BODY, ENT_QUOTES | ENT_HTML5), $html, 'Body is the ruled sentence.');
+    $this->assertMatchesRegularExpression('#<h3>\s*Welcome to ' . preg_quote(self::SITE_NAME, '#') . '\s*</h3>#', $html, 'Heading welcomes visitors by the site name.');
+    $this->assertStringContainsString(htmlspecialchars(self::BODY, ENT_QUOTES | ENT_HTML5), $html, 'Body is the sign-in sentence.');
   }
 
   /**
@@ -154,7 +152,7 @@ final class HeroCopyTest extends KernelTestBase {
   }
 
   /**
-   * No crypto words in the hero (orchestrator ruling).
+   * No crypto words in the hero.
    */
   public function testNoCryptoWords(): void {
     $this->runHelper();
@@ -176,7 +174,7 @@ final class HeroCopyTest extends KernelTestBase {
    */
   public function testHeadingFollowsTheSiteName(): void {
     $this->runHelper();
-    $this->assertStringContainsString('<h3>' . self::SITE_NAME . '</h3>', $this->renderHero());
+    $this->assertStringContainsString('<h3>Welcome to ' . self::SITE_NAME . '</h3>', $this->renderHero());
 
     $this->config('system.site')->set('name', 'Mutual Aid Network')->save();
     $html = $this->renderHero();

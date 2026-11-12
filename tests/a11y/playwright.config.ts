@@ -1,11 +1,11 @@
-// Accessibility harness for Phase 22 (D-05, UI-SPEC Part 5).
+// Accessibility harness.
 //
 // Rerun from the repo root:
 //   npx playwright test -c tests/a11y/playwright.config.ts
 //   (or: npm run test:a11y)
 //
 // Uses the installed Google Chrome (channel 'chrome'); no browser download.
-// On a host without Google Chrome (desktop-dev, 22-28), set
+// On a host without Google Chrome, set
 // LN_BROWSER_CHANNEL=chromium after `npx playwright install chromium`.
 // One worker, headless: this runs on an 8 GB machine next to DDEV.
 //
@@ -27,59 +27,65 @@ export const BASE_URL = process.env.LN_BASE_URL ?? 'https://fresh3.ddev.site';
 export const BROWSER_CHANNEL = process.env.LN_BROWSER_CHANNEL ?? 'chrome';
 
 // chat.spec.ts and overview.spec.ts run in two projects each and skip the
-// tests that belong to the other persona (22-28). The 22-30 state specs
+// tests that belong to the other persona. The state specs
 // (keyboard, reflow, sr-proxy) do the same.
 const STATE_SPECS = ['keyboard.spec.ts', 'reflow.spec.ts', 'sr-proxy.spec.ts'];
 const ANONYMOUS_SPECS = ['smoke.spec.ts', 'overview.spec.ts'];
 const STEWARD_SPECS: string[] = ['upload.spec.ts', 'batch.spec.ts', 'web.spec.ts', 'status.spec.ts', 'chat.spec.ts', ...STATE_SPECS, 'import-run.spec.ts', 'titles.spec.ts'];
 const MEMBER_SPECS: string[] = ['source-box.spec.ts', 'chat.spec.ts', 'overview.spec.ts', ...STATE_SPECS, 'server-ai.spec.ts'];
-// Phase 21 group fund screens (21-28), on their own lines next to Phase 22's.
+// Group fund screens, on their own lines.
 STEWARD_SPECS.push('treasury.spec.ts');
 MEMBER_SPECS.push('treasury-member.spec.ts');
-// Phase 21 page titles in Title Case (Tom, 2026-11-07; 21-29).
+// Group fund page titles in Title Case.
 STEWARD_SPECS.push('treasury-titles.spec.ts');
-// 21-29: the recorded walkthrough and the keyboard checks (steward project;
+// The group fund recorded walkthrough and the keyboard checks (steward project;
 // the walkthrough's member block switches its own session).
 STEWARD_SPECS.push('treasury-walkthrough.spec.ts', 'treasury-keyboard.spec.ts');
-// Phase 23 (23-13): the organizer guide, as the steward. Results go to the
-// Phase 23 folder through PHASE23_RESULTS_DIR.
+// The organizer guide, as the steward. Results go to the results folder set
+// by PHASE23_RESULTS_DIR.
 STEWARD_SPECS.push('guide.spec.ts');
-// 23-26: the site terms and the register form's consent box, as an
-// anonymous visitor. Results go to the Phase 23 folder.
+// The site terms and the register form's consent box, as an
+// anonymous visitor. Results go to the folder set by PHASE23_RESULTS_DIR.
 ANONYMOUS_SPECS.push('terms.spec.ts');
-// 23-29: the Phase 23 keyboard run and screen-reader proxy. They run in the
+// The sign-up and guide keyboard run and screen-reader proxy. They run in the
 // onboarding, anonymous and steward projects; each test skips the states that
 // belong to another project (helpers/phase23-states.ts).
 const PHASE23_STATE_SPECS = ['keyboard-phase23.spec.ts', 'sr-proxy-phase23.spec.ts'];
 ANONYMOUS_SPECS.push(...PHASE23_STATE_SPECS);
 STEWARD_SPECS.push(...PHASE23_STATE_SPECS);
-// Phase 25 group governance screens (25-26). governance.spec.ts runs in the
-// member project and switches persona per block; results go to the Phase 25
-// folder.
+// Group governance screens. governance.spec.ts runs in the
+// member project and switches persona per block; results go to the
+// governance results folder.
 MEMBER_SPECS.push('governance.spec.ts');
-// 22.1-17: the DeepChat bar's computed keyboard focus ring, as the member (the chat shows on the group page).
+// The DeepChat bar's computed keyboard focus ring, as the member (the chat shows on the group page).
 MEMBER_SPECS.push('chat-focus-ring.spec.ts');
 // The chat panel's width, the line under the input, and the assistant's name (default and long), at 320 to 1280.
 MEMBER_SPECS.push('chat-panel-size.spec.ts');
-// 25-26: the keyboard walk and screen-reader evidence, as the steward (the
+// Governance: the keyboard walk and screen-reader evidence, as the steward (the
 // vote blocks switch to the voter).
 STEWARD_SPECS.push('governance-keyboard.spec.ts');
-// 22.1-15: the "Hacked or Phished?" help page, signed out and as a member.
-// Results go to the 22.1 folder.
+// The "Hacked or Phished?" help page, signed out and as a member.
+// Results go to the brand results folder.
 ANONYMOUS_SPECS.push('safety-help.spec.ts');
 MEMBER_SPECS.push('safety-help.spec.ts');
-// WINDOWS 46: the "Joined" button's computed colours, as the member (who has joined the a11y group).
+// The sign-in button on the welcome block, the log-in and the sign-up pages,
+// and the top bar's height with it; signed out only.
+// On a site with the sign-in off, set LN_WEB3_OFF=1; otherwise a missing
+// sign-in fails these tests instead of skipping them.
+ANONYMOUS_SPECS.push('sign-in-entry.spec.ts');
+// The "Joined" button's computed colours, as the member (who has joined the a11y group).
 MEMBER_SPECS.push('joined-button.spec.ts');
 
-// LN_RECORD=1 records a trace and a video of every test (22-30). The CLI's
+// LN_RECORD=1 records a trace and a video of every test. The CLI's
 // --trace flag also works; there's no CLI flag for video.
 const RECORD = process.env.LN_RECORD === '1';
 
-// Phase 23 (23-20): the Nuxt sign-up site's screens, with every sign-up API
+// The Nuxt sign-up site's screens, with every sign-up API
 // answered by page.route mocks. It runs against the Nuxt dev server
 // (NUXT_LAUNCH_OPEN=true npm --prefix ../localnodes-onboarding run dev), not
 // Drupal, so it has its own baseURL and no stored session, and only
-// onboarding.spec.ts runs in it. Results go to the Phase 23 folder.
+// onboarding.spec.ts runs in it. Results go to the folder set by
+// PHASE23_RESULTS_DIR.
 export const ONBOARDING_URL = process.env.LN_ONBOARDING_URL ?? 'http://localhost:3000';
 // The home page, against the built site (landing-v5.spec.ts).
 const ONBOARDING_SPECS = ['onboarding.spec.ts', 'landing-v5.spec.ts', ...PHASE23_STATE_SPECS];
@@ -115,7 +121,7 @@ export default defineConfig({
   outputDir: '../../test-results',
   globalSetup: ONBOARDING_ONLY ? undefined : './global-setup.ts',
   // Fails the run if any AI provider call reached a provider on the server
-  // while the suite ran (22-30; tests/a11y/README.md).
+  // while the suite ran (see tests/a11y/README.md).
   globalTeardown: ONBOARDING_ONLY ? undefined : './global-teardown.ts',
   use: {
     baseURL: BASE_URL,

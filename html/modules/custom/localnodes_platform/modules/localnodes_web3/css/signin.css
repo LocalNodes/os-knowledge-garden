@@ -1,0 +1,65 @@
+/**
+ * @file
+ * The sign-in button above the password form, and in the welcome block.
+ *
+ * See \Drupal\localnodes_web3\SignIn. Spacing and colour come from --ln-*
+ * tokens only.
+ */
+
+.ln-signin {
+  margin-bottom: var(--ln-space-lg);
+}
+
+.ln-signin[hidden] {
+  display: none;
+}
+
+.ln-signin .ln-signin__button {
+  display: block;
+  width: 100%;
+}
+
+.ln-signin .ln-safety-help-link {
+  margin-top: var(--ln-space-sm);
+  text-align: center;
+}
+
+.ln-signin .ln-signin__or {
+  margin: var(--ln-space-lg) 0 0;
+  padding-top: var(--ln-space-md);
+  border-top: 1px solid var(--ln-color-border, currentColor);
+  color: var(--ln-color-text-muted);
+  text-align: center;
+}
+
+/* The welcome block: one button, then a quiet text link beside it. */
+.hero-cta-wrapper.ln-signin-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ln-space-md);
+}
+
+.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__password {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* The sign-in's "Opening sign-in…" line and its Cancel button. The
+   connector puts them at the top of <main>, which sits under Open Social's
+   fixed top bar, so on its own the line is hidden there. Shown as a strip
+   just under the bar instead; js/signin.js sets its top to the bar's bottom
+   edge, which moves down when the bar wraps on a narrow phone. */
+.siwe-login-waap__waiting {
+  position: fixed;
+  top: 50px;
+  right: 0;
+  left: 0;
+  z-index: 1029;
+  justify-content: center;
+  padding: var(--ln-space-sm) var(--ln-space-md);
+  border-bottom: 1px solid var(--ln-color-border-control);
+  background-color: var(--ln-color-surface);
+  color: var(--ln-color-text);
+  text-align: center;
+}
