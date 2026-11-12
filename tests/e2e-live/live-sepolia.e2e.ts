@@ -232,13 +232,17 @@ function metaMaskDriver(context: BrowserContext, extensionId: string, log: Promp
 async function signInWithMetaMask(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<void> {
   await page.goto('/user/login');
   const button = page.locator('#siwe-login-button');
-  await button.waitFor({ state: 'visible' });
+  // The button is server-rendered: it is there at load or not at all. Without a limit a missing
+  // button used the whole 10-minute test budget (run 43212766603).
+  await button.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => {
+    throw new Error('sign-in: the browser-wallet button (#siwe-login-button) is not on /user/login within 30 s');
+  });
   let navigated = false;
   const nav = page
-    .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 180_000 })
+    .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 90_000 })
     .then(() => { navigated = true; }, () => undefined);
   await button.click();
-  await confirmPrompts(context, extensionId, 'signIn', log, { done: () => navigated, timeoutMs: 180_000 });
+  await confirmPrompts(context, extensionId, 'signIn', log, { done: () => navigated, timeoutMs: 90_000 });
   await nav;
   await page.waitForLoadState('load');
   await expect(page.locator('#siwe-login-button')).toHaveCount(0);
@@ -299,10 +303,12 @@ test.describe.serial('live Sepolia', () => {
     const log: PromptLog = { clicks: [], warnings: [] };
     const driver = metaMaskDriver(context, extensionId, log);
 
+    // Normally 16 to 32 s from test start (runs 42510466003, 42614533731, 42810302102,
+    // 43012024391); 2 minutes leaves room for a slow MetaMask without eating the test budget.
     await test.step('SIWE sign-in', async () => {
       await signInWithMetaMask(page, context, extensionId, log);
       reportPrompts(info, 'sign-in', log);
-    });
+    }, { timeout: 120_000 });
 
     const wallet = await test.step('the wallet and its network', async () => {
       const accounts = (await page.evaluate(() =>
