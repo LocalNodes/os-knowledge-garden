@@ -14,6 +14,8 @@ import {
   receiptOutcome,
   redact,
   routeKey,
+  ALERT_SELECTOR,
+  alertLine,
   approveAlertKey,
   setupRouteKey,
   txHashText,
@@ -280,5 +282,86 @@ describe('voting setup keys', () => {
     expect(approveAlertKey('The approvals ran out of time. Approvals for the voting rules last 6 days, so organizers need to approve again.')).toBe('expired');
     expect(approveAlertKey('Your wallet ran into a problem. Check your wallet, then try again.')).toBe('wallet_rpc');
     expect(approveAlertKey('secret 0xabc words')).toBe('other');
+  });
+});
+
+describe('site alert text', () => {
+  const UNRECOGNISED = /^alert: unrecognised site message \(\d+ words\)$/;
+
+  it('prints the key of a known site message, never its words', () => {
+    expect(alertLine("  The voting rules weren’t accepted.\n Organizers need to approve them again.  ")).toBe('alert: rules_refused');
+    expect(alertLine('Someone reserved Willow House first. Choose another name, then organizers approve again.')).toBe('alert: setup_name_taken');
+    expect(alertLine("The community's network fee limit is reached, so setup continues after 14:05.")).toBe('alert: setup_fee_limit');
+    expect(alertLine('Your wallet is on a different network. Switch it to Sepolia, then approve again.')).toBe('alert: approve_wrong_network');
+    expect(alertLine("Setting up voting didn't go through. Nothing changed. Organizers need to approve it again. Couldn't check the group's voting setup right now.")).toBe(
+      'alert: setup_failed,host_unread_setup',
+    );
+    expect(alertLine(' \n ')).toBeNull();
+  });
+
+  it('prints only a word count for any other text: no word, number or hex from the page', () => {
+    expect(alertLine('Fund 0xc0eE95AE5a54b0AFa511c453459f4d29e22aA4c9 holds 1,000 PRACTICE.')).toBe('alert: unrecognised site message (5 words)');
+    // Near a known message is not the message.
+    expect(alertLine("The voting rules weren't accepted.")).toMatch(UNRECOGNISED);
+    for (const h of HOSTILE) {
+      const out = String(alertLine(`Something went wrong: ${h} (try again)`));
+      expect(out).toMatch(UNRECOGNISED);
+      noTrace(out);
+    }
+    expect(alertLine(SEED)).toBe('alert: unrecognised site message (12 words)');
+  });
+
+  it('keeps a long alert to one short line', () => {
+    expect(alertLine('Notice 1. '.repeat(400))).toBe('alert: unrecognised site message (800 words)');
+  });
+
+  it('the dump prints the outermost site alerts, none in or around the receipt panel, at most 5', async () => {
+    const PANEL = '#safe-deployment-status-container';
+    type El = { innerText: string; nested?: boolean; inPanel?: boolean; aroundPanel?: boolean };
+    const els: El[] = [
+      { innerText: "The voting rules weren't accepted. Organizers need to approve them again." },
+      { innerText: "The voting rules weren't accepted. Organizers need to approve them again.", nested: true },
+      { innerText: 'Wallet said: https://rpc.example/v3/APIKEY123', inPanel: true },
+      { innerText: 'Status: the wallet said https://rpc.example/v3/APIKEY123 just now', aroundPanel: true },
+      ...Array.from({ length: 6 }, (_, i) => ({ innerText: `Notice ${i + 1}. `.repeat(i + 1) })),
+    ];
+    const asDom = (e: El) => ({
+      innerText: e.innerText,
+      textContent: e.innerText,
+      parentElement: { closest: (sel: string) => (sel === ALERT_SELECTOR && e.nested ? {} : null) },
+      closest: (sel: string) => (sel === PANEL && e.inPanel ? {} : null),
+      querySelector: (sel: string) => (sel === PANEL && e.aroundPanel ? {} : null),
+    });
+    const read: string[] = [];
+    const locator = (sel: string) => ({
+      count: async () => (sel === PANEL ? 0 : 1),
+      evaluateAll: async (fn: (nodes: unknown[], arg: unknown) => string[], arg: unknown) => {
+        read.push(sel);
+        return fn(els.map(asDom), arg);
+      },
+    });
+    const page = { url: () => 'http://localhost:8080/group/1/votes/setup', locator };
+    const logged: string[] = [];
+    const orig = console.log;
+    console.log = (line: string) => logged.push(line);
+    try {
+      await new FailureDump().print(page as never);
+    }
+    finally {
+      console.log = orig;
+    }
+    expect(read).toEqual([ALERT_SELECTOR]);
+    const out = logged.join('\n');
+    expect(out.match(/alert: rules_refused/g)?.length).toBe(1);
+    expect(out.match(/alert: unrecognised site message/g)?.length).toBe(4);
+    for (let n = 1; n <= 4; n++) expect(out).toContain(`alert: unrecognised site message (${2 * n} words)`);
+    expect(out).not.toContain('(10 words)');
+    expect(out).toContain('alert text: 2 more not printed');
+    expect(out).not.toContain('Notice');
+    expect(out).not.toMatch(/wallet said/i);
+    // The alerts in and around the receipt panel (3 and 7 words) are skipped.
+    expect(out).not.toContain('(3 words)');
+    expect(out).not.toContain('(7 words)');
+    noTrace(out);
   });
 });

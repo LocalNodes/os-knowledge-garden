@@ -56,6 +56,8 @@ import { confirmPrompts, openHome, SWITCH_PROMPT, within, type PromptLog } from 
 import { bounded, forSite, networkOf, REOPEN, signInAs as signInAsAccount, signInWithMetaMask as signInWithWallet, useAccount as shareAccount, WALLET_READ_MS, type JudgeWallet } from './governance/judge-wallet';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup } from './governance/live-steps';
+import { setupReason } from './setup-reason';
+import { until } from './wait-loop';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
 import type { RegistryEntry } from '../e2e/helpers/chain';
 import {
@@ -373,21 +375,6 @@ function reportPrompts(info: TestInfo, step: string, log: PromptLog): number {
   return count;
 }
 
-/** Reloads a page until `ready` shows, failing at once on any of `stops`. */
-async function until(page: Page, what: string, ready: () => Promise<boolean>, stops: Array<[string, () => Promise<boolean>]>, timeoutMs: number, everyMs = 30_000): Promise<void> {
-  const end = Date.now() + timeoutMs;
-  for (;;) {
-    if (await ready()) return;
-    for (const [name, stop] of stops) {
-      if (await stop()) throw new Error(`${what}: the page shows "${name}"`);
-    }
-    if (Date.now() > end) throw new Error(`${what}: not shown within ${Math.round(timeoutMs / 60_000)} minutes`);
-    await page.waitForTimeout(everyMs);
-    await page.reload();
-    await page.waitForLoadState('load');
-  }
-}
-
 // ---------------------------------------------------------------------------------------------
 // The run.
 // ---------------------------------------------------------------------------------------------
@@ -504,10 +491,17 @@ test.describe.serial('live governance judge', () => {
 
     const { module, topHatDomain } = await test.step('wait for "Group voting is ready."', async () => {
       const v7 = setupProgress(page);
-      await until(page, 'Group voting is ready.', () => v7.ready.isVisible(), [
-        [COPY.setupFailed, () => v7.setupFailed.isVisible()],
-        [COPY.rulesRefused, () => v7.rulesRefused.isVisible()],
-      ], 20 * 60_000);
+      try {
+        await until(page, 'Group voting is ready.', () => v7.ready.isVisible(), [
+          [COPY.setupFailed, () => v7.setupFailed.isVisible()],
+          [COPY.rulesRefused, () => v7.rulesRefused.isVisible()],
+        ], 20 * 60_000);
+      }
+      catch (error) {
+        // Why the setup stopped, from the site's own record, before the site is torn down.
+        for (const line of await setupReason()) console.log(`[judge] ${line}`);
+        throw error;
+      }
       for (const href of await page.getByRole('link', { name: /public record/ }).evaluateAll((a) => a.map((x) => (x as HTMLAnchorElement).href))) {
         const hash = href.match(/\/tx\/(0x[0-9a-fA-F]{64})/)?.[1];
         if (hash) out('HASH', 'voting_setup', hash.toLowerCase());
