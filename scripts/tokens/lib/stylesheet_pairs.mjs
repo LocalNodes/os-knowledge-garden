@@ -12,6 +12,8 @@
  *   deepchat     html/modules/custom/social_ai_indexing/css/deepchat.css
  *   treasury     html/modules/custom/localnodes_platform/modules/localnodes_web3/css/treasury.css
  *                (the group fund components; added by WR-06b, 22.1-15)
+ *   signin       html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css
+ *                (the sign-in button above the password form, and the "Opening sign-in…" strip)
  *
  * A stylesheet names a foreground; the background behind it is a fact about the page, so it comes from PARTNERS, a
  * hand-written map keyed by stylesheet, then single selector (a selector list is split: its members can sit on
@@ -54,6 +56,7 @@ export const STYLESHEETS = Object.freeze({
   'ai-overview': { rel: 'html/modules/custom/social_ai_indexing/css/ai-overview.css', name: 'ai-overview.css' },
   deepchat: { rel: 'html/modules/custom/social_ai_indexing/css/deepchat.css', name: 'deepchat.css' },
   treasury: { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/treasury.css', name: 'treasury.css' },
+  signin: { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css', name: 'signin.css' },
 });
 
 /** { key: absolute path } for the five stylesheets in `root`, with `replace` (key -> path) taking precedence. */
@@ -353,6 +356,19 @@ export const PARTNERS = {
     '.badge.safe-status-badge--neutral': {
       ...text(['own'], BADGE_WHY),
       ...border(PAGE, 'the neutral badge\'s fill is the canvas, so on the canvas page its border is its only edge; the badge sits in a payment row or page, on the page or a card'),
+    },
+  },
+  signin: {
+    // The "Or use a password" line between the sign-in button and the password form. Its border-top names
+    // var(--ln-color-border, currentColor); with a fallback in the var() it is not read as a token here.
+    '.ln-signin .ln-signin__or': text(
+      PAGE,
+      'SignIn::formElement() puts this paragraph above the log-in and sign-up forms, on whatever light surface the form page draws (a white card or the page), so the three light surfaces are measured',
+    ),
+    // The connector's "Opening sign-in…" strip, fixed under the top bar (js/signin.js places it).
+    '.siwe-login-waap__waiting': {
+      ...text(['own'], 'the waiting line is body text on the surface fill of the same rule'),
+      ...border(PAGE, 'the bottom border is the lower edge of the fixed strip, over whatever light surface of the page scrolls under it'),
     },
   },
 };

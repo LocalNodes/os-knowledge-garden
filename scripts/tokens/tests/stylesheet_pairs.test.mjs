@@ -2,7 +2,7 @@
  * Tests for scripts/tokens/lib/stylesheet_pairs.mjs (22.1-17, review WR-06, DES-01, D-09).
  *
  * The library reads the five stylesheets that draw --ln-color-* (ln-overrides.css, localnodes_import's import.css,
- * social_ai_indexing's ai-overview.css and deepchat.css, and localnodes_web3's treasury.css for the group fund), a
+ * social_ai_indexing's ai-overview.css and deepchat.css, and localnodes_web3's treasury.css for the group fund and signin.css for the sign-in button), a
  * partner map (which background sits behind which
  * foreground, per single selector and per property) and gives the contrast pairings the stylesheets draw, measured
  * against the colour the browser renders.
@@ -372,6 +372,42 @@ test('the repo: treasury.css is read, and its status rules, badges and IDs are m
   ]) {
     assert.ok(ids.has(want), `missing ${want}`);
   }
+});
+
+test('the repo: signin.css is read, and its "or" line and waiting strip are measured on what sits behind them', () => {
+  assert.deepEqual(STYLESHEETS.signin, { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css', name: 'signin.css' });
+  const r = REAL();
+  const mine = r.pairs.filter((p) => p.id.startsWith('P13.signin.'));
+  const id = (kind, fg, bg) => `P13.signin.${kind}.drupal-css.--ln-color-${fg}.on.drupal-css.--ln-color-${bg}`;
+  assert.deepEqual(
+    mine.map((p) => p.id).sort(),
+    [
+      // The muted "Or use a password" line on each light surface the form page can draw.
+      id('text', 'text-muted', 'surface'),
+      id('text', 'text-muted', 'canvas'),
+      id('text', 'text-muted', 'tint'),
+      // The waiting line's text on the strip's own surface fill.
+      id('text', 'text', 'surface'),
+      // The strip's bottom border against the page under it.
+      id('border', 'border-control', 'surface'),
+      id('border', 'border-control', 'canvas'),
+      id('border', 'border-control', 'tint'),
+    ].sort(),
+  );
+  assert.deepEqual(r.unmapped.filter((u) => u.sheet === 'signin'), []);
+  assert.deepEqual(r.stale.filter((s) => s.sheet === 'signin'), []);
+});
+
+test('a signin.css rule whose colour has no partner is UNMAPPED, and a partner for a removed rule is stale', () => {
+  const file = css('.ln-signin .ln-signin__or { color: var(--ln-color-text-muted); }\n.siwe-login-waap__waiting { border-bottom: 1px solid var(--ln-color-border-control); }');
+  const r = stylesheetPairings({
+    files: { signin: file },
+    tree: TREE,
+    partners: { signin: { '.ln-signin .ln-signin__or': { text: { on: ['surface'], why: WHY } }, '.ln-signin__gone': { text: { on: ['surface'], why: WHY } } } },
+  });
+  assert.deepEqual(r.unmapped.map((u) => [u.sheet, u.selector, u.property, u.role]), [['signin', '.siwe-login-waap__waiting', 'border-bottom', 'border-control']]);
+  assert.deepEqual(r.stale.map((s) => [s.sheet, s.selector]), [['signin', '.ln-signin__gone']]);
+  assert.ok(r.pairs.some((p) => p.source === 'signin.css .ln-signin .ln-signin__or color'));
 });
 
 // Q14 (orchestrator, 2026-11-09): a module border that an ln-overrides.css rule re-colours is measured as rendered.
