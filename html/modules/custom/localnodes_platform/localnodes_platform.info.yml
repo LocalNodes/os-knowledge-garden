@@ -34,3 +34,7 @@ dependencies:
   # Brand palette regeneration (Phase 22, DES-01): hook_install calls
   # color_scheme_form_submit() to recolour socialblue.
   - color:color
+  - social:social_profile_privacy
+  - social:social_tagging
+  - social:social_group_default_route
+  - social:social_event_addtocal

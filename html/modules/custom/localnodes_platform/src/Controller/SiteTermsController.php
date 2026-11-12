@@ -58,6 +58,11 @@ class SiteTermsController extends ControllerBase {
       // Autoescaped in the template (T-23-75): site managers can edit it.
       '#site_name' => (string) $site->get('name'),
       '#version_date' => static::formatVersionDate(static::TERMS_CHANGED),
+      // With the Web3 stack on, a member can connect a wallet and the site
+      // keeps its public address, so the terms must say so. Installing a
+      // module rebuilds the routes and uninstalling one clears the cache
+      // bins, so a cached page never keeps the other sentence.
+      '#keeps_wallet_address' => $this->moduleHandler()->moduleExists('localnodes_web3'),
       '#attached' => ['library' => ['localnodes_platform/site_terms']],
       '#cache' => [
         // A rename shows on the next view.

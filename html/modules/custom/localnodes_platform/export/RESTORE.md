@@ -11,7 +11,7 @@ This folder is a full copy of the community site **{{site_name}}**, made on {{cr
 | `private-files.tar.gz` | Private files: documents attached to pages, readable only by the people allowed to see them. |
 | `manifest.json` | What was exported: versions, file counts, a checksum for each part, and what was left out. |
 | `SHA256SUMS` | The checksums, for step 1. |
-| `library/` | Only in copies made with it. Every published topic, event and page as a Markdown file with its attachments, readable without any software. A restore does not need it. Its own `README.md` says what is in it and how to import it into another tool. |
+| `library/` | Only in copies made with it. Published topics, events and pages as Markdown files, readable without LocalNodes or Drupal. Current attachments that could be copied are beside each page. Check any `missing` list at the top of each page before relying on the copy. A restore does not need it. Its own `README.md` says what is in it and how to import it into another tool. |
 
 **Not included:**
 
@@ -21,7 +21,7 @@ This folder is a full copy of the community site **{{site_name}}**, made on {{cr
 
 A site restored or moved from this export uses its own new sign-in salt on first start, and members sign in again once with their usual passwords.
 
-This copy holds every member's account and all private content. Keep it as safe as the site itself, and delete copies you no longer need. In `library/`, only the `public/` folder is safe to publish; `members/` and `group-only/` hold pages that only signed-in members or a group's members could read.
+This copy holds every member's account and all private content. Keep it as safe as the site itself, and delete copies you no longer need. The folders in `library/` record the pages' saved audience labels. Check the pages, attachments and permission to share before publishing any copy. Keep the whole archive private.
 
 ## What you need
 

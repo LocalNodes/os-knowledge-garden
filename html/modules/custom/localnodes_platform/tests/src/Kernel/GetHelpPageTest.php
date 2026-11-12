@@ -40,7 +40,7 @@ final class GetHelpPageTest extends KernelTestBase {
    */
   private const LINES = [
     "Ask your group's organizers first. They can see your group's settings and documents.",
-    "Something wrong in an imported document, such as private information or a mistake? Open it and use its \"Report a problem\" link. That link is only on imported documents; for anything else, ask your group's organizers.",
+    "Something wrong in an imported document, such as private information or a mistake? Open the document and choose Report a problem with this page. That link is only on imported documents; for anything else, ask your group's organizers.",
     "Can't sign in, or the site isn't working? Email LocalNodes at hello@localnodes.xyz.",
     'If someone else got into your account: Hacked or phished?',
   ];

@@ -16,9 +16,7 @@ use Drupal\user\Entity\User;
  * The terms version a member agreed to is kept on their account (23-41).
  *
  * ONB-05, D-25, T-23-41: since 23-26 nobody joins without ticking "I agree
- * to the site terms". The terms' Changes section promises "we'll ask you to
- * agree to the new version", which needs to know who agreed to which one.
- * So a self-registration with the box ticked stores, in user.data under
+ * to the site terms". A self-registration with the box ticked stores, in user.data under
  * localnodes_platform, terms_agreed_version (SiteTermsController::
  * TERMS_CHANGED) and terms_agreed_at (the request time). Nothing the member
  * sees changes.

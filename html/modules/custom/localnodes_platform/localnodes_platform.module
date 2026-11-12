@@ -172,6 +172,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'variables' => [
         'site_name' => '',
         'version_date' => '',
+        'keeps_wallet_address' => FALSE,
       ],
       'template' => 'localnodes-site-terms',
       'path' => $path . '/templates',
