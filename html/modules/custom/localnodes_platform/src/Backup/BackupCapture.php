@@ -14,6 +14,11 @@ class BackupCapture {
    */
   public const REQUEST_WAIT = 300;
 
+  /**
+   * Why a capture failed when its pause could not be lifted afterwards.
+   */
+  public const RELEASE_FAILED = 'The pause could not be lifted; the site stays closed until the pause ends or an operator clears it.';
+
   public function run(BackupPause $pause, string $reason, int $maxPause, int $drain, int $margin, callable $copy): mixed {
     $backup = $pause->openLock('backup.lock');
     if (!flock($backup, LOCK_EX | LOCK_NB)) {
@@ -22,6 +27,8 @@ class BackupCapture {
     }
     $worker = NULL;
     $token = NULL;
+    $result = NULL;
+    $error = NULL;
     try {
       if ($pause->active() !== NULL) {
         throw new \RuntimeException('the site is already paused by another backup or restore', 409);
@@ -42,14 +49,32 @@ class BackupCapture {
       if (microtime(TRUE) >= $deadline) throw new \RuntimeException(SiteExporter::DEADLINE_MESSAGE);
       $result = $copy($deadline);
       if (microtime(TRUE) >= $deadline) throw new \RuntimeException(SiteExporter::DEADLINE_MESSAGE);
-      return $result;
+    }
+    catch (\Throwable $e) {
+      $error = $e;
     }
     finally {
-      if ($token !== NULL) $pause->release($token);
+      // FALSE from release() with no file, or another valid pause in it,
+      // means this run's pause is already gone. An unreadable file still
+      // closes the site, so it counts as not lifted.
+      $released = $token === NULL || $pause->release($token) || $this->goneOrReplaced($pause, $token);
       if ($worker !== NULL) { flock($worker, LOCK_UN); fclose($worker); }
       flock($backup, LOCK_UN);
       fclose($backup);
     }
+    // This run's pause left in place is reported, never passed as done; the
+    // copy's own error, if any, stays attached.
+    if (!$released) throw new \RuntimeException(self::RELEASE_FAILED, 0, $error);
+    if ($error !== NULL) throw $error;
+    return $result;
+  }
+
+  /**
+   * Whether the pause file is missing or holds another run's valid pause.
+   */
+  private function goneOrReplaced(BackupPause $pause, string $token): bool {
+    $current = $pause->read();
+    return $current === NULL ? !file_exists($pause->file()) && !is_link($pause->file()) : !hash_equals($current['token'], $token);
   }
 
 }

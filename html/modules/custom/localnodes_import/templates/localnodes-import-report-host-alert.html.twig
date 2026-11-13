@@ -1,0 +1,31 @@
+{#
+/**
+ * @file
+ * The host's alert for a problem report on a page that a signed-out visitor
+ * can't see.
+ *
+ * The page's organizers get the whole report. The host gets only this: the
+ * site's name, when the report was made, the page's id and whether an
+ * organizer got the report. Nothing from the page or the reporter is passed
+ * to this template: no title, no address or link, no reason, no details and
+ * no contact address.
+ *
+ * Printed inside the LocalNodes mail wrapper (email--localnodes.html.twig of
+ * localnodes_platform), which supplies the greeting and the footer.
+ *
+ * Variables:
+ * - site_name: The community's name.
+ * - reported_at: When the report was made, formatted for display.
+ * - nid: The reported page's id.
+ * - organizers_reached: TRUE when at least one organizer got the report.
+ */
+#}
+<p class="first-paragraph">{% trans %}Someone reported a page on {{ site_name }}.{% endtrans %}</p>
+<p>{% trans %}When: {{ reported_at }}{% endtrans %}</p>
+<p>{% trans %}Page id: {{ nid }}{% endtrans %}</p>
+{% if organizers_reached %}
+  <p>{{ "The report reached this site's organizers."|t }}</p>
+{% else %}
+  <p>{{ "The report could not be sent to any of this site's organizers. The person who reported it was asked to try again."|t }}</p>
+{% endif %}
+<p>{{ "The page isn't public, so this alert leaves out the page, the report and the reporter's details."|t }}</p>

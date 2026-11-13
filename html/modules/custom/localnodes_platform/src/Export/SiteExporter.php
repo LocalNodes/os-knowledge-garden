@@ -75,6 +75,21 @@ final class SiteExporter {
   ];
 
   /**
+   * Private messages between members, as LIKE patterns.
+   *
+   * Only the people in a conversation may read it on the site, and the
+   * organizers who take the export are not in other members' conversations,
+   * so the export leaves these rows out, and with them every row elsewhere
+   * that refers to a conversation (ConversationRows). The nightly backup
+   * keeps them: a restore has to bring the messages back, and the backup is
+   * encrypted to a key the site never holds.
+   */
+  public const MESSAGE_TABLE_PATTERNS = [
+    'private_message%',
+    'pm_thread_history',
+  ];
+
+  /**
    * Environment variables whose values must never be in an archive.
    */
   public const SECRET_ENV = [
@@ -122,6 +137,14 @@ final class SiteExporter {
   public const DEADLINE_MESSAGE = 'The export ran past its time limit and was stopped. The archive was deleted.';
 
   /**
+   * Why a site export is refused while direct messages are switched on.
+   *
+   * The export does not separate members' conversations from the rest of
+   * the copy, so it does not start at all while the module is enabled.
+   */
+  public const MESSAGES_REFUSAL = 'Site export is not available while direct messages are switched on.';
+
+  /**
    * Unix time by which the current export() must be done, or NULL.
    *
    * Set only for the length of one export() call. The nightly backup passes
@@ -131,6 +154,11 @@ final class SiteExporter {
   private ?float $deadline = NULL;
 
   private mixed $progress = NULL;
+
+  /**
+   * Whether the current export() keeps private messages (the backup only).
+   */
+  private bool $keepMessages = FALSE;
 
   public function __construct(
     private readonly Connection $database,
@@ -196,9 +224,10 @@ final class SiteExporter {
    *
    * @return string[]
    */
-  public function leftOutTables(): array {
+  public function leftOutTables(bool $keep_messages = FALSE): array {
     $tables = [];
-    foreach (self::LEFT_OUT_TABLE_PATTERNS as $pattern) {
+    $patterns = $keep_messages ? self::LEFT_OUT_TABLE_PATTERNS : array_merge(self::LEFT_OUT_TABLE_PATTERNS, self::MESSAGE_TABLE_PATTERNS);
+    foreach ($patterns as $pattern) {
       foreach ($this->database->schema()->findTables($pattern) as $table) {
         $tables[$table] = $table;
       }
@@ -368,6 +397,66 @@ final class SiteExporter {
   }
 
   /**
+   * Writes the rows of the given tables that do not refer to a conversation.
+   *
+   * Values go in as hex, which the final scan cannot read, so each value
+   * is checked here for every form of a secret the final scan looks for.
+   *
+   * @param resource $handle
+   *   The open dump file.
+   * @param array<string, string> $tables
+   *   Unprefixed table name => key column, from ConversationRows::tables().
+   * @param array<string, string> $secrets
+   *   Secret values by label.
+   *
+   * @return array<string, int>
+   *   Rows left out, by table.
+   */
+  public function writeConversationFreeRows($handle, ConversationRows $conversations, array $tables, array $secrets): array {
+    $removed = [];
+    if ($tables === []) {
+      return $removed;
+    }
+    $forms = self::scanForms($secrets);
+    $prefix = $this->database->getPrefix();
+    fwrite($handle, "\n-- Rows written by localnodes:export without those that refer to a private message.\nSET autocommit=0;\nSET FOREIGN_KEY_CHECKS=0;\n");
+    foreach ($tables as $table => $column) {
+      $removed[$table] = 0;
+      foreach ($conversations->rows($table) as $row) {
+        $kept = $conversations->keep($table, $column, $row);
+        if ($kept === NULL) {
+          $removed[$table]++;
+          continue;
+        }
+        $values = [];
+        foreach ($kept as $value) {
+          if ($value === NULL) {
+            $values[] = 'NULL';
+            continue;
+          }
+          $value = (string) $value;
+          if ($label = $this->findSecretInText($value, $forms)) {
+            throw new \RuntimeException("Secret check failed: $label is in table $table. Nothing was written.");
+          }
+          // Text as text; bytes that are not UTF-8 (serialized blobs) as
+          // bytes. A bare hex literal would be read as a number in an
+          // integer column.
+          $values[] = mb_check_encoding($value, 'UTF-8') ? self::sqlText($value) : self::sqlBinary($value);
+        }
+        fwrite($handle, sprintf(
+          "INSERT INTO `%s` (%s) VALUES (%s);\n",
+          $prefix . $table,
+          implode(', ', array_map(fn (string $name): string => '`' . str_replace('`', '``', $name) . '`', array_keys($kept))),
+          implode(', ', $values)
+        ));
+      }
+    }
+    fwrite($handle, "COMMIT;\nSET FOREIGN_KEY_CHECKS=1;\nSET autocommit=1;\n");
+    ksort($removed);
+    return $removed;
+  }
+
+  /**
    * Takes the secrets out of one config object.
    *
    * - A key entity on the "config" provider loses its stored value.
@@ -476,6 +565,16 @@ final class SiteExporter {
   }
 
   /**
+   * Why a site export may not start now, or NULL when it may.
+   *
+   * A backup ($keep_messages in export()) is not a site export and is not
+   * refused.
+   */
+  public function refusal(): ?string {
+    return $this->moduleHandler->moduleExists('private_message') ? self::MESSAGES_REFUSAL : NULL;
+  }
+
+  /**
    * Builds the archive.
    *
    * @param string $destination
@@ -496,7 +595,11 @@ final class SiteExporter {
    * @return array
    *   'path' => the archive's path, 'manifest' => the manifest.
    */
-  public function export(string $destination, callable $dumper, ?callable $library = NULL, ?float $deadline = NULL, ?callable $progress = NULL): array {
+  public function export(string $destination, callable $dumper, ?callable $library = NULL, ?float $deadline = NULL, ?callable $progress = NULL, bool $keep_messages = FALSE): array {
+    // Before anything else is read or written.
+    if (!$keep_messages && ($why = $this->refusal())) {
+      throw new \RuntimeException($why);
+    }
     if ($why = $this->refuseDestination($destination)) {
       throw new \RuntimeException("Refusing to write the archive to $destination: $why.");
     }
@@ -514,6 +617,7 @@ final class SiteExporter {
     $old_umask = umask(0077);
     $this->deadline = $deadline;
     $this->progress = $progress;
+    $this->keepMessages = $keep_messages;
     try {
       return $this->build($destination, $dumper, $library, $secrets, $forms, $site_name, $slug);
     }
@@ -539,6 +643,7 @@ final class SiteExporter {
       umask($old_umask);
       $this->deadline = NULL;
       $this->progress = NULL;
+      $this->keepMessages = FALSE;
     }
   }
 
@@ -576,17 +681,31 @@ final class SiteExporter {
     try {
       $work = $staging . '/' . $name;
       mkdir($work, 0700);
-      $left_out = $this->leftOutTables();
+      $left_out = $this->leftOutTables($this->keepMessages);
+
+      // Tables holding rows about conversations (notices, activity records,
+      // queued jobs): the dump takes their structure, and this class writes
+      // their other rows. The backup keeps them whole.
+      $conversations = new ConversationRows($this->database);
+      $filtered = [];
+      if (!$this->keepMessages) {
+        foreach ($conversations->tables() as $table => $column) {
+          if (!in_array($table, $left_out, TRUE) && $conversations->touches($table, $column)) {
+            $filtered[$table] = $column;
+          }
+        }
+      }
 
       // Database: the dump, then the cleaned config rows, then gzip. The
       // dumper gets the tables' real names, with the database prefix.
       $prefix = $this->database->getPrefix();
       $sql = $work . '/database.sql';
       $this->checkDeadline();
-      $dumper($sql, array_map(fn (string $table): string => $prefix . $table, array_merge($left_out, ['config'])));
+      $dumper($sql, array_map(fn (string $table): string => $prefix . $table, array_merge($left_out, array_keys($filtered), ['config'])));
       $this->checkDeadline();
       $handle = fopen($sql, 'ab');
       $scrubbed = $this->writeScrubbedConfig($handle, $secrets);
+      $removed = $this->writeConversationFreeRows($handle, $conversations, $filtered, $secrets);
       fclose($handle);
       $this->run(['gzip', '-n', $sql]);
       if ($this->progress) ($this->progress)('records', (int) filesize($sql . '.gz'));
@@ -594,9 +713,19 @@ final class SiteExporter {
       // Files.
       $public = (string) $this->fileSystem->realpath('public://');
       $private = (string) $this->fileSystem->realpath('private://');
+      // Files put into messages and used nowhere else stay out with them.
+      // secret:// keeps its files in the private folder.
+      $message_files = ['public' => [], 'private' => []];
+      foreach ($this->keepMessages ? [] : $conversations->files() as $uri) {
+        [$scheme, $path] = explode('://', $uri, 2) + [1 => ''];
+        $scheme = $scheme === 'secret' ? 'private' : $scheme;
+        if (isset($message_files[$scheme]) && $path !== '') {
+          $message_files[$scheme][] = $path;
+        }
+      }
       $file_counts = [
-        'public' => $this->packFiles($public, $work . '/public-files.tar.gz', self::PUBLIC_SKIP),
-        'private' => $private !== '' ? $this->packFiles($private, $work . '/private-files.tar.gz', self::PRIVATE_SKIP, $destination) : 0,
+        'public' => $this->packFiles($public, $work . '/public-files.tar.gz', self::PUBLIC_SKIP, NULL, $message_files['public']),
+        'private' => $private !== '' ? $this->packFiles($private, $work . '/private-files.tar.gz', self::PRIVATE_SKIP, $destination, $message_files['private']) : 0,
       ];
 
       if ($this->progress) ($this->progress)('files', (int) filesize($work . '/public-files.tar.gz') + (is_file($work . '/private-files.tar.gz') ? (int) filesize($work . '/private-files.tar.gz') : 0));
@@ -619,7 +748,7 @@ final class SiteExporter {
         }
       }
 
-      $manifest = $this->manifest($created, $site_name, $left_out, $scrubbed, $file_counts, $library_counts, $work);
+      $manifest = $this->manifest($created, $site_name, $left_out, $scrubbed, $file_counts, $library_counts, $work, $removed);
       file_put_contents($work . '/manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
       file_put_contents($work . '/RESTORE.md', $this->restoreText($manifest, $name));
       $sums = '';
@@ -677,10 +806,13 @@ final class SiteExporter {
   /**
    * Packs a files folder, leaving out what Drupal makes again.
    *
+   * @param string[] $skip_files
+   *   Single files to leave out, relative to the folder, matched literally.
+   *
    * @return int
    *   The number of files packed.
    */
-  private function packFiles(string $dir, string $tarball, array $skip, ?string $also_skip = NULL): int {
+  private function packFiles(string $dir, string $tarball, array $skip, ?string $also_skip = NULL, array $skip_files = []): int {
     $args = ['tar', '-C', $dir, '-czf', $tarball];
     foreach ($skip as $folder) {
       $args[] = '--exclude=./' . $folder;
@@ -688,6 +820,14 @@ final class SiteExporter {
     $real_skip = $also_skip ? (realpath($also_skip) ?: $also_skip) : NULL;
     if ($real_skip && str_starts_with($real_skip . '/', rtrim(realpath($dir) ?: $dir, '/') . '/')) {
       $args[] = '--exclude=./' . substr($real_skip, strlen(rtrim(realpath($dir) ?: $dir, '/')) + 1);
+    }
+    if ($skip_files) {
+      // Names as they are: no wildcards, and only the whole path matches.
+      $args[] = '--no-wildcards';
+      $args[] = '--anchored';
+      foreach ($skip_files as $file) {
+        $args[] = '--exclude=./' . ltrim($file, '/');
+      }
     }
     $args[] = '.';
     $this->run($args);
@@ -698,7 +838,7 @@ final class SiteExporter {
   /**
    * The manifest: what is in the archive and what built the site.
    */
-  private function manifest(\DateTimeImmutable $created, string $site_name, array $left_out, array $scrubbed, array $file_counts, ?array $library_counts, string $work): array {
+  private function manifest(\DateTimeImmutable $created, string $site_name, array $left_out, array $scrubbed, array $file_counts, ?array $library_counts, string $work, array $removed = []): array {
     $commit = self::buildCommit();
     $parts = [];
     foreach (['database.sql.gz', 'public-files.tar.gz', 'private-files.tar.gz'] as $part) {
@@ -756,9 +896,14 @@ final class SiteExporter {
       'install_complete_marker' => \Drupal::state()->get('localnodes.install_complete') !== NULL,
       'database' => [
         'left_out_tables' => $left_out,
-        'left_out_note' => 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores) are not included.',
+        'left_out_note' => $this->keepMessages
+          ? 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores) are not included.'
+          : 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores, and private messages between members) are not included.',
         'config_scrubbed' => $scrubbed,
-      ],
+      ] + ($this->keepMessages ? [] : [
+        'message_rows_left_out' => $removed,
+        'message_rows_note' => 'Rows in these tables that refer to a private message or a conversation (its notices, activity records, read times, queued jobs and the usage records of files put into a message) are not included, nor are files used only in messages; the tables\' other rows are.',
+      ]),
       'files' => [
         'public_count' => $file_counts['public'],
         'private_count' => $file_counts['private'],
@@ -790,6 +935,7 @@ final class SiteExporter {
       '{{demo_module}}' => $manifest['settings_to_match']['DEMO_MODULE'],
       '{{web3_enabled}}' => $manifest['settings_to_match']['WEB3_ENABLED'],
       '{{ai_provider}}' => $manifest['settings_to_match']['AI_PROVIDER'],
+      "{{messages_note}}\n" => $this->keepMessages ? '' : "- **Private messages between members.** Only the people in a conversation may read it, so messages, and the notices and records about them, are not in this copy.\n",
     ]);
   }
 

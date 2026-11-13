@@ -12,6 +12,7 @@ use Drupal\localnodes_platform\Drush\Commands\OrganizerCommands;
 use Drupal\localnodes_platform\OrganizerActivation;
 use Drupal\symfony_mailer\EmailFactoryInterface;
 use Drupal\user\Entity\Role;
+use Drupal\user\Entity\User;
 use Drupal\user\UserInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\DependencyInjection\Reference;
@@ -74,6 +75,12 @@ final class OrganizerActivationTest extends LocalNodesEmailKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     Role::create(['id' => 'sitemanager', 'label' => 'Site manager'])->save();
+    // Provisioning runs after the installed site has reserved uid1 for its host.
+    User::create(['uid' => 1, 'name' => 'host', 'mail' => 'host@mail.localnodes.xyz', 'status' => 1])->save();
+    if (function_exists('_localnodes_platform_block_host_account')) {
+      _localnodes_platform_block_host_account();
+      $this->assertTrue(User::load(1)->isBlocked());
+    }
     _localnodes_platform_configure_email();
     putenv('ORGANIZER_EMAIL=' . self::ORGANIZER_EMAIL);
     putenv('ORGANIZER_NAME=Sam');

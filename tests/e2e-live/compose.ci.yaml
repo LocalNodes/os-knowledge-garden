@@ -18,6 +18,9 @@ services:
     environment:
       WEB3_ENABLED: "true"
       DEMO_MODULE: none
+      # WaaP's staging service: a CI site never creates real WaaP sign-in accounts
+      # (siwe_login_waap ships production as its default). settings.php reads it.
+      WAAP_ENVIRONMENT: staging
       # SIWE's expected domain and a trusted host (settings.php).
       SERVICE_FQDN_OPENSOCIAL: localhost:8080
       # drush --uri in the entrypoint.

@@ -21,7 +21,8 @@ use Drupal\Tests\safe_smart_accounts\Kernel\SafeKernelTestBase;
  * localnodes_web3 is added with enableModules(), which loads its .module
  * without resolving its .info.yml dependencies (group_treasury and
  * social_group_treasury pull in Open Social, which a Kernel test can't
- * boot). Nothing here installs its config.
+ * boot). The required platform parent is enabled alongside it; the base
+ * fixture already enables siwe_login. Nothing here installs its config.
  *
  * @group localnodes_web3
  */
@@ -101,7 +102,7 @@ final class TreasuryStylesTest extends SafeKernelTestBase {
    * Enables localnodes_web3 and drops the cached library definitions.
    */
   private function enableLocalnodesWeb3(): void {
-    $this->enableModules(['localnodes_web3']);
+    $this->enableModules(['localnodes_platform', 'localnodes_web3']);
     $this->container->get('library.discovery')->clearCachedDefinitions();
   }
 

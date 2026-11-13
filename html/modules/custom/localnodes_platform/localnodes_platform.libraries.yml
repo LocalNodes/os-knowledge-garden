@@ -5,13 +5,15 @@
 # Core puts module CSS in CSS_AGGREGATE_DEFAULT regardless of what is declared
 # here, which would load it BEFORE socialblue; localnodes_platform_css_alter()
 # moves both files into CSS_AGGREGATE_THEME at weights after socialblue's
-# brand--sky.css: ln-tokens.css first (900), ln-overrides.css last (901).
+# brand--sky.css: ln-tokens.css first (900), then ln-overrides.css (901), then
+# the app look, ln-app-look.css (902).
 tokens:
   version: VERSION
   css:
     theme:
       css/ln-tokens.css: { weight: 900 }
       css/ln-overrides.css: { weight: 901 }
+      css/ln-app-look.css: { weight: 902 }
 
 # A real "More group pages" button for socialblue's group-tab overflow arrow
 # (22-30 KB-08): keyboard and screen-reader access to the tabs that don't fit.

@@ -20,7 +20,9 @@ aabb1122-3344-4556-6778-899001122334:
     - community
     - group
   description: >
-    <p>Central coordination space for watershed stewardship across the Front Range. Members share monitoring data from Boulder Creek and South Platte tributaries, coordinate beaver dam analog installations, organize native planting days, and connect community science efforts with The Watershed Center and Boulder Watershed Collective. The hub where land-based and tech-based regeneration meet.</p>
+    <p>Central coordination space for watershed stewardship across the Front Range. Members share monitoring data from Boulder Creek and South Platte tributaries, coordinate beaver dam analog installations, organize native planting days, and connect community science efforts with the Kingbird Stream Center and Silvercreek Watershed Collective. The hub where land-based and tech-based regeneration meet.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month; answer the quick poll under Quick polls.</p>
   members:
     - aa11bb22-cc33-4dd4-ee55-ff6677889900
     - 11223344-5566-4778-8990-aabbccddeef0
@@ -47,7 +49,9 @@ bbcc2233-4455-4667-7889-900112233445:
     - community
     - group
   description: >
-    <p>Where Ethereum localism meets the Front Range. This group explores how web3 coordination tools -- quadratic funding, community currencies, mutual credit, and DAO governance -- can serve place-based regenerative communities. Born from the ETHBoulder and GFEL gatherings, members build open-source tools, run local public goods funding rounds, and practice regen tech that serves life rather than extracting from it.</p>
+    <p>Where Ethereum localism meets the Front Range. This group explores how web3 coordination tools -- quadratic funding, community currencies, mutual credit, and DAO governance -- can serve place-based regenerative communities. Born from the Mountain Mesh Jam and Commitment Commons gatherings, members build open-source tools, run local public goods funding rounds, and practice regen tech that serves life rather than extracting from it.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - bb22cc33-dd44-4ee5-5ff6-677889900aa1
     - dd44ee55-ff66-4778-8990-0aa11bb22cc3
@@ -74,6 +78,8 @@ ccdd3344-5566-4778-8990-011223344556:
     - group
   description: >
     <p>Connecting regenerative agriculture practitioners, food rescue volunteers, urban farmers, and permaculture designers across the Front Range. Share growing knowledge adapted to Colorado's high-altitude semi-arid climate, coordinate seed swaps, organize farm-to-table events, and build the food sovereignty infrastructure our bioregion needs.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - cc33dd44-ee55-4ff6-6778-89900aa11bb2
     - 44556677-8899-400a-abb0-cddeeff01223
@@ -82,7 +88,7 @@ ccdd3344-5566-4778-8990-011223344556:
     - 55667788-9900-4aab-bcc0-ddeeff012334
     - 11223344-5566-4778-8990-aabbccddeef0
 
-# RegenHub Boulder - Physical community workspace and social glue
+# Mesa Hearth Boulder - Physical community workspace and social glue
 ddee4455-6677-4889-90aa-122334455667:
   uuid: ddee4455-6677-4889-90aa-122334455667
   langcode: en
@@ -90,7 +96,7 @@ ddee4455-6677-4889-90aa-122334455667:
   image_alt: Co-working space and community gathering
   uid: 22334455-6677-4889-90aa-bbccddeeff01
   created: -75 day|11:30
-  label: RegenHub Boulder
+  label: Mesa Hearth Boulder
   type: flexible_group
   field_flexible_group_visibility: community
   field_group_allowed_join_method: direct
@@ -98,7 +104,9 @@ ddee4455-6677-4889-90aa-122334455667:
     - community
     - group
   description: >
-    <p>The physical anchor of Boulder's regenerative community. RegenHub is a co-working space, event venue, and community commons where regenerators, builders, and organizers gather. This group coordinates events, welcomes newcomers, shares resources, and maintains the social fabric that holds our community together.</p>
+    <p>The physical anchor of Boulder's regenerative community. Mesa Hearth is a co-working space, event venue, and community commons where regenerators, builders, and organizers gather. This group coordinates events, welcomes newcomers, shares resources, and maintains the social fabric that holds our community together.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - 22334455-6677-4889-90aa-bbccddeeff01
     - bb22cc33-dd44-4ee5-5ff6-677889900aa1
@@ -127,6 +135,8 @@ eeff5566-7788-4990-0aa1-233445566778:
     - group
   description: >
     <p>The deliberative body for the Boulder node's polycentric governance. Council members are nominated to participate in decisions about treasury allocation, cross-group coordination, and network-level policies. This is a closed group -- members are added by invitation to ensure accountability to the communities they represent.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - ee55ff66-7788-4990-0aa1-1bb22cc33dd4
     - aa11bb22-cc33-4dd4-ee55-ff6677889900

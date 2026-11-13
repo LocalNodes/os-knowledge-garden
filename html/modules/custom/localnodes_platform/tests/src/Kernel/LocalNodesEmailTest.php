@@ -40,7 +40,7 @@ final class LocalNodesEmailTest extends LocalNodesEmailKernelTestBase {
 
     $this->assertTrue($this->config('social_swiftmail.settings')->get('remove_open_social_branding'));
     $mail = $this->config('user.mail');
-    $this->assertSame('Reset your password for [site:name]', $mail->get('password_reset.subject'));
+    $this->assertSame('Your sign-in link for [site:name]', $mail->get('password_reset.subject'));
     $this->assertSame('Welcome to [site:name]', $mail->get('register_admin_created.subject'));
     $this->assertSame('Welcome to [site:name]', $mail->get('register_no_approval_required.subject'));
 
@@ -58,7 +58,7 @@ final class LocalNodesEmailTest extends LocalNodesEmailKernelTestBase {
     _localnodes_platform_configure_email();
     $this->sendReset();
 
-    $this->assertSubject('Reset your password for ' . static::SITE_NAME);
+    $this->assertSubject('Your sign-in link for ' . static::SITE_NAME);
     $html = (string) $this->email->getHtmlBody();
     $this->assertStringContainsString('<!-- localnodes-email -->', $html);
     $this->assertStringContainsString(static::SITE_NAME, $html);
@@ -160,11 +160,52 @@ final class LocalNodesEmailTest extends LocalNodesEmailKernelTestBase {
   }
 
   /**
+   * The three mails whose link opens the password page say what it does.
+   *
+   * The link signs in once; choosing a password is offered, not required,
+   * and leaves any other way of signing in as it is. None says the member
+   * will log in with a password from then on.
+   *
+   * @dataProvider linkMailProvider
+   */
+  public function testLinkMailsSayWhatTheLinkDoes(string $op, string $limit): void {
+    _localnodes_platform_configure_email();
+    $this->sendUserMail($op);
+
+    // The text body wraps long lines; compare with single spaces.
+    $text = preg_replace('/\s+/', ' ', (string) $this->email->getTextBody());
+    $this->assertStringContainsString('This link signs you in:', $text);
+    $this->assertStringContainsString('On the page it opens you can choose a password for your next visits. Any other way you sign in to ' . static::SITE_NAME . ' stays as it is.', $text);
+    $this->assertStringContainsString($limit, $text);
+    // Core ends a link only for an account that has signed in before, so no
+    // mail here promises a lifetime.
+    $this->assertStringNotContainsString('one day', $text);
+    $this->assertStringNotContainsString('password: Your password', $text);
+    $this->assertStringNotContainsString('After setting your password', $text);
+    $this->assertDoesNotMatchRegularExpression('/Hi [^,]+, seed-member-\d+,/', $text, 'The wrapper greets the member; the body does not name them again.');
+  }
+
+  /**
+   * The mails with a sign-in link, and what each says about its time limit.
+   *
+   * @return array<string, array{string, string}>
+   *   [mail key, limit sentence].
+   */
+  public static function linkMailProvider(): array {
+    return [
+      'password_reset' => ['password_reset', 'The link works once. If you did not ask for it'],
+      'register_admin_created' => ['register_admin_created', 'The link works once. After that, sign in at'],
+      'status_activated' => ['status_activated', 'The link works once. After that, sign in at'],
+      'register_no_approval_required' => ['register_no_approval_required', 'The link works once. After that, sign in at'],
+    ];
+  }
+
+  /**
    * The subjects Tom approved are in place for the reset and both welcomes.
    */
   public function testApprovedSubjectsReachTheRecipient(): void {
     _localnodes_platform_configure_email();
-    foreach (['password_reset' => 'Reset your password for', 'register_admin_created' => 'Welcome to', 'register_no_approval_required' => 'Welcome to'] as $op => $start) {
+    foreach (['password_reset' => 'Your sign-in link for', 'register_admin_created' => 'Welcome to', 'register_no_approval_required' => 'Welcome to'] as $op => $start) {
       $this->sendUserMail($op);
       $this->assertSubject($start . ' ' . static::SITE_NAME);
     }

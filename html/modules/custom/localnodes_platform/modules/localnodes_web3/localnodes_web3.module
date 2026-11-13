@@ -6,14 +6,22 @@
  */
 
 use Drupal\block\BlockInterface;
+use Drupal\Component\Render\MarkupInterface;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Markup;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\localnodes_web3\EmailLink;
 use Drupal\localnodes_web3\SignIn;
+use Drupal\localnodes_web3\SignInEmail;
 use Drupal\localnodes_web3\SiweHelpLink;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
 use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Implements hook_library_info_alter().
@@ -23,8 +31,28 @@ use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
  * network banner, a receipt panel or a Short ID gets the LocalNodes look.
  * safe_smart_accounts and group_treasury stay theme-neutral and never
  * reference this library or any --ln-* token.
+ *
+ * Also hangs "Confirm your sign-in" (localnodes_web3/signature_proof) off
+ * every script of the fund and vote modules, so it holds their buttons
+ * until the session is proven, before the wallet is asked for anything. It
+ * signs with siwe_login's signer library when the installed siwe_login has
+ * one; without it the panel says the wallet cannot be reached.
  */
 function localnodes_web3_library_info_alter(array &$libraries, $extension) {
+  if ($extension === 'localnodes_web3' && isset($libraries['signature_proof'])) {
+    if (\Drupal::service('library.discovery')->getLibraryByName('siwe_login', 'signer')) {
+      $libraries['signature_proof']['dependencies'][] = 'siwe_login/signer';
+    }
+    return;
+  }
+  if (in_array($extension, ['safe_smart_accounts', 'group_treasury', 'safe_governance', 'safe_governance_group'], TRUE)) {
+    foreach ($libraries as $name => $library) {
+      $own = array_filter(array_keys($library['js'] ?? []), fn ($file) => str_starts_with((string) $file, 'js/'));
+      if ($own && !in_array('localnodes_web3/signature_proof', $library['dependencies'] ?? [], TRUE)) {
+        $libraries[$name]['dependencies'][] = 'localnodes_web3/signature_proof';
+      }
+    }
+  }
   if ($extension !== 'safe_smart_accounts' || !isset($libraries['components'])) {
     return;
   }
@@ -77,6 +105,21 @@ function localnodes_web3_safe_smart_accounts_approve_help(SafeTransactionInterfa
 }
 
 /**
+ * Implements hook_block_access().
+ *
+ * The pages an emailed sign-in link opens show no other sign-in, so their
+ * own "Sign in" button is the only one there.
+ */
+function localnodes_web3_block_access(BlockInterface $block, string $operation, AccountInterface $account): AccessResultInterface {
+  if ($operation !== 'view' || $block->getPluginId() !== 'siwe_login_block') {
+    return AccessResult::neutral();
+  }
+  $route = (string) \Drupal::routeMatch()->getRouteName();
+  return AccessResult::forbiddenIf(str_starts_with($route, 'localnodes_web3.email_link'))
+    ->addCacheContexts(['route.name']);
+}
+
+/**
  * Implements hook_block_view_BASE_BLOCK_ID_alter() for siwe_login_block.
  *
  * The same link under the sign-in. It is added in a
@@ -92,6 +135,11 @@ function localnodes_web3_block_view_siwe_login_block_alter(array &$build, BlockP
   // page, and the log-in and sign-up pages show it under their own button.
   $placed = $build['#block'] ?? NULL;
   if ($placed instanceof BlockInterface && in_array($placed->getRegion(), SiweHelpLink::TOP_BAR_REGIONS, TRUE)) {
+    // siwe_login's wallet button, when shown, would sit beside Sign in and
+    // crowd the bar on a phone. It stays in the page, hidden (signin.css),
+    // and the log-in page and the welcome block offer it as "Use a browser
+    // wallet" (see SignIn).
+    $build['#attributes']['class'][] = 'ln-signin-topbar';
     return;
   }
   $build['#pre_render'][] = [SiweHelpLink::class, 'preRender'];
@@ -107,6 +155,7 @@ function localnodes_web3_block_view_siwe_login_block_alter(array &$build, BlockP
  * adding an account at /admin/people/create gets no button.
  */
 function localnodes_web3_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  _localnodes_web3_signature_proof_form($form);
   if (!in_array($form_id, SignIn::FORM_IDS, TRUE) || !SignIn::available()) {
     return;
   }
@@ -117,12 +166,158 @@ function localnodes_web3_form_alter(array &$form, FormStateInterface $form_state
 }
 
 /**
+ * Marks a post form on a page that needs a proven session.
+ *
+ * The form posts back to its page, so the page's route mark already makes
+ * the server refuse it unless the session is proven (SignatureGuard runs
+ * before any validate or submit handler). The mark here lets
+ * js/signature-proof.js ask for the proof before the member submits.
+ */
+function _localnodes_web3_signature_proof_form(array &$form): void {
+  $form['#cache']['contexts'][] = 'route';
+  $form['#cache']['contexts'][] = 'user.roles:authenticated';
+  $request = \Drupal::requestStack()->getCurrentRequest();
+  if ($request === NULL || \Drupal::currentUser()->isAnonymous() || !\Drupal::service('localnodes_web3.signature_guard')->needsProof($request)) {
+    return;
+  }
+  if (strtolower((string) ($form['#method'] ?? 'post')) !== 'post') {
+    return;
+  }
+  $form['#attributes']['data-ln-signature-proof'] = '';
+  $form['#attached']['library'][] = 'localnodes_web3/signature_proof';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for siwe_email_verification_form.
+ *
+ * The step that asks a member who signed in without an email for one (see
+ * SignInEmail).
+ */
+function localnodes_web3_form_siwe_email_verification_form_alter(array &$form, FormStateInterface $form_state): void {
+  SignInEmail::alterForm($form);
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * - email_link: the sign-in link (EmailLink), params 'account' and 'url'.
+ * - not_switched_on: sent by SignInEmail to the inbox of an account that
+ *   is not switched on yet, when someone signs in and gives its address.
+ */
+function localnodes_web3_mail(string $key, array &$message, array $params): void {
+  $account = $params['account'] ?? NULL;
+  if (!$account instanceof UserInterface) {
+    return;
+  }
+  $options = ['langcode' => $message['langcode']];
+  $site = (string) \Drupal::config('system.site')->get('name');
+  $vars = ['@site' => $site, '@name' => $account->getDisplayName()];
+  switch ($key) {
+    case 'email_link':
+      $message['subject'] = t('Your sign-in link for @site', $vars, $options);
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('@name,', $vars, $options));
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('Here is your link to sign in to @site:', $vars, $options));
+      $message['body'][] = (string) ($params['url'] ?? '');
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('It works once, for one day, on any device. If you did not ask for it, you can ignore this email; nothing changes on your account.', $vars, $options));
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('-- @site team', $vars, $options));
+      break;
+
+    case 'not_switched_on':
+      $message['subject'] = t('Your account on @site is not switched on yet', $vars, $options);
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('@name,', $vars, $options));
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('Someone signed in to @site and gave this email address. Your account here is not switched on yet, so that sign-in was not added to it.', $vars, $options));
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('If it was you: once your account is switched on, sign in again and give this address. If it was not you, you can ignore this email; nothing changed on your account.', $vars, $options));
+      $message['body'][] = _localnodes_web3_mail_paragraph(t('-- @site team', $vars, $options));
+      break;
+  }
+}
+
+/**
+ * One paragraph of a mail body.
+ *
+ * The mailer pastes translated parts into the mail as they are, with no
+ * break between them, so each is wrapped in its own paragraph. t() has
+ * already escaped the values put into it.
+ */
+function _localnodes_web3_mail_paragraph(\Stringable|string $text): MarkupInterface {
+  return Markup::create('<p>' . $text . '</p>');
+}
+
+/**
+ * Implements hook_siwe_login_response_alter().
+ *
+ * A member who signs in with the sign-in button and has invitations
+ * waiting goes to their invitations, as after a first password.
+ */
+function localnodes_web3_siwe_login_response_alter(array &$response_data, $user): void {
+  if (!$user instanceof UserInterface) {
+    return;
+  }
+  $target = \Drupal::service('localnodes_platform.invite_landing')->target($user);
+  if ($target !== NULL) {
+    $response_data['redirect'] = $target->toString();
+  }
+}
+
+/**
+ * Implements hook_user_login().
+ *
+ * The same for a member who finishes signing in from the email that
+ * confirms their address: siwe_login then sends them home, and a
+ * destination sends them on to their invitations instead. A destination
+ * already in the address is kept.
+ */
+function localnodes_web3_user_login(UserInterface $account): void {
+  if (\Drupal::routeMatch()->getRouteName() !== 'siwe_login.email_verification_confirm') {
+    return;
+  }
+  $request = \Drupal::request();
+  if ($request->query->has('destination')) {
+    return;
+  }
+  $target = \Drupal::service('localnodes_platform.invite_landing')->target($account);
+  if ($target !== NULL) {
+    $request->query->set('destination', $target->toString());
+  }
+}
+
+/**
+ * Implements hook_user_update().
+ *
+ * A changed wallet address ends the account's session proofs. Blocking an
+ * account ends its emailed sign-in links for good.
+ *
+ * A member who signed in before giving an email has a made-up address; when
+ * they confirm a real one, the event invitations sent to it become theirs.
+ * Open Social does that only for a new account (social_event_invite's
+ * hook_user_insert), and group invitations already follow an address
+ * change (ginvite).
+ */
+function localnodes_web3_user_update(UserInterface $account): void {
+  $original = $account->original ?? NULL;
+  // A changed wallet address ends every session proof made before it
+  // (SignatureSession), even if the old address comes back.
+  if ($original instanceof UserInterface && $account->hasField('field_ethereum_address')
+    && strtolower((string) $original->get('field_ethereum_address')->value) !== strtolower((string) $account->get('field_ethereum_address')->value)) {
+    \Drupal::service('localnodes_web3.signature_session')->addressChanged((int) $account->id());
+  }
+  if ($original instanceof UserInterface && $original->isActive() && !$account->isActive()) {
+    EmailLink::revoke($account);
+  }
+  if (!$original instanceof UserInterface || EmailLink::canReceive($original) || !EmailLink::canReceive($account)) {
+    return;
+  }
+  SignInEmail::claimEventInvites($account);
+}
+
+/**
  * Implements hook_ENTITY_TYPE_view_alter() for block_content.
  *
  * The front-page welcome block (Open Social's hero_call_to_action_block)
  * shows "Sign in" and a quiet "Use a password" link in place of its stored
- * "Sign up" and "Login" buttons. The stored links are left alone, so the
- * block shows them again when this module is off.
+ * button. The stored link is left alone (localnodes_platform sets it to one
+ * "Sign in" to the log-in page), so the block shows it again when this module
+ * is off.
  */
 function localnodes_web3_block_content_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display): void {
   if ($entity->bundle() !== 'hero_call_to_action_block' || !isset($build['field_call_to_action_link']) || !SignIn::available()) {

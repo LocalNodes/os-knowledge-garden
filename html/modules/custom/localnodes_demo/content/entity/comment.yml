@@ -22,7 +22,7 @@ b1bbe7d2-e031-4d28-9fae-9c25b37b68f3:
   type: comment
   langcode: en
   body: >
-    Thank you for this thoughtful introduction. I want to emphasize that any platform for bioregional organizing must center indigenous perspectives. The Coast Salish peoples have been stewarding these watersheds for thousands of years. I look forward to contributing that perspective here.
+    Thank you for this thoughtful introduction. I want to emphasize that any platform for bioregional organizing must center indigenous perspectives. The Indigenous peoples of this land have been stewarding these watersheds for thousands of years. I look forward to contributing that perspective here.
   entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
   entity_type: node
   field_name: field_topic_comments
@@ -34,7 +34,7 @@ a54f1ba9-490f-4fae-b0fc-aa3ba5bb6ec4:
   langcode: en
   parent: 0f698f17-5f22-432a-91e2-1223aff9fdfe
   body: >
-    Absolutely, Willow. The mutual aid networks we build must be grounded in right relationship with indigenous communities. Solidarity Cascadia has been working with Coast Salish organizations on a land-back initiative, and I would love to connect you with that work through this platform.
+    Absolutely, Willow. The mutual aid networks we build must be grounded in right relationship with indigenous communities. At Solidarity Cascadia we want to learn how to do that well, and I hope this platform can help us listen.
   entity_id: 90f14e5e-ac2c-4f5f-a06e-f274d82e1214
   entity_type: node
   field_name: field_topic_comments
@@ -71,7 +71,7 @@ a54f1ba9-490f-4fae-b0fc-aa3ba5bb6ec4:
   langcode: en
   parent: 0a379466-6bd5-46c0-8eb4-ee433ba9c79c
   body: >
-    I love the sliding scale idea, Elena. We could structure it as $100 minimum with suggested $500, and use the Cascadia Resilience Fund grant to cover the gap. Let me draft a revised proposal with these adjustments and bring it to the next group meeting.
+    I love the sliding scale idea, Elena. We could structure it as $100 minimum with suggested $500, and use the Fireweed Resilience Fund grant to cover the gap. Let me draft a revised proposal with these adjustments and bring it to the next group meeting.
   entity_id: 2f229d29-7327-4517-ba61-cfdcc639a7cd
   entity_type: node
   field_name: field_topic_comments
@@ -98,7 +98,7 @@ e7b96a71-9b9b-44d9-a678-f50820172f05:
   type: comment
   langcode: en
   body: >
-    Can I bring herb starts from City Roots? We have tons of oregano, thyme, and sage that are ready to find new homes. Also wondering if anyone has sugar snap pea seeds adapted to our Pacific Northwest growing season.
+    Can I bring herb starts from Sidewalk Seed? We have tons of oregano, thyme, and sage that are ready to find new homes. Also wondering if anyone has sugar snap pea seeds adapted to our Pacific Northwest growing season.
   entity_id: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
   entity_type: node
   field_name: field_event_comments

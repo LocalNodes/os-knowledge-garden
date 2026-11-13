@@ -15,7 +15,7 @@ use Drupal\ai\Event\PreGenerateResponseEvent;
  * - settings.php derives $settings['localnodes_ai_data_tier'] ('local' on
  *   DDEV; off DDEV 'paid' only when GEMINI_KEY_TIER=paid) and
  *   $settings['localnodes_demo_module'] (DEMO_MODULE, with the entrypoint's
- *   default 'localnodes_demo').
+ *   default 'none').
  * - localnodes_platform_requirements('runtime') reports an error naming
  *   GEMINI_KEY_TIER when a key is set, unless the tier is paid or local,
  *   or the site is a demo. Without a key the assistant is not set up.
@@ -121,9 +121,9 @@ final class DataTierGateTest extends GroupAccessKernelTestBase {
    * settings.php: the demo setting reads DEMO_MODULE like the entrypoint.
    */
   public function testSettingsReadDemoModuleLikeTheEntrypoint(): void {
-    // docker/entrypoint.sh: DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}".
-    $this->assertSame('localnodes_demo', $this->settingsFor([])['localnodes_demo_module'] ?? NULL, 'Unset counts as the default demo.');
-    $this->assertSame('localnodes_demo', $this->settingsFor(['DEMO_MODULE' => ''])['localnodes_demo_module'] ?? NULL, 'Empty counts as the default demo.');
+    // docker/entrypoint.sh: DEMO_MODULE="${DEMO_MODULE:-none}".
+    $this->assertSame('none', $this->settingsFor([])['localnodes_demo_module'] ?? NULL, 'Unset is a blank site, not a demo.');
+    $this->assertSame('none', $this->settingsFor(['DEMO_MODULE' => ''])['localnodes_demo_module'] ?? NULL, 'Empty is a blank site, not a demo.');
     $this->assertSame('boulder_demo', $this->settingsFor(['DEMO_MODULE' => 'boulder_demo'])['localnodes_demo_module'] ?? NULL);
     $this->assertSame('none', $this->settingsFor(['DEMO_MODULE' => 'none'])['localnodes_demo_module'] ?? NULL);
   }

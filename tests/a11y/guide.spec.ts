@@ -26,7 +26,7 @@ test.describe('organizer guide', () => {
     const steps = page.locator('.localnodes-guide__steps > li');
     await expect(steps).toHaveCount(6);
     await expect(steps.locator('h2')).toHaveText([
-      'Set your password',
+      'Sign in',
       'Open your group',
       'Upload your first files',
       'Wait while your documents are prepared',

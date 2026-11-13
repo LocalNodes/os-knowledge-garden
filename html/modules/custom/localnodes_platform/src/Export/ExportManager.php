@@ -39,6 +39,9 @@ class ExportManager {
     return new ExportFiles((string) Settings::get('file_private_path', ''), DRUPAL_ROOT);
   }
 
+  /** Why a site export may not start now, or NULL when it may. */
+  public function refusal(): ?string { return $this->exporter->refusal(); }
+
   public function current(): array { return $this->read('current'); }
   public function last(): array { return $this->read('last'); }
 
@@ -66,6 +69,8 @@ class ExportManager {
 
   public function request(int $uid): array {
     if (!$this->access->allows($uid)) throw new \RuntimeException('Export is unavailable.');
+    // Before the slot's lock file or any job record is written.
+    if ($why = $this->refusal()) throw new \RuntimeException($why);
     return $this->locked(function () use ($uid): array {
       if (!$this->access->allows($uid)) throw new \RuntimeException('Export is unavailable.');
       $job = $this->current();

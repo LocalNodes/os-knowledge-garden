@@ -44,18 +44,31 @@
         "800": { "$value": "#27272a", "$type": "color" },
         "900": { "$value": "#18181b", "$type": "color" },
         "950": { "$value": "#09090b", "$type": "color" },
-        "text": { "$value": "#343434", "$type": "color" },
-        "muted": { "$value": "#555555", "$type": "color" },
-        "border": { "$value": "#8a8a8a", "$type": "color" },
-        "divider": { "$value": "#e6e6e6", "$type": "color" },
-        "canvas": { "$value": "#f3f3f3", "$type": "color" },
+        "text": { "$value": "#27272a", "$type": "color", "$description": "Body text: the app-look mock's Day text (2026-11-12); #343434 before." },
+        "strong": { "$value": "#18181b", "$type": "color", "$description": "Headings and the active tab: the mock's Day strong text." },
+        "muted": { "$value": "#555b57", "$type": "color" },
+        "border": { "$value": "#828784", "$type": "color", "$description": "Control borders. The mock's #8a8f8c is 2.99:1 on the raised input fill; this is the nearest grey that keeps 3:1 on every light fill." },
+        "divider": { "$value": "#e2e5e3", "$type": "color" },
+        "canvas": { "$value": "#f4f5f4", "$type": "color" },
+        "raised": { "$value": "#f4f4f5", "$type": "color", "$description": "The fill of inputs, the post composer and the question bubble (the mock's Day raised)." },
+        "tint-line": { "$value": "#c5ece5", "$type": "color", "$description": "The hairline edge of the tint boxes and the avatar discs (the mock's Day tint line)." },
         "white": { "$value": "#ffffff", "$type": "color" },
         "tint": { "$value": "#f0fdfa", "$type": "color", "$description": "The light tint behind the AI overview, import panels and notes: the app-look mock's Day tint (2026-11-12), the 50 teal."  }
       },
+      "source": {
+        "$description": "Where an answer meets its source (the app-look mock, 2026-11-12): the amber citation chip, the paper slip the quoted passage sits on, and the highlight on the cited sentence. Nothing else uses these.",
+        "cite": { "$value": "#fbbf24", "$type": "color" },
+        "cite-ink": { "$value": "#1c1403", "$type": "color" },
+        "paper": { "$value": "#f4eedf", "$type": "color" },
+        "paper-ink": { "$value": "#26221c", "$type": "color" },
+        "paper-label": { "$value": "#5a5348", "$type": "color" },
+        "paper-rule": { "$value": "#d9d0bb", "$type": "color" },
+        "mark": { "$value": "#fde68a", "$type": "color" }
+      },
       "chrome": {
         "$description": "socialblue's navigation fields. The dark top bar keeps its stock greys. The section bar and the second line were blue and are teal since 2026-11-12. drupal/color replaces colours by value, so these must differ from the 15 other fields: the section bar #0e6f68 sits between brand 700 and 800, the second line is brand 950, its active text #0a3f3b sits between 900 and 950.",
-        "navbar-bg": { "$value": "#333333", "$type": "color" },
-        "navbar-active-bg": { "$value": "#1f1f1f", "$type": "color" },
+        "navbar-bg": { "$value": "#09090b", "$type": "color", "$description": "The landing page's band (app look, 2026-11-12); #333333 before." },
+        "navbar-active-bg": { "$value": "#1a1e1c", "$type": "color", "$description": "The band's raised fill; #1f1f1f before." },
         "navbar-sec-bg": { "$value": "#0e6f68", "$type": "color" },
         "navbar-sec-text": { "$value": "#f9f9f9", "$type": "color" },
         "line2-bg": { "$value": "#042f2e", "$type": "color" },
@@ -150,6 +163,7 @@
     "highlight": { "$value": "{primitive.color.accent.400}" },
     "on-highlight": { "$value": "{primitive.color.neutral.text}" },
     "text": { "$value": "{primitive.color.neutral.text}" },
+    "text-strong": { "$value": "{primitive.color.neutral.strong}" },
     "text-muted": { "$value": "{primitive.color.neutral.muted}" },
     "border-control": { "$value": "{primitive.color.neutral.border}" },
     "divider": {
@@ -160,6 +174,23 @@
     "surface": { "$value": "{primitive.color.neutral.white}" },
     "canvas": { "$value": "{primitive.color.neutral.canvas}" },
     "tint": { "$value": "{primitive.color.neutral.tint}" },
+    "raised": { "$value": "{primitive.color.neutral.raised}" },
+    "tint-line": {
+      "$value": "{primitive.color.neutral.tint-line}",
+      "decorative": true,
+      "$description": "The hairline edge of a tint box or avatar disc; the box is set apart by its fill and its text, never by this line alone, so it carries no contrast pairing."
+    },
+    "cite": { "$value": "{primitive.color.source.cite}" },
+    "on-cite": { "$value": "{primitive.color.source.cite-ink}" },
+    "paper": { "$value": "{primitive.color.source.paper}" },
+    "on-paper": { "$value": "{primitive.color.source.paper-ink}" },
+    "paper-label": { "$value": "{primitive.color.source.paper-label}" },
+    "paper-rule": {
+      "$value": "{primitive.color.source.paper-rule}",
+      "decorative": true,
+      "$description": "The rule under the paper slip's label line; decoration, so it carries no contrast pairing."
+    },
+    "mark": { "$value": "{primitive.color.source.mark}" },
     "danger": { "$value": "{primitive.color.status.danger}" },
     "danger-bg": { "$value": "{primitive.color.status.danger-bg}" },
     "danger-strong": { "$value": "{primitive.color.status.danger-strong}" },
@@ -241,7 +272,7 @@
       "second-line-navbar-active-text": "{primitive.color.chrome.line2-active-text}"
     },
     "drupal-css": {
-      "$description": "Every --ln-* custom property on :root in css/ln-tokens.css. Names are the ones Phase 22's CSS already reads; on-primary, on-danger and danger-strong are new in 22.1-03.",
+      "$description": "Every --ln-* custom property on :root in css/ln-tokens.css. Names are the ones the existing module CSS already reads; on-primary, on-danger and danger-strong came with the brand palette; text-strong, raised, tint-line and the source roles (cite, paper, mark) are the app look, 2026-11-12.",
       "--ln-color-primary": "{semantic.primary}",
       "--ln-color-primary-strong": "{semantic.primary-strong}",
       "--ln-color-link": "{semantic.link}",
@@ -265,6 +296,16 @@
       "--ln-color-on-primary": "{semantic.on-primary}",
       "--ln-color-on-danger": "{semantic.on-danger}",
       "--ln-color-danger-strong": "{semantic.danger-strong}",
+      "--ln-color-text-strong": "{semantic.text-strong}",
+      "--ln-color-raised": "{semantic.raised}",
+      "--ln-color-tint-line": "{semantic.tint-line}",
+      "--ln-color-cite": "{semantic.cite}",
+      "--ln-color-on-cite": "{semantic.on-cite}",
+      "--ln-color-paper": "{semantic.paper}",
+      "--ln-color-on-paper": "{semantic.on-paper}",
+      "--ln-color-paper-label": "{semantic.paper-label}",
+      "--ln-color-paper-rule": "{semantic.paper-rule}",
+      "--ln-color-mark": "{semantic.mark}",
       "--ln-space-xs": "{primitive.space.xs}",
       "--ln-space-sm": "{primitive.space.sm}",
       "--ln-space-md": "{primitive.space.md}",
@@ -368,7 +409,10 @@
       "border-control": "{semantic.border-control}",
       "divider": "{semantic.divider}",
       "surface": "{semantic.surface}",
-      "canvas": "{semantic.canvas}"
+      "canvas": "{semantic.canvas}",
+      "raised": "{semantic.raised}",
+      "cite": "{semantic.cite}",
+      "on-cite": "{semantic.on-cite}"
     }
   }
 }

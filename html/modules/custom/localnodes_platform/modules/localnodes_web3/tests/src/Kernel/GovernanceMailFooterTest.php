@@ -20,7 +20,8 @@ use Drupal\KernelTests\KernelTestBase;
  * module's footer-less notice, are left as they are.
  *
  * localnodes_web3 is enabled without its .info.yml dependencies (they pull
- * in Open Social, which a Kernel test can't boot); only its hooks are used.
+ * in Open Social, which a Kernel test can't boot). Its platform parent and
+ * sign-in service dependencies are enabled explicitly; only hooks are used.
  *
  * @group localnodes_web3
  */
@@ -29,7 +30,7 @@ final class GovernanceMailFooterTest extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'localnodes_web3'];
+  protected static $modules = ['system', 'user', 'field', 'siwe_login', 'localnodes_platform', 'localnodes_web3'];
 
   /**
    * The generic footer line, as safe_governance_group writes it.
@@ -55,7 +56,7 @@ final class GovernanceMailFooterTest extends KernelTestBase {
   public function testOtherMailsAreUntouched(): void {
     $cases = [
       ['safe_governance_group', 'changes_waiting', ['1 change is waiting.', 'Approve new members: https://example.com']],
-      ['user', 'password_reset', ['Reset your password.', self::FOOTER]],
+      ['user', 'password_reset', ['Your sign-in link.', self::FOOTER]],
     ];
     foreach ($cases as [$module, $key, $body]) {
       $message = $this->message($module, $key, $body);

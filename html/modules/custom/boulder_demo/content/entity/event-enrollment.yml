@@ -31,7 +31,7 @@ en3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3e003:
 # Enrollments for BDA Build Day (+14 day) -- 2 enrollments
 en4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4e004:
   uuid: en4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4e004
-  title: finn_youth @ Beaver Dam Analog Build Day at Caribou Ranch
+  title: finn_youth @ Beaver Dam Analog Build Day at Thistlewood Ranch
   langcode: en
   uid: 55667788-9900-4aab-bcc0-ddeeff012334
   field_event: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
@@ -39,7 +39,7 @@ en4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4e004:
   field_account: 55667788-9900-4aab-bcc0-ddeeff012334
 en5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5e005:
   uuid: en5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5e005
-  title: zara_datascience @ Beaver Dam Analog Build Day at Caribou Ranch
+  title: zara_datascience @ Beaver Dam Analog Build Day at Thistlewood Ranch
   langcode: en
   uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
   field_event: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
@@ -82,10 +82,10 @@ en9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a9e009:
   field_enrollment_status: 1
   field_account: 33445566-7788-4990-0aab-bccddeeff012
 
-# Enrollment for RegenHub Open House (+21 day) -- 1 enrollment
+# Enrollment for Mesa Hearth Open House (+21 day) -- 1 enrollment
 en10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0e010:
   uuid: en10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a0e010
-  title: lucia_foodcommons @ RegenHub Open House and Community Potluck
+  title: lucia_foodcommons @ Mesa Hearth Open House and Community Potluck
   langcode: en
   uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
   field_event: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3

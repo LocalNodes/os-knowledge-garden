@@ -43,9 +43,9 @@ final class CommunitySeedTest extends GroupAccessKernelTestBase {
   protected static $modules = ['localnodes_platform'];
 
   /**
-   * The organizer's address: fictional, on a domain the mail filter lets pass.
+   * The organizer's address: fictional, on a reserved domain; no mail is read.
    */
-  protected const ORGANIZER_EMAIL = 'robin.organizer@mail.localnodes.xyz';
+  protected const ORGANIZER_EMAIL = 'robin.organizer@example.invalid';
 
   /**
    * The community's name.
@@ -443,7 +443,7 @@ final class CommunitySeedTest extends GroupAccessKernelTestBase {
    * then seed).
    */
   public function testOrganizerSetupThenSeedWithABlockedOrganizer(): void {
-    $email = 'kai.signup@mail.localnodes.xyz';
+    $email = 'kai.signup@example.invalid';
     $site_name = 'Hillside Neighbors';
     putenv('ORGANIZER_EMAIL=' . $email);
     putenv('ORGANIZER_NAME=Kai');

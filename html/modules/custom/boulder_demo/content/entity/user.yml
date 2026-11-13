@@ -16,7 +16,7 @@ aa11bb22-cc33-4dd4-ee55-ff6677889900:
   image_alt: Mira Solano
   first_name: Mira
   last_name: Solano
-  organization: Boulder Watershed Collective
+  organization: Silvercreek Watershed Collective
   function: Watershed Restoration Lead
   phone_number: ""
   expertise:
@@ -25,9 +25,9 @@ aa11bb22-cc33-4dd4-ee55-ff6677889900:
   interests:
     - c9d0e1f2-a3b4-4c5d-6e7f-809102132435
     - e1f2a3b4-c5d6-4e7f-8091-021324354657
-  address: 1830 Pearl Street, Boulder, CO
+  address: 1830 Wild Plum Street, Boulder, CO
   self_introduction: >
-    I lead riparian restoration projects along Boulder Creek and its tributaries through the Boulder Watershed Collective. Our work centers on beaver dam analogs and native planting to rebuild the braided stream channels that once defined the Front Range. Every drop of water that falls here starts a 2,000-mile journey from the Continental Divide to the Gulf of Mexico -- understanding that journey is understanding our bioregion.
+    I lead riparian restoration projects along Boulder Creek and its tributaries through the Silvercreek Watershed Collective. Our work centers on beaver dam analogs and native planting to rebuild the braided stream channels that once defined the Front Range. Every drop of water that falls here starts a long journey from the Continental Divide to the Gulf of Mexico -- understanding that journey is understanding our bioregion.
 
 # Kai Nakamura - Regen Tech Builder
 bb22cc33-dd44-4ee5-5ff6-677889900aa1:
@@ -41,7 +41,7 @@ bb22cc33-dd44-4ee5-5ff6-677889900aa1:
   image_alt: Kai Nakamura
   first_name: Kai
   last_name: Nakamura
-  organization: OpenCivics Labs
+  organization: Commons Compass Labs
   function: Regen Tech Builder
   phone_number: ""
   expertise:
@@ -50,9 +50,9 @@ bb22cc33-dd44-4ee5-5ff6-677889900aa1:
   interests:
     - b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324
     - f2a3b4c5-d6e7-4f80-9102-132435465768
-  address: 2040 14th Street, Boulder, CO
+  address: 2040 Thimbleberry Street, Boulder, CO
   self_introduction: >
-    I build open-source coordination tools for bioregional communities at OpenCivics Labs. My work grows from the ETHBoulder and GFEL gatherings where I first saw how Ethereum can serve as credibly-neutral infrastructure for cosmo-local coordination. Regen tech means technology in service of place, not extraction from it -- hippies with laptops building the infrastructure of belonging.
+    I build open-source coordination tools for bioregional communities at Commons Compass Labs. My work grows from the Mountain Mesh Jam and Commitment Commons gatherings where I first saw how Ethereum can serve as credibly-neutral infrastructure for cosmo-local coordination. Regen tech means technology in service of place, not extraction from it -- hippies with laptops building the infrastructure of belonging.
 
 # Lucia Trujillo - Permaculture Designer & Food Rescue
 cc33dd44-ee55-4ff6-6778-89900aa11bb2:
@@ -66,7 +66,7 @@ cc33dd44-ee55-4ff6-6778-89900aa11bb2:
   image_alt: Lucia Trujillo
   first_name: Lucia
   last_name: Trujillo
-  organization: Front Range Food Collective
+  organization: Sunbreak Food Collective
   function: Permaculture Designer
   phone_number: ""
   expertise:
@@ -75,9 +75,9 @@ cc33dd44-ee55-4ff6-6778-89900aa11bb2:
   interests:
     - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
     - e1f2a3b4-c5d6-4e7f-8091-021324354657
-  address: 640 Main Street, Longmont, CO
+  address: 640 Bluestem Street, Longmont, CO
   self_introduction: >
-    Third-generation Colorado grower designing regenerative food systems for the Front Range's unique conditions -- 5,400 feet elevation, 300 days of sun, and precious little rainfall. Through the Front Range Food Collective, we connect permaculture practitioners, food rescue volunteers, and urban farmers to build the food sovereignty infrastructure our bioregion needs. Every seed swap strengthens our resilience.
+    Third-generation Colorado grower designing regenerative food systems for the Front Range's unique conditions -- 5,400 feet elevation, 300 days of sun, and precious little rainfall. Through the Sunbreak Food Collective, we connect permaculture practitioners, food rescue volunteers, and urban farmers to build the food sovereignty infrastructure our bioregion needs. Every seed swap strengthens our resilience.
 
 # Devon Hartley - Community Currency Designer
 dd44ee55-ff66-4778-8990-0aa11bb22cc3:
@@ -100,9 +100,9 @@ dd44ee55-ff66-4778-8990-0aa11bb22cc3:
   interests:
     - b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324
     - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
-  address: 1750 13th Street, Boulder, CO
+  address: 1750 Gooseberry Street, Boulder, CO
   self_introduction: >
-    I design mutual credit systems and community currencies at the Boulder Mutual Credit Lab. Inspired by GFEL workshops on commitment pooling and the Ethereum localism movement, I am working to pilot a Boulder community currency that keeps value circulating locally. Quadratic funding for Front Range public goods is my current passion project -- a way to democratically fund what our community actually needs.
+    I design mutual credit systems and community currencies at the Boulder Mutual Credit Lab. Inspired by Commitment Commons workshops on commitment pooling and the Ethereum localism movement, I am working to pilot a Boulder community currency that keeps value circulating locally. Quadratic funding for Front Range public goods is my current passion project -- a way to democratically fund what our community actually needs.
 
 # Sage Clearwater - Governance Facilitator
 ee55ff66-7788-4990-0aa1-1bb22cc33dd4:
@@ -125,7 +125,7 @@ ee55ff66-7788-4990-0aa1-1bb22cc33dd4:
   interests:
     - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
     - e1f2a3b4-c5d6-4e7f-8091-021324354657
-  address: 900 Baseline Road, Boulder, CO
+  address: 900 Prairie Smoke Road, Boulder, CO
   self_introduction: >
     I facilitate the Boulder Governance Circle, bridging traditional consensus processes with DAO governance to practice polycentric decision-making that serves both people and place. My background in restorative justice and on-chain treasury management gives me a hybrid perspective -- governance should grow from the ground up, like a cottonwood along Boulder Creek, while leveraging the coordination tools that Ethereum localism offers.
 
@@ -141,7 +141,7 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   image_alt: Zara Okafor
   first_name: Zara
   last_name: Okafor
-  organization: CU Boulder Env Studies
+  organization: Cinquefoil College Env Studies
   function: Community Data Scientist
   phone_number: ""
   expertise:
@@ -150,9 +150,9 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   interests:
     - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
     - f2a3b4c5-d6e7-4f80-9102-132435465768
-  address: 4001 Discovery Drive, Boulder, CO
+  address: 4001 Lichen Drive, Boulder, CO
   self_introduction: >
-    I am a CU Boulder grad student bridging academic research with community science for Front Range watershed monitoring. My capstone project analyzes water quality data from volunteer monitoring programs along Boulder Creek and South Platte tributaries. Data sovereignty matters -- the communities generating this data should govern how it is used. I am here to share findings and learn from the practitioners doing the real work.
+    I am a Cinquefoil College grad student bridging academic research with community science for Front Range watershed monitoring. My capstone project analyzes water quality data from volunteer monitoring programs along Boulder Creek and South Platte tributaries. Data sovereignty matters -- the communities generating this data should govern how it is used. I am here to share findings and learn from the practitioners doing the real work.
 
 # Rowan Blackwood - Restoration Ecologist
 11223344-5566-4778-8990-aabbccddeef0:
@@ -166,7 +166,7 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   image_alt: Rowan Blackwood
   first_name: Rowan
   last_name: Blackwood
-  organization: Front Range Rewilding
+  organization: Beaverworks Rewilding
   function: Restoration Ecologist
   phone_number: ""
   expertise:
@@ -175,15 +175,15 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   interests:
     - c9d0e1f2-a3b4-4c5d-6e7f-809102132435
     - e1f2a3b4-c5d6-4e7f-8091-021324354657
-  address: 195 N Highway 119, Nederland, CO
+  address: 195 Aspen Hollow Road, Nederland, CO
   self_introduction: >
-    I build beaver dam analogs and practice low-tech process-based restoration in Front Range streams through Front Range Rewilding. BDAs are simple structures -- posts and woven branches mimicking natural beaver dams -- that raise water tables, restore braided channels, and bring life back to degraded streams. My hands are usually muddy and my boots are always wet. Come to a build day and see what stream restoration feels like.
+    I build beaver dam analogs and practice low-tech process-based restoration in Front Range streams through Beaverworks Rewilding. BDAs are simple structures -- posts and woven branches mimicking natural beaver dams -- that raise water tables, restore braided channels, and bring life back to degraded streams. My hands are usually muddy and my boots are always wet. Come to a build day and see what stream restoration feels like.
 
 # Jess Park - Community Organizer
 22334455-6677-4889-90aa-bbccddeeff01:
   uuid: 22334455-6677-4889-90aa-bbccddeeff01
   created: -38 day|10:20
-  name: jess_regenhub
+  name: jess_mesahearth
   mail: jess.park@boulder.localnodes.example
   timezone: America/Denver
   status: 1
@@ -191,7 +191,7 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   image_alt: Jess Park
   first_name: Jess
   last_name: Park
-  organization: RegenHub Boulder
+  organization: Mesa Hearth Boulder
   function: Community Organizer
   phone_number: ""
   expertise:
@@ -200,9 +200,9 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   interests:
     - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
     - a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213
-  address: 1310 College Avenue, Boulder, CO
+  address: 1310 Pinyon Avenue, Boulder, CO
   self_introduction: >
-    I steward RegenHub Boulder, our community's physical co-working space, event venue, and gathering place. From ETHBoulder hackathons to community potlucks, RegenHub is where regenerators, builders, and organizers come together. My job is the social glue -- making sure the people doing the tech work meet the people doing the land work. That is where the real magic of Boulder's regen community happens.
+    I steward Mesa Hearth Boulder, our community's physical co-working space, event venue, and gathering place. From Mountain Mesh Jam hackathons to community potlucks, Mesa Hearth is where regenerators, builders, and organizers come together. My job is the social glue -- making sure the people doing the tech work meet the people doing the land work. That is where the real magic of Boulder's regen community happens.
 
 # Marco Rivera - Cooperative Energy Coordinator
 33445566-7788-4990-0aab-bccddeeff012:
@@ -216,7 +216,7 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   image_alt: Marco Rivera
   first_name: Marco
   last_name: Rivera
-  organization: Front Range Solar Coop
+  organization: Brightfield Solar Coop
   function: Cooperative Energy Coordinator
   phone_number: ""
   expertise:
@@ -225,9 +225,9 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   interests:
     - f2a3b4c5-d6e7-4f80-9102-132435465768
     - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
-  address: 501 Main Street, Louisville, CO
+  address: 501 Cattail Street, Louisville, CO
   self_introduction: >
-    I coordinate community-owned solar installations across the Front Range through the Front Range Solar Coop. Colorado gives us 300 days of sunshine -- that is a public good waiting to be harnessed cooperatively. Our model ensures that the benefits of clean energy stay within our communities. I am excited about pairing solar cooperatives with community currencies so neighbors can trade energy credits locally.
+    I coordinate community-owned solar installations across the Front Range through the Brightfield Solar Coop. Colorado gives us 300 days of sunshine -- that is a public good waiting to be harnessed cooperatively. Our model ensures that the benefits of clean energy stay within our communities. I am excited about pairing solar cooperatives with community currencies so neighbors can trade energy credits locally.
 
 # Talia Redhawk - Indigenous Water Protector
 44556677-8899-400a-abb0-cddeeff01223:
@@ -241,7 +241,7 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   image_alt: Talia Redhawk
   first_name: Talia
   last_name: Redhawk
-  organization: Arapaho Water Relations
+  organization: Headwaters Water Relations
   function: Indigenous Water Protector
   phone_number: ""
   expertise:
@@ -250,9 +250,9 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
   interests:
     - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
     - f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102
-  address: 2950 Baseline Road, Boulder, CO
+  address: 2950 Prairie Smoke Road, Boulder, CO
   self_introduction: >
-    I work with Arapaho Water Relations to honor the relationship between the Arapaho and Cheyenne peoples and the waters of the Front Range. These streams and rivers have been tended for thousands of years before Boulder existed as a city. True watershed restoration must center indigenous water rights and traditional ecological knowledge. I am here to ensure that the regenerative community remembers whose land and whose water we are stewards of.
+    I work with Headwaters Water Relations to honor the relationship between the Indigenous peoples of this land and the waters of the Front Range. These streams and rivers have been tended for thousands of years before Boulder existed as a city. True watershed restoration must center indigenous water rights and traditional ecological knowledge. I am here to ensure that the regenerative community remembers whose land and whose water we are stewards of.
 
 # Finn O'Brien - Youth Regen Organizer
 55667788-9900-4aab-bcc0-ddeeff012334:
@@ -275,9 +275,9 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
     - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
     - b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
     - d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80
-  address: 1001 Arapahoe Avenue, Boulder, CO
+  address: 1001 Coyote Willow Avenue, Boulder, CO
   self_introduction: >
-    I organize with Next Gen Front Range, connecting young people across the Front Range who care about regeneration, climate justice, and building new systems. I attended my first ETHBoulder last year and realized that regen tech and watershed restoration are two sides of the same coin. Now I am bridging the gap -- bringing youth energy to both build days on the creek and hackathons at RegenHub.
+    I organize with Next Gen Front Range, connecting young people across the Front Range who care about regeneration, climate justice, and building new systems. I attended my first Mountain Mesh Jam last year and realized that regen tech and watershed restoration are two sides of the same coin. Now I am bridging the gap -- bringing youth energy to both build days on the creek and hackathons at Mesa Hearth.
 
 # Boulder Admin - Site Manager
 66778899-00aa-4bbc-cdd0-eeff01223344:
@@ -300,6 +300,6 @@ ff667788-9900-4aa1-1bb2-2cc33dd44ee5:
     - c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
   interests:
     - a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-  address: 1777 Broadway, Boulder, CO
+  address: 1777 Mallow Street, Boulder, CO
   self_introduction: >
     This is the official site manager account for the Boulder LocalNodes instance. If you need help using the platform, have questions about groups, or want to get more involved in our community, reach out here or contact any of our group stewards. Welcome to the Boulder node!

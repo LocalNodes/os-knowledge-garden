@@ -142,6 +142,8 @@ case "$cmd" in
   site:install) echo "$*" > "$SITE/siteinstall_args"; [ -n "${FAIL_INSTALL:-}" ] && exit "$FAIL_INSTALL"; touch "$SITE/installed" "$SITE/users_table" ;;
   en)
     [ "${FAIL_EN:-0}" = 1 ] && [ "$1" = localnodes_platform ] && exit 1
+    # FAIL_EN_W3=1 fails enabling localnodes_web3.
+    [ "${FAIL_EN_W3:-0}" = 1 ] && [ "$1" = localnodes_web3 ] && { echo "Unable to install modules" >&2; exit 1; }
     # 23-40: FAIL_EN_OR=1 fails enabling localnodes_openrouter; otherwise it is marked on.
     if [ "$1" = localnodes_openrouter ]; then
       [ "${FAIL_EN_OR:-0}" = 1 ] && exit 1
@@ -166,6 +168,8 @@ case "$cmd" in
         if [ -n "${INDEXED_OUT:-}" ]; then echo "$INDEXED_OUT"; else cat "$SITE/indexed" 2>/dev/null || echo 0; fi ;;
       *) exit 1 ;;
     esac ;;
+  # The shared demo list (DemoPlugins); an empty answer stops the install.
+  localnodes-demo:plugins) [ "${EMPTY_DEMO_LIST:-0}" = 1 ] || echo "${1}_file ${1}_user" ;;
   social-demo:add) [ "${FAIL_DEMO:-0}" = 1 ] && { echo 5 > "$SITE/nodes"; exit 1; }; echo 18 > "$SITE/nodes" ;;
   # 23-40: clearing the vector server empties the Qdrant collection (0 points at
   # 3072) unless QDRANT_KEEPS_POINTS=1 (a backend that only logged a warning).
@@ -174,6 +178,11 @@ case "$cmd" in
     [ "${QDRANT_KEEPS_POINTS:-0}" = 1 ] || printf '%s' '{"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":2,"config":{"params":{"vectors":{"size":3072,"distance":"Cosine"}}}},"status":"ok","time":0.0001}' > "$SITE/qdrant_info" ;;
   search-api:index) [ "${FAIL_INDEX:-0}" = 1 ] && { echo "AiQuotaException: embed_content per day" >&2; exit 3; } ;;
   cron) [ "${FAIL_CRON:-0}" = 1 ] && exit 4 ;;
+  localnodes-web3:check)
+    # The readiness check passes while $SITE/w3_ok exists, printing W3_OUT (default a fixed
+    # address) on stdout; otherwise one fixed line on stderr and exit 1.
+    if [ -f "$SITE/w3_ok" ]; then echo "${W3_OUT:-0x00000000000000000000000000000000000000A1}"; exit 0; fi
+    echo "Web3 check failed: sponsor_not_set_up" >&2; exit 1 ;;
   localnodes:topic-types) [ "${FAIL_TOPIC:-0}" = 1 ] && exit 1; echo "Added 0 page types." ;;
   localnodes:seed-community)
     # Mirrors 23-34's command: fixed sentences only, never the value or a text; a
@@ -228,6 +237,17 @@ check "fresh + index failures: FRESH INSTALL COMPLETE" yes "$(has "$t/out" "=== 
 check "fresh + index failures: completion marker written" yes "$([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
 check "fresh: demo content loaded with direct indexing deferred" 1 "$(calls "$t" "social-demo:add DEFER=1")"
 check "fresh: no other command runs with indexing deferred" 1 "$(grep -c 'DEFER=1' "$t/calls")"
+check "fresh: the demo load gets the shared list's ids" 1 "$(grep -cx 'drush social-demo:add localnodes_demo_file localnodes_demo_user' "$t/seq")"
+
+# 1b. The shared demo list comes back empty: the install stops before loading.
+t="$(new_site)"
+rc="$(run_ep "$t" EMPTY_DEMO_LIST=1)"
+check "empty demo list: stops (non-zero), no demo load, no completion" "yes 0 no" "$([ "$rc" -ne 0 ] && echo yes || echo no) $(calls "$t" "social-demo:add") $(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+
+# 1c. DEMO_MODULE empty (as unset: the default is none): a blank site.
+t="$(new_site)"
+rc="$(run_ep "$t" DEMO_MODULE=)"
+check "no DEMO_MODULE: exit 0, no demo module, no demo list, no demo load" "0 0 0 0" "$rc $(grep -c '^drush en localnodes_demo' "$t/seq") $(calls "$t" "localnodes-demo:plugins") $(calls "$t" "social-demo:add")"
 
 # 2. Restart of the 2026-11-06 staging state: installed, content present, no
 #    markers at all. Must resume (updb, index, cron), not reload demo content.
@@ -553,7 +573,7 @@ check "redeploy with the openrouter toggle: guard reads, then en, then the ready
   g="$(grep -n '^drush php:eval .*getIndexedItemsCount' "$t/seq" | head -1 | cut -d: -f1)"; e="$(line_of "$t" 'drush en localnodes_openrouter')"; c="$(line_of "$t" 'callback ready')"
   [ -n "$g" ] && [ -n "$e" ] && [ -n "$c" ] && [ "$g" -lt "$e" ] && [ "$e" -lt "$c" ] && echo yes || echo no)"
 check "redeploy with the openrouter toggle: still exactly one ready" "ready" "$(cb_statuses "$t")"
-t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=true)"
+t="$(rsite)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=true)"  # the check passes (section 11)
 check "redeploy with WEB3_ENABLED: en localnodes_web3 before the ready callback" yes "$(
   w="$(line_of "$t" 'drush en localnodes_web3')"; c="$(line_of "$t" 'callback ready')"
   [ -n "$w" ] && [ -n "$c" ] && [ "$w" -lt "$c" ] && echo yes || echo no)"
@@ -691,7 +711,63 @@ check "state read fails at start: non-zero, no callback" "yes 0" "$(nonzero "$rc
 # 10k. A clean start sends no failed callback (success path and redeploy path).
 t="$(new_site)"; rc="$(run_ep "$t" $ORG $CB)"
 check "clean fresh install: no failed callback" 0 "$(failed_count "$t")"
-check "entrypoint carries an EXIT trap and the four reason codes" "yes yes yes yes yes" "$(grep -qE 'trap .* EXIT' "$ENTRYPOINT" && echo yes || echo no) $(for c in install_failed db_not_empty platform_enable_failed organizer_failed; do grep -q "$c" "$ENTRYPOINT" && echo yes || echo no; done | tr '\n' ' ' | sed 's/ $//')"
+check "entrypoint carries an EXIT trap and the six reason codes" "yes yes yes yes yes yes yes" "$(grep -qE 'trap .* EXIT' "$ENTRYPOINT" && echo yes || echo no) $(for c in install_failed db_not_empty platform_enable_failed organizer_failed web3_enable_failed web3_check_failed; do grep -q "$c" "$ENTRYPOINT" && echo yes || echo no; done | tr '\n' ' ' | sed 's/ $//')"
+
+# 11. Practice sites. A sign-up site with WEB3_ENABLED=true proves
+#     its group funds and decisions work (drush localnodes-web3:check) before the install
+#     marker and before every ready, and its ready carries the relayer's public address.
+W3ADDR="0x00000000000000000000000000000000000000A1"
+W3="WEB3_ENABLED=true WEB3_CHECK_WAIT=0"
+w3_checks() { n="$(calls "$1" "localnodes-web3:check")"; echo "${n:-0}"; }               # w3_checks DIR
+before() {  # before DIR A B -> yes when the first seq line starting with A comes before the first with B
+  local a b; a="$(grep -n -m1 "^$2" "$1/seq" | cut -d: -f1)"; b="$(grep -n -m1 "^$3" "$1/seq" | cut -d: -f1)"
+  [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] && echo yes || echo no
+}
+# 11a. Check passes: ready carries the address; the check runs before the marker.
+t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice, check passes: exit 0, creating_user then ready, one check" "0 creating_user,ready 1" "$rc $(cb_statuses "$t") $(w3_checks "$t")"
+check "practice, check passes: ready carries relayer_address" "\"$W3ADDR\" attempt,provision_id,relayer_address,site_url,source,status" "$(cb_get "$t" 2 relayer_address) $(cb_keys "$t" 2)"
+check "practice: localnodes_web3 enabled, check before the install marker" "yes yes" "$(before "$t" "drush en localnodes_web3" "drush localnodes-web3:check") $(before "$t" "drush localnodes-web3:check" "drush state:set localnodes.install_complete")"
+check "practice: creating_user carries no relayer_address" null "$(cb_get "$t" 1 relayer_address)"
+# 11b. Check fails: no marker, no ready, one failed with web3_check_failed, after the retries.
+t="$(new_site)"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice, check fails: non-zero, creating_user then failed, reason web3_check_failed" "yes creating_user,failed \"web3_check_failed\"" "$(nonzero "$rc") $(cb_statuses "$t") $(cb_get "$t" 2 reason)"
+check "practice, check fails: tried 8 times, no install marker" "8 no" "$(w3_checks "$t") $([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+check "practice, check fails: the failed body has the contract keys only" "$FAILED_KEYS" "$(cb_keys "$t" 2)"
+# 11c. The restart (marker unwritten, so the resume path) still fails: no ready.
+rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=2)"
+check "practice, restart still failing: resume path, no ready on any run, still no marker" "yes yes 0 no" "$(nonzero "$rc") $(has "$t/out" "RESUMING INSTALL") $(grep -c '"status":"ready"' "$t/callbacks") $([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+# ...and once the check passes, the next restart sends ready with the address and writes the marker.
+touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice, restart passing: exit 0, last callback ready with the address, marker written" "0 ready \"$W3ADDR\" yes" "$rc $(cb_statuses "$t" | sed 's/.*,//') $(cb_get "$t" "$(cbs "$t")" relayer_address) $([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+# 11d. Malformed check output (not 0x + 40 hex) is a failure.
+t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=1 W3_OUT='0x123 key=abc')"
+check "practice, malformed address: failed web3_check_failed, no ready, nothing of it in a callback" "yes \"web3_check_failed\" 0 0" "$(nonzero "$rc") $(cb_get "$t" 2 reason) $(grep -c '"status":"ready"' "$t/callbacks") $(grep -c 'key=abc' "$t/callbacks")"
+# 11e. The enable fails: web3_enable_failed, and the check never runs.
+t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
+# The enable runs before the organizer step, so the failed callback is the only one.
+check "practice, enable fails: only a failed callback, web3_enable_failed, no check" "yes failed \"web3_enable_failed\" 0" "$(nonzero "$rc") $(cb_statuses "$t") $(cb_get "$t" 1 reason) $(w3_checks "$t")"
+# 11f. Redeploy, organizer not activated, check failing: no ready, exit 0, a fixed line.
+t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=2)"
+check "practice redeploy, check fails: exit 0, no callback, fixed line, EXISTING INSTALL READY" "0 0 yes yes" "$rc $(cbs "$t") $(has "$t/out" "group funds and decisions are not working; ready not sent") $(has "$t/out" "=== EXISTING INSTALL READY ===")"
+touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice redeploy, check passes: ready with the address" "0 ready \"$W3ADDR\"" "$rc $(cb_statuses "$t") $(cb_get "$t" 1 relayer_address)"
+# 11g. Redeploy whose enable fails: a warning, not silence, and the start-up goes on.
+t="$(rsite)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
+check "practice redeploy, enable fails: exit 0, warning logged, drush error not hidden" "0 yes yes" "$rc $(has "$t/out" "Warning: localnodes_web3 could not be enabled on this redeploy") $(has "$t/out" "Unable to install modules")"
+# 11h. An activated site's redeploy runs no check (nothing to hand over).
+t="$(rsite)"; printf now > "$t/state/localnodes.organizer_activated"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice redeploy, organizer activated: no check, no callback" "0 0 0" "$rc $(w3_checks "$t") $(cbs "$t")"
+# 11i. Web3 off (the default) is unchanged: no check anywhere, ready without the address.
+t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB)"
+check "web3 off: no check, ready body as before (no relayer_address)" "0 0 attempt,provision_id,site_url,source,status" "$rc $(w3_checks "$t") $(cb_keys "$t" 2)"
+t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB)"
+check "web3 off redeploy: no check, ready resent as before" "0 0 ready" "$rc $(w3_checks "$t") $(cb_statuses "$t")"
+t="$(new_site)"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=false)"
+check "WEB3_ENABLED=false: no enable, no check" "0 0 0" "$rc $(grep -c '^drush en localnodes_web3' "$t/seq") $(w3_checks "$t")"
+# 11j. A manual run with web3 on (staging, demos) is untouched: enable, but no check, no callback.
+t="$(new_site)"; rc="$(run_ep "$t" $ORG $W3)"
+check "manual run with web3 on: enabled, no check, no callback" "0 1 0 0" "$rc $(grep -c '^drush en localnodes_web3' "$t/seq") $(w3_checks "$t") $(cbs "$t")"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \

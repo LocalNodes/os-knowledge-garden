@@ -80,7 +80,7 @@ JSON
   cat > "$WORK/state/manifest.json" <<JSON
 {"provision_id":"$PID","subdomain":"demo","site_name":"$MANIFEST_SITE","organizer_email":"$MANIFEST_EMAIL",
  "topic_types_b64":"WyJHYXJkZW5zIl0","community_seed":"$SEED_B64","ai_provider":"gemini","ai_key_source":"platform",
- "host_report_email":"$MANIFEST_HOST"}
+ "host_report_email":"$MANIFEST_HOST","community_template":"housing_coop"}
 JSON
   : > "$WORK/github_env"
   : > "$WORK/summary.md"
@@ -97,7 +97,7 @@ run_step() {
     GIT_REPO="https://github.com/LocalNodes/os-knowledge-garden" GIT_BRANCH="main" \
     GITHUB_ENV="$WORK/github_env" GITHUB_STEP_SUMMARY="$WORK/summary.md" \
     APP_UUID="app123" SUBDOMAIN="demo" FQDN="demo.localnodes.xyz" DEPLOY_UUID="dep123" \
-    "$@" bash --noprofile --norc -eo pipefail "$WORK/step.sh" 2>&1)"
+    "$@" bash --noprofile --norc ${STEP_FLAGS:--eo pipefail} "$WORK/step.sh" 2>&1)"
   RC=$?
 }
 
@@ -145,9 +145,15 @@ ORDER="$(jq -r '
   | ([range(0; $r | length) | select($r[.] | test("-X (POST|PATCH|DELETE)|env_request"))] | min) as $m
   | if $v != null and $c != null and $m != null and $v < $c and $v < $m then "ok" else "bad v=\($v) c=\($c) m=\($m)" end' "$WORK/wf.json")"
 check "image_tag is validated before the first Coolify mutation" '[ "$ORDER" = ok ]'
+TORDER="$(jq -r '
+  [.jobs.provision.steps[]] as $s
+  | [range(0; $s | length) | select(($s[.].run // "") | contains("update_env \"COMMUNITY_TEMPLATE\""))] as $w
+  | (first(range(0; $s | length) | select($s[.].name == "Deploy instance")) // null) as $d
+  | if ($w | length) == 1 and $s[$w[0]].name == "Configure environment variables" and $d != null and $w[0] < $d then "ok" else "bad w=\($w) d=\($d)" end' "$WORK/wf.json")"
+check "COMMUNITY_TEMPLATE is written in one step, Configure environment variables, before Deploy instance" '[ "$TORDER" = ok ]'
 INPUT_KEYS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs | keys | join(" ")' "$WORK/wf.json")"
-check "dispatch inputs are exactly the contract set (provision contract v1)" \
-  '[ "$INPUT_KEYS" = "attempt callback_url demo_module gemini_key_tier image_tag provision_id subdomain" ]'
+check "dispatch inputs are exactly the contract set (provision contract v1, plus web3)" \
+  '[ "$INPUT_KEYS" = "attempt callback_url demo_module gemini_key_tier image_tag provision_id subdomain web3" ]'
 check "no organizer email, site name or Stripe session id input (D-05, Pitfall 8)" \
   '! grep -vE "^\s*#" "$WF" | grep -qE "^\s+(stripe_session_id|email|site_name):|inputs\.(stripe_session_id|email|site_name)"'
 check "the manifest is fetched from the sign-up app" 'grep -q "api/provision-manifest" "$WF"'
@@ -157,6 +163,15 @@ check "status callbacks are conditioned on provision_id, not the Stripe session"
   '[ "$(jq -r "[.jobs.provision.steps[] | select(.name | startswith(\"Notify status\")) | .if] | map(contains(\"inputs.provision_id\")) | all" "$WORK/wf.json")" = true ]'
 
 echo "# Validate inputs (P2)"
+for W3 in off practice ""; do
+  reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT= WEB3_INPUT="$W3"
+  check "web3='$W3' is accepted" '[ $RC -eq 0 ] && [ "$(genv SUBDOMAIN)" = demo ]'
+done
+for W3 in on true Practice "practice
+x" "$INJECT"; do
+  reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT= WEB3_INPUT="$W3"
+  check "web3='${W3:0:12}' is refused before any request" '[ $RC -ne 0 ] && grep -q "Invalid web3" <<<"$OUT" && [ "$(genv FAIL_REASON)" = invalid_request ] && [ ! -s "$WORK/state/requests.log" ] && ! ls "$WORK"/PWNED* >/dev/null 2>&1'
+done
 reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT=9B8E2A1
 check "uppercase image_tag fails validation" '[ $RC -ne 0 ] && grep -q "Invalid image_tag" <<<"$OUT"'
 check "  ...and nothing was sent to Coolify" '[ ! -s "$WORK/state/requests.log" ]'
@@ -279,7 +294,7 @@ check "the manifest is read from the pinned origin even when the environment hol
 reset_state; run_step "Fetch provision manifest" ok "${MF[@]}" CALLBACK_SECRET=
 check "an empty callback secret fails with manifest_failed before any request" '[ $RC -ne 0 ] && grep -qx "FAIL_REASON=manifest_failed" "$WORK/github_env" && [ ! -s "$WORK/state/requests.log" ]'
 
-echo "# Fetch provision manifest: the host's report address (23 Q5)"
+echo "# Fetch provision manifest: the host's report address"
 reset_state; run_step "Fetch provision manifest" ok "${MF[@]}"
 check "the host report address reaches GITHUB_ENV as HOST_REPORT_EMAIL, masked and never printed otherwise" \
   '[ $RC -eq 0 ] && [ "$(genv HOST_REPORT_EMAIL)" = "$MANIFEST_HOST" ] && grep -qx "::add-mask::$MANIFEST_HOST" <<<"$OUT" && [ "$(grep -F -- "$MANIFEST_HOST" <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
@@ -308,6 +323,32 @@ reset_state; jq 'del(.community_seed)' "$WORK/state/manifest.json" > "$WORK/m.js
 run_step "Fetch provision manifest" ok "${MF[@]}"
 check "a manifest without community_seed still passes, with an empty COMMUNITY_SEED_B64" '[ $RC -eq 0 ] && [ -z "$(genv COMMUNITY_SEED_B64)" ] && [ -n "$(genv SITE_NAME)" ]'
 
+echo "# Fetch provision manifest: the community template"
+reset_state; run_step "Fetch provision manifest" ok "${MF[@]}"
+check "a manifest naming housing_coop hands COMMUNITY_TEMPLATE=housing_coop to the later steps" \
+  '[ $RC -eq 0 ] && [ "$(genv COMMUNITY_TEMPLATE)" = housing_coop ]'
+reset_state; jq 'del(.community_template)' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+run_step "Fetch provision manifest" ok "${MF[@]}"
+check "a manifest without community_template still passes, with an empty COMMUNITY_TEMPLATE" \
+  '[ $RC -eq 0 ] && [ -n "$(genv SITE_NAME)" ] && [ -z "$(genv COMMUNITY_TEMPLATE)" ]'
+for EMPTYT in '""' 'null' '7' '["housing_coop"]'; do
+  reset_state; jq --argjson v "$EMPTYT" '.community_template = $v' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+  run_step "Fetch provision manifest" ok "${MF[@]}"
+  check "a community_template of $EMPTYT still passes, with an empty COMMUNITY_TEMPLATE" \
+    '[ $RC -eq 0 ] && [ -n "$(genv SITE_NAME)" ] && [ -z "$(genv COMMUNITY_TEMPLATE)" ]'
+done
+# Each value is JSON, so a trailing newline survives into the manifest (a shell variable would lose it).
+for BADT in '"housing.coop"' '"housing/coop"' '"Housing_coop"' '"housing coop"' '"housing\ncoop"' '"housing_coop\n"' "\"$(printf 'a%.0s' $(seq 65))\""; do
+  reset_state; jq --argjson v "$BADT" '.community_template = $v' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+  run_step "Fetch provision manifest" ok "${MF[@]}"
+  check "a community_template of $(printf '%.16s' "$BADT") fails with manifest_failed and writes nothing" \
+    '[ $RC -ne 0 ] && grep -qx "FAIL_REASON=manifest_failed" "$WORK/github_env" && [ -z "$(genv SITE_NAME)" ] && [ -z "$(genv COMMUNITY_TEMPLATE)" ]'
+done
+T64="$(printf 'a%.0s' $(seq 64))"
+reset_state; jq --arg v "$T64" '.community_template = $v' "$WORK/state/manifest.json" > "$WORK/m.json" && mv "$WORK/m.json" "$WORK/state/manifest.json"
+run_step "Fetch provision manifest" ok "${MF[@]}"
+check "a community_template of 64 lowercase letters passes unchanged" '[ $RC -eq 0 ] && [ "$(genv COMMUNITY_TEMPLATE)" = "$T64" ]'
+
 echo "# Create Coolify application"
 reset_state; run_step "Create Coolify application" ok
 check "create passes Coolify 4.1 path validation (leading-slash docker_compose_location)" '[ $RC -eq 0 ] && grep -qx "APP_UUID=app123" "$WORK/github_env"'
@@ -327,7 +368,7 @@ check "site mail (system.site) reads MAIL_FROM" "grep -qF \"getenv('MAIL_FROM') 
 
 echo "# Configure environment variables: update_env fails hard (P1 #2)"
 reset_state; run_step "Configure environment variables" all503 "${CONFIG_DEFAULTS[@]}"
-check "HTTP 503 on PATCH fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "PATCH failed (503)" <<<"$OUT"'
+check "HTTP 503 on PATCH fails the step" '[ $RC -ne 0 ] && grep -q "PATCH failed (503)" <<<"$OUT"'
 check "  ...without falling back to POST" '! grep -q "^POST .*/envs " "$WORK/state/requests.log"'
 check "  ...and stops at the first variable" '[ "$(grep -c "^PATCH" "$WORK/state/requests.log")" -eq 1 ]'
 check "  ...and IMAGE_TAG is never written" '! grep -q " IMAGE_TAG$" "$WORK/state/requests.log"'
@@ -347,13 +388,13 @@ check "409 from a concurrent create is retried and succeeds" '[ $RC -eq 0 ] && [
 reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" ORGANIZER_EMAIL=o@example.org DEMO_MODULE_INPUT=none SITE_NAME=
 check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* SPONSOR_RELAYER_PRIVATE_KEY$" "$WORK/state/requests.log")" -eq 3 ]'
 
-echo "# Codex re-check: curl exit status and duplicate deletion"
+echo "# Configure environment variables: curl exit status and duplicate deletion"
 reset_state; run_step "Configure environment variables" curl23 "${CONFIG_DEFAULTS[@]}"
 check "curl exit 23 with HTTP 200 fails update_env" '[ $RC -ne 0 ] && grep -q "PATCH failed (curl-exit-23)" <<<"$OUT"'
 check "  ...and nothing after the first variable is written" '[ "$(grep -c "^PATCH" "$WORK/state/requests.log")" -eq 1 ]'
 
 reset_state; run_step "Configure environment variables" delete503 "${CONFIG_DEFAULTS[@]}"
-check "DELETE 503 on a duplicate fails the step (Codex reproduction)" '[ $RC -ne 0 ] && grep -q "Deleting duplicate DB_PASSWORD (u9) failed (curl exit 0, HTTP 503)" <<<"$OUT"'
+check "DELETE 503 on a duplicate fails the step" '[ $RC -ne 0 ] && grep -q "Deleting duplicate DB_PASSWORD (u9) failed (curl exit 0, HTTP 503)" <<<"$OUT"'
 check "  ...without claiming the delete happened" '! grep -q "Deleted duplicate DB_PASSWORD" <<<"$OUT"'
 check "  ...and before any value is written or deployed" '! grep -qE "^(PATCH|POST) " "$WORK/state/requests.log"'
 
@@ -365,7 +406,7 @@ check "DELETE that reports 200 but removes nothing is caught by read-back" '[ $R
 check "  ...after exactly 3 bounded rounds" '[ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
 
 reset_state; run_step "Configure environment variables" delete_late "${CONFIG_DEFAULTS[@]}"
-check "a third-round DELETE that succeeds passes (final read-back, Codex re-check 2)" '[ $RC -eq 0 ] && grep -q "Verified: no duplicates remain" <<<"$OUT" && [ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
+check "a third-round DELETE that succeeds passes (final read-back)" '[ $RC -eq 0 ] && grep -q "Verified: no duplicates remain" <<<"$OUT" && [ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
 
 echo "# Configure environment variables: read-back before deploy"
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME="$INJECT" ORGANIZER_EMAIL=o@example.org
@@ -390,6 +431,75 @@ check "  ...without printing any password" '! grep -qE "[0-9a-f]{32}" <<<"$(grep
 reset_state; run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}"
 check "token without read:sensitive fails closed" '[ $RC -ne 0 ] && grep -q "needs read:sensitive" <<<"$OUT"'
 
+echo "# Configure environment variables: group funds and decisions"
+# The practice RPC is read from the step's env, as GitHub would pass it
+WF_RPC="$(jq -r '[.jobs.provision.steps[] | select(.name == "Configure environment variables")][0].env.PRACTICE_RPC_URL // ""' "$WORK/wf.json")"
+check "the practice RPC is a public keyless https URL (no key in it)" '[[ "$WF_RPC" =~ ^https://[A-Za-z0-9.-]+$ ]]'
+check "both steps receive the input through env:" '[ "$(jq -r "[.jobs.provision.steps[] | select(.env.WEB3_INPUT == \"\${{ inputs.web3 }}\") | .name] | join(\",\")" "$WORK/wf.json")" = "Validate inputs,Configure environment variables" ]'
+check "the input is a choice of off or practice, default off" '[ "$(jq -c ".true.workflow_dispatch.inputs.web3 | [.type, .options, .default]" "$WORK/wf.json")" = "[\"choice\",[\"off\",\"practice\"],\"off\"]" ]'
+WEB3_KEYS='WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT'
+w3_written() {  # the web3 names this run wrote (PATCH or POST bodies), sorted, space separated
+  for k in $WEB3_KEYS; do grep -q "\"key\": *\"$k\"" "$WORK/state/bodies.log" && printf '%s ' "$k"; done
+}
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "practice succeeds and reads the four values back" '[ $RC -eq 0 ] && grep -q "Verified WEB3_ENABLED" <<<"$OUT" && grep -q "Verified SIWE_CHAIN_ID" <<<"$OUT" && grep -q "Verified SIWE_CHAIN_RPC_URL" <<<"$OUT" && grep -q "Verified WAAP_ENVIRONMENT" <<<"$OUT"'
+check "  ...WEB3_ENABLED=true, SIWE_CHAIN_ID=11155111, SIWE_CHAIN_RPC_URL=the public RPC" '[ "$(stored WEB3_ENABLED)" = true ] && [ "$(stored SIWE_CHAIN_ID)" = 11155111 ] && [ "$(stored SIWE_CHAIN_RPC_URL)" = "$WF_RPC" ]'
+check "  ...WAAP_ENVIRONMENT=production (pilots use WaaP production)" '[ "$(stored WAAP_ENVIRONMENT)" = production ]'
+check "  ...exactly those web3 names were written" '[ "$(w3_written)" = "WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT " ]'
+check "  ...the relayer key and token are checked by presence" 'grep -q "Verified SPONSOR_RELAYER_PRIVATE_KEY (present; value not read back)" <<<"$OUT" && grep -q "Verified SPONSOR_RELAYER_TOKEN (present; value not read back)" <<<"$OUT"'
+RK="$(stored SPONSOR_RELAYER_PRIVATE_KEY)"; RT="$(stored SPONSOR_RELAYER_TOKEN)"
+check "  ...the relayer key and token appear in output only on ::add-mask:: lines" '[ -n "$RK" ] && [ "$(grep -F -e "${RK#0x}" -e "$RT" <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
+for W3 in off ""; do
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT="$W3" PRACTICE_RPC_URL="$WF_RPC"
+  check "web3='$W3' succeeds and writes WEB3_ENABLED=false only" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(w3_written)" = "WEB3_ENABLED " ] && grep -q "Verified WEB3_ENABLED" <<<"$OUT"'
+done
+# A new app (no REUSE) never holds a stale true, but off would still write false over one
+reset_state
+jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":"true","is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "off on an app holding WEB3_ENABLED=true sets it back to false" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ]'
+# A retry that reuses its own app: one set up with web3 on is never switched off
+hold_web3() {  # hold_web3 VALUE -> a fresh store whose app already holds WEB3_ENABLED=VALUE
+  reset_state
+  V="$1" jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":env.V,"is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+}
+for W3 in off ""; do
+  hold_web3 true
+  run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT="$W3" PRACTICE_RPC_URL="$WF_RPC"
+  check "a reused practice app retried with web3='$W3' is refused, naming both modes" \
+    '[ $RC -ne 0 ] && grep -q "set up with group funds and decisions on (practice); a retry with them off is refused" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+  check "  ...before any setting is written or removed" \
+    '! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log" && [ "$(stored WEB3_ENABLED)" = true ]'
+done
+# The workflow sets no shell:, so GitHub runs steps with bash -e and no pipefail;
+# these run the same way, so a read that cannot tell must stop the step on its own.
+# Only the first read fails; later reads answer with the held true, so the mode check's own
+# message must be the one that stops it.
+for SC in envs_down envs_get503 envs_garbage envs_empty envs_blank; do
+  hold_web3 true
+  STEP_FLAGS=-e run_step "Configure environment variables" "$SC" "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+  check "a reused app whose settings cannot be read ($SC) stops at the mode check before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qF "Could not read this app'"'"'s settings to check its group funds mode; nothing was changed." <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log" && [ "$(stored WEB3_ENABLED)" = true ]'
+done
+reset_state
+jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":"false","is_preview":false},{"uuid":"w2","key":"WEB3_ENABLED","value":"true","is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "a reused app with a false copy ahead of a true one is still refused" \
+  '[ $RC -ne 0 ] && grep -q "a retry with them off is refused" <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log"'
+hold_web3 true
+run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a reused practice app retried with practice goes ahead" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = true ]'
+hold_web3 false
+run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a reused app holding false (also the compose default) may be retried with practice" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = true ]'
+hold_web3 false
+run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "a reused off app retried with off goes ahead" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ]'
+reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a relayer key that did not stick fails the presence check" '[ $RC -ne 0 ] && grep -q "SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "  ...but web3 off does not check it (off changes nothing)" '[ $RC -eq 0 ] && ! grep -q "Verified SPONSOR_RELAYER" <<<"$OUT"'
+
 echo "# Configure environment variables: sign-up values reach the container (D-12, D-17, D-20, D-21)"
 KEYV="sk-or-v1-TESTKEY-0123456789"
 GKEY="AIzaSyORGANIZER-GEMINI-KEY-0123456789"
@@ -413,7 +523,7 @@ check "a sign-up run passes and sets PROVISION_ID, PROVISION_ATTEMPT and the per
   '[ $RC -eq 0 ] && [ "$(stored PROVISION_ID)" = "$PID" ] && [ "$(stored PROVISION_ATTEMPT)" = 1 ] && [ "$(stored PROVISION_CALLBACK_TOKEN)" = "$TOKEN" ]'
 check "  ...SITE_NAME, ORGANIZER_EMAIL, LOCALNODES_TOPIC_TYPES (the manifest value as is), AI_PROVIDER and GEMINI_KEY_TIER" \
   '[ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored ORGANIZER_EMAIL)" = "$MANIFEST_EMAIL" ] && [ "$(stored LOCALNODES_TOPIC_TYPES)" = "$TOPICS_B64" ] && [ "$(stored AI_PROVIDER)" = gemini ] && [ "$(stored GEMINI_KEY_TIER)" = paid ]'
-check "  ...HOST_REPORT_EMAIL is stored as the manifest gave it (23 Q5)" '[ "$(stored HOST_REPORT_EMAIL)" = "$MANIFEST_HOST" ]'
+check "  ...HOST_REPORT_EMAIL is stored as the manifest gave it" '[ "$(stored HOST_REPORT_EMAIL)" = "$MANIFEST_HOST" ]'
 check "  ...LOCALNODES_COMMUNITY_SEED is stored exactly as received, unflagged like the page types (23-34)" \
   '[ "$(stored LOCALNODES_COMMUNITY_SEED)" = "$SEED_B64" ] && ! grep -qF -- "$SEED_B64" <<<"$OUT" && ! grep -qF -- "$SEED_B64" "$WORK/state/requests.log"'
 check "  ...a platform AI key keeps today's repository-secret GEMINI_API_KEY and sets no OpenRouter key" \
@@ -444,6 +554,15 @@ check "a manual demo run sets no sign-up values and makes no ack call" \
 check "  ...and writes neither AI_BACKUP_PROVIDER nor AI_BACKUP_MODEL (23-40)" \
   '! written AI_BACKUP_PROVIDER && ! written AI_BACKUP_MODEL'
 check "  ...and keeps today's platform GEMINI_API_KEY" '[ "$(stored GEMINI_API_KEY)" = g ]'
+check "  ...and writes no COMMUNITY_TEMPLATE" '! written COMMUNITY_TEMPLATE'
+
+echo "# Configure environment variables: the community template"
+reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" COMMUNITY_TEMPLATE=housing_coop
+check "a sign-up run with a community template writes COMMUNITY_TEMPLATE once and reads it back" \
+  '[ $RC -eq 0 ] && [ "$(grep -cE "^  (Created|Updated) COMMUNITY_TEMPLATE$" <<<"$OUT")" -eq 1 ] && [ "$(grep -cE "^PATCH .*/envs COMMUNITY_TEMPLATE$" "$WORK/state/requests.log")" -eq 1 ] && [ "$(grep -cE "^POST .*/envs COMMUNITY_TEMPLATE$" "$WORK/state/requests.log")" -le 1 ] && [ "$(stored COMMUNITY_TEMPLATE)" = housing_coop ] && grep -qx "  Verified COMMUNITY_TEMPLATE" <<<"$OUT"'
+reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" COMMUNITY_TEMPLATE=
+check "a sign-up run without a community template writes no COMMUNITY_TEMPLATE and verifies none" \
+  '[ $RC -eq 0 ] && ! written COMMUNITY_TEMPLATE && ! grep -q "Verified COMMUNITY_TEMPLATE" <<<"$OUT"'
 
 echo "# Configure environment variables: an organizer's own key is write-once (D-21, Pitfall 13)"
 reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" AI_PROVIDER=openrouter AI_KEY_SOURCE=organizer AI_KEY="$KEYV"
@@ -535,7 +654,7 @@ check "update_env sends the secret flag as is_shown_once and is_literal" 'grep -
 check "the workflow never calls update_env for the shared callback secret" '! grep -qx PROVISION_CALLBACK_SECRET <<<"$UPDATE_NAMES"'
 check "the Configure step no longer reads the shared secret" '! step_script "Configure environment variables" | grep -q PROVISION_CALLBACK_SECRET'
 check "every Phase 23 container name is set by update_env" \
-  '[ -z "$(for n in PROVISION_ID PROVISION_ATTEMPT PROVISION_CALLBACK_TOKEN SITE_NAME ORGANIZER_EMAIL LOCALNODES_TOPIC_TYPES LOCALNODES_COMMUNITY_SEED AI_PROVIDER GEMINI_KEY_TIER GEMINI_API_KEY OPENROUTER_API_KEY AI_BACKUP_PROVIDER AI_BACKUP_MODEL HOST_REPORT_EMAIL; do grep -qx "$n" <<<"$UPDATE_NAMES" || echo "$n"; done)" ]'
+  '[ -z "$(for n in PROVISION_ID PROVISION_ATTEMPT PROVISION_CALLBACK_TOKEN SITE_NAME ORGANIZER_EMAIL LOCALNODES_TOPIC_TYPES LOCALNODES_COMMUNITY_SEED AI_PROVIDER GEMINI_KEY_TIER GEMINI_API_KEY OPENROUTER_API_KEY AI_BACKUP_PROVIDER AI_BACKUP_MODEL HOST_REPORT_EMAIL COMMUNITY_TEMPLATE; do grep -qx "$n" <<<"$UPDATE_NAMES" || echo "$n"; done)" ]'
 
 echo "# Retry reuses its own half-made app (D-15, D-18, Pitfall 5)"
 RETRY=(PROVISION_ID_INPUT="$PID" ATTEMPT_INPUT=2)
@@ -605,7 +724,7 @@ seed_old_secrets; run_step "Configure environment variables" ok "${SIGNUP[@]}"
 check "a fresh app (no REUSE) always gets newly generated secrets" \
   '[ $RC -eq 0 ] && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]] && [[ "$(stored DRUPAL_ADMIN_PASS)" =~ ^[0-9a-f]{32}$ ]]'
 
-echo "# Deadlines fail the run (Codex re-check 2)"
+echo "# Deadlines fail the run"
 reset_state; run_step "Wait for deployment" ok
 check "deployment that finishes passes" '[ $RC -eq 0 ] && grep -q "Deployment complete" <<<"$OUT"'
 reset_state; run_step "Wait for deployment" deploy_stuck

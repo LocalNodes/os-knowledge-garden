@@ -47,6 +47,8 @@ Install and redeploy flow:
 - **Fresh install:** `site:install social` → `drush en localnodes_platform` → `drush cr`. Module `config/install` is applied on enable.
 - **Existing install (redeploy):** `drush updatedb -y && drush cr`. Database updates and a cache rebuild only, with no config import, so a redeploy is safe for a running instance.
 - **Optional Web3:** the `localnodes_web3` submodule is enabled only when `WEB3_ENABLED=true` (default off). Its RPC defaults to Pocket Network's keyless public portal; override per instance with `ETHEREUM_PROVIDER_URL`.
+  - **Sign-up sites with practice funds:** the provision workflow's `web3` input (`off` by default, or `practice`) sets `WEB3_ENABLED=true`, Ethereum Sepolia (`SIWE_CHAIN_ID=11155111`, a public keyless RPC) and `WAAP_ENVIRONMENT=production` for a practice pilot; `off` writes `WEB3_ENABLED=false`. Test-network money only.
+  - On a sign-up site with web3 on, the entrypoint runs `drush localnodes-web3:check` (modules on, the Sepolia network on, the gas sponsor set up, reachable and its balance readable) before the install marker and before every ready. A failure sends `failed` with `web3_enable_failed` or `web3_check_failed` and no ready; a restart checks again. The ready callback carries the relayer's public address (`relayer_address`), which the sign-up app stores for whoever funds the relayer. Manual runs and demos are not checked.
 
 ## Deployment
 

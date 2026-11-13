@@ -6,6 +6,7 @@ namespace Drupal\Tests\localnodes_platform\Kernel;
 
 use Drupal\Core\Database\Database;
 use Drupal\Core\Site\Settings;
+use Drupal\file\Entity\File;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\key\Entity\Key;
 use Drupal\localnodes_platform\Export\SiteExporter;
@@ -653,6 +654,40 @@ final class SiteExportTest extends KernelTestBase {
     $folder = $this->unpack($other['path']);
     $list = new Process(['tar', '-tzf', $folder . '/private-files.tar.gz']); $list->mustRun();
     $this->assertStringNotContainsString('site-exports', $list->getOutput());
+  }
+
+
+  /**
+   * A file used only in a message stays out, whatever its scheme.
+   *
+   * secret:// keeps its files in the private folder, so a message-only file
+   * there is left out of the private files like one under private://. A file
+   * also used outside messages stays in.
+   */
+  public function testMessageOnlyFilesStayOutOnEveryScheme(): void {
+    $this->installEntitySchema('file');
+    $this->installSchema('file', ['file_usage']);
+    mkdir($this->base . '/private/messages', 0775, TRUE);
+    $files = [
+      'secret://messages/secret-only.txt' => ['SECRET-SCHEME-MESSAGE-CANARY', ['private_message']],
+      'private://messages/private-only.txt' => ['PRIVATE-SCHEME-MESSAGE-CANARY', ['private_message']],
+      'private://messages/shared.txt' => ['SHARED-FILE-STAYS', ['private_message', 'node']],
+    ];
+    $usage = $this->container->get('database');
+    foreach ($files as $uri => [$text, $types]) {
+      file_put_contents($this->base . '/private/' . substr($uri, strpos($uri, '://') + 3), $text);
+      $file = File::create(['uri' => $uri, 'filename' => basename($uri), 'status' => 1]);
+      $file->save();
+      foreach ($types as $type) {
+        $usage->insert('file_usage')->fields(['fid' => $file->id(), 'module' => 'test', 'type' => $type, 'id' => 1, 'count' => 1])->execute();
+      }
+    }
+    $seen = [];
+    $result = $this->exporter()->export($this->base . '/exports', $this->dumper($seen));
+    $everything = $this->everything($this->unpack($result['path']));
+    $this->assertStringNotContainsString('SECRET-SCHEME-MESSAGE-CANARY', $everything);
+    $this->assertStringNotContainsString('PRIVATE-SCHEME-MESSAGE-CANARY', $everything);
+    $this->assertStringContainsString('SHARED-FILE-STAYS', $everything);
   }
 
 }

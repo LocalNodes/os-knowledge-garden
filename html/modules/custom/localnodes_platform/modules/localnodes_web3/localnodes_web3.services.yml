@@ -1,0 +1,57 @@
+services:
+  localnodes_web3.export_proof:
+    class: Drupal\localnodes_web3\Export\ExportSignatureProof
+    arguments: ['@localnodes_platform.export_access', '@siwe_login.nonce_store', '@localnodes_web3.export_validator', '@localnodes_web3.export_detector', '@localnodes_web3.export_tempstore', '@lock', '@datetime.time', '@config.factory', '@?siwe_login.attachment_history']
+  localnodes_web3.export_silent_logger:
+    class: Drupal\localnodes_web3\Export\SilentLoggerFactory
+  localnodes_web3.export_detector:
+    class: Drupal\siwe_login\Service\ContractWalletDetector
+    arguments: ['@http_client', '@config.factory', '@siwe_login.rpc_provider_manager', '@localnodes_web3.export_silent_logger']
+  localnodes_web3.export_validator:
+    class: Drupal\siwe_login\Service\SiweMessageValidator
+    arguments: ['@localnodes_web3.export_silent_logger', '@datetime.time', '@config.factory', '@siwe_login.ens_resolver', '@siwe_login.message_parser', '@siwe_login.nonce_store', '@siwe_login.signature_verifier', '@localnodes_web3.export_detector']
+  localnodes_web3.export_tempstore:
+    class: Drupal\Core\TempStore\PrivateTempStoreFactory
+    arguments: ['@keyvalue.expirable', '@lock', '@current_user', '@request_stack', 300]
+  localnodes_web3.export_proof_logger_factory:
+    class: Drupal\localnodes_web3\Export\ExportProofLoggerFactory
+    decorates: logger.factory
+    arguments: ['@.inner']
+  localnodes_web3.signature_session:
+    class: Drupal\localnodes_web3\SignatureSession
+    arguments: ['@user.data', '@entity_type.manager', '@request_stack', '@siwe_login.nonce_store', '@localnodes_web3.signature_session_validator', '@localnodes_web3.signature_session_tempstore', '@lock', '@datetime.time', '@config.factory']
+  # A validator of its own whose failures stay out of the site log, like the
+  # export one: a wrong signature here is not a sign-in attempt.
+  localnodes_web3.signature_session_validator:
+    class: Drupal\siwe_login\Service\SiweMessageValidator
+    arguments: ['@localnodes_web3.export_silent_logger', '@datetime.time', '@config.factory', '@siwe_login.ens_resolver', '@siwe_login.message_parser', '@siwe_login.nonce_store', '@siwe_login.signature_verifier', '@localnodes_web3.export_detector']
+  localnodes_web3.signature_session_tempstore:
+    class: Drupal\Core\TempStore\PrivateTempStoreFactory
+    arguments: ['@keyvalue.expirable', '@lock', '@current_user', '@request_stack', 300]
+  localnodes_web3.signature_guard:
+    class: Drupal\localnodes_web3\EventSubscriber\SignatureGuard
+    arguments: ['@localnodes_web3.signature_session', '@current_user', '@?group_relation_type.manager', '@?bare_html_page_renderer', '@?router.route_provider']
+    tags:
+      - { name: event_subscriber }
+  # Marks the group fund and vote routes that need a proven session
+  # (ProofRoutes); the guard above enforces it.
+  localnodes_web3.signature_proof_routes:
+    class: Drupal\localnodes_web3\Routing\SignatureProofRoutes
+    arguments: ['@entity_type.manager', !service_closure '@?jsonapi.resource_type.repository']
+    tags:
+      - { name: event_subscriber }
+  localnodes_web3.flood_allowance:
+    class: Drupal\localnodes_web3\FloodAllowance
+    arguments: ['@flood', '@lock', '@request_stack']
+  localnodes_web3.email_link_switch:
+    class: Drupal\localnodes_web3\EventSubscriber\EmailLinkSwitch
+    tags:
+      - { name: event_subscriber }
+  localnodes_web3.email_link_mailer:
+    class: Drupal\localnodes_web3\EmailLinkMailer
+    arguments: ['@localnodes_web3.flood_allowance', '@config.factory', '@plugin.manager.mail', '@datetime.time', '@logger.channel.localnodes_web3']
+    tags:
+      - { name: needs_destruction }
+  logger.channel.localnodes_web3:
+    parent: logger.channel_base
+    arguments: ['localnodes_web3']

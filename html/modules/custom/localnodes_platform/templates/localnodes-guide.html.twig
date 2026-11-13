@@ -37,8 +37,11 @@
 
   <ol class="localnodes-guide__steps">
     <li>
-      <h2>{% trans %}Set your password{% endtrans %}</h2>
-      <p>{% trans %}Open the sign-in link in your welcome email. Choose Log in. Set your password, then choose Save.{% endtrans %}</p>
+      <h2>{% trans %}Sign in{% endtrans %}</h2>
+      <p>{% trans %}Open the sign-in link in your welcome email. Choose Log in. Choose a password for your next visits, then choose Save.{% endtrans %}</p>
+      {% if sign_in_button %}
+        <p>{% trans %}You can also use the Sign in button with the same email address. We email you a link that adds that way of signing in to your account. Open it in the same browser.{% endtrans %}</p>
+      {% endif %}
     </li>
     <li>
       <h2>{% trans %}Open your group{% endtrans %}</h2>
@@ -67,7 +70,11 @@
     <li>
       <h2>{% trans %}Bring in your members{% endtrans %}</h2>
       <p>{% trans %}To invite people, open your group's {{ members_link }}, choose Add members, then Invite users. Enter their email addresses, or their names if they are already on the site, and press "Send your invite(s) by email".{% endtrans %}</p>
-      <p>{% trans %}Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After setting a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.{% endtrans %}</p>
+      {% if sign_in_button %}
+        <p>{% trans %}Each person gets an email. Someone new to the site uses the Sign in button and gives the address the invitation went to, then opens the link we email them in the same browser. They then see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.{% endtrans %}</p>
+      {% else %}
+        <p>{% trans %}Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After choosing a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.{% endtrans %}</p>
+      {% endif %}
       <p>{% trans %}Your members read the documents in the group's Topics, where each original file can be opened. To ask, they go to the group's page and use the AI assistant at the bottom right. It looks for answers in the pages each member can see.{% endtrans %}</p>
     </li>
   </ol>

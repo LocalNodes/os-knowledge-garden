@@ -152,11 +152,15 @@ test.describe('keyboard: behaviour', () => {
     await expect(list).toBeVisible();
     await page.keyboard.press('Tab');
     expect(await page.evaluate(() => !!document.activeElement?.closest('.navbar-secondary .hidden-list')), 'Tab goes from the button into the list').toBe(true);
-    // The list's links: palette A's muted text (#555555), at least 4.5:1 on white.
+    // The list's links: the muted text token (ln-overrides.css), at least 4.5:1 on white. The token is read from
+    // the page, not copied here, so a palette change does not leave this stale.
+    const muted = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ln-color-text-muted').trim());
+    expect(muted, '--ln-color-text-muted is defined on the page').toMatch(/^#[0-9a-f]{6}$/i);
+    const mutedRgb = `rgb(${[1, 3, 5].map((at) => parseInt(muted.slice(at, at + 2), 16)).join(', ')})`;
     const colours = await list.locator('a').evaluateAll((as) => as.map((a) => getComputedStyle(a).color));
     expect(colours.length).toBeGreaterThan(0);
     for (const colour of colours) {
-      expect(colour, 'overflow link colour').toBe('rgb(85, 85, 85)');
+      expect(colour, 'overflow link colour').toBe(mutedRgb);
     }
     await checkA11y(page, 'group-tabs', 'overflow-open', { include: ['.navbar-secondary'] });
     await page.keyboard.press('Escape');

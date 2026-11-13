@@ -519,27 +519,31 @@
   box-shadow: none;
 }
 
-/*
- * S6 Source box (22-20, UI-SPEC Part 8 S6): tinted card with a 4px teal
- * left rule, after the page text and before the comments.
- */
+/* The Source box, after the page text and before the comments, is a slip
+   of paper: where the page came from, set apart from the community's own
+   words by its warm fill and its label line. */
 .localnodes-import-source {
   max-width: 72ch;
   margin: var(--ln-space-lg, 24px) 0;
-  padding: var(--ln-space-lg, 24px);
-  border-left: 4px solid var(--ln-color-primary);
-  border-radius: var(--ln-radius-card, 8px);
-  background: var(--ln-color-tint);
-  color: var(--ln-color-text);
+  padding: var(--ln-space-md, 16px) 18px;
+  border: 1px solid var(--ln-color-paper-rule);
+  border-radius: 4px;
+  background: var(--ln-color-paper);
+  color: var(--ln-color-on-paper);
   font-size: 16px;
   line-height: 1.5;
 }
 
 .localnodes-import-source__heading {
   margin: 0 0 var(--ln-space-sm, 8px);
-  font-size: 20px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ln-color-paper-rule);
+  color: var(--ln-color-paper-label);
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.3;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
 }
 
 .localnodes-import-source p {
@@ -577,7 +581,7 @@
 }
 
 .localnodes-import-source__meta {
-  color: var(--ln-color-text-muted);
+  color: var(--ln-color-paper-label);
   font-size: 14px;
   font-weight: 400;
 }
@@ -1048,7 +1052,7 @@
 /* S6: a page with no readable text says so in its Source box (22-30). */
 .localnodes-import-source__no-text {
   margin: var(--ln-space-sm, 8px) 0 0;
-  color: var(--ln-color-text);
+  color: var(--ln-color-on-paper);
 }
 
 /* S2, S3: "Importing into ‹group name›" (22-30, Codex CX-04/07). Label

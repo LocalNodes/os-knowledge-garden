@@ -18,6 +18,7 @@ This folder is a full copy of the community site **{{site_name}}**, made on {{cr
 - **No keys or passwords from our server.** There is no AI key, mail key, token or database password in this copy. You bring your own (step 2).
 - **The search index (Solr) and the assistant's index (vector store).** Both are rebuilt from the database in step 6. The assistant's index needs your own AI key.
 - Caches, logs and sign-in sessions. Everyone signs in again with their usual password.
+{{messages_note}}
 
 A site restored or moved from this export uses its own new sign-in salt on first start, and members sign in again once with their usual passwords.
 
@@ -139,11 +140,20 @@ Open the site in a browser.
 
 Under *Administration › Reports › Status report*, an error for the Gemini data tier is expected until you set an AI key, and `GEMINI_KEY_TIER=paid` for a paid one.
 
-To sign in as the site's administrator without a password (for example before mail works):
+If you need the server recovery account (account 1), it may be blocked in the restored copy. From the server, temporarily unblock it and request a one-time sign-in link. Replace `community.example.org` with your site's address:
 
 ```sh
-drush user:login --uri=https://<your.domain.org>
+drush user:unblock --uid=1
+drush user:login --uid=1 --uri=https://community.example.org
 ```
+
+Open the printed link to do the recovery work. When finished, block the account again from the server; this also ends its open sign-in sessions:
+
+```sh
+drush user:block --uid=1
+```
+
+Use your ordinary member account for everyday work.
 
 ## 8. Finish moving in
 

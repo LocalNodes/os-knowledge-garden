@@ -72,6 +72,7 @@ class OrganizerWelcomeEmailBuilder extends EmailBuilderBase {
       '#theme' => 'localnodes_organizer_welcome',
       '#reset_url' => user_pass_reset_url($account, $options),
       '#guide_url' => Url::fromUserInput('/guide', ['absolute' => TRUE])->toString(),
+      '#sign_in_button' => \Drupal::moduleHandler()->moduleExists('localnodes_web3'),
     ]);
   }
 

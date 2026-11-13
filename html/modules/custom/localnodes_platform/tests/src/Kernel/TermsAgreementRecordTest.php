@@ -96,7 +96,7 @@ final class TermsAgreementRecordTest extends KernelTestBase {
   public function testSelfRegistrationRecordsTheTermsVersion(): void {
     $form_state = $this->submitRegister([
       'name' => 'new-member',
-      'mail' => 'new-member@mail.localnodes.xyz',
+      'mail' => 'new-member@example.invalid',
       'terms_consent' => 1,
     ]);
     $after = time();
@@ -145,7 +145,7 @@ final class TermsAgreementRecordTest extends KernelTestBase {
   public function testAdminCreatedAccountRecordsNothing(): void {
     $role = Role::create(['id' => 'people_admin', 'label' => 'People admin']);
     $role->grantPermission('administer users')->save();
-    $admin = User::create(['name' => 'people-admin', 'mail' => 'people-admin@mail.localnodes.xyz', 'status' => 1, 'roles' => ['people_admin']]);
+    $admin = User::create(['name' => 'people-admin', 'mail' => 'people-admin@example.invalid', 'status' => 1, 'roles' => ['people_admin']]);
     $admin->save();
     $this->container->get('current_user')->setAccount($admin);
 
@@ -155,7 +155,7 @@ final class TermsAgreementRecordTest extends KernelTestBase {
 
     $form_state = $this->submitRegister([
       'name' => 'added-member',
-      'mail' => 'added-member@mail.localnodes.xyz',
+      'mail' => 'added-member@example.invalid',
       'pass' => ['pass1' => 'a-long-test-password', 'pass2' => 'a-long-test-password'],
       'status' => 1,
       // Forged: the admin form has no box.
@@ -173,7 +173,7 @@ final class TermsAgreementRecordTest extends KernelTestBase {
   public function testFailedSignUpRecordsNothing(): void {
     $form_state = $this->submitRegister([
       'name' => 'not-agreed',
-      'mail' => 'not-agreed@mail.localnodes.xyz',
+      'mail' => 'not-agreed@example.invalid',
       // Box left unticked: a browser sends no value. Checkbox's value
       // callback reads any value that is sent, 0 included, as ticked.
     ]);
@@ -186,7 +186,7 @@ final class TermsAgreementRecordTest extends KernelTestBase {
    * The handler itself needs a saved account and a ticked box.
    */
   public function testHandlerNeedsTheTickedBoxAndAnAccount(): void {
-    $account = User::create(['name' => 'direct-member', 'mail' => 'direct-member@mail.localnodes.xyz', 'status' => 1]);
+    $account = User::create(['name' => 'direct-member', 'mail' => 'direct-member@example.invalid', 'status' => 1]);
     $account->save();
     $uid = (int) $account->id();
     $user_data = $this->container->get('user.data');

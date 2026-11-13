@@ -1,0 +1,9 @@
+manage everything enrollments:
+  title: 'Manage every event enrollment in the fixture'
+view published event enrollment entities:
+  title: 'View published event enrollments in the fixture'
+unknownfeaturepermission:
+  title: 'Access confidential records in the fixture'
+  restrict access: true
+late fixture ordinary access:
+  title: 'Use the ordinary fixture feature'

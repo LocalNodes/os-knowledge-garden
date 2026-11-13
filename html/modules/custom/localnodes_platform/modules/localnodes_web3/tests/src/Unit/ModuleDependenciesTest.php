@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
  * lives in safe_governance's submodule safe_governance_group, so
  * localnodes_web3 depends on it too. The WaaP connector is also a dependency,
  * so a fresh web3 site offers its Sign in button without a manual enable step.
+ * Export confirmation also requires the platform parent's owner-access service.
  *
  * Full dependency installation pulls in Open Social. This pins the complete
  * declaration; WaapWithWeb3Test checks the sign-in dependency and rendering.
@@ -27,6 +28,7 @@ final class ModuleDependenciesTest extends TestCase {
    * The modules a web3 site needs, as project:module.
    */
   private const EXPECTED = [
+    'localnodes_platform:localnodes_platform',
     'siwe_login:siwe_login',
     'siwe_login:siwe_login_waap',
     'safe_smart_accounts:safe_smart_accounts',
@@ -52,7 +54,7 @@ final class ModuleDependenciesTest extends TestCase {
   }
 
   /**
-   * Every web3 module is declared, each once, and nothing else.
+   * The platform parent and every web3 module are declared, each once.
    */
   public function testDependenciesAreExactlyTheWeb3Stack(): void {
     $dependencies = $this->dependencies();

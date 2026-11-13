@@ -1,0 +1,6 @@
+name: 'LocalNodes notice test'
+type: module
+description: 'Provides stored notice entities and digest rows for kernel tests.'
+package: Testing
+hidden: true
+core_version_requirement: ^10

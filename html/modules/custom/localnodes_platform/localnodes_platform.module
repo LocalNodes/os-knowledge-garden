@@ -11,11 +11,110 @@ use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\localnodes_platform\Form\TermsConsent;
 use Drupal\localnodes_platform\InviteLanding;
 use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
+use Drupal\localnodes_platform\SignInMethod;
 use Drupal\symfony_mailer\EmailInterface;
 use Drupal\symfony_mailer\Exception\SkipMailException;
+use Drupal\user\UserInterface;
+
+/** Implements hook_action_info_alter(). */
+function localnodes_platform_action_info_alter(array &$definitions): void {
+  foreach ([
+    'user_block_user_action' => \Drupal\localnodes_platform\Plugin\Action\BlockMember::class,
+    'user_unblock_user_action' => \Drupal\localnodes_platform\Plugin\Action\UnblockMember::class,
+  ] as $id => $class) {
+    if (isset($definitions[$id])) $definitions[$id]['class'] = $class;
+  }
+}
+
+/** Implements hook_form_FORM_ID_alter() for the existing People bulk form. */
+function localnodes_platform_form_views_form_user_admin_people_page_1_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  $actor = \Drupal::currentUser();
+  if ($actor->hasPermission('block users') && !$actor->hasPermission('administer users')) {
+    // The profile filters these controls in its last form alter. Finish after
+    // all alters so both scoped actions survive without any account-edit grant.
+    $form['#after_build'][] = '_localnodes_platform_member_status_actions_after_build';
+  }
+}
+
+/** Keeps native People controls and their configured labels. */
+function _localnodes_platform_member_status_actions_after_build(array $form, FormStateInterface $form_state): array {
+  if (!isset($form['header']['user_bulk_form']['action']['#options'])) return $form;
+  $select = &$form['header']['user_bulk_form']['action'];
+  $options = array_intersect_key($select['#options'], ['' => TRUE]);
+  foreach (\Drupal::entityTypeManager()->getStorage('action')->loadMultiple(['user_block_user_action', 'user_unblock_user_action']) as $id => $action) {
+    $options[$id] = $action->label();
+  }
+  $select['#options'] = $options;
+  return $form;
+}
+
+/** Implements hook_node_access(). */
+function localnodes_platform_node_access(EntityInterface $node, $operation, AccountInterface $account) {
+  return _localnodes_platform_private_house_access($node, (string) $operation, $account);
+}
+
+/** Implements hook_post_access(). */
+function localnodes_platform_post_access(EntityInterface $post, $operation, AccountInterface $account) {
+  return _localnodes_platform_private_house_access($post, (string) $operation, $account);
+}
+
+/** Implements hook_comment_access(). */
+function localnodes_platform_comment_access(EntityInterface $comment, $operation, AccountInterface $account) {
+  return _localnodes_platform_private_house_access($comment, (string) $operation, $account);
+}
+
+/** Prevents site roles and former authors from substituting for membership. */
+function _localnodes_platform_private_house_access(EntityInterface $entity, string $operation, AccountInterface $account): \Drupal\Core\Access\AccessResultInterface {
+  $result = \Drupal\Core\Access\AccessResult::neutral()->addCacheContexts(['user', 'user.roles', 'user.permissions'])
+    ->addCacheTags(['group_content_list', 'group_list'])
+    ->addCacheableDependency($entity);
+  if ((int) $account->id() === 1 || $entity->isNew()) return $result;
+  $entities = \Drupal::entityTypeManager();
+  foreach ($entities->getStorage('user_role')->loadMultiple($account->getRoles()) as $role) {
+    if ($role->isAdmin()) return $result;
+  }
+  if ($entity instanceof \Drupal\comment\CommentInterface) {
+    $parent = $entity->getCommentedEntity();
+    return $parent ? _localnodes_platform_private_house_access($parent, $operation, $account)->addCacheableDependency($entity) : $result;
+  }
+  if (!$entity instanceof \Drupal\Core\Entity\FieldableEntityInterface) return $result;
+  $groups = [];
+  $private = FALSE;
+  if ($entity->getEntityTypeId() === 'post') {
+    $private = $entity->hasField('field_visibility') && (string) $entity->get('field_visibility')->value === '3';
+    $gid = $entity->hasField('field_recipient_group') ? $entity->get('field_recipient_group')->target_id : NULL;
+    if ($gid && $entities->hasDefinition('group_content')) {
+      $group = $entities->getStorage('group')->load($gid);
+      if ($group) $groups[] = $group;
+    }
+  }
+  elseif ($entity->getEntityTypeId() === 'node') {
+    $private = $entity->hasField('field_content_visibility') && $entity->get('field_content_visibility')->value === 'group';
+    if ($entities->hasDefinition('group_content')) {
+      foreach ($entities->getStorage('group_content')->loadByEntity($entity) as $relationship) {
+        if ($group = $relationship->getGroup()) $groups[] = $group;
+      }
+    }
+  }
+  else return $result;
+  foreach ($groups as $group) {
+    $result->addCacheableDependency($group);
+    $private = $private || in_array($group->bundle(), ['closed_group', 'secret_group'], TRUE)
+      || ($group->hasField('field_flexible_group_visibility') && $group->get('field_flexible_group_visibility')->value === 'members');
+  }
+  if (!$private) return $result;
+  foreach ($groups as $group) {
+    // A page explicitly shared with several houses follows their ordinary
+    // grants: current membership in any related house can qualify.
+    if ($group->getMember($account)) return $result;
+  }
+  return \Drupal\Core\Access\AccessResult::forbidden('Private house content requires current house access.')
+    ->addCacheableDependency($result);
+}
 
 /**
  * Implements hook_page_attachments().
@@ -42,9 +141,21 @@ function localnodes_platform_page_attachments(array &$attachments) {
  * text field has no token filter, so this does the one substitution itself.
  * The name is admin input and is escaped. The build depends on system.site,
  * so a rename shows on the next render.
+ *
+ * It also leaves out Open Social's stock photo (a crowd of strangers on a
+ * waterfront, public://homepage-block.jpg), which the hero keeps stored
+ * because its image field is required. Without it the block shows on the
+ * theme's plain hero background. A community's own image still shows.
  */
 function localnodes_platform_block_content_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display): void {
-  if ($entity->bundle() !== 'hero_call_to_action_block' || !isset($build['field_text_block'])) {
+  if ($entity->bundle() !== 'hero_call_to_action_block') {
+    return;
+  }
+  if (isset($build['field_hero_image']) && $entity->hasField('field_hero_image')
+    && $entity->get('field_hero_image')->entity?->getFileUri() === 'public://homepage-block.jpg') {
+    unset($build['field_hero_image']);
+  }
+  if (!isset($build['field_text_block'])) {
     return;
   }
   $site = \Drupal::config('system.site');
@@ -68,11 +179,12 @@ function localnodes_platform_block_content_view_alter(array &$build, EntityInter
  * (theme weight 700) for its AA overrides to win at equal specificity, and
  * after ln-tokens.css (the generated custom properties it reads), so move both
  * into the theme group here, before the resolver sorts: ln-tokens.css at
- * CSS_THEME + 900, ln-overrides.css at CSS_THEME + 901.
+ * CSS_THEME + 900, ln-overrides.css at CSS_THEME + 901, and the app look,
+ * ln-app-look.css, last at CSS_THEME + 902.
  */
 function localnodes_platform_css_alter(array &$css, $assets, $language) {
   $module_path = \Drupal::service('extension.list.module')->getPath('localnodes_platform');
-  foreach (['css/ln-tokens.css' => 900, 'css/ln-overrides.css' => 901] as $file => $weight) {
+  foreach (['css/ln-tokens.css' => 900, 'css/ln-overrides.css' => 901, 'css/ln-app-look.css' => 902] as $file => $weight) {
     $path = $module_path . '/' . $file;
     if (isset($css[$path])) {
       $css[$path]['group'] = CSS_AGGREGATE_THEME;
@@ -151,6 +263,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'variables' => [
         'reset_url' => '',
         'guide_url' => '',
+        'sign_in_button' => FALSE,
       ],
       'template' => 'localnodes-organizer-welcome',
       'path' => $path . '/templates/email',
@@ -167,6 +280,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
         'get_help_link' => '',
         'get_help_url' => '',
         'assistant_name' => NULL,
+        'sign_in_button' => FALSE,
       ],
       'template' => 'localnodes-guide',
       'path' => $path . '/templates',
@@ -324,9 +438,6 @@ function _localnodes_platform_flat_tokens(): array {
  *   block where HTML escaping would break a quoted family name.
  * - ln_site_name: the community's name (system.site), a plain string the
  *   template autoescapes.
- * - ln_wallet_line: the one optional line in the organizer-created welcome
- *   mail on Web3 sites (Tom, card 6), empty everywhere else. Web3 is on when
- *   the localnodes_web3 submodule is enabled.
  *
  * It never sets `logo`, `site_name`, `site_slogan` or `site_sub_slogan`:
  * social_swiftmail's preprocess runs after this one (module order is
@@ -340,14 +451,6 @@ function localnodes_platform_preprocess_email(array &$variables): void {
   $variables['ln_radius_control'] = $tokens['radius']['control'] ?? '6px';
   $variables['ln_font'] = preg_replace('/[^A-Za-z0-9 ,_-]/', '', (string) ($tokens['font']['sans'] ?? '')) ?: 'sans-serif';
   $variables['ln_site_name'] = (string) \Drupal::config('system.site')->get('name');
-
-  $variables['ln_wallet_line'] = '';
-  $email = $variables['email'] ?? NULL;
-  if ($email instanceof EmailInterface
-    && $email->getSubType() === 'register_admin_created'
-    && \Drupal::moduleHandler()->moduleExists('localnodes_web3')) {
-    $variables['ln_wallet_line'] = t('You can connect a wallet later from your account page.');
-  }
 }
 
 /**
@@ -392,6 +495,51 @@ function localnodes_platform_form_user_register_form_alter(array &$form, FormSta
 }
 
 /**
+ * Implements hook_modules_installed().
+ */
+function localnodes_platform_modules_installed(array $modules, $is_syncing): void {
+  \Drupal\localnodes_platform\Mail\NoticeMailTemplates::configure();
+  // Feature installers can add site-role grants after the platform installs.
+  \Drupal::moduleHandler()->loadInclude('localnodes_platform', 'install');
+  _localnodes_platform_protect_private_groups();
+}
+
+/**
+ * Implements hook_group_content_predelete().
+ */
+function localnodes_platform_group_content_predelete(\Drupal\group\Entity\GroupRelationshipInterface $relationship): void {
+  if ($relationship->getPluginId() === 'group_membership') {
+    try {
+      \Drupal::service('localnodes_platform.group_notice_cleanup')->remove((int) $relationship->getEntityId(), (int) $relationship->getGroupId());
+    }
+    catch (\Throwable $exception) {
+      // Cleanup must never prevent a member from leaving. Log no member text.
+      \Drupal::logger('localnodes_platform')->warning('Waiting group notice cleanup failed (@class, code @code).', [
+        '@class' => get_class($exception),
+        '@code' => $exception->getCode(),
+      ]);
+    }
+  }
+}
+
+/**
+ * Implements hook_user_login().
+ *
+ * Records how this session signed in (see SignInMethod), so that screens
+ * which need the account holder, not only their inbox, can tell.
+ */
+function localnodes_platform_user_login(UserInterface $account): void {
+  $request = \Drupal::request();
+  if (!$request->hasSession()) {
+    return;
+  }
+  // The account and its wallet address at this moment, so a later check can
+  // tell whether the signature that signed in was this account's wallet.
+  $address = $account->hasField('field_ethereum_address') ? $account->get('field_ethereum_address')->value : NULL;
+  SignInMethod::record($request->getSession(), \Drupal::routeMatch()->getRouteName(), \Drupal::time()->getRequestTime(), (int) $account->id(), is_string($address) ? $address : NULL);
+}
+
+/**
  * Implements hook_form_FORM_ID_alter() for user_form.
  *
  * A member invited by email signs in for the first time from the welcome
@@ -411,9 +559,58 @@ function localnodes_platform_form_user_form_alter(array &$form, FormStateInterfa
 }
 
 /**
+ * Implements hook_emailfrequency_info_alter().
+ */
+function localnodes_platform_emailfrequency_info_alter(array &$definitions): void {
+  $classes = [
+    'immediately' => \Drupal\localnodes_platform\Mail\NoticeImmediateFrequency::class,
+    'daily' => \Drupal\localnodes_platform\Mail\NoticeDeferredFrequency::class,
+    'weekly' => \Drupal\localnodes_platform\Mail\NoticeDeferredFrequency::class,
+  ];
+  foreach ($classes as $id => $class) {
+    if (isset($definitions[$id])) {
+      $definitions[$id]['class'] = $class;
+    }
+  }
+}
+
+/**
+ * Implements hook_queue_info_alter().
+ */
+function localnodes_platform_queue_info_alter(array &$definitions): void {
+  if (isset($definitions['activity_digest_worker'])) {
+    $definitions['activity_digest_worker']['class'] = \Drupal\localnodes_platform\Mail\NoticeDigestWorker::class;
+  }
+}
+
+/**
+ * Implements hook_group_content_insert().
+ */
+function localnodes_platform_group_content_insert(\Drupal\group\Entity\GroupRelationshipInterface $relationship): void {
+  if ($relationship->getPluginId() === 'group_membership') {
+    \Drupal::service('localnodes_platform.group_notice_cleanup')->clearDeparture((int) $relationship->getEntityId(), (int) $relationship->getGroupId());
+  }
+}
+
+
+/**
  * Implements hook_file_download().
  */
 function localnodes_platform_file_download($uri) {
   $target = rawurldecode((string) \Drupal\Core\StreamWrapper\StreamWrapperManager::getTarget($uri));
   if (preg_match('#(?:^|/)(?:site-exports|\.localnodes)(?:/|$)#', $target)) return -1;
+}
+
+
+/** Implements hook_event_enrollment_access(). */
+function localnodes_platform_event_enrollment_access(EntityInterface $enrollment, $operation, AccountInterface $account) {
+  return \Drupal::service('localnodes_platform.house_enrollment_access')->entityAccess($enrollment, $account);
+}
+
+
+/** Implements hook_views_plugins_filter_alter(). */
+function localnodes_platform_views_plugins_filter_alter(array &$plugins): void {
+  if (isset($plugins['activity_filter_personalised_homepage'])) {
+    $plugins['activity_filter_personalised_homepage']['class'] = \Drupal\localnodes_platform\Plugin\views\filter\HouseActivityHomepageFilter::class;
+  }
 }

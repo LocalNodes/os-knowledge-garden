@@ -354,4 +354,54 @@ final class SiteExportButtonTest extends KernelTestBase {
     $this->assertSame([], $this->container->get('localnodes_platform.export_manager')->current());
   }
 
+  /**
+   * The screen, the queue and the drush export, with or without messages.
+   *
+   * @return array
+   *   'job' => what request() returned or the refusal's message, 'page' =>
+   *   the built screen, 'export' => the export's message.
+   */
+  private function tryEveryWay(User $owner): array {
+    $now = time();
+    $this->container->get('current_user')->setAccount($owner);
+    $page = \Drupal\localnodes_platform\Form\SiteExportForm::create($this->container)->buildForm([], new \Drupal\Core\Form\FormState());
+    try { $job = $this->manager($now)->request((int) $owner->id()); }
+    catch (\RuntimeException $e) { $job = $e->getMessage(); }
+    // A dumper that stops the run once the export has got that far.
+    $dumper = function (): void { throw new \LogicException('the export started'); };
+    try { $this->container->get('localnodes_platform.site_exporter')->export($this->base . '/exports', $dumper); $export = 'finished'; }
+    catch (\Throwable $e) { $export = $e->getMessage(); }
+    return ['job' => $job, 'page' => $page, 'export' => $export];
+  }
+
+  public function testExportStartsWhileDirectMessagesAreOff(): void {
+    $owner = $this->owner();
+    $this->assertFalse($this->container->get('module_handler')->moduleExists('private_message'));
+    $result = $this->tryEveryWay($owner);
+    $this->assertIsArray($result['job']);
+    $this->assertSame('queued', $result['job']['status']);
+    $this->assertSame($result['job']['id'], $this->container->get('localnodes_platform.export_manager')->current()['id']);
+    $this->assertArrayHasKey('screen', $result['page']);
+    $this->assertArrayNotHasKey('off', $result['page']);
+    $this->assertStringContainsString('the export started', $result['export']);
+  }
+
+  public function testExportRefusesAndWritesNothingWhileDirectMessagesAreOn(): void {
+    $owner = $this->owner();
+    $this->enableModules(['private_message']);
+    $this->assertTrue($this->container->get('module_handler')->moduleExists('private_message'));
+    $sentence = 'Site export is not available while direct messages are switched on.';
+    $result = $this->tryEveryWay($owner);
+    $this->assertSame($sentence, $result['job']);
+    $this->assertSame($sentence, $result['export']);
+    $this->assertStringContainsString($sentence, (string) $result['page']['off']['#markup']);
+    $this->assertArrayNotHasKey('screen', $result['page']);
+    $this->assertArrayNotHasKey('actions', $result['page']);
+    // No job record, no lock file, no export folder, no destination.
+    $this->assertSame([], $this->container->get('localnodes_platform.export_manager')->current());
+    $this->assertSame(0, (int) $this->container->get('database')->select('localnodes_site_export')->countQuery()->execute()->fetchField());
+    $this->assertSame(['.', '..'], scandir($this->base . '/private'));
+    $this->assertDirectoryDoesNotExist($this->base . '/exports');
+  }
+
 }

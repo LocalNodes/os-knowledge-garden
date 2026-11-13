@@ -109,7 +109,8 @@ function localnodes_import_theme(): array {
         'report_url' => NULL,
       ],
     ],
-    // The mail a problem report sends to the stewards and the host (23-05).
+    // The mail a problem report sends to the stewards and, for a public page,
+    // to the host.
     // Printed inside the LocalNodes mail wrapper.
     'localnodes_import_report_mail' => [
       'variables' => [
@@ -119,6 +120,16 @@ function localnodes_import_theme(): array {
         'contact' => '',
         'review_url' => '',
         'takedown_url' => '',
+      ],
+    ],
+    // The host's alert for a report on a page a signed-out visitor can't
+    // see. It carries nothing from the page or the reporter.
+    'localnodes_import_report_host_alert' => [
+      'variables' => [
+        'site_name' => '',
+        'reported_at' => '',
+        'nid' => 0,
+        'organizers_reached' => FALSE,
       ],
     ],
     // The import batch's progress bar (S4, 22-17): same ARIA as the JS bar
@@ -500,20 +511,40 @@ function _localnodes_import_field_string(NodeInterface $node, string $field_name
 /**
  * Implements hook_mail().
  *
- * report_problem (23-05): the mail a problem report sends to a site manager,
- * a group manager and the host. The words are the report notification table
- * of 23-UI-SPEC.md. Reporter text (details, address) is printed by the
- * template, which escapes it; nothing from the reporter is rendered as HTML
- * (T-23-19). Sent by ReportProblemForm, one mail per person.
+ * report_problem: the mail a problem report sends to a site manager, a
+ * group manager, and the host when the page is public. Reporter text
+ * (details, address) is printed by the template, which escapes it; nothing
+ * from the reporter is rendered as HTML. Sent by ReportProblemForm, one mail
+ * per person.
+ *
+ * report_host_alert: what the host gets instead when a signed-out visitor
+ * can't see the page. The site's name, the time, the page's id and whether
+ * an organizer got the report; never the page's title or address, the
+ * reason, the details or the reporter's address.
  *
  * @param string $key
  *   The mail key.
  * @param array $message
  *   The message array.
  * @param array $params
- *   nid, reason (key), details, contact.
+ *   report_problem: nid, reason (key), details, contact.
+ *   report_host_alert: nid, organizers_reached, reported_at (a timestamp).
  */
 function localnodes_import_mail($key, &$message, $params): void {
+  if ($key === 'report_host_alert') {
+    $site_name = (string) \Drupal::config('system.site')->get('name');
+    $message['subject'] = PlainTextOutput::renderFromHtml(t('A page was reported on @site', ['@site' => $site_name]));
+    $build = [
+      '#theme' => 'localnodes_import_report_host_alert',
+      '#site_name' => $site_name,
+      // In the site's time zone, not the reporter's.
+      '#reported_at' => \Drupal::service('date.formatter')->format((int) ($params['reported_at'] ?? 0), 'custom', 'F j, Y, g:i a T', \Drupal::config('system.date')->get('timezone.default') ?: 'UTC'),
+      '#nid' => (int) ($params['nid'] ?? 0),
+      '#organizers_reached' => !empty($params['organizers_reached']),
+    ];
+    $message['body'][] = \Drupal::service('renderer')->renderInIsolation($build);
+    return;
+  }
   if ($key !== 'report_problem') {
     return;
   }

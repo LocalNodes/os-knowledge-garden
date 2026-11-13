@@ -1,0 +1,11 @@
+# Test only. The guard answers before any controller runs, so the
+# controller here is never reached by a refused request.
+localnodes_web3_proof_test.marked:
+  path: '/localnodes-proof-test'
+  defaults:
+    _controller: '\Drupal\system\Controller\Http4xxController::on404'
+  requirements:
+    _access: 'TRUE'
+  options:
+    _localnodes_signature_proof: true
+    no_cache: TRUE

@@ -16,13 +16,13 @@
   --ln-color-primary-strong: #134e4a;
   --ln-color-link: #115e59;
   --ln-color-highlight: #ffc142;
-  --ln-color-on-highlight: #343434;
-  --ln-color-text: #343434;
-  --ln-color-text-muted: #555555;
-  --ln-color-border-control: #8a8a8a;
-  --ln-color-divider: #e6e6e6;
+  --ln-color-on-highlight: #27272a;
+  --ln-color-text: #27272a;
+  --ln-color-text-muted: #555b57;
+  --ln-color-border-control: #828784;
+  --ln-color-divider: #e2e5e3;
   --ln-color-surface: #ffffff;
-  --ln-color-canvas: #f3f3f3;
+  --ln-color-canvas: #f4f5f4;
   --ln-color-tint: #f0fdfa;
   --ln-color-danger: #b42318;
   --ln-color-danger-bg: #fef3f2;
@@ -35,6 +35,16 @@
   --ln-color-on-primary: #ffffff;
   --ln-color-on-danger: #ffffff;
   --ln-color-danger-strong: #991e14;
+  --ln-color-text-strong: #18181b;
+  --ln-color-raised: #f4f4f5;
+  --ln-color-tint-line: #c5ece5;
+  --ln-color-cite: #fbbf24;
+  --ln-color-on-cite: #1c1403;
+  --ln-color-paper: #f4eedf;
+  --ln-color-on-paper: #26221c;
+  --ln-color-paper-label: #5a5348;
+  --ln-color-paper-rule: #d9d0bb;
+  --ln-color-mark: #fde68a;
 
   /* Spacing scale (multiples of 4) */
   --ln-space-xs: 4px;

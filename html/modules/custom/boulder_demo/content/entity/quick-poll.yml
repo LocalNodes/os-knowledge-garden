@@ -1,0 +1,25 @@
+---
+# One quick poll in the busiest group. Answers come from group members only.
+# The member a visitor is most likely to sign in as has not answered, so the
+# question is still open for them.
+5f5a1968-4fb2-407b-b142-1e91302ab97e:
+  uuid: 5f5a1968-4fb2-407b-b142-1e91302ab97e
+  question: Where should the spring creek cleanup start?
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  group: aabb1122-3344-4556-6778-899001122334
+  created: -2 day|10:00
+  choices:
+    - Kingbird Park
+    - Cottonwood Green bandshell
+    - Pika Creek confluence
+  answers:
+    - uid: 11223344-5566-4778-8990-aabbccddeef0
+      choice: 0
+    - uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+      choice: 2
+    - uid: 44556677-8899-400a-abb0-cddeeff01223
+      choice: 0
+    - uid: 55667788-9900-4aab-bcc0-ddeeff012334
+      choice: 1
+    - uid: 22334455-6677-4889-90aa-bbccddeeff01
+      choice: 0

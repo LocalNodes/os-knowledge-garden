@@ -43,6 +43,12 @@ final class OrganizerWelcomeTest extends LocalNodesEmailKernelTestBase {
     parent::setUp();
     // Open Social ships this role; the command gives it to the new account.
     Role::create(['id' => 'sitemanager', 'label' => 'Site manager'])->save();
+    // A real installed site reserves uid1 for the host before provisioning.
+    User::create(['uid' => 1, 'name' => 'host', 'mail' => 'host@mail.localnodes.xyz', 'status' => 1])->save();
+    if (function_exists('_localnodes_platform_block_host_account')) {
+      _localnodes_platform_block_host_account();
+      $this->assertTrue(User::load(1)->isBlocked());
+    }
     _localnodes_platform_configure_email();
     putenv('ORGANIZER_EMAIL=' . self::ORGANIZER_EMAIL);
     putenv('ORGANIZER_NAME=' . static::SITE_NAME);
@@ -101,9 +107,10 @@ final class OrganizerWelcomeTest extends LocalNodesEmailKernelTestBase {
     foreach ([
       // It says what the site is ready for: the organizer's documents.
       "Your community's site is ready for you to add your documents.",
-      'Set my password',
+      'Use the button to sign in. It works once. It opens a page where you choose a password for your next visits.',
+      'Sign in</a>',
       'Your first three steps',
-      'Set your password.',
+      'Sign in.',
       'Open your group.',
       'Upload your first files.',
       'Read the organizer guide',
@@ -184,6 +191,34 @@ final class OrganizerWelcomeTest extends LocalNodesEmailKernelTestBase {
     $this->assertSame(1, (int) $count);
     // An account that was already there keeps the roles it had (T-23-14).
     $this->assertFalse($this->organizerAccount()->hasRole('sitemanager'));
+  }
+
+  /** @dataProvider privilegedExistingAccounts */
+  public function testPrivilegedAccountIsNeverWelcomedAsOrganizer(string $kind): void {
+    if ($kind === 'host') {
+      $existing = User::load(1);
+      $existing->setEmail(self::ORGANIZER_EMAIL)->save();
+    }
+    else {
+      $role_id = $kind === 'administrator' ? 'administrator' : 'custom_administrator';
+      Role::create(['id' => $role_id, 'label' => 'Host administrator', 'is_admin' => TRUE])->save();
+      $existing = User::create(['name' => 'host-administrator', 'mail' => self::ORGANIZER_EMAIL, 'status' => 1, 'roles' => [$role_id]]);
+      $existing->save();
+    }
+    $storage = $this->container->get('entity_type.manager')->getStorage('user');
+    // Compare SQL-loaded representations on both sides, including scalar types.
+    $before = $storage->loadUnchanged($existing->id())->toArray();
+    [$code, $printed] = $this->runCommand();
+    $this->assertSame(1, $code);
+    $this->assertSame('The organizer account cannot be a host or administrator account.', trim($printed));
+    $this->noMail();
+    $this->assertSame($before, $storage->loadUnchanged($existing->id())->toArray());
+    $this->assertEmpty($this->container->get('state')->get(self::SENT_KEY));
+    $this->assertEmpty($this->container->get('state')->get('localnodes.organizer_uid'));
+  }
+
+  public static function privilegedExistingAccounts(): array {
+    return [['host'], ['administrator'], ['custom administrator']];
   }
 
   /**

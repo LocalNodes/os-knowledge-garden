@@ -55,14 +55,14 @@ final class GuidePageTest extends KernelTestBase {
    * follows the stock invite screens and a new member's walk through them.
    */
   private const STEPS = [
-    ['Set your password', ["Open the sign-in link in your welcome email. Choose Log in. Set your password, then choose Save."]],
+    ['Sign in', ["Open the sign-in link in your welcome email. Choose Log in. Choose a password for your next visits, then choose Save."]],
     ['Open your group', ["Your group isn't ready yet. Get help."]],
     ['Upload your first files', ["To add documents, open your group's Import tab and choose Upload files. Choose your files, tick the box that says you have the right to share them, and press the Import button. Use files whose text you can select and copy: the assistant can't read image-only scans, and a very short file may be too short to use."]],
     ['Wait while your documents are prepared', ['The "Preparing documents for the assistant\'s search" panel on the Import tab shows how many are prepared, for example "18 of 21". This happens in the background. You can leave the page and come back.']],
     ['Ask the AI assistant a question', ['Go to your group\'s page. The AI assistant, called "LocalNodes LiAIson", is at the bottom right. It isn\'t shown on the Import tab. It looks for answers in the pages you can see. Ask something your documents answer. When the assistant finds an answer it can give with sources, open a numbered source to check it. Otherwise read the documents or ask for help.']],
     ['Bring in your members', [
       'To invite people, open your group\'s Manage members tab, choose Add members, then Invite users. Enter their email addresses, or their names if they are already on the site, and press "Send your invite(s) by email".',
-      'Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After setting a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.',
+      'Each person gets an email. Someone new to the site creates an account from it and follows the sign-in link in the welcome email. After choosing a password and choosing Save, they see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.',
       'Your members read the documents in the group\'s Topics, where each original file can be opened. To ask, they go to the group\'s page and use the AI assistant at the bottom right. It looks for answers in the pages each member can see.',
     ]],
   ];
@@ -71,7 +71,7 @@ final class GuidePageTest extends KernelTestBase {
    * The step headings, in order.
    */
   private const HEADINGS = [
-    'Set your password', 'Open your group', 'Upload your first files',
+    'Sign in', 'Open your group', 'Upload your first files',
     'Wait while your documents are prepared', 'Ask the AI assistant a question',
     'Bring in your members',
   ];
@@ -178,7 +178,7 @@ final class GuidePageTest extends KernelTestBase {
   private function member(): User {
     $role = Role::load('authenticated');
     $role->grantPermission('access content')->save();
-    $user = User::create(['name' => 'guide-member', 'mail' => 'guide-member@mail.localnodes.xyz', 'status' => 1]);
+    $user = User::create(['name' => 'guide-member', 'mail' => 'guide-member@example.invalid', 'status' => 1]);
     $user->save();
     return $user;
   }
@@ -265,7 +265,7 @@ final class GuidePageTest extends KernelTestBase {
    * A signed-in person without "access content" is denied too.
    */
   public function testSignedInPersonWithoutAccessContentIsDenied(): void {
-    $user = User::create(['name' => 'no-content', 'mail' => 'no-content@mail.localnodes.xyz', 'status' => 1]);
+    $user = User::create(['name' => 'no-content', 'mail' => 'no-content@example.invalid', 'status' => 1]);
     $user->save();
     $result = $this->container->get('access_manager')->checkNamedRoute('localnodes_platform.guide', [], $user, TRUE);
     $this->assertFalse($result->isAllowed());
@@ -322,7 +322,7 @@ final class GuidePageTest extends KernelTestBase {
       'global_role' => 'sitemanager',
       'permissions' => ['view group'],
     ])->save();
-    $manager = User::create(['name' => 'guide-manager', 'mail' => 'guide-manager@mail.localnodes.xyz', 'status' => 1, 'roles' => ['sitemanager']]);
+    $manager = User::create(['name' => 'guide-manager', 'mail' => 'guide-manager@example.invalid', 'status' => 1, 'roles' => ['sitemanager']]);
     $manager->save();
     $this->container->get('current_user')->setAccount($manager);
     $this->container->get('router.builder')->rebuild();
@@ -383,6 +383,21 @@ final class GuidePageTest extends KernelTestBase {
     $this->assertContains('Using the assistant', $texts);
     $this->assertContains(self::ASSISTANT_BODY, $texts);
     $this->assertContains(self::HELP_LINE, $texts);
+  }
+
+  /**
+   * With localnodes_web3, steps 1 and 6 also tell the Sign in button way.
+   */
+  public function testWithWeb3SignInSteps(): void {
+    $this->pretendWeb3IsOn();
+    $xpath = $this->xpathOf($this->renderGuide());
+
+    $this->assertSame([
+      self::STEPS[0][1][0],
+      'You can also use the Sign in button with the same email address. We email you a link that adds that way of signing in to your account. Open it in the same browser.',
+    ], $this->stepParagraphs($xpath, 1));
+    $invite = $this->stepParagraphs($xpath, 6)[1];
+    $this->assertSame('Each person gets an email. Someone new to the site uses the Sign in button and gives the address the invitation went to, then opens the link we email them in the same browser. They then see their pending invitations. They choose Accept for your group, then Join if asked. Someone who already has an account can sign in and open Invites from their profile menu.', $invite);
   }
 
   /**

@@ -8,7 +8,7 @@ bodies go to $FAKE_STATE/bodies.log so tests can check literal values).
 
 $FAKE_SCENARIO picks the failure mode:
   ok              normal Coolify 4.1 behaviour (PATCH existing=201, PATCH missing=404, POST=201)
-  all503          every env PATCH/POST answers 503 (Codex's reproduction)
+  all503          every env PATCH/POST answers 503
   post503         PATCH missing=404, then POST answers 503
   app404          PATCH answers 404 "Application not found" (not a missing variable)
   post409_once    first POST per key answers 409 and the key appears (concurrent create)
@@ -16,10 +16,15 @@ $FAKE_SCENARIO picks the failure mode:
   readback_wrong  GET returns a different IMAGE_TAG than was saved
   readback_wrong_backup  GET returns a different AI_BACKUP_MODEL than was saved (23-40)
   hidden          GET omits `value` (token without read:sensitive)
-  delete503       DELETE answers 503 and removes nothing (Codex re-check reproduction)
+  envs_get503     the first GET /envs answers 503; later reads work
+  envs_garbage    the first GET /envs answers 200 with a body that is not JSON; later reads work
+  envs_down       the first GET /envs gets no answer (curl exits 7, prints nothing); later reads work
+  envs_empty      the first GET /envs answers 200 with an empty body; later reads work
+  envs_blank      the first GET /envs answers 200 with a whitespace-only body; later reads work
+  delete503       DELETE answers 503 and removes nothing
   delete_noop     DELETE answers 200 but removes nothing (only the read-back can tell)
   delete_curl23   DELETE answers 200 but curl exits 23
-  curl23          env PATCH is applied and reports 200, but curl exits 23 (Codex re-check)
+  curl23          env PATCH is applied and reports 200, but curl exits 23
   delete_late     the first 2 DELETEs of each row remove nothing, the 3rd works (only a final read-back sees it)
   deploy_stuck    GET /deployments/{uuid} keeps answering "in_progress"
   deploy_garbage  GET /deployments/{uuid} answers non-JSON
@@ -118,6 +123,7 @@ if body:
         f.write(body.replace("\n", " ") + "\n")
 
 status, resp = 200, {}
+raw = None  # a body sent as is, not as JSON
 prod = lambda e: not e.get("is_preview")
 
 MANIFEST_FALLBACK = {
@@ -165,6 +171,15 @@ elif url and url.endswith("/applications") and method == "GET":
         status, resp = 200, None
     else:
         status, resp = 200, []
+elif url and url.endswith("/envs") and method == "GET" and scenario == "envs_down" and counter("envs_get") == 0:
+    sys.stderr.write("curl: (7) Failed to connect\n")
+    sys.exit(7)
+elif url and url.endswith("/envs") and method == "GET" and scenario == "envs_get503" and counter("envs_get") == 0:
+    status, resp = 503, {"message": "Service Unavailable"}
+elif url and url.endswith("/envs") and method == "GET" and scenario == "envs_garbage" and counter("envs_get") == 0:
+    status, resp = 200, None
+elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_empty", "envs_blank") and counter("envs_get") == 0:
+    status, resp, raw = 200, None, ("" if scenario == "envs_empty" else " \n\t \n")
 elif url and url.endswith("/envs") and method == "GET":
     envs = load()
     if scenario == "readback_wrong":
@@ -173,6 +188,8 @@ elif url and url.endswith("/envs") and method == "GET":
         envs = [dict(e, value="fixture/other-model") if e["key"] == "AI_BACKUP_MODEL" else e for e in envs]
     if scenario == "hidden":
         envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} for e in envs]
+    if scenario == "drop_relayer_key":
+        envs = [e for e in envs if e["key"] != "SPONSOR_RELAYER_PRIVATE_KEY"]
     envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} if e.get("is_shown_once") else e for e in envs]
     written = os.path.exists(os.path.join(state_dir, "pass-written"))
     if scenario == "dupes_after" and written and counter("stale") == 0:
@@ -248,7 +265,10 @@ elif url and "/deploy?" in url:
 else:
     status, resp = 200, {}
 
-text = "<html>502 Bad Gateway</html>" if resp is None else json.dumps(resp)
+if raw is not None:
+    text = raw
+else:
+    text = "<html>502 Bad Gateway</html>" if resp is None else json.dumps(resp)
 if out_file:
     with open(out_file, "w") as f:
         f.write(text)

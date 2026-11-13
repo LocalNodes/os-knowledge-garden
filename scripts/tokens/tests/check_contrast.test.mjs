@@ -445,7 +445,8 @@ for (const id of ACCENT_IDS) {
     assert.match(l, /overridden by ln-overrides\.css \(9 rules -> --ln-color-text\)/);
     assert.match(l, /3 amber bar fills/, 'the line says the bar fills are not measured here');
     const ratio = Number(l.split(' ')[2]);
-    assert.ok(ratio >= 4.5 && ratio <= 13, `measured as the text role, not the accent: ${ratio}`);
+    // The text role (#27272a since the app look) is 13.6 to 14.9 on the light surfaces; the amber accent is under 2.
+    assert.ok(ratio >= 4.5 && ratio <= 15, `measured as the text role, not the accent: ${ratio}`);
   });
 }
 

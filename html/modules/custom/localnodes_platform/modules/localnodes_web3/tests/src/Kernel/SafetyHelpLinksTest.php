@@ -35,7 +35,8 @@ use GuzzleHttp\Middleware;
  *   WaaP's own #pre_render replaces the whole block content, so the help
  *   link has to be added after it (review 15-M1).
  * - In the top bar ("header") the sign-in block gets no link.
- * - Without localnodes_platform the route is missing: no link, no error.
+ * - Without the help route: no link, no error. The required platform parent
+ *   remains enabled; those cases remove just the route from the test router.
  * - Every network this module ships gets group_treasury's "Open in Safe
  *   app" link, which the help page's "If this site is down" section names.
  *
@@ -148,10 +149,11 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
   }
 
   /**
-   * Without localnodes_platform the hook returns nothing and the page works.
+   * Without the help route the hook returns nothing and the page works.
    */
   public function testNoHelpRouteNoPaymentLink(): void {
-    $this->enable('localnodes_web3');
+    $this->enable('localnodes_platform', 'localnodes_web3');
+    $this->removeHelpRoute();
     [$safe, $owner] = $this->sharedAccount();
     $tx = $this->payment($safe, $owner, ['signed_by' => [self::OWNER]]);
 
@@ -219,10 +221,11 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
   }
 
   /**
-   * Without localnodes_platform the block has no link and still renders.
+   * Without the help route the block has no link and still renders.
    */
   public function testNoHelpRouteNoSignInLink(): void {
-    $this->enable('localnodes_web3');
+    $this->enable('localnodes_platform', 'localnodes_web3');
+    $this->removeHelpRoute();
 
     $html = $this->signInBlock();
     $this->assertStringContainsString('siwe-login-button', $html);
@@ -319,6 +322,17 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
     $stack->push(Middleware::history($this->rpcHistory));
     $this->container->set('http_client', new Client(['handler' => $stack]));
     $this->container->get('router.builder')->rebuild();
+  }
+
+  /** Removes only the help route, preserving all real service dependencies. */
+  private function removeHelpRoute(): void {
+    $provider = $this->container->get('router.route_provider');
+    $this->assertCount(1, $provider->getRoutesByNames([SiweHelpLink::ROUTE]));
+    $this->container->get('database')->delete('router')
+      ->condition('name', SiweHelpLink::ROUTE)
+      ->execute();
+    $provider->reset();
+    $this->assertSame([], $provider->getRoutesByNames([SiweHelpLink::ROUTE]));
   }
 
   /**

@@ -1,0 +1,47 @@
+/**
+ * @file
+ * The "Confirm your sign-in" panel (js/signature-proof.js), from --ln-*
+ * tokens only. A neutral panel with the attention rule used by the group
+ * fund panels: it asks for a step, it is not an error.
+ */
+.ln-proof {
+  margin: var(--ln-space-md) 0;
+  padding: var(--ln-space-md) var(--ln-space-lg);
+  color: var(--ln-color-text);
+  background-color: var(--ln-color-canvas);
+  border: 1px solid var(--ln-color-border-control);
+  border-left: 4px solid var(--ln-color-warning-text);
+}
+
+.ln-proof:focus-visible {
+  outline: 2px solid var(--ln-color-highlight);
+  outline-offset: 2px;
+}
+
+.ln-proof .ln-proof__title {
+  margin: 0 0 var(--ln-space-sm);
+  font-size: 1.125rem;
+}
+
+.ln-proof .ln-proof__text {
+  margin: 0 0 var(--ln-space-sm);
+}
+
+.ln-proof .ln-proof__add {
+  display: inline-block;
+  margin-bottom: var(--ln-space-sm);
+}
+
+.ln-proof .ln-proof__add[hidden] {
+  display: none;
+}
+
+.ln-proof .ln-proof__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ln-space-sm);
+}
+
+.ln-proof .ln-proof__actions [hidden] {
+  display: none;
+}
