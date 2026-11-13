@@ -49,6 +49,13 @@ use Drupal\user\Entity\Role;
  * a browser wallet (such as MetaMask) can sign in. siwe_login_waap ships it
  * off; on our sites it is offered as a quiet "Use a browser wallet" under
  * the main sign-in (see SignIn). Idempotent.
+ *
+ * And it puts in the public-record notice members tick before they vote,
+ * approve or send a group payment, approve the voting setup or publish a
+ * proposal. group_treasury ships the notice empty, which
+ * shows nothing and asks nothing; the LocalNodes wording is set here. A
+ * notice the site already wrote is kept.
+ * Idempotent.
  */
 function localnodes_web3_install() {
   _localnodes_web3_configure_siwe_rpc_default();
@@ -58,6 +65,41 @@ function localnodes_web3_install() {
   _localnodes_web3_require_member_email();
   _localnodes_web3_word_welcome_mail();
   _localnodes_web3_show_wallet_button();
+  _localnodes_web3_set_public_notice();
+}
+
+/**
+ * The public-record notice: what becomes public and cannot be erased.
+ *
+ * Changing the wording asks every member to tick again, since
+ * group_treasury keeps a hash of the text beside each tick.
+ */
+const LOCALNODES_WEB3_PUBLIC_NOTICE = [
+  'text' => 'The voting service makes your account ID, vote and proposal text public. Payments publish recipients and amounts on a public test network. These records cannot be erased, even if your account or site is deleted. Practice money has no value.',
+  'details' => 'Your account ID is the long address used to identify you to the voting and payment services. When you vote, this site sends that address, your choice and the proposal text to the public voting service, where anyone can read them. If a practice payment is sent, its recipient and amount become public on the test network, a system used for practice payments. These records are kept outside this site. We cannot erase them later, even if your account or the site is deleted. Practice money has no value and cannot be exchanged for real money. Keep private house details out of proposals.',
+  'label' => 'I have read what becomes public and what cannot be erased.',
+];
+
+/**
+ * Sets the LocalNodes public-record notice when the site has none.
+ *
+ * Does nothing when group_treasury has no notice setting (a version without
+ * the notice), or when the site already wrote any part of it.
+ */
+function _localnodes_web3_set_public_notice(): void {
+  $notice = \Drupal::configFactory()->getEditable('group_treasury.public_notice');
+  if ($notice->isNew()) {
+    return;
+  }
+  foreach (array_keys(LOCALNODES_WEB3_PUBLIC_NOTICE) as $key) {
+    if (trim((string) $notice->get($key)) !== '') {
+      return;
+    }
+  }
+  foreach (LOCALNODES_WEB3_PUBLIC_NOTICE as $key => $value) {
+    $notice->set($key, $value);
+  }
+  $notice->save(TRUE);
 }
 
 /**

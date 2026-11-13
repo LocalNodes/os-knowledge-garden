@@ -5331,17 +5331,17 @@
         },
         {
             "name": "drupal/group_treasury",
-            "version": "1.0.0-alpha7",
+            "version": "1.0.0-alpha8",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/group_treasury.git",
-                "reference": "1.0.0-alpha7"
+                "reference": "1.0.0-alpha8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha7.zip",
-                "reference": "1.0.0-alpha7",
-                "shasum": "65b1ea09c924e404b0b9cf48cb0b45fa63a2c9f8"
+                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha8.zip",
+                "reference": "1.0.0-alpha8",
+                "shasum": "3a073c028b1474ec7fc934b2474e0637cd8c4ed3"
             },
             "require": {
                 "drupal/core": "^10",
@@ -5355,8 +5355,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha7",
-                    "datestamp": "1794514960",
+                    "version": "1.0.0-alpha8",
+                    "datestamp": "1794610798",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5380,10 +5380,14 @@
             ],
             "description": "Integrates Safe Smart Accounts as treasuries for Drupal Groups",
             "homepage": "https://www.drupal.org/project/group_treasury",
+            "keywords": [
+                "Actively maintained",
+                "Administration tools"
+            ],
             "support": {
                 "source": "https://git.drupalcode.org/project/group_treasury"
             },
-            "published-time": "2026-11-12T20:22:19+00:00"
+            "published-time": "2026-11-13T22:58:37+00:00"
         },
         {
             "name": "drupal/hux",
@@ -7644,17 +7648,23 @@
         },
         {
             "name": "drupal/safe_governance",
-            "version": "dev-1.0.x",
+            "version": "1.0.0-alpha1",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_governance.git",
-                "reference": "703dade1a1f25a09d91ab52ea7ca03a2225121c7"
+                "reference": "1.0.0-alpha1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/safe_governance-1.0.0-alpha1.zip",
+                "reference": "1.0.0-alpha1",
+                "shasum": "3babf57cc0dc93b35b0194191de491fc7f7dab7c"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
                 "drupal/core": "^10 || ^11",
                 "drupal/gas_sponsor": "^1.0",
-                "drupal/safe_smart_accounts": "^1.0.0-alpha2",
+                "drupal/safe_smart_accounts": "^1.0.0-alpha6",
                 "kornrunner/keccak": "^1.0",
                 "php": ">=8.2"
             },
@@ -7667,12 +7677,9 @@
             },
             "type": "drupal-module",
             "extra": {
-                "branch-alias": {
-                    "dev-1.0.x": "1.0.x-dev"
-                },
                 "drupal": {
-                    "version": "1.0.x-dev",
-                    "datestamp": "1794456184",
+                    "version": "1.0.0-alpha1",
+                    "datestamp": "1794610767",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7696,9 +7703,13 @@
             ],
             "description": "Group voting rules for a Safe account: Snapshot, Zodiac Reality and Hats Protocol, with addresses from the network registry",
             "homepage": "https://www.drupal.org/project/safe_governance",
+            "keywords": [
+                "Actively maintained"
+            ],
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_governance"
-            }
+            },
+            "published-time": "2026-11-13T22:59:07+00:00"
         },
         {
             "name": "drupal/safe_smart_accounts",
