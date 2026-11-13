@@ -53,6 +53,7 @@ final class ProofRoutes {
     'localnodes_web3.email_link_open' => 'Signed-out sign-in by emailed link; no session to prove yet.',
     'localnodes_web3.export_challenge' => 'Site export asks for its own fresh signature on every use.',
     'group_treasury.fund_creation_status' => 'GET only: reports fund-setup progress to a fund manager. It may record a result the site verifies on chain, but never starts, resends or signs a setup; that is the marked create form.',
+    'group_treasury.public_notice' => 'POST that stores only the member\'s tick on the public-record notice (member, group, text hash, time); it changes no fund and casts nothing. The vote, payment and setup steps it unlocks are marked.',
     'group_treasury.treasury' => 'Its only form re-reads the public balance (TreasuryRefreshForm); it changes no fund.',
     'gas_sponsor.network_fees' => 'Its only form re-reads the public fee balance (NetworkFeeRefreshForm); it changes no fund.',
     'safe_governance_group.votes' => 'Its only form re-reads the public vote record (RefreshVotesForm); voting posts to the marked vote route.',
