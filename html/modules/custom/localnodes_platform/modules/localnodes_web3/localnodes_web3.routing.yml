@@ -1,0 +1,81 @@
+localnodes_web3.export_challenge:
+  path: '/admin/config/system/site-export/challenge'
+  defaults:
+    _controller: '\Drupal\localnodes_web3\Controller\ExportChallengeController::challenge'
+  methods: [POST]
+  requirements:
+    _custom_access: 'localnodes_platform.export_access::access'
+    _csrf_request_header_token: 'TRUE'
+    _user_is_logged_in: 'TRUE'
+  options:
+    no_cache: TRUE
+
+localnodes_web3.email_link:
+  path: '/user/email-link'
+  defaults:
+    _form: '\Drupal\localnodes_web3\Form\EmailLinkRequestForm'
+    _title: 'Email me a sign-in link'
+  requirements:
+    _user_is_logged_in: 'FALSE'
+  options:
+    _maintenance_access: TRUE
+    no_cache: TRUE
+
+localnodes_web3.email_link_sign_in:
+  path: '/user/email-link/sign-in'
+  defaults:
+    _form: '\Drupal\localnodes_web3\Form\EmailLinkSignInForm'
+    _title: 'Sign in'
+  requirements:
+    _user_is_logged_in: 'FALSE'
+  options:
+    _maintenance_access: TRUE
+    no_cache: TRUE
+
+localnodes_web3.email_link_open:
+  path: '/user/email-link/{uid}/{timestamp}/{hash}'
+  defaults:
+    _controller: '\Drupal\localnodes_web3\Controller\EmailLinkController::open'
+    _title: 'Sign in'
+  requirements:
+    _access: 'TRUE'
+    uid: '\d+'
+    timestamp: '\d+'
+  options:
+    _maintenance_access: TRUE
+    no_cache: TRUE
+
+# Proving this session with the member's wallet (SignatureSession). A
+# password or emailed-link session needs this before changing group funds or
+# votes; a session that signed in with the wallet already is.
+localnodes_web3.signature_proof_challenge:
+  path: '/user/signature-proof/challenge'
+  defaults:
+    _controller: '\Drupal\localnodes_web3\Controller\SignatureProofController::challenge'
+  methods: [POST]
+  requirements:
+    _csrf_request_header_token: 'TRUE'
+    _user_is_logged_in: 'TRUE'
+  options:
+    no_cache: TRUE
+
+localnodes_web3.signature_proof_status:
+  path: '/user/signature-proof/status'
+  defaults:
+    _controller: '\Drupal\localnodes_web3\Controller\SignatureProofController::status'
+  methods: [GET]
+  requirements:
+    _user_is_logged_in: 'TRUE'
+  options:
+    no_cache: TRUE
+
+localnodes_web3.signature_proof:
+  path: '/user/signature-proof'
+  defaults:
+    _controller: '\Drupal\localnodes_web3\Controller\SignatureProofController::prove'
+  methods: [POST]
+  requirements:
+    _csrf_request_header_token: 'TRUE'
+    _user_is_logged_in: 'TRUE'
+  options:
+    no_cache: TRUE

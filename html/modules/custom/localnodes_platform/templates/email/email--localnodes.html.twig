@@ -22,8 +22,6 @@
  * - ln_radius_card, ln_radius_control, ln_font: Shape and type from the same
  *   file.
  * - ln_site_name: The community's name (system.site).
- * - ln_wallet_line: One optional line, set only in the organizer-created
- *   welcome mail on Web3 sites.
  *
  * Colours come only from `ln`. A literal colour here would drift from the
  * token source (D-03), and scripts/tokens/check_raw_colors.mjs (22.1-06)
@@ -124,9 +122,6 @@
     .wrapper {
       box-sizing: border-box;
       padding: 0 44px 40px; }
-
-    .wallet-line {
-      margin-top: 16px; }
 
     /* The footer sits on the canvas, under the card. */
     .footer {
@@ -509,9 +504,6 @@
                     <tr><td>{{ header }}</td></tr>
                   {% endif %}
                   <tr><td>{{ body }}</td></tr>
-                  {% if ln_wallet_line %}
-                    <tr><td><p class="wallet-line">{{ ln_wallet_line }}</p></td></tr>
-                  {% endif %}
                   {% if footer %}
                     <tr><td>{{ footer }}</td></tr>
                   {% endif %}

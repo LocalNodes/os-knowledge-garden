@@ -1,5 +1,5 @@
 /**
- * The contrast pairs the LocalNodes module stylesheets draw (22.1-17, review WR-06, DES-01, D-09).
+ * The contrast pairs the LocalNodes module stylesheets draw.
  *
  * P4 in pairings.mjs measures a pair only when one ln-overrides.css rule sets both `color` and a background. That left
  * most of what the stylesheets paint unmeasured: the header name, the DeepChat bar, and the colours in import.css and
@@ -7,18 +7,22 @@
  * background. This library reads the five stylesheets that use var(--ln-color-*):
  *
  *   overrides    html/modules/custom/localnodes_platform/css/ln-overrides.css
+ *   app-look     html/modules/custom/localnodes_platform/css/ln-app-look.css
+ *                (the app look: header, tabs, cards, outline buttons and fields; loads after ln-overrides.css)
  *   import       html/modules/custom/localnodes_import/css/import.css
  *   ai-overview  html/modules/custom/social_ai_indexing/css/ai-overview.css
  *   deepchat     html/modules/custom/social_ai_indexing/css/deepchat.css
  *   treasury     html/modules/custom/localnodes_platform/modules/localnodes_web3/css/treasury.css
- *                (the group fund components; added by WR-06b, 22.1-15)
+ *                (the group fund components)
  *   signin       html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css
  *                (the sign-in button above the password form, and the "Opening sign-in…" strip)
+ *   signature-proof  html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signature-proof.css
+ *                (the "Confirm your sign-in" panel before a fund or vote change)
  *
  * A stylesheet names a foreground; the background behind it is a fact about the page, so it comes from PARTNERS, a
  * hand-written map keyed by stylesheet, then single selector (a selector list is split: its members can sit on
- * different backgrounds, review 17-M2), then property kind. Every entry carries a one-line `why` that names the
- * template or rule which puts the partner there (T-22.1-58: a guessed partner is a wrong measurement).
+ * different backgrounds), then property kind. Every entry carries a one-line `why` that names the
+ * template or rule which puts the partner there (a guessed partner is a wrong measurement).
  *
  *   text        { on: [bg, ...] }                    the colour is `color` or `fill`; 4.5:1 on each background behind it
  *   border      { against: [bg, ...] }               a border or box-shadow; 3:1 on the SURROUNDINGS, never on the
@@ -34,7 +38,7 @@
  *   { from: '<selector>', bg: 'text', sheet?: 'deepchat' }
  *                                      the background that an ancestor rule in these stylesheets sets
  *
- * What is measured is what the browser renders, not what a module stylesheet asks for (T-22.1-60, review 17-H1). The
+ * What is measured is what the browser renders, not what a module stylesheet asks for. The
  * global `:focus-visible` rule in ln-overrides.css is !important, so it beats the outline a module sets. For a
  * `:focus-visible` selector the ring that renders is taken from ln-overrides.css: the rule with exactly that selector
  * if it has an !important outline colour or offset, else the global rule. When a module asks for another colour, the
@@ -53,11 +57,13 @@ import { ln, pairing } from './pairing.mjs';
 export const STYLESHEETS = Object.freeze({
   'site-export': { rel: 'html/modules/custom/localnodes_platform/css/site-export.css', name: 'site-export.css' },
   overrides: { rel: 'html/modules/custom/localnodes_platform/css/ln-overrides.css', name: 'ln-overrides.css' },
+  'app-look': { rel: 'html/modules/custom/localnodes_platform/css/ln-app-look.css', name: 'ln-app-look.css' },
   import: { rel: 'html/modules/custom/localnodes_import/css/import.css', name: 'import.css' },
   'ai-overview': { rel: 'html/modules/custom/social_ai_indexing/css/ai-overview.css', name: 'ai-overview.css' },
   deepchat: { rel: 'html/modules/custom/social_ai_indexing/css/deepchat.css', name: 'deepchat.css' },
   treasury: { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/treasury.css', name: 'treasury.css' },
   signin: { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css', name: 'signin.css' },
+  'signature-proof': { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signature-proof.css', name: 'signature-proof.css' },
 });
 
 /** { key: absolute path } for the five stylesheets in `root`, with `replace` (key -> path) taking precedence. */
@@ -73,10 +79,10 @@ const LINK = `${BAR} .chat-dropdown-link`;
 const PAGE = ['surface', 'canvas', 'tint'];
 /** Where a LocalNodes import screen draws: socialblue's body (the canvas) or a white .card. */
 const IMPORT_PAGE = ['canvas', 'surface'];
-/** Around the group page's "Joined" button (WINDOWS 46). */
+/** Around the group page's "Joined" button. */
 const JOINED_AROUND = ['surface', 'canvas'];
-const JOINED_WHY = "the button sits in the group statistics .card (lane site, 2026-11-11: rgb(250, 250, 250), between surface #fff and canvas #f3f3f3, so both bounds are measured)";
-const IMPORT_WHY = "import screens sit on socialblue's body or a white .card (lane site, 2026-11-09: body rgb(243, 243, 243) = canvas, .card rgb(255, 255, 255) = surface)";
+const JOINED_WHY = "the button sits in the group statistics .card (measured on the test site, 2026-11-11: rgb(250, 250, 250), between surface #fff and canvas #f3f3f3, so both bounds are measured)";
+const IMPORT_WHY = "import screens sit on socialblue's body or a white .card (measured on the test site, 2026-11-09: body rgb(243, 243, 243) = canvas, .card rgb(255, 255, 255) = surface)";
 
 const barFill = { from: BAR, sheet: 'deepchat', bg: 'text' };
 const headerFill = { from: HEADER, sheet: 'deepchat', bg: 'text' };
@@ -127,12 +133,69 @@ const importRing = (surroundings = IMPORT_PAGE, why = IMPORT_WHY) => ring(surrou
 const P5_LIGHT = ['P5.focus.on.surface', 'P5.focus.on.canvas', 'P5.focus.on.tint'];
 const P5_NAV = ['navbar-bg', 'navbar-active-bg', 'navbar-sec-bg', 'second-line-navbar-bg'].map((f) => `P5.focus-on-dark.on.socialblue.${f}`);
 
+const APP_COVER = '.socialblue--sky .cover:not(.cover-img)';
+const APP_TABS = '.socialblue--sky .navbar-secondary';
+
 /**
  * Partner map: PARTNERS[stylesheet][single selector][kind]. See the header for the shapes. Selectors are written as
  * the stylesheet writes them, whitespace collapsed. The nine accent rules of ln-overrides.css are not here: P2 measures
  * them (ACCENT_TEXT_RULES in pairings.mjs).
  */
 export const PARTNERS = {
+  'app-look': {
+    // The page body: socialbase html.html.twig; the text and the canvas come from the same rule.
+    body: text(['own'], 'the body text sits on the canvas fill of the same rule'),
+    // A group header with no cover picture (socialblue group--hero--sky.html.twig without field_group_image).
+    [APP_COVER]: text(['own'], 'the header text (meta lines) sits on the white fill of the same rule; its bottom edge is the decorative divider'),
+    [`${APP_COVER} .page-title`]: text([on(APP_COVER, 'surface', 'app-look')], 'the header line under the name (the access-permissions link) is in the white header'),
+    [`${APP_COVER} .page-title a`]: text([on(APP_COVER, 'surface', 'app-look')], 'the access-permissions link is in the white header'),
+    [`${APP_COVER} .page-title h1`]: text([on(APP_COVER, 'surface', 'app-look')], 'the group name is the header title, inside the white header'),
+    [`${APP_COVER} .hero-footer a`]: text([on(APP_COVER, 'surface', 'app-look')], 'the member count and join links are in the header footer, inside the white header'),
+    [`${APP_COVER} svg`]: text([on(APP_COVER, 'surface', 'app-look')], 'the header icons are drawn in the white header'),
+    // The tabs bar under a group or profile header (socialblue navbar--sky.css markup, nav.navbar-secondary).
+    [APP_TABS]: fillOf(
+      { under: ['text-muted', 'text-strong', { fg: 'primary', kind: 'non-text' }, { fg: 'border-control', kind: 'non-text' }, { fg: 'focus', kind: 'focus' }] },
+      'the tab names, the active tab, its teal underline, the hover underline and the focus ring (the focus colour, from the :focus-visible rule below) are all drawn on the white tabs bar',
+    ),
+    // The ring in the white tabs bar. It replaces ln-overrides.css's ".navbar-secondary :focus-visible" (focus-on-dark, for
+    // a dark bar) with the same !important and a higher specificity, and loads later. app-look.spec.ts reads the painted
+    // colour of each focused tab and of the "More group pages" button.
+    [`${APP_TABS} :focus-visible`]: ring(
+      [on(APP_TABS, 'surface', 'app-look')],
+      [on(APP_TABS, 'surface', 'app-look'), 'surface'],
+      'a tab or the "More group pages" button sits on the white tabs bar and its ring is drawn 2px outside it, still on the bar; the folded tabs open in a list socialblue draws on white (surface)',
+    ),
+    [`${APP_TABS} .navbar-nav li a`]: text([on(APP_TABS, 'surface', 'app-look')], 'a tab name sits on the white tabs bar (its own fill is transparent)'),
+    [`${APP_TABS} .navbar-nav li a:hover`]: text([on(APP_TABS, 'surface', 'app-look')], 'a hovered tab is still on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li a:focus`]: text([on(APP_TABS, 'surface', 'app-look')], 'a focused tab is still on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li.active a`]: text([on(APP_TABS, 'surface', 'app-look')], 'the active tab is on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li a.is-active`]: text([on(APP_TABS, 'surface', 'app-look')], 'the active tab is on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li a:hover::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the hover underline is a 2px bar under the tab, on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li a:focus::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the focus underline is a 2px bar under the tab, on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li.active a::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the active underline is a 2px teal bar under the tab, on the white tabs bar'),
+    [`${APP_TABS} .navbar-nav li a.is-active::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the active underline is a 2px teal bar under the tab, on the white tabs bar'),
+    // Card headings: socialblue's .card is white (surface); its edge is the decorative divider.
+    '.socialblue--sky .teaser--stream': fillOf({ under: ['text', 'text-strong', 'text-muted', 'link'] }, 'a stream teaser body holds the title, the tag, the meta badges and the read-more link on its own white fill'),
+    '.socialblue--sky .teaser--stream .teaser__image': fillOf({ under: ['text-muted'] }, 'the picture column behind a teaser picture; with no picture it is hidden (same stylesheet)'),
+    '.socialblue--sky .card h2': text(['surface'], "a card heading is in a socialblue .card, which is white (socialblue card styles)"),
+    '.socialblue--sky .card h3': text(['surface'], "a card heading is in a socialblue .card, which is white (socialblue card styles)"),
+    '.socialblue--sky .card h4': text(['surface'], "a card heading is in a socialblue .card, which is white (socialblue card styles)"),
+    // Outline buttons: transparent, so the page or card shows through.
+    '.main-container .btn-default': {
+      ...text(PAGE, 'the outline button is transparent; its text sits on the white card, the canvas or a tinted band behind it'),
+      ...border(PAGE, 'the outline is the button edge, on the card, canvas or tint around it'),
+    },
+    // Form fields: the raised fill, the text and placeholder on it, the control edge against the page around it.
+    '.main-container .form-control': {
+      ...text(['own'], 'the typed text sits on the raised fill of the same rule'),
+      ...fillOf({ under: ['text-muted', { fg: 'focus', kind: 'focus' }] }, 'the placeholder (ln-overrides.css, text-muted) and the field focus ring are drawn on the raised fill'),
+      ...border([...PAGE, 'raised'], 'the field edge sits between its raised fill and the card, canvas or tint around it'),
+    },
+    // The field states the rule above would flatten: the focus edge and the error edge, on the same field.
+    '.main-container .form-control:focus': border([...PAGE, 'raised'], 'a focused field: its edge sits between its raised fill and the card, canvas or tint around it'),
+    '.main-container .has-error .form-control': border([...PAGE, 'raised'], 'a field in error (socialbase form-element: .form-group.has-error around it): its edge sits between its raised fill and the page around it'),
+    '.main-container .has-error .form-control:focus': border([...PAGE, 'raised'], 'a focused field in error keeps the danger edge, between its raised fill and the page around it'),
+  },
   'site-export': {
     '.ln-export': { ...text(['own'], 'localnodes-site-export.html.twig sets the panel text and surface fill together'), ...fillOf({ under: ['text'] }, 'the panel contains records, actions and helper details') },
     '.ln-export-owner': text(['surface'], 'the owner label is inside the explicitly white export panel'),
@@ -148,7 +211,7 @@ export const PARTNERS = {
     '.btn-danger:hover': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
     '.btn-danger:active': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
     '.btn-danger.active': { ...text(['own'], 'white text on the darker red fill of the same rule'), ...border(PAGE, 'the border is the fill colour, on the page') },
-    // WINDOWS 46: the group page's "Joined" button, outlined navy on the surface fill, in every state.
+    // The group page's "Joined" button, outlined navy on the surface fill, in every state.
     '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
     '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:hover': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
     '.hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:focus': { ...text(['own'], 'navy text on the surface fill of the same rule'), ...border(JOINED_AROUND, JOINED_WHY) },
@@ -173,12 +236,12 @@ export const PARTNERS = {
     // The global ring and the navigation ring are P5's.
     ':focus-visible': { outline: { measuredBy: P5_LIGHT, why: 'the global ring on the three light surfaces is P5 (focus on surface, canvas and tint)' } },
     '.navbar-default :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5 (focus-on-dark on navbar-bg, navbar-active-bg, navbar-sec-bg, second-line-navbar-bg)' } },
-    '.navbar-secondary :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5' } },
+    '.navbar-secondary :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5; where the app look makes the secondary bar white (.socialblue--sky), ln-app-look.css replaces this ring with the focus colour, measured there' } },
     '.navbar-second-line :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5' } },
-    // The import alert's left bar: import.css draws it in the accent (1.62:1 on white), which is a fill, never a status mark
-    // (Q14, orchestrator 2026-11-09): this rule re-colours it with the warning-text role, and the gate measures that.
+    // The import alert's left bar: import.css draws it in the accent (1.62:1 on white), which is a fill, never a status mark,
+    // so this rule re-colours it with the warning-text role, and the gate measures that.
     '.localnodes-import-alert.localnodes-import-alert': border(IMPORT_PAGE, 'the alert is a block in the web form (on the page) or inside the white status card; the 4px bar is its status mark'),
-    // The DeepChat bar (22.1-17).
+    // The DeepChat bar.
     [`${HEADER}:focus-visible`]: { outline: BAR_RING.outline },
     [`${OPTIONS}:focus-visible`]: { outline: OPTIONS_RING.outline },
     [HEADER]: text([headerFill], "the header text sits on the header fill, --ln-color-text (deepchat.css); this rule sets the colour instead of contrib sticky-chatbot.css's literal white"),
@@ -194,13 +257,13 @@ export const PARTNERS = {
     '.ln-site-footer': text(['targets.socialblue.brand-secondary'], "the rule's comment: socialblue paints .site-footer in brand-secondary (the dark blue); this block prints inside it"),
     '.ln-site-footer a': text(['targets.socialblue.brand-secondary'], 'the footer links sit on the same .site-footer fill, brand-secondary'),
     // Placeholder and meta lines on the post and comment boxes.
-    '.form-control::placeholder': text(['surface'], 'the placeholder sits in a white .form-control (the rule comment: 22.1-11, S6 and S7)'),
+    '.form-control::placeholder': text(['surface'], 'the placeholder sits in a white .form-control (see the rule comment in the stylesheet)'),
     'form .form-control::placeholder': text(['surface'], 'the placeholder sits in a white .form-control'),
     '.metainfo__authorname': text(PAGE, 'the meta line sits in the post card (white) or on the page'),
     '.metainfo__published-date': text(PAGE, 'the meta line sits in the post card (white) or on the page'),
     '.post-date': text(PAGE, 'the post date sits in the post card (white) or on the page'),
     '.post-date a': text(PAGE, 'the post date link sits in the post card (white) or on the page'),
-    // The sort icon is a mask painted with a background colour (WINDOWS 45): a graphic on the table header.
+    // The sort icon is a mask painted with a background colour: a graphic on the table header.
     '.table th a::after': fillOf({ boundary: PAGE }, 'the sort icon is a mask over a plain background, a 3:1 graphic on the table header, which sits on the page'),
     '.table th.sortable a::after': fillOf({ boundary: PAGE }, 'the sort icon is a mask over a plain background, a 3:1 graphic on the table header, which sits on the page'),
   },
@@ -222,10 +285,7 @@ export const PARTNERS = {
   },
   'ai-overview': {
     '.ai-overview-notice': text(['canvas', 'surface'], 'AiOverviewBlock::build() renders this notice before the social-ai-overview.html.twig panel; socialbase block.html.twig can wrap it in a white card, otherwise the page canvas shows through; ai-overview.css gives only the sibling .ai-overview__content its tint'),
-    [OVERVIEW]: {
-      ...text(['own'], 'the answer text sits on the tinted card of the same rule (templates/social-ai-overview.html.twig)'),
-      ...border([...PAGE], 'the 4px rule is at the card edge: the tint on one side, the page on the other (the card sits on the search page)'),
-    },
+    [OVERVIEW]: text(['own'], 'the answer text sits on the tinted card of the same rule (templates/social-ai-overview.html.twig); its hairline edge is the decorative tint-line'),
     '.ai-overview__label': text([on(OVERVIEW, 'tint')], 'the label is in .ai-overview__header inside the tinted card'),
     '.ai-overview__disclosure': text([on(OVERVIEW, 'tint')], 'the disclosure line is in .ai-overview__header inside the tinted card'),
     '.ai-overview__marker': text([on(OVERVIEW, 'tint')], 'the [n] markers are links in the answer text inside the tinted card'),
@@ -233,7 +293,7 @@ export const PARTNERS = {
     '.ai-overview__source-list a': text([on(OVERVIEW, 'tint')], 'the Sources list is inside the tinted card'),
   },
   import: {
-    // S2: error summary, field error, drop zone, chosen files.
+    // Error summary, field error, drop zone, chosen files.
     [IMPORT_SUMMARY]: { ...text(['own'], 'the summary text sits on the danger tint of the same rule (ImportFormTrait error summary)'), ...border(IMPORT_PAGE, `the summary is a block on the page: ${IMPORT_WHY}`) },
     [`${IMPORT_SUMMARY}:focus`]: importRing([on(IMPORT_SUMMARY, 'danger-bg')], 'the summary takes script focus; its ring sits 2px outside its border, on the page'),
     [`${IMPORT_SUMMARY} a`]: text([on(IMPORT_SUMMARY, 'danger-bg')], 'the links are the list items inside the summary, on its tint'),
@@ -248,7 +308,7 @@ export const PARTNERS = {
     },
     '.localnodes-import-chosen__note': text(IMPORT_PAGE, `the note is above the chosen list, on the page: ${IMPORT_WHY}`),
     '.localnodes-import-chosen__stop-note': text(IMPORT_PAGE, `js/upload.js appends this paragraph inside .localnodes-import-chosen__progress after the file field; import.css gives neither that progress row nor .localnodes-import-chosen a fill, so the form background shows through: ${IMPORT_WHY}`),
-    '.localnodes-import-chosen__name': text(IMPORT_PAGE, `a row of the chosen list, on the page (lane site: .localnodes-import-chosen sits on body rgb(243, 243, 243))`),
+    '.localnodes-import-chosen__name': text(IMPORT_PAGE, `a row of the chosen list, on the page (measured on the test site: .localnodes-import-chosen sits on body rgb(243, 243, 243))`),
     '.localnodes-import-chosen__size': text(IMPORT_PAGE, 'a row of the chosen list, on the page'),
     '.localnodes-import-chosen__status': text(IMPORT_PAGE, 'a row of the chosen list, on the page'),
     '.localnodes-import-chosen__row[data-state="failed"] .localnodes-import-chosen__status': text(IMPORT_PAGE, 'the failed row of the chosen list, on the page'),
@@ -272,7 +332,7 @@ export const PARTNERS = {
     '.localnodes-import-spinner': border(['divider', ...IMPORT_PAGE], 'the spinner is a ring: the primary arc turns over the divider-coloured track, beside the page it sits on'),
     '.localnodes-import-upload__back': text(IMPORT_PAGE, `a standalone link beside a button on the page: ${IMPORT_WHY}`),
     '.localnodes-import-report__more': text(IMPORT_PAGE, `the "Import more documents" link under the report, on the page: ${IMPORT_WHY}`),
-    // S4 report.
+    // Report.
     '.localnodes-import-report__summary': text(IMPORT_PAGE, `the report summary line, on the page: ${IMPORT_WHY}`),
     '.localnodes-import-report th': text(IMPORT_PAGE, `a column heading of the report table, on the page (or on the row card below 768px): ${IMPORT_WHY}`),
     '.localnodes-import-report__name a': text(IMPORT_PAGE, 'the page title link in a report row, on the page or the row card'),
@@ -294,18 +354,16 @@ export const PARTNERS = {
       ...fillOf({ under: [{ fg: 'primary', kind: 'non-text' }] }, 'the batch bar draws its primary fill on this track'),
     },
     '.path-batch .progress-wrapper .progress-bar': fillOf({ boundary: [on('.path-batch .progress-wrapper .progress', 'surface')] }, 'the fill is drawn on the track, --ln-color-surface'),
-    // S6 source box and imported content.
-    [IMPORT_SOURCE]: {
-      ...text(['own'], 'the box text sits on the tint of the same rule (templates/localnodes-import-source-box.html.twig)'),
-      ...border([...IMPORT_PAGE, 'tint'], 'the 4px rule is at the box edge: the tint on one side, the page or card on the other'),
-    },
-    [`${IMPORT_SOURCE} a`]: text([on(IMPORT_SOURCE, 'tint')], 'the attribution, licence and report links are inside the box (templates/localnodes-import-source-box.html.twig)'),
-    [`${IMPORT_SOURCE} a:focus-visible`]: importRing([on(IMPORT_SOURCE, 'tint')], 'the links are inside the tinted box'),
-    '.localnodes-import-source__meta': text([on(IMPORT_SOURCE, 'tint')], 'the meta line is a paragraph of the box'),
-    '.localnodes-import-source__no-text': text([on(IMPORT_SOURCE, 'tint')], 'the no-text notice is a paragraph of the box (templates/localnodes-import-source-box.html.twig)'),
+    // Source box and imported content.
+    [IMPORT_SOURCE]: text(['own'], 'the box text sits on the paper fill of the same rule (templates/localnodes-import-source-box.html.twig); its edge is the decorative paper-rule'),
+    '.localnodes-import-source__heading': text([on(IMPORT_SOURCE, 'paper')], 'the "Source" label is the first line of the box (templates/localnodes-import-source-box.html.twig); the rule under it is the decorative paper-rule'),
+    [`${IMPORT_SOURCE} a`]: text([on(IMPORT_SOURCE, 'paper')], 'the attribution, licence and report links are inside the box (templates/localnodes-import-source-box.html.twig)'),
+    [`${IMPORT_SOURCE} a:focus-visible`]: importRing([on(IMPORT_SOURCE, 'paper')], 'the links are inside the paper box'),
+    '.localnodes-import-source__meta': text([on(IMPORT_SOURCE, 'paper')], 'the meta line is a paragraph of the box'),
+    '.localnodes-import-source__no-text': text([on(IMPORT_SOURCE, 'paper')], 'the no-text notice is a paragraph of the box (templates/localnodes-import-source-box.html.twig)'),
     '.localnodes-import-imported .body-text blockquote': { ...border(PAGE, 'an imported quote sits in the page body, in a white card or on the page'), ...text(PAGE, 'an imported quote sits in the page body, in a white card or on the page') },
     '.localnodes-import-imported .body-text blockquote cite': text(PAGE, 'the cite line of an imported quote, in the page body'),
-    // S3 web form.
+    // Web form.
     '.localnodes-import-web__licence': text(IMPORT_PAGE, `the licence note in the web form, on the page: ${IMPORT_WHY}`),
     '.localnodes-import-web__licence a': text(IMPORT_PAGE, 'a link in the licence note, on the page'),
     '.localnodes-import-web__licence a:focus-visible': importRing(),
@@ -367,17 +425,33 @@ export const PARTNERS = {
     },
   },
   signin: {
-    // The "Or use a password" line between the sign-in button and the password form. Its border-top names
-    // var(--ln-color-border, currentColor); with a fallback in the var() it is not read as a token here.
-    '.ln-signin .ln-signin__or': text(
+    // The "Or use a password" line between the sign-in entry and the password form, with a rule above it.
+    '.ln-signin-entry .ln-signin__or': {
+      ...text(
+        PAGE,
+        'SignIn::formElement() puts this paragraph above the log-in and sign-up forms, on whatever light surface the form page draws (a white card or the page), so the three light surfaces are measured',
+      ),
+      ...border(PAGE, 'the top rule separates the sign-in entry from the password form, on the same light surfaces as the text'),
+    },
+    // "Use a browser wallet": a text button under the sign-in entry, link-coloured. In the welcome block it takes the block's own colour instead (color: inherit, no token).
+    '.ln-signin-wallet .ln-signin-wallet__button': text(
       PAGE,
-      'SignIn::formElement() puts this paragraph above the log-in and sign-up forms, on whatever light surface the form page draws (a white card or the page), so the three light surfaces are measured',
+      'SignIn::walletChoice() puts this button in the sign-in entry above the log-in and sign-up forms, on the same light surfaces as the "or" line',
     ),
     // The connector's "Opening sign-in…" strip, fixed under the top bar (js/signin.js places it).
     '.siwe-login-waap__waiting': {
       ...text(['own'], 'the waiting line is body text on the surface fill of the same rule'),
       ...border(PAGE, 'the bottom border is the lower edge of the fixed strip, over whatever light surface of the page scrolls under it'),
     },
+  },
+  'signature-proof': {
+    // The "Confirm your sign-in" panel: js/signature-proof.js inserts it after the fund or vote button, in the form.
+    '.ln-proof': {
+      ...text(['own'], 'the panel text sits on the canvas fill of the same rule'),
+      ...fillOf({ under: ['text'] }, 'the title, the line and the add link are drawn on the panel fill'),
+      ...border(PAGE, 'the 1px edge and the 4px left rule are the panel\'s outer edge, over the form page or the card it sits in'),
+    },
+    '.ln-proof:focus-visible': ring(PAGE, PAGE, 'the panel takes focus when it opens; the ring sits 2px outside it, over the form page or card'),
   },
 };
 
@@ -465,7 +539,7 @@ function ringWinner(overrideRules, selector) {
 }
 
 /**
- * The colour an ln-overrides.css rule gives a module's border (Q14, 22.1-17): a rule whose selector is the module's single
+ * The colour an ln-overrides.css rule gives a module's border: a rule whose selector is the module's single
  * class doubled (`.a.a` outranks `.a` without !important) with a border colour of the same side. Null when none.
  */
 function borderOverride(overrideRules, selector, prop) {

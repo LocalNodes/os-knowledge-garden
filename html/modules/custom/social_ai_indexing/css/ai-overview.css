@@ -2,8 +2,8 @@
  * @file
  * The search page's AI overview panel (22-UI-SPEC S8).
  *
- * Tinted card with a 4px primary-colour left rule, 16px/24px padding, 8px
- * radius and a 72ch reading width. Every value comes from the --ln-* tokens
+ * Tinted card with a hairline tint edge, 16px/24px padding, 10px radius and a
+ * 72ch reading width (the app look: teal only on what you can press). Every value comes from the --ln-* tokens
  * (localnodes_platform/css/ln-tokens.css). Colours have no fallback value:
  * a hex fallback would keep the old palette alive after a palette
  * swap, and the token sheet is attached on every socialbase page.
@@ -18,8 +18,8 @@
   margin-bottom: var(--ln-space-lg, 24px);
   padding: var(--ln-space-md, 16px) var(--ln-space-lg, 24px);
   background: var(--ln-color-tint);
-  border-left: 4px solid var(--ln-color-primary);
-  border-radius: var(--ln-radius-card, 8px);
+  border: 1px solid var(--ln-color-tint-line);
+  border-radius: 10px;
   color: var(--ln-color-text);
 }
 
@@ -42,6 +42,9 @@
 .ai-overview__disclosure {
   font-weight: 400;
   color: var(--ln-color-text-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Answer text: Body 16/400/1.5. */

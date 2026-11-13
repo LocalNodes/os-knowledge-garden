@@ -1,12 +1,13 @@
 /**
  * @file
- * The sign-in button above the password form, and in the welcome block.
+ * The sign-in button above the password form, and in the welcome block,
+ * with the quiet "Email me a sign-in link" line.
  *
  * See \Drupal\localnodes_web3\SignIn. Spacing and colour come from --ln-*
  * tokens only.
  */
 
-.ln-signin {
+.ln-signin-entry {
   margin-bottom: var(--ln-space-lg);
 }
 
@@ -24,25 +25,104 @@
   text-align: center;
 }
 
-.ln-signin .ln-signin__or {
+.ln-signin-entry .ln-signin__email {
+  margin: var(--ln-space-md) 0 0;
+  text-align: center;
+}
+
+/* Text links a thumb can hit: 44px tall, as the importer's controls are. */
+.ln-signin-entry .ln-signin__email a,
+.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__password,
+.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__email {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ln-signin-entry .ln-signin__or {
   margin: var(--ln-space-lg) 0 0;
   padding-top: var(--ln-space-md);
-  border-top: 1px solid var(--ln-color-border, currentColor);
+  border-top: 1px solid var(--ln-color-border-control);
   color: var(--ln-color-text-muted);
   text-align: center;
 }
 
-/* The welcome block: one button, then a quiet text link beside it. */
+/* The welcome block: one button, then quiet text links beside it. When they
+   wrap on a phone, each line is already a 44px target, so the lines sit 4px
+   apart; the bottom margin matches the space above the heading. The links
+   take the block's own text colour, white on Open Social's dark
+   canvas over the cover image, where the link token would be too dark. */
 .hero-cta-wrapper.ln-signin-hero {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--ln-space-md);
+  gap: var(--ln-space-xs) var(--ln-space-md);
+  margin-bottom: var(--ln-space-md);
 }
 
-.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__password {
+.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__password,
+.hero-cta-wrapper.ln-signin-hero .ln-signin-hero__email {
   color: inherit;
   text-decoration: underline;
+}
+
+/* "Use a browser wallet": a quiet text button under the main sign-in.
+   siwe_login's own wallet button stays in the top bar's block, hidden, so
+   it doesn't crowd the bar; this choice hands its click to it. */
+.ln-signin-topbar #siwe-login-button,
+.ln-signin-wallet[hidden] {
+  display: none;
+}
+
+/* Sign in in the top bar: a 44px target inside the 50px bar (3px above and
+   below), and it never shrinks; on a narrow phone the community's name gives
+   way instead (ln-overrides.css). The id matches siwe_login's own rule,
+   which pads the block 6px all round. */
+#block-siwe-login.ln-signin-topbar {
+  flex-shrink: 0;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.ln-signin-topbar .siwe-login-waap__button {
+  min-height: 44px;
+}
+
+.ln-signin-entry .ln-signin-wallet {
+  text-align: center;
+}
+
+.ln-signin-wallet .ln-signin-wallet__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ln-color-link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hero-cta-wrapper.ln-signin-hero .ln-signin-wallet__button {
+  color: inherit;
+}
+
+.ln-signin-wallet .ln-signin-wallet__note {
+  margin: 0;
+}
+
+.ln-signin-wallet .ln-signin-wallet__note:not(:empty) {
+  margin-top: var(--ln-space-sm);
+}
+
+/* In the welcome block the note takes its own line under the choices. The
+   wrapper is a .form-group, whose bottom margin pushed the choice 12px above
+   the other links on their line and added a gap under it on a phone. */
+.hero-cta-wrapper.ln-signin-hero .ln-signin-wallet {
+  max-width: 100%;
+  margin-bottom: 0;
 }
 
 /* The sign-in's "Opening sign-in…" line and its Cancel button. The

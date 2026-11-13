@@ -25,7 +25,7 @@ services:
       # 'paid' = key from a Cloud project with billing on (AI-SPEC G8). Shown on
       # the status report; demo sites (DEMO_MODULE != none) are exempt.
       GEMINI_KEY_TIER: ${GEMINI_KEY_TIER:-}
-      DEMO_MODULE: ${DEMO_MODULE:-localnodes_demo}
+      DEMO_MODULE: ${DEMO_MODULE:-none}
       DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
       DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
       # Empty (the default) = a random admin password that is never shown; first sign-in is
@@ -62,6 +62,8 @@ services:
       # Page types the organizer confirmed: base64url JSON, decoded by the entrypoint.
       LOCALNODES_TOPIC_TYPES: ${LOCALNODES_TOPIC_TYPES:-}
       LOCALNODES_COMMUNITY_SEED: ${LOCALNODES_COMMUNITY_SEED:-}
+      # A community template id; empty keeps one starting group.
+      COMMUNITY_TEMPLATE: ${COMMUNITY_TEMPLATE:-}
       # AI choice (gemini or openrouter). OPENROUTER_API_KEY is an organizer's own key, written
       # write-once by the workflow. OPENROUTER_BASE_URL points the OpenRouter provider at another
       # OpenAI-compatible gateway (runbook only, set per instance). AI_BACKUP_PROVIDER and
@@ -87,6 +89,7 @@ services:
       SAFE_RPC_URL_ETHEREUM_SEPOLIA: ${SAFE_RPC_URL_ETHEREUM_SEPOLIA:-}
       SAFE_RPC_URL_BASE_SEPOLIA: ${SAFE_RPC_URL_BASE_SEPOLIA:-}
       # WaaP sign-in (siwe_login_waap; settings.php). Inert unless that module is enabled.
+      # Empty = WaaP production (real sign-in accounts); set staging for a test site.
       WAAP_ENVIRONMENT: ${WAAP_ENVIRONMENT:-}
       WALLETCONNECT_PROJECT_ID: ${WALLETCONNECT_PROJECT_ID:-}
       # Recurring cron + search indexing worker (docker/worker-loop.sh, forked by the

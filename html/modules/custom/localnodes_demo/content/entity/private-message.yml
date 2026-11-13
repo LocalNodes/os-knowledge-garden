@@ -1,0 +1,30 @@
+---
+# A short thread between two Watershed Guardians, so "Messages" is alive for
+# riverkeeper_maria and noah_watershed.
+# Fictional people only; their @*.example addresses get no mail.
+ce8a8984-2b21-4b99-8f6d-9faa4d0bee38:
+  uuid: ce8a8984-2b21-4b99-8f6d-9faa4d0bee38
+  members:
+    - bcead200-a74f-4e24-93c4-2746436a5207
+    - 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  messages:
+    - uuid: f8cf2e7d-9872-4427-b695-8f95fd7ea72c
+      uid: bcead200-a74f-4e24-93c4-2746436a5207
+      created: -3 day|08:40
+      message: >
+        <p>Noah, are you still up for leading the planting morning? I can bring the willow cuttings from the nursery.</p>
+    - uuid: 64f210bd-5997-49ab-bfb2-6f6f6a78b0a4
+      uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+      created: -3 day|12:15
+      message: >
+        <p>Yes, count me in. Could you bring the long-handled loppers too? Ours went to the Hazelrun crew.</p>
+    - uuid: e0321af9-6239-4638-b017-20e10bd57731
+      uid: bcead200-a74f-4e24-93c4-2746436a5207
+      created: -2 day|09:05
+      message: >
+        <p>Will do. I will post the meeting spot in the group tonight so people know where to park.</p>
+    - uuid: 544043d5-21b9-4858-8388-f66e7082515c
+      uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+      created: -1 day|19:30
+      message: >
+        <p>Perfect, thanks Maria. See you there.</p>

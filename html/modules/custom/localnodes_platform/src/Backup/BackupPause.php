@@ -28,8 +28,31 @@ final class BackupPause {
    */
   public const DIR = '.localnodes';
 
+  /**
+   * Lock file held while the pause is published or removed.
+   */
+  public const PAUSE_LOCK = 'pause.lock';
+
+  /**
+   * Why create() refused where hard links are missing.
+   */
+  public const NO_HARD_LINKS = 'Cannot publish the pause file: this folder does not allow hard links.';
+
+  /**
+   * Why create() refused when the pause lock stayed taken.
+   */
+  public const LOCK_BUSY = 'Another change to the pause is in progress.';
+
+  /**
+   * @param string $privateDir
+   *   The private files folder.
+   * @param float $lockWait
+   *   Longest wait, in seconds, for the pause lock. Changes under it take
+   *   milliseconds; tests pass a short wait.
+   */
   public function __construct(
     private readonly string $privateDir,
+    private readonly float $lockWait = 10.0,
   ) {}
 
   /**
@@ -242,11 +265,14 @@ final class BackupPause {
   /**
    * Writes a new pause and returns its token.
    *
-   * The caller holds the backup lock, so no other writer runs. An expired
-   * pause left by a killed run is removed first; a pause still in force
-   * refuses. The JSON goes to a temporary file in the same folder, which is
-   * renamed over the pause name only when every byte was written and the
-   * file closed: a failed write leaves no pause file and throws.
+   * Runs under the pause lock, as release() does, so a release that read an
+   * older token cannot remove this pause. An expired pause left by a killed
+   * run is removed first; a pause still in force refuses. The JSON goes to a
+   * temporary file in the same folder, published with link() only when every
+   * byte was written: readers see the whole line or no file, and a failed
+   * write leaves no pause and throws. Where hard links are missing it
+   * refuses rather than write the pause in place, which an interrupted
+   * writer could leave cut short, closing the site with no end.
    *
    * @param string $reason
    *   "backup" or "restore".
@@ -254,45 +280,100 @@ final class BackupPause {
    *   Unix time the pause ends, or NULL for no end.
    *
    * @throws \RuntimeException
-   *   When a pause is in force or the file cannot be written.
+   *   When a pause is in force, the pause lock stays taken, or the file
+   *   cannot be published.
    */
   public function create(string $reason, ?int $until): string {
     $dir = dirname($this->file());
     if (!is_dir($dir) && !@mkdir($dir, 0700, TRUE) && !is_dir($dir)) {
       throw new \RuntimeException('Cannot make the folder for the pause file.');
     }
-    if ($this->active() !== NULL) {
-      throw new \RuntimeException('The site is already paused by another backup or restore.');
-    }
-    if (file_exists($this->file()) || is_link($this->file())) {
-      @unlink($this->file());
-    }
-    $token = bin2hex(random_bytes(16));
-    $temporary = $dir . '/.backup-pause.' . bin2hex(random_bytes(8));
-    $handle = @fopen($temporary, 'x');
-    if ($handle === FALSE) {
-      throw new \RuntimeException('Cannot write the pause file.');
-    }
-    $json = json_encode(['token' => $token, 'until' => $until, 'reason' => $reason]) . "\n";
-    if (!BackupWrite::all($handle, $json) || !@chmod($temporary, 0644) || !@rename($temporary, $this->file())) {
+    return $this->underPauseLock(function () use ($dir, $reason, $until): string {
+      if ($this->active() !== NULL) {
+        throw new \RuntimeException('The site is already paused by another backup or restore.');
+      }
+      if (file_exists($this->file()) || is_link($this->file())) {
+        @unlink($this->file());
+      }
+      $token = bin2hex(random_bytes(16));
+      $temporary = $dir . '/.backup-pause.' . bin2hex(random_bytes(8));
+      $handle = @fopen($temporary, 'x');
+      if ($handle === FALSE) {
+        throw new \RuntimeException('Cannot write the pause file.');
+      }
+      $json = json_encode(['token' => $token, 'until' => $until, 'reason' => $reason]) . "\n";
+      if (!BackupWrite::all($handle, $json) || !@chmod($temporary, 0644)) {
+        @unlink($temporary);
+        throw new \RuntimeException('Cannot write the pause file.');
+      }
+      // link() fails, unlike rename(), when a pause was published meanwhile
+      // by something outside the lock; that pause stays.
+      $published = @link($temporary, $this->file());
       @unlink($temporary);
-      throw new \RuntimeException('Cannot write the pause file.');
-    }
-    return $token;
+      if (!$published) {
+        throw new \RuntimeException(file_exists($this->file()) || is_link($this->file())
+          ? 'The site is already paused by another backup or restore.'
+          : self::NO_HARD_LINKS);
+      }
+      return $token;
+    });
   }
 
   /**
    * Removes the pause only if it still holds this token.
    *
+   * The token check and the removal run under the pause lock, so a pause
+   * published after the check is never removed.
+   *
    * @return bool
-   *   TRUE when this token's pause was removed.
+   *   TRUE when this token's pause was removed. FALSE when the token does
+   *   not match, or the lock or the file could not be had; a backup pause
+   *   then ends at its time limit.
    */
   public function release(string $token): bool {
-    $pause = $this->read();
-    if ($token === '' || $pause === NULL || !hash_equals($pause['token'], $token)) {
+    if ($token === '') {
       return FALSE;
     }
-    return @unlink($this->file());
+    try {
+      return $this->underPauseLock(function () use ($token): bool {
+        $pause = $this->read();
+        if ($pause === NULL || !hash_equals($pause['token'], $token)) {
+          return FALSE;
+        }
+        return @unlink($this->file());
+      });
+    }
+    catch (\RuntimeException) {
+      return FALSE;
+    }
+  }
+
+  /**
+   * Runs a change to the pause file while holding the pause lock.
+   *
+   * @throws \RuntimeException
+   *   When the lock cannot be opened, or is still taken after the wait.
+   */
+  private function underPauseLock(callable $change): mixed {
+    $handle = $this->openLock(self::PAUSE_LOCK);
+    try {
+      $deadline = microtime(TRUE) + $this->lockWait;
+      while (!flock($handle, LOCK_EX | LOCK_NB)) {
+        if (microtime(TRUE) >= $deadline) {
+          throw new \RuntimeException(self::LOCK_BUSY);
+        }
+        usleep(50000);
+      }
+      try {
+        return $change();
+      }
+      finally {
+        flock($handle, LOCK_UN);
+      }
+    }
+    finally {
+      fclose($handle);
+    }
   }
 
   /**

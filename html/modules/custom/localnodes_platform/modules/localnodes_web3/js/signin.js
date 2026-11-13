@@ -96,6 +96,47 @@
     window.location.assign(login + window.location.search);
   }
 
+  /**
+   * siwe_login's wallet button (hidden in the top bar), if it is in the page.
+   */
+  function liveWallet() {
+    const button = document.getElementById('siwe-login-button');
+    return button && button.isConnected ? button : null;
+  }
+
+  /**
+   * "Use a browser wallet": shown once siwe_login's wallet button is there,
+   * and a click is handed to it. With no wallet in this browser the click
+   * says so under the choice instead; siwe_login would only show a message
+   * at the top of the page, under the fixed top bar.
+   */
+  Drupal.behaviors.localnodesWalletChoice = {
+    attach(context) {
+      once('ln-wallet', '[data-ln-wallet]', context).forEach((control) => {
+        const wrap = control.closest('[data-ln-wallet-wrap]');
+        const note = wrap?.querySelector('[data-ln-wallet-note]');
+        if (wrap) {
+          wrap.hidden = !liveWallet();
+        }
+        control.addEventListener('click', () => {
+          const button = liveWallet();
+          if (typeof window.ethereum === 'undefined' || !button) {
+            if (note) {
+              note.textContent = Drupal.t('No browser wallet was found in this browser. Add a wallet such as MetaMask and reload this page, or use Sign in instead.');
+            }
+            return;
+          }
+          if (note) {
+            note.textContent = '';
+          }
+          if (!button.disabled) {
+            button.click();
+          }
+        });
+      });
+    },
+  };
+
   Drupal.behaviors.localnodesSignIn = {
     attach(context) {
       once('ln-signin-waiting', 'main, [role="main"]', context).forEach((main) => {

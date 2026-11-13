@@ -31,27 +31,50 @@ final class SiteExportForm extends FormBase {
       return $form;
     }
     if (!$this->access->allows((int) $this->currentUser()->id())) return $form;
+    if ($this->exports->refusal() !== NULL) {
+      $form['off'] = ['#markup' => '<p>' . $this->t('Site export is not available while direct messages are switched on.') . '</p>'];
+      return $form;
+    }
     $job = $this->exports->current();
     $form_state->set('export_operation', $operation);
-    $form_state->set('export_id', $job['id'] ?? '');
+    $form_state->set('export_id', $operation === 'request' ? '' : ($job['id'] ?? ''));
     if ($operation !== '') {
       $form['#prefix'] = '<div class="ln-export-confirm">';
       $form['#suffix'] = '</div>';
       $form['heading'] = ['#markup' => '<h2>' . $this->t('Confirm it is you') . '</h2><p>' . $this->t('Use your current password to request this copy and each time you download it.') . '</p>'];
       $user = $this->access->account((int) $this->currentUser()->id());
-      if (!$user?->getPassword()) {
+      if (!$user?->getPassword() && $this->identity->signer()?->waitingUntil((int) $this->currentUser()->id()) !== NULL) {
+        $form['heading']['#markup'] = '<h2>' . $this->t('Confirm it is you') . '</h2><p>' . $this->t('A sign-in added to this account must wait 24 hours before it can confirm an export.') . '</p>';
+        $form['help'] = $this->help();
+        return $form;
+      }
+      $signature = !$user?->getPassword() && ($this->identity->signer()?->available((int) $this->currentUser()->id()) ?? FALSE);
+      if (!$user?->getPassword() && (!$signature || !$this->identity->signer()->attach($form))) {
+        $form['heading']['#markup'] = '<h2>' . $this->t('Confirm it is you') . '</h2><p>' . $this->t('This sign-in cannot confirm an export. Ask for export help.') . '</p>';
         $form['help'] = $this->help();
         return $form;
       }
       $form['acknowledged'] = ['#type' => 'checkbox', '#title' => $this->t('I understand this copy includes private records from every group.'), '#required' => TRUE];
-      $form['password'] = ['#type' => 'password', '#title' => $this->t('Your current password'), '#required' => TRUE, '#attributes' => ['autocomplete' => 'current-password']];
+      if ($signature) {
+        $form['heading']['#markup'] = '<h2>' . $this->t('Confirm it is you') . '</h2><p>' . $this->t('Confirm with your sign-in to request this copy and each time you download it.') . '</p>';
+        $form['#attached']['library'][] = 'localnodes_web3/export_confirmation';
+        $form['#attributes']['data-ln-export-signature'] = '';
+        $form['#attributes']['data-ln-export-action'] = $operation;
+        $form['#attributes']['data-ln-export-id'] = $form_state->get('export_id');
+        $form['#attributes']['data-ln-export-challenge'] = Url::fromRoute('localnodes_web3.export_challenge')->toString();
+        $form['proof_message'] = ['#type' => 'hidden', '#default_value' => '', '#attributes' => ['autocomplete' => 'off']];
+        $form['proof_signature'] = ['#type' => 'hidden', '#default_value' => '', '#attributes' => ['autocomplete' => 'off']];
+        $form['signing_status'] = ['#type' => 'container', '#attributes' => ['data-ln-export-status' => '', 'role' => 'status', 'aria-live' => 'polite']];
+      }
+      else $form['password'] = ['#type' => 'password', '#title' => $this->t('Your current password'), '#required' => TRUE, '#attributes' => ['autocomplete' => 'current-password']];
       $labels = ['request' => 'Confirm and request export', 'download' => 'Confirm and download', 'delete' => 'Confirm and delete this download'];
       if (!isset($labels[$operation])) return [];
       $form['actions']['#type'] = 'actions';
       $form['actions']['submit'] = ['#type' => 'submit', '#value' => $this->t($labels[$operation])];
-      $form['help_text'] = ['#markup' => '<p>' . $this->t('Sign in without a password?') . '</p>'];
+      if (!$signature) $form['help_text'] = ['#markup' => '<p>' . $this->t('Sign in without a password?') . '</p>'];
+      else $form['no_script'] = ['#markup' => '<noscript><p>' . $this->t('Turn on JavaScript to confirm with your sign-in, or ask for export help.') . '</p></noscript>'];
       $form['help'] = $this->help();
-      $form['cancel'] = ['#type' => 'link', '#title' => $this->t('Cancel'), '#url' => Url::fromRoute('localnodes_platform.site_export')];
+      $form['cancel'] = ['#type' => 'link', '#title' => $this->t('Cancel'), '#url' => Url::fromRoute('localnodes_platform.site_export'), '#attributes' => ['data-ln-export-cancel' => '']];
       return $form;
     }
     $status = $job['status'] ?? 'never';
@@ -71,7 +94,11 @@ final class SiteExportForm extends FormBase {
     }
     else $actions['request'] = $link($status === 'failed' ? 'Try again' : 'Export this site', 'request');
     if ($status === 'failed' || !$this->access->account((int) $this->currentUser()->id())?->getPassword()) $actions['help'] = $this->help();
-    if (!$this->access->account((int) $this->currentUser()->id())?->getPassword()) unset($actions['request'], $actions['download'], $actions['delete']);
+    if (!$this->access->account((int) $this->currentUser()->id())?->getPassword() && !($this->identity->signer()?->available((int) $this->currentUser()->id()) ?? FALSE)) {
+      unset($actions['request'], $actions['download'], $actions['delete']);
+      $waiting = $this->identity->signer()?->waitingUntil((int) $this->currentUser()->id()) !== NULL;
+      $actions['unavailable'] = ['#plain_text' => $waiting ? $this->t('A sign-in added to this account must wait 24 hours before it can confirm an export.') : $this->t('This sign-in cannot confirm an export.'), '#weight' => -10];
+    }
     $parts = [];
     foreach (['records', 'files', 'library'] as $key) $parts[$key] = (in_array($status, ['ready', 'running'], TRUE) && isset($job['parts'][$key])) ? self::size((int) $job['parts'][$key]) : NULL;
     $last = $this->exports->last();
@@ -98,11 +125,14 @@ final class SiteExportForm extends FormBase {
   private static function size(int $bytes): string { return number_format($bytes / 1000000, 1) . ' MB'; }
 
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    $ok = $this->identity->confirm((int) $this->currentUser()->id(), (string) $form_state->getValue('password', ''), (bool) $form_state->getValue('acknowledged'));
-    // Do not retain a password in form state, input or a rebuilt form.
-    $form_state->setValue('password', '');
-    $input = $form_state->getUserInput();
-    unset($input['password']);
+    $ok = $this->identity->confirm((int) $this->currentUser()->id(), (string) $form_state->getValue('password', ''), (bool) $form_state->getValue('acknowledged'), (string) $form_state->get('export_operation'), (string) $form_state->get('export_id'), (string) $form_state->getValue('proof_message', ''), (string) $form_state->getValue('proof_signature', ''));
+    // Never retain credentials in state, input or a rebuilt form.
+    $input = $form_state->getUserInput() ?? [];
+    foreach (['password', 'proof_message', 'proof_signature'] as $key) {
+      $form_state->setValue($key, '');
+      unset($input[$key]);
+      if (isset($form[$key])) { $form[$key]['#value'] = ''; $form[$key]['#default_value'] = ''; }
+    }
     $form_state->setUserInput($input);
     if (!$ok) $form_state->setErrorByName('password', $this->t('We could not confirm it is you. Try again or ask for export help.'));
   }

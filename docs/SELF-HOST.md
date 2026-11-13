@@ -90,7 +90,7 @@ You can leave the mail and AI keys empty for now (step 6). Leave other settings 
 
 Do not change `DB_PASSWORD`, `DB_ROOT_PASSWORD` or `DRUPAL_HASH_SALT` after the first start. The database keeps the first passwords, and a different salt can break sign-in links.
 
-`WEB3_ENABLED` is off by default; leave it off for a library-only site. On a fresh site with `WEB3_ENABLED=true`, members also get a **Sign in** button that opens WaaP for email or Google sign-in; the existing email-and-password form stays available. Leave `WAAP_ENVIRONMENT` blank to use WaaP's staging service for testing, or set `WAAP_ENVIRONMENT=production` for a live site. No WalletConnect project ID is needed for email or Google; set `WALLETCONNECT_PROJECT_ID` if you also want the **Browser Wallet** choice inside WaaP. WalletConnect's QR-code option is unavailable in this build. See the [WaaP setup reference](https://docs.waap.human.tech/for-apps/methods/evm) (checked 2026-11-11); test sign-in on your site's address before inviting members.
+`WEB3_ENABLED` is off by default; leave it off for a library-only site. On a fresh site with `WEB3_ENABLED=true`, members also get a **Sign in** button that opens WaaP for email or Google sign-in; the existing email-and-password form stays available. Leave `WAAP_ENVIRONMENT` blank for a live site: the default is WaaP's production service. Set `WAAP_ENVIRONMENT=staging` only on a test site, since accounts on the two services are separate. No WalletConnect project ID is needed for email or Google; set `WALLETCONNECT_PROJECT_ID` if you also want the **Browser Wallet** choice inside WaaP. WalletConnect's QR-code option is unavailable in this build. See the [WaaP setup reference](https://docs.waap.human.tech/for-apps/methods/evm) (checked 2026-11-11); test sign-in on your site's address before inviting members.
 
 ## 3. Make the site reachable
 
@@ -136,28 +136,37 @@ docker compose up -d opensocial
 
 ## 5. Sign in for the first time
 
-There is no default password. The installer gave the administrator account (named `admin`) a random password that is never shown. Ask the site for a one-time sign-in link instead:
+The first administrator account (account 1, named `admin`) is blocked after installation. Its random password cannot sign you in. From your server, temporarily unblock it and request a one-time sign-in link:
 
 ```sh
 drush() { docker compose exec -T opensocial /var/www/html/vendor/bin/drush -r /var/www/html/html "$@"; }
+drush user:unblock --uid=1
 docker compose exec -T opensocial sh -c \
-  'exec /var/www/html/vendor/bin/drush -r /var/www/html/html user:login --uri="$SERVICE_URL_OPENSOCIAL"'
+  'exec /var/www/html/vendor/bin/drush -r /var/www/html/html user:login --uid=1 --uri="$SERVICE_URL_OPENSOCIAL"'
 ```
 
 The command uses the address from your saved settings, as read when the site container started. You do not need to edit an address inside the command. Keep the tunnel open while using its `localhost` address.
 
-Open the printed link on your own computer. **It works once.** It signs you in as the administrator and opens the account form at `/user/1/edit`, with the new-password fields. Now:
+Open the printed link on your own computer. **It works once.** It signs you in as the administrator and opens the account form at `/user/1/edit`. Leave this recovery account's password unchanged. Use this session to:
 
-1. Set and save a password you will remember on that form.
-2. Under *Administration › Configuration › System › Basic site settings*, check the site's name. Its email address is LocalNodes' own `noreply@localnodes.xyz` unless you set `MAIL_FROM` before the first start; change it to your own sender address when you set up mail (step 6).
+1. Under *Administration › Configuration › System › Basic site settings*, check the site's name. Its email address is LocalNodes' own `noreply@localnodes.xyz` unless you set `MAIL_FROM` before the first start; change it to your own sender address when you set up mail (step 6).
+2. Under *Administration › People › Add user*, create a separate ordinary member account for everyday use. Set its password and give it the **Verified user** role. Leave the option to notify the new user unchecked until mail is working.
 
 The `drush` line defines a shortcut for this terminal session. In a new terminal, `cd` into the `localnodes` folder and define it again. Use it whenever this guide or a support answer says `drush`.
+
+When you finish this administrator session, block account 1 again from the server. This also ends its open sign-in sessions:
+
+```sh
+drush user:block --uid=1
+```
+
+For later setup or recovery that needs the administrator, repeat the server unblock, one-time sign-in and block steps above. Use your ordinary member account for everyday work.
 
 Never run `drush config:import` or `drush deploy` on this site.
 
 ### Create your first group
 
-Your new site has no groups yet. With the tunnel open and while signed in, open [Create a group](http://localhost:8080/group/add). If you already use HTTPS, open `/group/add` on your site's address instead. Create a group for your community, then open its Import tab to add documents. The in-site guide's references to a welcome email and an existing group do not apply to this manual setup.
+Your new site has no groups yet. Sign in with your ordinary member account. With the tunnel open, open [Create a group](http://localhost:8080/group/add). If you already use HTTPS, open `/group/add` on your site's address instead. Create a group for your community, then open its Import tab to add documents. The in-site guide's references to a welcome email and an existing group do not apply to this manual setup.
 
 ## 6. Add mail and the assistant
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3860f56a2f6a808d1a211c8fc984e555",
+    "content-hash": "14a8bf16bb39f6ab922d186da33ab4e9",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -4774,7 +4774,7 @@
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/gas_sponsor.git",
-                "reference": "5d5aeedadbdfbe7ed0ff35368d9ce2f00b8e64d8"
+                "reference": "eae128341a5722796fed798e03a179a002f27e87"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -4789,7 +4789,7 @@
                 },
                 "drupal": {
                     "version": "1.0.x-dev",
-                    "datestamp": "1794408238",
+                    "datestamp": "1794514868",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5331,22 +5331,22 @@
         },
         {
             "name": "drupal/group_treasury",
-            "version": "1.0.0-alpha6",
+            "version": "1.0.0-alpha7",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/group_treasury.git",
-                "reference": "1.0.0-alpha6"
+                "reference": "1.0.0-alpha7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha6.zip",
-                "reference": "1.0.0-alpha6",
-                "shasum": "f7270f2242f99f41e063235ce56177d6fffc130e"
+                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha7.zip",
+                "reference": "1.0.0-alpha7",
+                "shasum": "65b1ea09c924e404b0b9cf48cb0b45fa63a2c9f8"
             },
             "require": {
                 "drupal/core": "^10",
                 "drupal/group": "*",
-                "drupal/safe_smart_accounts": "^1.0",
+                "drupal/safe_smart_accounts": "^1.0.0-alpha6",
                 "php": ">=8.2"
             },
             "require-dev": {
@@ -5355,8 +5355,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha6",
-                    "datestamp": "1794456319",
+                    "version": "1.0.0-alpha7",
+                    "datestamp": "1794514960",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5383,7 +5383,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/group_treasury"
             },
-            "published-time": "2026-11-12T04:04:59+00:00"
+            "published-time": "2026-11-12T20:22:19+00:00"
         },
         {
             "name": "drupal/hux",
@@ -7702,17 +7702,17 @@
         },
         {
             "name": "drupal/safe_smart_accounts",
-            "version": "1.0.0-alpha5",
+            "version": "1.0.0-alpha6",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_smart_accounts.git",
-                "reference": "1.0.0-alpha5"
+                "reference": "1.0.0-alpha6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha5.zip",
-                "reference": "1.0.0-alpha5",
-                "shasum": "1b947e1917d521a5c2d756395274a71259577652"
+                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha6.zip",
+                "reference": "1.0.0-alpha6",
+                "shasum": "a9c3b5584af273160bf2d108e6125b0f69644798"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7727,8 +7727,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha5",
-                    "datestamp": "1794456308",
+                    "version": "1.0.0-alpha6",
+                    "datestamp": "1794514984",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7755,7 +7755,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_smart_accounts"
             },
-            "published-time": "2026-11-12T04:04:46+00:00"
+            "published-time": "2026-11-12T20:22:43+00:00"
         },
         {
             "name": "drupal/search_api",
@@ -8123,17 +8123,17 @@
         },
         {
             "name": "drupal/siwe_login",
-            "version": "1.0.0-beta10",
+            "version": "1.0.0-beta12",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/siwe_login.git",
-                "reference": "1.0.0-beta10"
+                "reference": "1.0.0-beta12"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta10.zip",
-                "reference": "1.0.0-beta10",
-                "shasum": "05d70a80da444e934de80383ab7f6158117f435d"
+                "url": "https://ftp.drupal.org/files/projects/siwe_login-1.0.0-beta12.zip",
+                "reference": "1.0.0-beta12",
+                "shasum": "a76b0cc668c042f162aa72b5d749376b898574a9"
             },
             "require": {
                 "drupal/core": "^10 || ^11",
@@ -8147,8 +8147,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-beta10",
-                    "datestamp": "1794462591",
+                    "version": "1.0.0-beta12",
+                    "datestamp": "1794491476",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -8175,7 +8175,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/siwe_login"
             },
-            "published-time": "2026-11-12T05:49:30+00:00"
+            "published-time": "2026-11-12T13:50:55+00:00"
         },
         {
             "name": "drupal/smart_trim",

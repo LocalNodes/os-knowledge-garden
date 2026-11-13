@@ -16,30 +16,30 @@ e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1:
 
     <p>This year's assembly will focus on three themes: Front Range watershed health indicators from our community science monitoring, the proposal for a quadratic funding round for local public goods, and polycentric governance in practice -- bridging DAO tools with consensus-based facilitation. Each group will present their seasonal stewardship report.</p>
 
-    <p>Whether you have been building beaver dam analogs on Caribou Ranch, running mutual credit experiments, growing food forests in Longmont, or hacking at RegenHub, the Assembly is your chance to see how all these threads weave together into a coherent bioregional practice. Come learn, contribute, and celebrate the living systems of the Front Range.</p>
+    <p>Whether you have been building beaver dam analogs on Thistlewood Ranch, running mutual credit experiments, growing food forests in Longmont, or hacking at Mesa Hearth, the Assembly is your chance to see how all these threads weave together into a coherent bioregional practice. Come learn, contribute, and celebrate the living systems of the Front Range.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 1750 13th Street
+    address_line1: 1750 Gooseberry Street
   field_event_date: +30 day|09:00
   field_event_date_end: +30 day|18:00
   image: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
   image_alt: Front Range mountain landscape
-  field_event_location: Boulder Creek Event Center
+  field_event_location: Kingbird Event Center
   field_content_visibility: community
   field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
   group: aabb1122-3344-4556-6778-899001122334
 
-# Event 2: Beaver Dam Analog Build Day at Caribou Ranch (future +14 day, public, no group)
+# Event 2: Beaver Dam Analog Build Day at Thistlewood Ranch (future +14 day, public, no group)
 e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2:
   uuid: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
-  title: Beaver Dam Analog Build Day at Caribou Ranch
+  title: Beaver Dam Analog Build Day at Thistlewood Ranch
   type: event
   langcode: en
   uid: 11223344-5566-4778-8990-aabbccddeef0
   body: >
-    <p>Come get your hands muddy! Join us at Caribou Ranch Open Space for a hands-on beaver dam analog (BDA) build day. BDAs are simple, low-tech structures -- posts driven into the streambed with woven willow branches -- that mimic the function of natural beaver dams. They slow water, raise water tables, and help degraded streams rebuild their braided channels and floodplain connectivity.</p>
+    <p>Come get your hands muddy! Join us at Thistlewood Ranch Preserve for a hands-on beaver dam analog (BDA) build day. BDAs are simple, low-tech structures -- posts driven into the streambed with woven willow branches -- that mimic the function of natural beaver dams. They slow water, raise water tables, and help degraded streams rebuild their braided channels and floodplain connectivity.</p>
 
     <p>This is low-tech process-based restoration (LTPBR) in action. No engineering degree required -- just a willingness to stand in a cold stream and weave branches. Rowan will lead the installation, explaining the science behind beaver mimicry structures and how they transform stream complexity over time. We will build 3-5 structures on a tributary that has been incised from decades of channel straightening.</p>
 
@@ -48,36 +48,36 @@ e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2:
     country_code: US
     locality: Nederland
     postal_code: 80466
-    address_line1: Highway 72
+    address_line1: 4400 Thistlewood Ranch Road
   field_event_date: +14 day|09:00
   field_event_date_end: +14 day|15:00
   image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
   image_alt: Stream restoration site
-  field_event_location: Caribou Ranch Open Space
+  field_event_location: Thistlewood Ranch Preserve
   field_content_visibility: public
   field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
 
-# Event 3: RegenHub Open House & Community Potluck (future +21 day, public, RegenHub)
+# Event 3: Mesa Hearth Open House & Community Potluck (future +21 day, public, Mesa Hearth)
 e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3:
   uuid: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
-  title: "RegenHub Open House & Community Potluck"
+  title: "Mesa Hearth Open House & Community Potluck"
   type: event
   langcode: en
   uid: 22334455-6677-4889-90aa-bbccddeeff01
   body: >
-    <p>Come see what RegenHub Boulder is all about! This open house is your chance to tour our co-working space, meet the people building tools and tending land in our community, and share a meal together. RegenHub is where the regen tech builders meet the watershed stewards -- where hackathons happen down the hall from seed-sorting sessions.</p>
+    <p>Come see what Mesa Hearth Boulder is all about! This open house is your chance to tour our co-working space, meet the people building tools and tending land in our community, and share a meal together. Mesa Hearth is where the regen tech builders meet the watershed stewards -- where hackathons happen down the hall from seed-sorting sessions.</p>
 
     <p>We will have short lightning talks from community members about their current projects, plus a potluck dinner featuring food from Front Range farms and gardens. Bring a dish to share if you can. This is the social glue that holds our community together -- come for the food, stay for the connections.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 1310 College Avenue
+    address_line1: 1310 Pinyon Avenue
   field_event_date: +21 day|17:00
   field_event_date_end: +21 day|21:00
   image: a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f
   image_alt: Community gathering space
-  field_event_location: RegenHub Boulder
+  field_event_location: Mesa Hearth Boulder
   field_content_visibility: public
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
   group: ddee4455-6677-4889-90aa-122334455667
@@ -96,12 +96,12 @@ e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 900 Baseline Road
+    address_line1: 900 Prairie Smoke Road
   field_event_date: -14 day|18:00
   field_event_date_end: -14 day|21:00
   image:
   image_alt:
-  field_event_location: Online via Zoom
+  field_event_location: Online via video call
   field_content_visibility: community
   field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
   group: eeff5566-7788-4990-0aa1-233445566778
@@ -121,12 +121,12 @@ e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5:
     country_code: US
     locality: Longmont
     postal_code: 80501
-    address_line1: 640 Main Street
+    address_line1: 640 Bluestem Street
   field_event_date: +7 day|10:00
   field_event_date_end: +7 day|13:00
   image: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
   image_alt: Seed swap and garden plants
-  field_event_location: Longmont Farmstead
+  field_event_location: Bluestem Farmstead
   field_content_visibility: community
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
   group: ccdd3344-5566-4778-8990-011223344556
@@ -139,21 +139,21 @@ e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6:
   langcode: en
   uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
   body: >
-    <p>Learn how quadratic funding works and how to run a local QF round for Front Range public goods. QF is a democratic funding mechanism where many small contributions are amplified by a matching pool -- meaning projects that matter to the most people get the most funding, regardless of how wealthy individual donors are. Think of it as Gitcoin-style funding rounds but for your bioregion.</p>
+    <p>Learn how quadratic funding works and how to run a local QF round for Front Range public goods. QF is a democratic funding mechanism where many small contributions are amplified by a matching pool -- meaning projects that matter to the most people get the most funding, regardless of how wealthy individual donors are. Think of it as a matching-fund round, but for your bioregion.</p>
 
-    <p>Devon will walk through the mechanics of QF, share case studies from successful rounds in other communities, and lead a hands-on exercise designing a pilot round for Boulder. We will discuss what kinds of projects to include (watershed restoration, food commons, community infrastructure, mutual aid), how to structure the matching pool, and how to use the Schelling Point App for transparent voting.</p>
+    <p>Devon will walk through the mechanics of QF, share case studies from successful rounds in other communities, and lead a hands-on exercise designing a pilot round for Boulder. We will discuss what kinds of projects to include (watershed restoration, food commons, community infrastructure, mutual aid), how to structure the matching pool, and how to run an online vote that everyone can check.</p>
 
     <p>This workshop is for anyone curious about Ethereum localism in practice -- no crypto background needed. We will focus on the coordination mechanism, not the technology stack. Public goods funding is about community priorities, not protocol complexity.</p>
   field_event_address:
     country_code: US
     locality: Boulder
-    postal_code: 80309
-    address_line1: 1125 18th Street
+    postal_code: 80302
+    address_line1: 1125 Kinnikinnick Street
   field_event_date: +45 day|13:00
   field_event_date_end: +45 day|17:00
   image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
   image_alt: Workshop space
-  field_event_location: CU Boulder ATLAS Center
+  field_event_location: Cinquefoil College Maker Lab
   field_content_visibility: community
   field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: bbcc2233-4455-4667-7889-900112233445
@@ -168,19 +168,19 @@ e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7:
   body: >
     <p>Gather with your community to celebrate the summer solstice and honor the waters that sustain the Front Range. This is a time for storytelling, song, shared food, and renewing our commitment to the land and water of this bioregion.</p>
 
-    <p>Talia Redhawk will open the gathering with an acknowledgment of the Arapaho and Cheyenne peoples whose territory includes the Front Range and whose relationship to these waters stretches back thousands of years. We will hold community sharing circles along Boulder Creek, followed by a potluck feast featuring food grown within our bioregion. Bring something to share -- food, a story, a song, or simply your presence.</p>
+    <p>Talia Redhawk will open the gathering with an acknowledgment of the Indigenous peoples of the land we gather on, whose relationship to these waters stretches back thousands of years. We will hold community sharing circles along Boulder Creek, followed by a potluck feast featuring food grown within our bioregion. Bring something to share -- food, a story, a song, or simply your presence.</p>
 
-    <p>This gathering is open to everyone. Come celebrate the longest day of the year where the mountains meet the plains, where the Continental Divide sends water on its 2,000-mile journey to the Gulf.</p>
+    <p>This gathering is open to everyone. Come celebrate the longest day of the year where the mountains meet the plains, where the Continental Divide sends water on its long journey to the Gulf.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 3rd and Arapahoe
+    address_line1: 300 Willowbend Path
   field_event_date: +60 day|16:00
   field_event_date_end: +60 day|21:00
   image: b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90
   image_alt: Boulder Creek landscape
-  field_event_location: Eben G. Fine Park
+  field_event_location: Kingbird Park
   field_content_visibility: public
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
 
@@ -192,19 +192,157 @@ e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
   langcode: en
   uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
   body: >
-    <p>Watershed monitors, data scientists, and community members gathered for a full-day data jam to analyze the latest water quality data from our monitoring stations along Boulder Creek and South Platte tributaries. Zara Okafor led this session, combining CU Boulder research methods with community science data collected by volunteer monitors throughout the season.</p>
+    <p>Watershed monitors, data scientists, and community members gathered for a full-day data jam to analyze the latest water quality data from our monitoring stations along Boulder Creek and South Platte tributaries. Zara Okafor led this session, combining Cinquefoil College research methods with community science data collected by volunteer monitors throughout the season.</p>
 
     <p>Key findings: dissolved oxygen levels have improved significantly in reaches where beaver dam analogs were installed two years ago. Turbidity data shows that BDA sites are capturing sediment and rebuilding floodplain soils. The community science dashboard has been updated with all new data -- check the Watershed Hub group files for access.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80303
-    address_line1: 4001 Discovery Drive
+    address_line1: 4001 Lichen Drive
   field_event_date: -30 day|09:00
   field_event_date_end: -30 day|17:00
   image:
   image_alt:
-  field_event_location: CU Boulder Environmental Center
+  field_event_location: Cinquefoil College Field Station
+  field_content_visibility: community
+  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Watershed Hub Potluck (this month day 4, community, group; month-anchored so the calendar is never empty)
+2275752d-29f6-4738-a12d-a12cbb45c83d:
+  uuid: 2275752d-29f6-4738-a12d-a12cbb45c83d
+  title: Watershed Hub Potluck
+  type: event
+  langcode: en
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  body: >
+    <p>Bring a dish and a short update from your corner of the watershed. We go round the circle, then eat.</p>
+
+    <p>New members welcome; this is the easiest way to meet everyone.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: Tansy Street and Burdock Lane
+  field_event_date: this month day 4|18:00
+  field_event_date_end: this month day 4|20:30
+  field_event_location: Quarry Hill Pavilion
+  field_content_visibility: community
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Boulder Creek Cleanup Morning (this month day 13, public, group; month-anchored so the calendar is never empty)
+6fba96bb-8bd5-4259-a8e0-74da36dec443:
+  uuid: 6fba96bb-8bd5-4259-a8e0-74da36dec443
+  title: Boulder Creek Cleanup Morning
+  type: event
+  langcode: en
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  body: >
+    <p>We clear trash and invasive tamarisk along the creek path from Kingbird Park downstream. Gloves, bags and grabbers provided.</p>
+
+    <p>All ages welcome; kids with an adult.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 101 Willowbend Path
+  field_event_date: this month day 13|09:00
+  field_event_date_end: this month day 13|12:00
+  field_event_location: Kingbird Park
+  field_content_visibility: public
+  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Community Currency Office Hours (this month day 22, community, group; month-anchored so the calendar is never empty)
+9cf102d8-17e3-4e94-a115-6e717844b214:
+  uuid: 9cf102d8-17e3-4e94-a115-6e717844b214
+  title: Community Currency Office Hours
+  type: event
+  langcode: en
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  body: >
+    <p>Drop in with questions about the local mutual-credit pilot: how to open a line, how merchants settle, what happens at the end of a season.</p>
+
+    <p>No wallet needed to come and ask.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80301
+    address_line1: 1600 Kestrel Street
+  field_event_date: this month day 22|16:00
+  field_event_date_end: this month day 22|18:00
+  field_event_location: Mesa Hearth
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: bbcc2233-4455-4667-7889-900112233445
+
+# Food Commons Harvest Kitchen (next month day 6, community, group; month-anchored so the calendar is never empty)
+c1bc8f88-386a-47cc-8736-1699558d919e:
+  uuid: c1bc8f88-386a-47cc-8736-1699558d919e
+  title: Food Commons Harvest Kitchen
+  type: event
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  body: >
+    <p>We put up the season's tomatoes and peppers together and split the jars among everyone who comes.</p>
+
+    <p>Bring clean jars if you have them.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80304
+    address_line1: 1630 Sweetgrass Avenue
+  field_event_date: next month day 6|10:00
+  field_event_date_end: next month day 6|14:00
+  field_event_location: Sweetgrass Garden Kitchen
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: ccdd3344-5566-4778-8990-011223344556
+
+# Mesa Hearth Open Studio Night (next month day 15, public, group; month-anchored so the calendar is never empty)
+53b055e9-91cb-4a5a-88c6-70bfa9f0688e:
+  uuid: 53b055e9-91cb-4a5a-88c6-70bfa9f0688e
+  title: Mesa Hearth Open Studio Night
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>Members show what they are building: tools, maps, art and experiments. Open to anyone curious.</p>
+
+    <p>Light food and drink.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80301
+    address_line1: 1600 Kestrel Street
+  field_event_date: next month day 15|18:00
+  field_event_date_end: next month day 15|21:00
+  field_event_location: Mesa Hearth
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ddee4455-6677-4889-90aa-122334455667
+
+# Watershed Hub Monthly Check-In (next month day 24, community, group; month-anchored so the calendar is never empty)
+2752f2ec-8b08-4754-a30b-0489a6e6df67:
+  uuid: 2752f2ec-8b08-4754-a30b-0489a6e6df67
+  title: Watershed Hub Monthly Check-In
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Our monthly check-in: what moved, what is stuck, and where people could use a hand.</p>
+
+    <p>Join in person or online; the link is posted in the group the day before.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 1001 Coyote Willow Avenue
+  field_event_date: next month day 24|18:30
+  field_event_date_end: next month day 24|20:00
+  field_event_location: Online and at the Mesa Commons Library
   field_content_visibility: community
   field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
   group: aabb1122-3344-4556-6778-899001122334

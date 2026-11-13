@@ -21,12 +21,12 @@
     country_code: US
     locality: Seattle
     postal_code: 98101
-    address_line1: 305 Harrison Street
+    address_line1: 305 Lanternfish Way
   field_event_date: +30 day|09:00
   field_event_date_end: +30 day|18:00
   image: cd4a7ee5-d64a-407f-90f5-d75223056087
   image_alt: Cascadia bioregional landscape
-  field_event_location: Seattle Center
+  field_event_location: Northgrove Pavilion
   field_content_visibility: community
   field_event_type: f7a31497-13ab-4ec8-8674-64c5bbd64b76
   group: f1d6ab6e-c246-4434-9283-d452bdf77f82
@@ -41,17 +41,17 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
   body: >
     <p>Learn how to monitor the health of your local watershed. This hands-on training covers water quality testing, macroinvertebrate sampling, and riparian habitat assessment. Open to everyone -- no prior experience needed.</p>
 
-    <p>We will meet at the Nooksack River trailhead and spend the morning learning field techniques, followed by an afternoon of actual data collection that will be contributed to our community science database. Bring waterproof boots and a notebook.</p>
+    <p>We will meet at the Hazelrun Creek trailhead and spend the morning learning field techniques, followed by an afternoon of actual data collection that will be contributed to our community science database. Bring waterproof boots and a notebook.</p>
   field_event_address:
     country_code: US
     locality: Bellingham
     postal_code: 98225
-    address_line1: 3000 Lakeway Drive
+    address_line1: 3000 Hazelrun Trail Road
   field_event_date: +14 day|09:00
   field_event_date_end: +14 day|15:00
   image: 01e1d6a0-7ea7-423d-921a-92337ed5e589
   image_alt: Forest canopy along a river
-  field_event_location: Nooksack River Trailhead
+  field_event_location: Hazelrun Creek Trailhead
   field_content_visibility: public
   field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
 
@@ -63,19 +63,19 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
   langcode: en
   uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
   body: >
-    <p>Come visit the Cascadia Commons and see what community land stewardship looks like in practice. We will tour the community gardens, affordable housing units, and the new food forest that was planted last season.</p>
+    <p>Come visit the Hollyhock Commons and see what community land stewardship looks like in practice. We will tour the community gardens, affordable housing units, and the new food forest that was planted last season.</p>
 
     <p>This open house is a chance to learn about the commons-based model of land holding, ask questions about how the trust works, and meet the people who live and grow here. Light refreshments will be provided from our on-site garden.</p>
   field_event_address:
     country_code: US
     locality: Portland
     postal_code: 97202
-    address_line1: 834 Commons Way
+    address_line1: 834 Hollyhock Lane
   field_event_date: +21 day|10:00
   field_event_date_end: +21 day|14:00
   image: 6a503fe4-5993-492c-babf-e0d6e4827e82
   image_alt: Community garden with raised beds
-  field_event_location: Cascadia Commons Grounds
+  field_event_location: Hollyhock Commons Grounds
   field_content_visibility: public
   field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
   group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
@@ -94,7 +94,7 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
     country_code: US
     locality: Seattle
     postal_code: 98104
-    address_line1: 789 Council House Lane
+    address_line1: 789 Quillback Lane
   field_event_date: -14 day|18:00
   field_event_date_end: -14 day|21:00
   image:
@@ -119,12 +119,12 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
     country_code: US
     locality: Eugene
     postal_code: 97401
-    address_line1: 44 East Broadway
+    address_line1: 44 Elderberry Row
   field_event_date: +7 day|10:00
   field_event_date_end: +7 day|13:00
   image: e75443e6-5a70-4243-9a5c-fd72da789339
   image_alt: Garden seedlings and plants
-  field_event_location: Whiteaker Community Market
+  field_event_location: Elderberry Row Market
   field_content_visibility: community
   field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
 
@@ -143,7 +143,7 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
     country_code: US
     locality: Portland
     postal_code: 97214
-    address_line1: 2233 Solidarity Avenue
+    address_line1: 2233 Bramblewood Avenue
   field_event_date: +45 day|13:00
   field_event_date_end: +45 day|17:00
   image: 030215c2-7cd1-4519-a16c-a9a2e722bb8c
@@ -163,17 +163,17 @@ ab2574c1-ef7d-4fe6-b69a-17ae5ad94bfc:
   body: >
     <p>Gather with your bioregional community to celebrate the solstice and honor the living systems that sustain us. This is a time for storytelling, song, shared food, and renewing our commitment to the land we call home.</p>
 
-    <p>Willow Redcedar will open the gathering with an acknowledgment of the Coast Salish peoples whose territory we are on, followed by community sharing circles and a potluck feast featuring food grown within our bioregion.</p>
+    <p>Willow Redcedar will open the gathering with an acknowledgment of the Indigenous peoples of the land we gather on, followed by community sharing circles and a potluck feast featuring food grown within our bioregion.</p>
   field_event_address:
     country_code: US
     locality: Olympia
     postal_code: 98501
-    address_line1: Priest Point Park
+    address_line1: Saltmeadow Park
   field_event_date: +60 day|16:00
   field_event_date_end: +60 day|21:00
   image: d431b19e-1545-47d9-ad86-11893c053340
   image_alt: River estuary landscape
-  field_event_location: Priest Point Park Amphitheater
+  field_event_location: Saltmeadow Park Amphitheater
   field_content_visibility: public
   field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
 
@@ -192,7 +192,7 @@ ab2574c1-ef7d-4fe6-b69a-17ae5ad94bfc:
     country_code: US
     locality: Seattle
     postal_code: 98104
-    address_line1: 901 Data Commons Blvd
+    address_line1: 901 Kingbird Boulevard
   field_event_date: -30 day|14:00
   field_event_date_end: -30 day|17:00
   image:
@@ -200,4 +200,142 @@ ab2574c1-ef7d-4fe6-b69a-17ae5ad94bfc:
   field_event_location: LocalNodes Community Space
   field_content_visibility: community
   field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+
+# Hub Potluck and Project Share-Back (this month day 4, community, group; month-anchored so the calendar is never empty)
+4f988902-969d-4cd7-bb57-d50b7cd9918c:
+  uuid: 4f988902-969d-4cd7-bb57-d50b7cd9918c
+  title: Hub Potluck and Project Share-Back
+  type: event
+  langcode: en
+  uid: 508fefc5-3a18-471e-afc7-f0bd6686f850
+  body: >
+    <p>Bring a dish and a two-minute update on what your working group is up to. We go round the room, then eat.</p>
+
+    <p>New members are especially welcome: this is the easiest way to meet the people behind the groups.</p>
+  field_event_address:
+    country_code: US
+    locality: Seattle
+    postal_code: 98103
+    address_line1: 3501 Wrenfield Avenue
+  field_event_date: this month day 4|18:00
+  field_event_date_end: this month day 4|20:30
+  field_event_location: Wrenfield Commons Hall
+  field_content_visibility: community
+  field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+  group: f1d6ab6e-c246-4434-9283-d452bdf77f82
+
+# Riparian Planting Morning (this month day 13, public, group; month-anchored so the calendar is never empty)
+0ad41a21-7490-403f-969c-f774797c322e:
+  uuid: 0ad41a21-7490-403f-969c-f774797c322e
+  title: Riparian Planting Morning
+  type: event
+  langcode: en
+  uid: 6306b3d6-eaa9-4571-9973-f07e1dac1caa
+  body: >
+    <p>We plant native willow and red-osier dogwood cuttings along the restored reach. Gloves, tools and coffee provided.</p>
+
+    <p>Wear boots that can get wet. Families welcome.</p>
+  field_event_address:
+    country_code: US
+    locality: Bellingham
+    postal_code: 98226
+    address_line1: 1001 Heronwood Way
+  field_event_date: this month day 13|09:30
+  field_event_date_end: this month day 13|12:30
+  field_event_location: Heronwood Creek Park
+  field_content_visibility: public
+  field_event_type: 43048f01-387c-45d8-9ae2-c42c9f060770
+  group: fdcc1818-ced4-4af6-b4b3-527b757da1f0
+
+# Commons Reading Circle: How Communities Share Land (this month day 22, community, group; month-anchored so the calendar is never empty)
+bedb638d-beaa-4599-b1f4-5582d3caf923:
+  uuid: bedb638d-beaa-4599-b1f4-5582d3caf923
+  title: "Commons Reading Circle: How Communities Share Land"
+  type: event
+  langcode: en
+  uid: 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
+  body: >
+    <p>We read and talk through two chapters of a classic study of how communities govern shared land and ask what they mean for our land trust's bylaws.</p>
+
+    <p>No need to have read ahead: a one-page summary goes out the week before.</p>
+  field_event_address:
+    country_code: US
+    locality: Portland
+    postal_code: 97214
+    address_line1: 1120 Sorrel Street
+  field_event_date: this month day 22|19:00
+  field_event_date_end: this month day 22|20:30
+  field_event_location: Land Trust Office
+  field_content_visibility: community
+  field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
+
+# Mutual Credit Clinic (next month day 6, community, group; month-anchored so the calendar is never empty)
+0321429c-b085-46e1-a5c4-c2808d7b7b4b:
+  uuid: 0321429c-b085-46e1-a5c4-c2808d7b7b4b
+  title: Mutual Credit Clinic
+  type: event
+  langcode: en
+  uid: 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
+  body: >
+    <p>A hands-on morning for businesses and households curious about trading in mutual credit. We walk through how a credit line works and who settles what.</p>
+
+    <p>Bring questions; we bring worked examples from the pilot.</p>
+  field_event_address:
+    country_code: US
+    locality: Olympia
+    postal_code: 98501
+    address_line1: 313 Thimbleberry Lane
+  field_event_date: next month day 6|10:00
+  field_event_date_end: next month day 6|12:00
+  field_event_location: Thimbleberry Co-op Library
+  field_content_visibility: community
+  field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
+  group: 80dea4a2-dcec-4eaa-88a7-60785d6107a8
+
+# Salmon Homecoming Walk (next month day 15, public, group; month-anchored so the calendar is never empty)
+96e09cf7-ee9a-4d73-8b12-22dfd0a5e395:
+  uuid: 96e09cf7-ee9a-4d73-8b12-22dfd0a5e395
+  title: Salmon Homecoming Walk
+  type: event
+  langcode: en
+  uid: bcead200-a74f-4e24-93c4-2746436a5207
+  body: >
+    <p>An evening walk along the river to watch the salmon come home, with stories from Watershed Guardians who have counted them for a decade.</p>
+
+    <p>Easy pace, about two miles.</p>
+  field_event_address:
+    country_code: US
+    locality: Bellingham
+    postal_code: 98225
+    address_line1: 3000 Hazelrun Trail Road
+  field_event_date: next month day 15|17:30
+  field_event_date_end: next month day 15|19:30
+  field_event_location: Hazelrun Creek Trailhead
+  field_content_visibility: public
+  field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
+  group: fdcc1818-ced4-4af6-b4b3-527b757da1f0
+
+# Hub Monthly Check-In (next month day 24, community, group; month-anchored so the calendar is never empty)
+4be4a4bd-a74e-4a5f-b77a-3ffd4e397520:
+  uuid: 4be4a4bd-a74e-4a5f-b77a-3ffd4e397520
+  title: Hub Monthly Check-In
+  type: event
+  langcode: en
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  body: >
+    <p>Our monthly check-in across working groups: what moved, what is stuck, and where people could use a hand.</p>
+
+    <p>Join in person or online; the link is posted in the group the day before.</p>
+  field_event_address:
+    country_code: US
+    locality: Seattle
+    postal_code: 98103
+    address_line1: 3501 Wrenfield Avenue
+  field_event_date: next month day 24|18:30
+  field_event_date_end: next month day 24|20:00
+  field_event_location: Online and at Wrenfield Commons Hall
+  field_content_visibility: community
+  field_event_type: 43048f01-387c-45d8-9ae2-c42c9f060770
   group: f1d6ab6e-c246-4434-9283-d452bdf77f82

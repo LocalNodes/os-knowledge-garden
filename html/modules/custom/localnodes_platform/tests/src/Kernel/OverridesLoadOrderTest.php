@@ -8,14 +8,12 @@ use Drupal\Core\Asset\AttachedAssets;
 use Drupal\KernelTests\KernelTestBase;
 
 /**
- * ln-overrides.css loads after socialblue and ln-tokens.css (22.1-03, D-09).
+ * The module's stylesheets load after socialblue's, in a fixed order.
  *
- * 22.1-03 must_have: "The AA overrides live in a hand-written
- * css/ln-overrides.css that uses only var(--ln-*) values and loads after
- * socialblue and ln-tokens.css". Core files module CSS in the default group,
- * before every theme stylesheet, so the order depends on
- * localnodes_platform_css_alter(). Before this test only a manual check of the
- * served login page covered it. Added by the 22.1 Nyquist audit.
+ * ln-tokens.css sets the --ln-* values, ln-overrides.css holds the contrast
+ * fixes, and ln-app-look.css restyles the member theme on top of both, so it
+ * loads last. Core files module CSS before every theme stylesheet, so the
+ * order depends on localnodes_platform_css_alter().
  *
  * @group localnodes_platform
  * @group phase22_1
@@ -53,7 +51,22 @@ final class OverridesLoadOrderTest extends KernelTestBase {
   }
 
   /**
-   * Resolved CSS order: brand.css, brand--sky.css, ln-tokens, ln-overrides.
+   * Runs the shutdown callbacks while the container is still there.
+   *
+   * The bootstrap base theme saves its cache in a shutdown callback. Core
+   * runs those after a passing test; after a failing one they ran only at
+   * process exit, with no container, and that error replaced the failure.
+   */
+  protected function tearDown(): void {
+    $callbacks = &drupal_register_shutdown_function();
+    while ($callback = array_shift($callbacks)) {
+      call_user_func_array($callback['callback'], $callback['arguments']);
+    }
+    parent::tearDown();
+  }
+
+  /**
+   * Resolved order: brand.css, brand--sky.css, tokens, overrides, app look.
    */
   public function testOverridesLoadLast(): void {
     $assets = AttachedAssets::createFromRenderArray([
@@ -73,15 +86,18 @@ final class OverridesLoadOrderTest extends KernelTestBase {
     $sky = $find($order, 'socialblue/assets/css/brand--sky.css');
     $tokens = $find($order, 'localnodes_platform/css/ln-tokens.css');
     $overrides = $find($order, 'localnodes_platform/css/ln-overrides.css');
+    $look = $find($order, 'localnodes_platform/css/ln-app-look.css');
     $listing = implode(', ', $order);
 
-    foreach (['brand.css' => $brand, 'brand--sky.css' => $sky, 'ln-tokens.css' => $tokens, 'ln-overrides.css' => $overrides] as $name => $i) {
+    foreach (['brand.css' => $brand, 'brand--sky.css' => $sky, 'ln-tokens.css' => $tokens, 'ln-overrides.css' => $overrides, 'ln-app-look.css' => $look] as $name => $i) {
       $this->assertGreaterThanOrEqual(0, $i, "$name is in the resolved CSS: $listing");
     }
     $this->assertGreaterThan($brand, $tokens, 'ln-tokens.css loads after brand.css');
     $this->assertGreaterThan($sky, $tokens, 'ln-tokens.css loads after brand--sky.css');
     $this->assertGreaterThan($tokens, $overrides, 'ln-overrides.css loads after ln-tokens.css');
-    $this->assertSame(count($order) - 1, $overrides, 'ln-overrides.css is the last stylesheet');
+    $this->assertGreaterThan($overrides, $look, "ln-app-look.css loads after ln-overrides.css: $listing");
+    $this->assertSame(count($order) - 2, $overrides, "Only ln-app-look.css loads after ln-overrides.css: $listing");
+    $this->assertSame(count($order) - 1, $look, "ln-app-look.css is the last stylesheet: $listing");
   }
 
 }

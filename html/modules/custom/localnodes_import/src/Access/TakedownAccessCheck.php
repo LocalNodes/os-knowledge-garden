@@ -15,8 +15,8 @@ use Drupal\node\NodeInterface;
 /**
  * Who may take a reported page down (ONB-05, T-23-17).
  *
- * Anyone who can edit the page, any site manager, and the managers of the
- * page's group. Everyone else, signed in or not, gets 403. The report mail
+ * Anyone who can edit the page, or is one of its authorized site or house
+ * stewards. Everyone else, signed in or not, gets 403. The report mail
  * links here, but the link carries only the page's id: this check is the
  * only thing that lets someone in. The takedown form asks the same question
  * again right before it saves.
@@ -46,8 +46,12 @@ final class TakedownAccessCheck implements AccessInterface {
       $topic->access('update', $account) || $this->audience->isSteward($topic, $account)
     ))
       ->cachePerUser()
+      ->addCacheContexts(['user.permissions', 'user.roles'])
       ->addCacheableDependency($topic)
       ->addCacheTags($this->entityTypeManager->getDefinition('group_content')->getListCacheTags());
+    foreach ($this->audience->groupsOf($topic) as $group) {
+      $result->addCacheableDependency($group);
+    }
     return $result;
   }
 

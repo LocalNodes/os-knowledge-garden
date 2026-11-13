@@ -14,17 +14,17 @@ use Drush\Commands\DrushCommands;
  * The container entrypoint used to build a sign-in link, print it in the log
  * and send a plain mail with curl. This command does it inside Drupal: it
  * creates the organizer's account and sends one welcome mail whose sign-in
- * button is built in the mail builder and appears nowhere else (T-23-13). The
+ * button is built in the mail builder and appears nowhere else. The
  * command prints fixed sentences only: never an address, never a link.
  *
- * The first command also makes the community's first group (23-09). The second
+ * The first command also makes the community's first group. The second
  * command, localnodes:topic-types, makes the page types the organizer
- * confirmed at sign-up (D-20, ONB-06). The third command,
+ * confirmed at sign-up. The third command,
  * localnodes:seed-community, applies the four texts the sign-up drafted from
- * the organizer's description (23-34, T-2).
+ * the organizer's description.
  *
- * A sign-up site (23-35, Tom's billing rule B-1) runs localnodes:organizer-setup
- * instead of localnodes:organizer-welcome: the same account and first group,
+ * A sign-up site runs localnodes:organizer-setup instead of
+ * localnodes:organizer-welcome: the same account and first group,
  * but the account is blocked and no mail is sent. The welcome mail of a
  * sign-up site is sent by POST /localnodes/activate after the first payment
  * (OrganizerActivation). Manual and demo runs keep localnodes:organizer-welcome.
@@ -42,7 +42,7 @@ class OrganizerCommands extends DrushCommands {
   protected const STATE_ACCOUNT = 'localnodes.install_step.organizer_account';
 
   /**
-   * State key set once organizer-setup made the blocked account (23-35).
+   * State key set once organizer-setup made the blocked account.
    */
   protected const STATE_ORGANIZER_SETUP = 'localnodes.install_step.organizer_setup';
 
@@ -52,26 +52,40 @@ class OrganizerCommands extends DrushCommands {
   protected const STATE_ORGANIZER_UID = 'localnodes.organizer_uid';
 
   /**
-   * State key set once the community's first group exists (23-09).
+   * What the starting-groups step prints when a found group's visibility differs.
+   */
+  protected const VISIBILITY_CLASH = 'A starting group of that name already exists with another visibility; nothing was changed.';
+
+  /**
+   * State key set once the community's first group exists.
    */
   protected const STATE_FIRST_GROUP = 'localnodes.install_step.first_group';
 
   /**
-   * State key set once the community's four texts are applied (23-34).
+   * State key that records the community template the starting groups used.
+   *
+   * Its id and version, each starting group's id with its recorded "everyone"
+   * flag and suggested group template, and the kinds the organizer can add.
+   * Unset on a site made without a template.
+   */
+  protected const STATE_COMMUNITY_TEMPLATE = 'localnodes.community_template';
+
+  /**
+   * State key set once the community's four texts are applied.
    */
   protected const STATE_COMMUNITY_SEED = 'localnodes.install_step.community_seed';
 
   /**
-   * State key that holds the assistant's context text (23-34, ruling S).
+   * State key that holds the assistant's context text.
    *
    * Read at run time by social_ai_indexing's CommunityContextSubscriber.
    */
   public const STATE_COMMUNITY_CONTEXT = 'localnodes_platform.community_context';
 
   /**
-   * Longest value of LOCALNODES_COMMUNITY_SEED that is looked at (T-23-96).
+   * Longest value of LOCALNODES_COMMUNITY_SEED that is looked at.
    *
-   * 23-33 keeps the encoded seed under 12,000 characters; anything longer than
+   * The sign-up keeps the encoded seed under 12,000 characters; anything longer than
    * this is not a seed the sign-up made.
    */
   protected const COMMUNITY_SEED_ENV_MAX_LENGTH = 16384;
@@ -79,7 +93,7 @@ class OrganizerCommands extends DrushCommands {
   /**
    * The four texts of a community seed, and the most characters each keeps.
    *
-   * 23-33 writes them inside these lengths; they are applied again here
+   * The sign-up writes them inside these lengths; they are applied again here
    * because the value crossed a workflow and a container start.
    */
   protected const COMMUNITY_SEED_TEXTS = [
@@ -90,7 +104,7 @@ class OrganizerCommands extends DrushCommands {
   ];
 
   /**
-   * Title of the draft welcome post (T-2 d).
+   * Title of the draft welcome post.
    */
   protected const DRAFT_TITLE = 'Draft: welcome post';
 
@@ -105,12 +119,12 @@ class OrganizerCommands extends DrushCommands {
   protected const USERNAME_MAX_LENGTH = UserInterface::USERNAME_MAX_LENGTH;
 
   /**
-   * The most page types one provisioning creates (D-20).
+   * The most page types one provisioning creates.
    */
   protected const TOPIC_TYPES_MAX = 12;
 
   /**
-   * Longest value of LOCALNODES_TOPIC_TYPES that is looked at (T-23-30).
+   * Longest value of LOCALNODES_TOPIC_TYPES that is looked at.
    *
    * Twelve labels of 40 characters in JSON and base64 are under 1,000
    * characters, so anything near this size is not a list the sign-up made.
@@ -118,7 +132,7 @@ class OrganizerCommands extends DrushCommands {
   protected const TOPIC_TYPES_ENV_MAX_LENGTH = 8192;
 
   /**
-   * The sign-up form's page type rule, written again here (T-23-30).
+   * The sign-up form's page type rule, written again here.
    *
    * Two to 40 characters: letters, digits, spaces and & - ' /. The Nuxt
    * sign-up checks the same rule; this copy is the one that guards the site.
@@ -136,7 +150,7 @@ class OrganizerCommands extends DrushCommands {
    * Reads ORGANIZER_EMAIL and ORGANIZER_NAME from the environment. Exit code 0
    * means the mail went out now or on an earlier run. Exit code 1 means a
    * variable is missing or unusable, or the mail was not sent; the marker stays
-   * unset so the next start retries (D-17).
+   * unset so the next start retries.
    */
   #[CLI\Command(name: 'localnodes:organizer-welcome', aliases: ['ln-organizer-welcome'])]
   #[CLI\Usage(name: 'localnodes:organizer-welcome', description: 'Create the organizer (ORGANIZER_EMAIL, ORGANIZER_NAME) and send the welcome mail once')]
@@ -157,11 +171,11 @@ class OrganizerCommands extends DrushCommands {
     if (!$account) {
       return self::EXIT_FAILURE;
     }
-    // A later activation call finds the same account (23-35).
+    // A later activation call finds the same account.
     $state->set(self::STATE_ORGANIZER_UID, (int) $account->id());
 
     // The organizer finds a first group ready, named after the community, so
-    // the guide can say "open your group" (23-09, research Open Question 7).
+    // the guide can say "open your group".
     if (!$this->ensureFirstGroup($account)) {
       return self::EXIT_FAILURE;
     }
@@ -181,9 +195,9 @@ class OrganizerCommands extends DrushCommands {
   }
 
   /**
-   * Creates a sign-up site's organizer, blocked, and the first group (23-35).
+   * Creates a sign-up site's organizer, blocked, and the first group.
    *
-   * Tom's billing rule B-1: a sign-up site must not have a usable organizer
+   * A sign-up site must not have a usable organizer
    * login before its first payment. This makes the same account as
    * localnodes:organizer-welcome (sitemanager role, random password) but
    * blocked, makes the first group with the organizer as group manager, and
@@ -243,21 +257,31 @@ class OrganizerCommands extends DrushCommands {
   }
 
   /**
-   * Creates the community's first group once, with the organizer as manager.
+   * Creates the community's starting groups once, with the organizer as manager.
    *
-   * The group is a flexible group named after the community (SITE_NAME), with
-   * no address and no location: a community needs no place (PLACE-02, D-23).
-   * Only the organizer is added, as group manager (T-23-31). It is visible to
-   * signed-in members of the community only, which is the safer start; the
-   * organizer can open it up later.
+   * Without a community template this is the step as it was: one
+   * flexible group named after the community (SITE_NAME), with no address and
+   * no location, since a community needs no place. It is
+   * visible to signed-in members of the community only, which is the safer
+   * start; the organizer can open it up later.
    *
-   * Runs once per site: the state key is set when the group exists. Without
-   * SITE_NAME there is nothing to name it after, so nothing is made and
-   * nothing is printed. A group that an earlier run saved before it could set
-   * the key is found again by name and owner, not made twice.
+   * COMMUNITY_TEMPLATE names a community template instead: a versioned config
+   * file, localnodes_platform.community_template.NAME, that lists the starting
+   * groups ({site} in a name is the community's name) and the kinds of group
+   * the organizer can add more of. Its group templates are only named and its
+   * "everyone" flag only recorded: nothing is applied and nobody but the
+   * organizer is added. What was used is kept in state, with the ids of the
+   * groups made, for the step that confirms them. A name that loads no template
+   * prints a fixed sentence, never the value, and the site gets the one group.
+   *
+   * In both cases only the organizer is added, as group manager. The step runs
+   * once per site: the state key is set when every group exists. Without
+   * SITE_NAME there is nothing to name the groups after, so nothing is made
+   * and nothing is printed. A group that an earlier run saved before it could
+   * set the key is found again by name and owner, not made twice.
    *
    * @return bool
-   *   FALSE (after printing a fixed sentence) when the group cannot be made.
+   *   FALSE (after printing a fixed sentence) when the groups cannot be made.
    */
   protected function ensureFirstGroup(UserInterface $account): bool {
     $state = \Drupal::state();
@@ -266,13 +290,123 @@ class OrganizerCommands extends DrushCommands {
       return TRUE;
     }
 
-    $entity_type_manager = \Drupal::entityTypeManager();
-    if (!$entity_type_manager->getStorage('group_type')->load('flexible_group')) {
+    if (!\Drupal::entityTypeManager()->getStorage('group_type')->load('flexible_group')) {
       $this->output()->writeln('The flexible group type does not exist.');
       return FALSE;
     }
 
-    $storage = $entity_type_manager->getStorage('group');
+    $template = $this->communityTemplate($name);
+    if ($template === FALSE) {
+      return FALSE;
+    }
+    if ($template === NULL) {
+      $created = $this->ensureGroup($account, $name, 'community', FALSE)[1];
+      $state->set(self::STATE_FIRST_GROUP, gmdate('Y-m-d\TH:i:s\Z'));
+      $this->output()->writeln($created ? 'First group created.' : 'First group already exists.');
+      return TRUE;
+    }
+
+    // Check every starting group before saving any, so a clash on a later one
+    // leaves no new group and no new membership behind.
+    $storage = \Drupal::entityTypeManager()->getStorage('group');
+    foreach ($template['groups'] as $starting) {
+      $existing = $storage->loadByProperties([
+        'type' => 'flexible_group',
+        'label' => mb_substr(str_replace('{site}', $name, (string) $starting['name']), 0, 255),
+        'uid' => $account->id(),
+      ]);
+      if ($existing && (string) reset($existing)->get('field_flexible_group_visibility')->value !== (string) $starting['visibility']) {
+        $this->output()->writeln(self::VISIBILITY_CLASH);
+        return FALSE;
+      }
+    }
+
+    $any_created = FALSE;
+    $groups = [];
+    foreach ($template['groups'] as $starting) {
+      $found = $this->ensureGroup($account, str_replace('{site}', $name, (string) $starting['name']), (string) $starting['visibility'], TRUE);
+      if ($found === NULL) {
+        return FALSE;
+      }
+      [$group, $created] = $found;
+      $any_created = $any_created || $created;
+      $groups[] = [
+        'group' => (int) $group->id(),
+        'everyone' => (bool) ($starting['everyone'] ?? FALSE),
+        'group_template' => $starting['group_template'] ?? NULL,
+      ];
+    }
+    $state->set(self::STATE_COMMUNITY_TEMPLATE, [
+      'id' => $template['id'],
+      'version' => (int) $template['version'],
+      'groups' => $groups,
+      'repeatable' => array_values($template['repeatable'] ?? []),
+    ]);
+    // Set last: every starting group exists.
+    $state->set(self::STATE_FIRST_GROUP, gmdate('Y-m-d\TH:i:s\Z'));
+    $this->output()->writeln($any_created ? 'Starting groups created from the community template.' : 'Starting groups already exist.');
+    return TRUE;
+  }
+
+  /**
+   * Loads the community template COMMUNITY_TEMPLATE names.
+   *
+   * Two starting groups whose names come out alike once {site} is filled in
+   * (ignoring case and outer spaces) would collapse into one group and lose
+   * the second one's visibility, so such a template is refused.
+   *
+   * @param string $site
+   *   The community's name, which fills in {site}.
+   *
+   * @return array|false|null
+   *   The template; NULL when the variable is unset or empty (nothing printed)
+   *   or names no template with at least one group (a fixed sentence printed
+   *   that names the variable, never its value); FALSE, after a fixed
+   *   sentence, when two of its starting groups share a name.
+   */
+  protected function communityTemplate(string $site): array|false|null {
+    $id = trim((string) getenv('COMMUNITY_TEMPLATE'));
+    if ($id === '') {
+      return NULL;
+    }
+    // Only a bare machine name, so the value can never reach another config
+    // object.
+    $template = preg_match('/^[a-z0-9_]{1,64}$/', $id)
+      ? \Drupal::config('localnodes_platform.community_template.' . $id)->get()
+      : [];
+    if (($template['id'] ?? NULL) !== $id || empty($template['groups']) || !is_array($template['groups'])) {
+      $this->output()->writeln('COMMUNITY_TEMPLATE names no community template; the site gets one group.');
+      return NULL;
+    }
+    $seen = [];
+    foreach ($template['groups'] as $starting) {
+      $key = mb_strtolower(trim(mb_substr(str_replace('{site}', $site, (string) ($starting['name'] ?? '')), 0, 255)));
+      if (isset($seen[$key])) {
+        $this->output()->writeln('COMMUNITY_TEMPLATE names a template with two starting groups of the same name; nothing was made.');
+        return FALSE;
+      }
+      $seen[$key] = TRUE;
+    }
+    return $template;
+  }
+
+  /**
+   * Finds or makes one flexible group the organizer owns and manages.
+   *
+   * With $same_visibility, a group found by name must already have the
+   * visibility asked for. If it has another, it is left exactly as it is and
+   * the step stops: reusing it would put a template group's plans where other
+   * people can see them, or hide what members already see, and only the
+   * organizer should change that. Without a template the one group is found
+   * as before, whatever the organizer has since set it to.
+   *
+   * @return array{0: \Drupal\group\Entity\GroupInterface, 1: bool}|null
+   *   The group, and whether this call created it; NULL, after a fixed
+   *   sentence, when $same_visibility is set and a group of that name has
+   *   another visibility.
+   */
+  protected function ensureGroup(UserInterface $account, string $name, string $visibility, bool $same_visibility): ?array {
+    $storage = \Drupal::entityTypeManager()->getStorage('group');
     $label = mb_substr($name, 0, 255);
     $existing = $storage->loadByProperties([
       'type' => 'flexible_group',
@@ -280,12 +414,16 @@ class OrganizerCommands extends DrushCommands {
       'uid' => $account->id(),
     ]);
     $created = !$existing;
+    if ($same_visibility && $existing && (string) reset($existing)->get('field_flexible_group_visibility')->value !== $visibility) {
+      $this->output()->writeln(self::VISIBILITY_CLASH);
+      return NULL;
+    }
     /** @var \Drupal\group\Entity\GroupInterface $group */
     $group = $existing ? reset($existing) : $storage->create([
       'type' => 'flexible_group',
       'label' => $label,
       'uid' => $account->id(),
-      'field_flexible_group_visibility' => 'community',
+      'field_flexible_group_visibility' => $visibility,
     ]);
     if ($created) {
       $group->save();
@@ -303,10 +441,7 @@ class OrganizerCommands extends DrushCommands {
       $relationship->set('group_roles', array_merge(array_column($relationship->get('group_roles')->getValue(), 'target_id'), [$role]));
       $relationship->save();
     }
-
-    $state->set(self::STATE_FIRST_GROUP, gmdate('Y-m-d\TH:i:s\Z'));
-    $this->output()->writeln($created ? 'First group created.' : 'First group already exists.');
-    return TRUE;
+    return [$group, $created];
   }
 
   /**
@@ -482,13 +617,13 @@ class OrganizerCommands extends DrushCommands {
    *
    * Reads LOCALNODES_COMMUNITY_SEED: base64url JSON of {about,
    * group_description, assistant_context, welcome_post}, set by the
-   * provisioning workflow (23-33, 23-34). The texts are organizer-derived, so
+   * provisioning workflow. The texts are organizer-derived, so
    * each is cleaned again here (control characters to spaces, a length cap)
    * and escaped on output.
    *
    * The organizer is found by ORGANIZER_EMAIL and never created, and the
    * command never needs the account to sign in, so it works the same when the
-   * account is blocked until activation (23-35). It runs after the account and
+   * account is blocked until activation. It runs after the account and
    * the first group exist.
    *
    * Runs once: the state marker is set only after every part is done, so a
@@ -548,7 +683,7 @@ class OrganizerCommands extends DrushCommands {
     $this->applyTaglineAndAboutPage($organizer, $texts['about']);
     $this->applyGroupDescription($group, $texts['group_description']);
     // The assistant's context is a per-site value read at run time by
-    // social_ai_indexing's CommunityContextSubscriber (ruling S); the text is
+    // social_ai_indexing's CommunityContextSubscriber; the text is
     // already cleaned, and it is fenced again where it enters the prompt.
     \Drupal::state()->set(self::STATE_COMMUNITY_CONTEXT, $texts['assistant_context']);
     $this->applyDraftWelcomePost($organizer, $group, $texts['welcome_post']);
@@ -744,10 +879,10 @@ class OrganizerCommands extends DrushCommands {
    * Loads the organizer by exact address, or creates the account.
    *
    * A new account has a random password and only the sitemanager role
-   * (T-23-14, never administrator). It is active, or blocked when $blocked is
-   * TRUE (a sign-up site before its first payment, 23-35). An account that
+   * (never administrator). It is active, or blocked when $blocked is
+   * TRUE (a sign-up site before its first payment). An account that
    * already exists is left as it is: no role is added and its status is not
-   * changed.
+   * changed. Host and administrator accounts are never reused for this role.
    *
    * @return \Drupal\user\UserInterface|null
    *   The account, or NULL (after printing a fixed sentence) when it cannot be
@@ -757,7 +892,22 @@ class OrganizerCommands extends DrushCommands {
     $storage = \Drupal::entityTypeManager()->getStorage('user');
     $existing = $storage->loadByProperties(['mail' => $email]);
     if ($existing) {
-      return reset($existing);
+      $account = reset($existing);
+      $privileged = (int) $account->id() === 1;
+      if (!$privileged) {
+        $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple($account->getRoles());
+        foreach ($roles as $role) {
+          if ($role->isAdmin()) {
+            $privileged = TRUE;
+            break;
+          }
+        }
+      }
+      if ($privileged) {
+        $this->output()->writeln('The organizer account cannot be a host or administrator account.');
+        return NULL;
+      }
+      return $account;
     }
 
     if (!\Drupal::entityTypeManager()->getStorage('user_role')->load('sitemanager')) {

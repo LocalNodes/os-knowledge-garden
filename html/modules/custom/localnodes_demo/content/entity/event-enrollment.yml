@@ -49,7 +49,7 @@ cb8ad452-c265-4867-97b5-0b092197dbb7:
 # Enrollments for Seed Swap (+7 day)
 5774108a-984d-4c4b-b47d-7238fdb29184:
   uuid: 5774108a-984d-4c4b-b47d-7238fdb29184
-  title: sage_cityroots @ Seed Swap and Plant Exchange
+  title: sage_sidewalkseed @ Seed Swap and Plant Exchange
   langcode: en
   uid: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
   field_event: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e
@@ -57,7 +57,7 @@ cb8ad452-c265-4867-97b5-0b092197dbb7:
   field_account: ec2be69f-8d00-42dc-b2c7-04aa199b6a24
 e89a94d1-f9ec-49b2-806a-6479e3f99888:
   uuid: e89a94d1-f9ec-49b2-806a-6479e3f99888
-  title: willow_salish @ Seed Swap and Plant Exchange
+  title: willow_redcedar @ Seed Swap and Plant Exchange
   langcode: en
   uid: 7cde7276-0de6-43b9-b52c-642ef8f710b0
   field_event: 0b4a3f6a-a9ae-43f9-bf61-6e7cd8de445e

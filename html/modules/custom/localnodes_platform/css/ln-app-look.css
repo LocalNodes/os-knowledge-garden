@@ -1,0 +1,243 @@
+/**
+ * The app look (Day): neutral surfaces, hairline cards, teal only on the one
+ * main action and the active state. It restyles Open Social's own markup and
+ * replaces no template. Loads after ln-overrides.css (theme group, weight 902;
+ * see localnodes_platform_css_alter()). Colours come only from the --ln-*
+ * custom properties in ln-tokens.css, which the contrast gate measures through
+ * scripts/tokens/lib/stylesheet_pairs.mjs.
+ *
+ * Where it applies: on purpose, every page the member theme (socialblue)
+ * renders, sign-in and its other forms included. The app look is the look of
+ * the whole member theme, not of a few pages. The admin theme (Gin) never
+ * gets it: localnodes_platform_page_attachments() attaches it only to pages
+ * rendered by socialbase or a theme based on it, such as socialblue.
+ */
+
+/* The page: the light canvas and the body text. */
+body {
+  background-color: var(--ln-color-canvas);
+  color: var(--ln-color-text);
+}
+
+/* Group header with no cover picture: a white header with a hairline edge
+   instead of the brand-coloured block. A group with a picture keeps it. */
+.socialblue--sky .cover:not(.cover-img) {
+  background: var(--ln-color-surface);
+  color: var(--ln-color-text-muted);
+  border-bottom: 1px solid var(--ln-color-divider);
+}
+
+/* The darkening overlay is for a photo; with none it only greys the header. */
+.socialblue--sky .cover:not(.cover-img) .hero__bgimage-overlay {
+  display: none;
+}
+
+/* Open Social holds the header 410px tall for a photo; without one it is as
+   tall as its words, with room at the foot for the tabs bar that overlaps it. */
+.socialblue--sky .cover:not(.cover-img) .cover-wrap {
+  min-height: 0;
+  padding-top: 24px;
+  padding-bottom: 56px;
+}
+
+.socialblue--sky .cover:not(.cover-img) .page-title {
+  padding-top: 0;
+}
+
+.socialblue--sky .cover:not(.cover-img) .hero-footer {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+/* Dark words on white need no drop shadow (it is there for a photo). */
+.socialblue--sky .cover:not(.cover-img) .page-title,
+.socialblue--sky .cover:not(.cover-img) .page-title a {
+  color: var(--ln-color-text-muted);
+  text-shadow: none;
+}
+
+.socialblue--sky .cover:not(.cover-img) .page-title h1 {
+  color: var(--ln-color-text-strong);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.socialblue--sky .cover:not(.cover-img) .hero-footer a {
+  color: var(--ln-color-text-strong);
+}
+
+.socialblue--sky .cover:not(.cover-img) svg {
+  fill: var(--ln-color-text-muted);
+}
+
+@media (max-width: 599px) {
+  .socialblue--sky .cover:not(.cover-img) .page-title h1 {
+    font-size: 1.375rem;
+  }
+}
+
+/* Group and profile tabs: a white bar, muted tab names, the active tab in
+   strong text over a 2px teal underline. */
+.socialblue--sky .navbar-secondary {
+  background: var(--ln-color-surface);
+  border-bottom: 1px solid var(--ln-color-divider);
+}
+
+.socialblue--sky .navbar-secondary .navbar-nav li a {
+  color: var(--ln-color-text-muted);
+  background: transparent;
+}
+
+.socialblue--sky .navbar-secondary .navbar-nav li a:hover,
+.socialblue--sky .navbar-secondary .navbar-nav li a:focus {
+  color: var(--ln-color-text-strong);
+  background: transparent;
+}
+
+.socialblue--sky .navbar-secondary .navbar-nav li a:hover::after,
+.socialblue--sky .navbar-secondary .navbar-nav li a:focus::after {
+  background: var(--ln-color-border-control);
+  height: 2px;
+}
+
+.socialblue--sky .navbar-secondary .navbar-nav li.active a,
+.socialblue--sky .navbar-secondary .navbar-nav li a.is-active {
+  color: var(--ln-color-text-strong);
+  background: transparent;
+  font-weight: 600;
+}
+
+.socialblue--sky .navbar-secondary .navbar-nav li.active a::after,
+.socialblue--sky .navbar-secondary .navbar-nav li a.is-active::after {
+  background: var(--ln-color-primary);
+  height: 2px;
+}
+
+/* The focus ring in the tabs bar. ln-overrides.css gives anything focused in
+   .navbar-secondary the ring for dark bars (focus-on-dark, amber), which is
+   1.6:1 on this white bar. Here the bar is white, so it takes the ring for
+   light surfaces. The same holds for the list of folded tabs, which socialblue
+   also draws on white. !important because the rule it replaces is. */
+.socialblue--sky .navbar-secondary :focus-visible {
+  outline-color: var(--ln-color-focus) !important;
+}
+
+/* Cards: a hairline edge and more air instead of a shadow. */
+.socialblue--sky .card {
+  border: 1px solid var(--ln-color-divider);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.socialblue--sky .card h2,
+.socialblue--sky .card h3,
+.socialblue--sky .card h4 {
+  color: var(--ln-color-text-strong);
+}
+
+/* Secondary buttons: an outline, never a second filled button. */
+.main-container .btn-default {
+  background: transparent;
+  border: 1px solid var(--ln-color-border-control);
+  border-radius: 8px;
+  color: var(--ln-color-text-strong);
+  min-height: 40px;
+}
+
+/* Form fields in the page (not the search box in the dark top bar). */
+.main-container .form-control {
+  background-color: var(--ln-color-raised);
+  border: 1px solid var(--ln-color-border-control);
+  border-radius: 8px;
+  color: var(--ln-color-text);
+}
+
+/* The field states the rule above would flatten (it outranks socialbase's
+   own): a focused field has the focus colour on its edge, and a field in
+   error keeps the danger edge, focused or not. */
+.main-container .form-control:focus {
+  border-color: var(--ln-color-focus);
+}
+
+.main-container .has-error .form-control,
+.main-container .has-error .form-control:focus {
+  border-color: var(--ln-color-danger);
+}
+
+/* Stream cards: the teaser inside a card is white under a hairline, so the
+   stream reads as white cards on the page like the side cards. With no
+   picture, Open Social's large type mark is dropped; the line above already
+   says what was posted ("created a topic") and the title links to it. */
+.socialblue--sky .teaser--stream,
+.socialblue--sky .teaser--stream .teaser__image {
+  background: var(--ln-color-surface);
+}
+
+.socialblue--sky .teaser--stream {
+  border-top: 1px solid var(--ln-color-divider);
+}
+
+.socialblue--sky .teaser--stream.no-image .teaser__image {
+  display: none;
+}
+
+.socialblue--sky .teaser--stream.no-image .teaser__body {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+/* "When" lines on stream cards: the small label style. */
+.socialblue--sky .post-date,
+.socialblue--sky .post-date a {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The "when" link is small type, but its target is 24px tall (WCAG 2.5.8). */
+.socialblue--sky .post-date a {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
+}
+
+/* The group type ("Flexible group") is an internal name that means nothing to
+   a member: not shown in the group header or on group cards
+   (Open Social shows it in the header through a path-group rule, matched here.) */
+.socialblue--sky.path-group .cover-wrap:not(.cover-wrap--course-statistic) .page-title .teaser__tag,
+.socialblue--sky .group--teaser .teaser__tag {
+  display: none;
+}
+
+/* Open Social leaves an empty footer row in the header when there is no
+   button to show there; drop it so the tabs follow the header closely. */
+.socialblue--sky .cover:not(.cover-img) .hero-footer:not(:has(a, button, img, input)) {
+  display: none;
+}
+
+/* A page's title band (a topic, a document): a card like the body below it,
+   instead of a white band that stops short of the window edges. */
+.socialblue--sky .hero__banner--static.no-image {
+  margin: 16px 0 0;
+  border: 1px solid var(--ln-color-divider);
+  border-radius: 12px;
+}
+
+/* Below 900px Open Social runs the band edge to edge; inset it to line up
+   with the body card under it. */
+@media (max-width: 899px) {
+  .socialblue--sky .hero__banner--static.no-image {
+    width: auto;
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+}
+
+@media (max-width: 599px) {
+  .socialblue--sky .hero__banner--static.no-image {
+    margin-left: 14px;
+    margin-right: 14px;
+  }
+}

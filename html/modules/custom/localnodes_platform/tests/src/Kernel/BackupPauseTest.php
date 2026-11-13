@@ -11,6 +11,7 @@ use Drupal\localnodes_platform\Backup\BackupPause;
 use Drupal\localnodes_platform\Backup\BackupWrite;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Process\Process;
 
 /**
  * While the pause file is in force, the whole site answers 503.
@@ -49,11 +50,25 @@ final class BackupPauseTest extends KernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->private = $this->siteDirectory . '/private';
+    // A real folder: the pause is published with a hard link, which the
+    // test's vfs folder does not have.
+    $this->private = sys_get_temp_dir() . '/ln-pause-test-' . bin2hex(random_bytes(6)) . '/private';
     mkdir($this->private, 0700, TRUE);
     $this->setSetting('file_private_path', $this->private);
     $this->installConfig(['system']);
     $this->config('system.performance')->set('cache.page.max_age', 300)->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    $base = dirname($this->private);
+    if (is_dir($base)) {
+      (new Process(['chmod', '-R', 'u+rwx', $base]))->run();
+      (new Process(['rm', '-rf', $base]))->run();
+    }
+    parent::tearDown();
   }
 
   /**
@@ -197,12 +212,106 @@ final class BackupPauseTest extends KernelTestBase {
     $token = $pause->create('backup', time() + 600);
     $this->assertSame($token, $pause->read()['token']);
     $this->assertSame(0644, fileperms($pause->file()) & 0777);
-    $this->assertSame(['backup-pause'], array_values(array_diff(scandir($this->private . '/.localnodes'), ['.', '..'])));
+    $this->assertSame(['backup-pause', 'pause.lock'], array_values(array_diff(scandir($this->private . '/.localnodes'), ['.', '..'])));
   }
 
   /**
    * The answer settings.php gives before Drupal starts matches the middleware.
    */
+  /**
+   * Two writers that both pass the "already paused?" check: the second must
+   * refuse and leave the first writer's token, never replace it.
+   */
+  public function testRacingWriterDoesNotReplaceAPause(): void {
+    // A real folder: the site's volume has hard links, the test's vfs has not.
+    $real = sys_get_temp_dir() . '/pause-race-' . bin2hex(random_bytes(8));
+    mkdir($real . '/.localnodes', 0700, TRUE);
+    $pause = new BackupPause($real);
+    $rival = json_encode(['token' => 'rival-token', 'until' => NULL, 'reason' => 'restore']) . "\n";
+    // The rival publishes its pause while this writer fills its temporary file.
+    BackupWrite::$writer = function ($handle, string $data) use ($pause, $rival): bool {
+      file_put_contents($pause->file(), $rival);
+      $written = fwrite($handle, $data) === strlen($data);
+      return fclose($handle) && $written;
+    };
+    try {
+      $pause->create('backup', time() + 600);
+      $this->fail('A second writer must not replace a pause.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertStringStartsWith('The site is already paused', $e->getMessage());
+    }
+    finally {
+      BackupWrite::$writer = NULL;
+    }
+    $this->assertSame('rival-token', $pause->read()['token']);
+    $this->assertSame(['backup-pause', 'pause.lock'], array_values(array_diff(scandir($real . '/.localnodes'), ['.', '..'])), 'No temporary file is left.');
+    // Without the rival, the hard-link path publishes the whole line.
+    unlink($pause->file());
+    $token = $pause->create('backup', time() + 600);
+    $this->assertSame($token, $pause->read()['token']);
+    $this->assertSame(0644, fileperms($pause->file()) & 0777);
+    unlink($pause->file());
+    unlink($real . '/.localnodes/pause.lock');
+    rmdir($real . '/.localnodes');
+    rmdir($real);
+  }
+
+  /**
+   * Where hard links are missing, no pause is published: a pause written in
+   * place could be cut short and close the site with no end.
+   */
+  public function testNoHardLinksRefusesThePause(): void {
+    // The test's vfs folder has no hard links.
+    $pause = new BackupPause($this->siteDirectory . '/no-links');
+    try {
+      $pause->create('backup', time() + 600);
+      $this->fail('A pause must not be published without a hard link.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertSame('Cannot publish the pause file: this folder does not allow hard links.', $e->getMessage());
+    }
+    $this->assertFileDoesNotExist($pause->file());
+    $this->assertSame([], array_values(array_filter(scandir(dirname($pause->file())), fn ($f) => str_starts_with($f, '.backup-pause'))), 'No temporary file is left.');
+    $this->assertNull($pause->active());
+  }
+
+  /**
+   * Releasing and publishing take one lock: a release that read an old
+   * token cannot remove a pause published after it, and a writer cannot
+   * clear a stale pause while a release looks at it.
+   */
+  public function testPauseChangesWaitForThePauseLock(): void {
+    $pause = new BackupPause($this->private);
+    $token = $pause->create('backup', time() + 600);
+    $held = $pause->openLock('pause.lock');
+    $this->assertTrue(flock($held, LOCK_EX | LOCK_NB));
+    $impatient = new BackupPause($this->private, 0.2);
+    try {
+      $this->assertFalse($impatient->release($token), 'A release waits for the pause lock and gives up.');
+      $this->assertSame($token, $pause->read()['token'], 'The pause stays.');
+      // An expired pause left by a killed run: a writer must not clear it
+      // while the lock is held.
+      $stale = json_encode(['token' => 'stale-token', 'until' => time() - 60, 'reason' => 'backup']) . "\n";
+      file_put_contents($pause->file(), $stale);
+      try {
+        $impatient->create('backup', time() + 600);
+        $this->fail('A writer waits for the pause lock and gives up.');
+      }
+      catch (\RuntimeException $e) {
+        $this->assertSame('Another change to the pause is in progress.', $e->getMessage());
+      }
+      $this->assertSame($stale, file_get_contents($pause->file()), 'The stale pause is untouched.');
+    }
+    finally {
+      flock($held, LOCK_UN);
+      fclose($held);
+    }
+    $token = $impatient->create('backup', time() + 600);
+    $this->assertTrue($impatient->release($token));
+    $this->assertFileDoesNotExist($pause->file());
+  }
+
   public function testWebAnswerBeforeDrupal(): void {
     $pause = new BackupPause($this->private);
     $get = fn(string $method, string $uri, string $ip) => $pause->webAnswer(['REQUEST_METHOD' => $method, 'REQUEST_URI' => $uri, 'REMOTE_ADDR' => $ip]);

@@ -125,10 +125,9 @@ else {
   $settings['localnodes_ai_data_tier'] = $gemini_key_tier === 'paid' ? 'paid' : ($gemini_key_tier === '' ? '' : 'unpaid');
 }
 // Demo sites (fictional content only) are exempt from the tier check. Same
-// value and default as docker/entrypoint.sh: DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}",
-// so an unset or empty DEMO_MODULE counts as the default demo; 'none' is a
-// real (blank) community site.
-$settings['localnodes_demo_module'] = getenv('DEMO_MODULE') ?: 'localnodes_demo';
+// value and default as docker/entrypoint.sh: DEMO_MODULE="${DEMO_MODULE:-none}",
+// so an unset or empty DEMO_MODULE is a real (blank) community site, as 'none' is.
+$settings['localnodes_demo_module'] = getenv('DEMO_MODULE') ?: 'none';
 
 // ---------------------------------------------------------------------------
 // Resend SMTP transport for outbound email (created by localnodes_platform at

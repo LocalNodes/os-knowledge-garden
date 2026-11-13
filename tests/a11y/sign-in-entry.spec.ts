@@ -11,6 +11,9 @@
 // "script blocked" tests abort it and check that every control still leads
 // to the password form, and the "button gone" tests remove the connector's
 // button after the controls became ready.
+//
+// The emailed sign-in link ships switched off (localnodes_web3.settings), so
+// no page offers it and /user/email-link is not found.
 import { test, expect, type Page } from '@playwright/test';
 
 const WIDTHS = [1280, 390];
@@ -87,7 +90,7 @@ test.describe('sign-in entry points', () => {
       expect(place.hit, 'nothing covers Cancel').toBe('Cancel sign-in');
     });
 
-    test(`welcome block: Sign in and Use a password, ${width}px`, async ({ page }) => {
+    test(`welcome block: Sign in, Use a password, ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
       const cta = page.locator('.hero-cta-wrapper');
@@ -95,6 +98,7 @@ test.describe('sign-in entry points', () => {
       await expect(cta.getByRole('button', { name: 'Sign in' })).toHaveAttribute('data-ln-signin-ready', '');
       await expect(cta.getByRole('link')).toHaveText(['Use a password']);
       await expect(cta.getByRole('link', { name: 'Use a password' })).toHaveAttribute('href', '/user/login');
+      expect((await cta.getByRole('link', { name: 'Use a password' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await expect(page.locator('.hero-cta-wrapper a[href="/user/register"]')).toHaveCount(0);
       await expect(page.locator('h3', { hasText: /^Welcome to / })).toBeVisible();
 
@@ -120,8 +124,13 @@ test.describe('sign-in entry points', () => {
         const wrap = page.locator('.ln-signin');
         await expect(wrap).toBeVisible();
         await expect(wrap.getByRole('button', { name: 'Sign in' })).toBeVisible();
-        await expect(wrap.getByText('Or use a password')).toBeVisible();
         await expect(wrap.getByRole('link', { name: 'Hacked or phished? Get help' })).toBeVisible();
+        // Below the button: the line before the form, and no emailed link.
+        const entry = page.locator('.ln-signin-entry');
+        const or = entry.getByText('Or use a password');
+        await expect(or).toBeVisible();
+        expect((await or.boundingBox())!.y).toBeGreaterThan((await wrap.boundingBox())!.y);
+        await expect(page.locator('a[href="/user/email-link"]')).toHaveCount(0);
         // The form stays, below the button (sign-up asks for an email and
         // sends a link; log-in asks for a password).
         const pass = page.locator(path === '/user/login' ? 'input[type="password"]' : 'input[type="email"]').first();
@@ -154,6 +163,16 @@ test.describe('sign-in entry points', () => {
         await expect(page.locator('.ln-signin')).toBeHidden();
         await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
       }
+    });
+
+    test(`emailed link off: not offered, and its page is not found, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ['/', '/user/login', '/user/register']) {
+        await page.goto(path);
+        await expect(page.getByRole('link', { name: 'Email me a sign-in link' })).toHaveCount(0);
+      }
+      const response = await page.goto('/user/email-link');
+      expect(response!.status()).toBe(404);
     });
 
     test(`button gone after ready: the controls lead to the password form, ${width}px`, async ({ page }) => {
@@ -215,6 +234,37 @@ test.describe('sign-in entry points', () => {
       await page.evaluate(() => document.querySelector('[data-siwe-login-waap] .siwe-login-waap__button')!.remove());
       await expect(page.locator('.ln-signin')).toBeHidden();
       await expect(page.locator('form:has(.ln-signin) input:not([type="hidden"])').first()).toBeFocused();
+    });
+
+    // The install turns siwe_login_waap's wallet button on. It stays hidden
+    // in the top bar; "Use a browser wallet" under Sign in hands it the click.
+    test(`"Use a browser wallet" follows Sign in and works with or without a wallet, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ['/', '/user/login', '/user/register']) {
+        await page.goto(path);
+        await expect(page.locator('#siwe-login-button'), `${path}: the top-bar wallet button is hidden`).toBeHidden();
+        const wallet = page.getByRole('button', { name: 'Use a browser wallet' });
+        await expect(wallet, path).toHaveCount(1);
+        await expect(wallet, path).toBeVisible();
+        const signIn = page.locator(path === '/' ? '.hero-cta-wrapper' : '.ln-signin').getByRole('button', { name: 'Sign in' });
+        const [s, w] = [await signIn.boundingBox(), await wallet.boundingBox()];
+        // Under it on the forms; in the welcome block's row, after it.
+        expect(w!.y > s!.y || w!.x > s!.x + s!.width, `${path}: after Sign in`).toBe(true);
+        expect(w!.height, `${path}: a thumb can hit it`).toBeGreaterThanOrEqual(44);
+        // No wallet in this browser: it says so next to the choice.
+        await wallet.click();
+        await expect(page.locator('[data-ln-wallet-note]:visible'), path).toHaveText(/No browser wallet was found in this browser/);
+      }
+      // With a wallet, the click reaches siwe_login's own button.
+      await page.addInitScript(() => { (window as any).ethereum = { request: async () => [] }; });
+      await page.goto('/user/login');
+      await page.evaluate(() => {
+        (window as any).__lnWallet = 0;
+        document.getElementById('siwe-login-button')!.addEventListener('click', (e) => { e.stopImmediatePropagation(); (window as any).__lnWallet++; }, true);
+      });
+      await page.getByRole('button', { name: 'Use a browser wallet' }).click();
+      expect(await page.evaluate(() => (window as any).__lnWallet)).toBe(1);
+      await expect(page.locator('[data-ln-wallet-note]')).toHaveText('');
     });
   }
 });

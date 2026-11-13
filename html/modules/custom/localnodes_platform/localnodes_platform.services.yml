@@ -1,4 +1,9 @@
 services:
+  localnodes_platform.private_house_query_subscriber:
+    class: Drupal\localnodes_platform\QueryAccess\PrivateHouseQuerySubscriber
+    arguments: ['@database', '@entity_type.manager']
+    tags:
+      - { name: event_subscriber }
   # D-27 (Tom, 2026-11-05; checker W-1): at the ai_usage_limits token
   # ceiling, an index run's embeddings call becomes a SearchApiException, so
   # search_api's cron and post-request catches log it and keep the items
@@ -60,13 +65,24 @@ services:
     arguments: ['@settings']
     tags:
       - { name: http_middleware, priority: 250 }
+  localnodes_platform.group_notice_cleanup:
+    class: Drupal\localnodes_platform\Mail\GroupNoticeCleanup
+    arguments: ['@database', '@entity_type.manager', '@localnodes_platform.notice_departures', '@datetime.time']
+  localnodes_platform.notice_departures:
+    class: Drupal\Core\KeyValueStore\KeyValueStoreInterface
+    factory: ['@keyvalue', get]
+    arguments: ['localnodes_notice_departures']
+  localnodes_platform.notice_mail_config_subscriber:
+    class: Drupal\localnodes_platform\EventSubscriber\NoticeMailConfigSubscriber
+    tags:
+      - { name: event_subscriber }
 
   localnodes_platform.export_access:
     class: Drupal\localnodes_platform\Export\ExportAccess
     arguments: ['@state', '@entity_type.manager', '@database']
   localnodes_platform.export_identity:
     class: Drupal\localnodes_platform\Export\ExportIdentity
-    arguments: ['@localnodes_platform.export_access', '@password', '@flood']
+    arguments: ['@localnodes_platform.export_access', '@password', '@flood', '@?localnodes_web3.export_proof']
   localnodes_platform.backup_capture:
     class: Drupal\localnodes_platform\Backup\BackupCapture
   localnodes_platform.export_manager:
@@ -77,3 +93,13 @@ services:
     class: Drupal\localnodes_platform\Logger\ExportNoticeLoggerFactory
     decorates: logger.factory
     arguments: ['@.inner']
+
+  localnodes_platform.house_enrollment_access:
+    class: Drupal\localnodes_platform\Access\HouseEnrollmentAccess
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: access_check, applies_to: _localnodes_house_enrollment, method: routeAccess }
+  localnodes_platform.house_enrollment_routes:
+    class: Drupal\localnodes_platform\Routing\HouseEnrollmentRouteSubscriber
+    tags:
+      - { name: event_subscriber }

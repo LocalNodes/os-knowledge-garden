@@ -123,45 +123,21 @@ soft() {           # soft LABEL CMD...
 }
 
 load_demo_content() {
-  # Load demo content using the correct plugin IDs for the demo module.
-  # Each demo module (localnodes_demo, boulder_demo) registers DemoContent plugins
-  # with a module-specific prefix (e.g., localnodes_user, boulder_user).
-  # The base social_demo uses unprefixed IDs (user, group, etc.).
+  # The demo content plugins come from the platform's one list
+  # (DemoPlugins), the same list drush localnodes-demo:install loads: each
+  # demo module's prefixed ids (localnodes_user, boulder_user and so on) in
+  # load order, or social_demo's unprefixed ids for any other module.
   echo "Loading demo content for $DEMO_MODULE..."
-  case "$DEMO_MODULE" in
-    localnodes_demo)
-      PLUGIN_PREFIX="localnodes"
-      ;;
-    boulder_demo)
-      PLUGIN_PREFIX="boulder"
-      ;;
-    portland_demo)
-      PLUGIN_PREFIX="portland"
-      ;;
-    *)
-      # Default: use social_demo's unprefixed plugin IDs
-      PLUGIN_PREFIX=""
-      ;;
-  esac
-
+  DEMO_PLUGINS="$($DRUSH localnodes-demo:plugins "$DEMO_MODULE")"
+  if [ -z "$DEMO_PLUGINS" ]; then
+    echo "ERROR: no demo content plugins for $DEMO_MODULE; stopping so the container retries."
+    exit 1
+  fi
   # LOCALNODES_DEFER_INDEXING=1 turns off direct (post-request) indexing for
   # this one command (settings.php), so no embedding call runs inside it.
-  if [ -n "$PLUGIN_PREFIX" ]; then
-    LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add \
-      ${PLUGIN_PREFIX}_file \
-      ${PLUGIN_PREFIX}_user_terms \
-      ${PLUGIN_PREFIX}_event_type \
-      ${PLUGIN_PREFIX}_user \
-      ${PLUGIN_PREFIX}_group \
-      ${PLUGIN_PREFIX}_topic \
-      ${PLUGIN_PREFIX}_event \
-      ${PLUGIN_PREFIX}_event_enrollment \
-      ${PLUGIN_PREFIX}_comment \
-      ${PLUGIN_PREFIX}_post \
-      ${PLUGIN_PREFIX}_like
-  else
-    LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add file user_terms event_type user group topic event event_enrollment comment post like
-  fi
+  # The list is word-split on purpose: one argument per plugin id.
+  # shellcheck disable=SC2086
+  LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add $DEMO_PLUGINS
   mark_step demo_content
 }
 
@@ -200,10 +176,16 @@ send_callback() {  # send_callback STATUS REASON SITE_URL (REASON and SITE_URL m
       return 0
       ;;
   esac
-  if ! body="$(CB_STATUS="$status" CB_REASON="$reason" CB_SITE_URL="$site_url" php -r '
+  # A practice site's ready also carries its relayer's public address (RELAYER_ADDRESS, set
+  # by web3_ready_check only after the 0x + 40 hex check), so the sign-up app knows where
+  # test-network money for the fees goes. Never the key or the token.
+  local relayer=""
+  [ "$status" = "ready" ] && relayer="${RELAYER_ADDRESS:-}"
+  if ! body="$(CB_STATUS="$status" CB_REASON="$reason" CB_SITE_URL="$site_url" CB_RELAYER_ADDRESS="$relayer" php -r '
       $b = ["provision_id" => (string) getenv("PROVISION_ID"), "attempt" => (int) getenv("PROVISION_ATTEMPT"), "status" => (string) getenv("CB_STATUS")];
       if ((string) getenv("CB_REASON") !== "") { $b["reason"] = getenv("CB_REASON"); }
       if ((string) getenv("CB_SITE_URL") !== "") { $b["site_url"] = getenv("CB_SITE_URL"); }
+      if ((string) getenv("CB_RELAYER_ADDRESS") !== "") { $b["relayer_address"] = getenv("CB_RELAYER_ADDRESS"); }
       $b["source"] = "site";
       echo json_encode($b, JSON_UNESCAPED_SLASHES);')"; then
     echo "Warning: $status callback not built (non-fatal)"
@@ -233,11 +215,13 @@ fail_callback() {       # fail_callback REASON: status failed and a fixed code, 
 # read failing right at start-up) sends none either. The exit status is kept. The sign-up
 # app treats a failed from the site as provisional; a later ready for the same attempt wins.
 # Codes: install_failed (any other step), db_not_empty, platform_enable_failed,
-# organizer_failed. The code is a fixed word: no step output, key or address ever goes in it.
+# organizer_failed, web3_enable_failed and web3_check_failed (practice sites only).
+# The code is a fixed word: no step output, key or address ever goes in it.
 # Test: scripts/ops/tests/install-resume.test.sh
 FAIL_REASON=install_failed
 RUN_KIND=""
 READY_SENT=false
+RELAYER_ADDRESS=""
 on_exit() {
   local rc=$?
   trap - EXIT
@@ -249,6 +233,33 @@ on_exit() {
   exit "$rc"
 }
 trap on_exit EXIT
+
+# --- Practice sites: prove group funds and decisions work before "ready" ---
+# web3_ready_check: runs `drush localnodes-web3:check` until it passes, for about two minutes
+# (WEB3_CHECK_TRIES tries, WEB3_CHECK_WAIT seconds apart), because the relayer container has
+# no depends_on and may still be starting. The check needs the eight web3 modules on, the
+# Ethereum Sepolia network on, the relayer configured with an address, and its Sepolia
+# balance readable (zero is fine). On success it sets RELAYER_ADDRESS, after checking it is
+# 0x + 40 hex, and returns 0; otherwise it returns 1 with RELAYER_ADDRESS empty. The command
+# prints fixed words (stderr) and the public address (stdout) only. Only sign-up sites with
+# WEB3_ENABLED=true run it (the callers check), so manual, staging and demo runs are untouched.
+web3_ready_check() {
+  local tries="${WEB3_CHECK_TRIES:-8}" wait="${WEB3_CHECK_WAIT:-15}" n=1 out
+  RELAYER_ADDRESS=""
+  while :; do
+    if out="$($DRUSH localnodes-web3:check)" && [[ "$out" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
+      RELAYER_ADDRESS="$out"
+      echo "Group funds and decisions are working (relayer $RELAYER_ADDRESS)."
+      return 0
+    fi
+    if [ "$n" -ge "$tries" ]; then
+      echo "Group funds and decisions are not working after $n tries."
+      return 1
+    fi
+    n=$((n + 1))
+    sleep "$wait"
+  done
+}
 
 # Every step after site:install. Each one is safe to run again on resume.
 run_post_install() {
@@ -287,11 +298,13 @@ run_post_install() {
   # Off by default; set WEB3_ENABLED=true to enable on this instance.
   if [ "${WEB3_ENABLED:-false}" = "true" ]; then
     echo "Enabling localnodes_web3..."
+    FAIL_REASON=web3_enable_failed
     $DRUSH en localnodes_web3 -y
+    FAIL_REASON=install_failed
   fi
 
-  # Enable instance-specific demo module (set DEMO_MODULE=none for blank instance)
-  DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
+  # Enable the demo module DEMO_MODULE names. Unset, empty or none is a blank site.
+  DEMO_MODULE="${DEMO_MODULE:-none}"
 
   if [ "$DEMO_MODULE" != "none" ]; then
     echo "Enabling demo module: $DEMO_MODULE..."
@@ -386,6 +399,16 @@ run_post_install() {
     FAIL_REASON=install_failed
   fi
 
+  # A practice sign-up site proves its group funds and decisions work before the install
+  # marker and before ready. A failure stops the install here (set -e) with
+  # web3_check_failed, the marker unwritten, so a restart takes the resume path and checks
+  # again: a half-on site never reports ready.
+  if [ "${WEB3_ENABLED:-false}" = "true" ] && [ "${ORGANIZER_DONE:-false}" = "true" ] && [ "${SIGNUP_RUN:-false}" = "true" ]; then
+    FAIL_REASON=web3_check_failed
+    web3_ready_check
+    FAIL_REASON=install_failed
+  fi
+
   $DRUSH state:set "$INSTALL_MARKER" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   # "ready" goes out only now, with the install marker written, and on a resume too (the
   # first one may never have arrived). It carries the site address and nothing secret. The
@@ -433,12 +456,12 @@ if [ "$INSTALLED" = false ]; then
   printf '\n=== FRESH INSTALL ===\n'
 
   # No default admin password. When none is set (or it is the old "admin"),
-  # the account gets a random one that is never printed; the first sign-in
-  # is a one-time link from `drush user:login` (docs/SELF-HOST.md).
+  # the account gets a random one that is never printed. Account 1 is blocked
+  # after install; server-only setup access is described in docs/SELF-HOST.md.
   ADMIN_PASS="${DRUPAL_ADMIN_PASS:-}"
   if [ -z "$ADMIN_PASS" ] || [ "$ADMIN_PASS" = "admin" ]; then
     ADMIN_PASS="$(openssl rand -hex 24)"
-    echo "No DRUPAL_ADMIN_PASS set: the admin account gets a random password (not shown). Sign in with: drush user:login"
+    echo "No DRUPAL_ADMIN_PASS set: account 1 gets a random password (not shown). It is blocked after install; see docs/SELF-HOST.md for server-only setup access."
   fi
 
   # Install Open Social
@@ -478,7 +501,10 @@ else
   # Ensure optional Web3 stack matches WEB3_ENABLED on redeploy.
   if [ "${WEB3_ENABLED:-false}" = "true" ]; then
     echo "Ensuring localnodes_web3 enabled..."
-    $DRUSH en localnodes_web3 -y 2>/dev/null || true
+    # A redeploy never stops on this (its site is live), but a failure is logged, not hidden.
+    # A sign-up site not yet handed over also has its ready held back below.
+    $DRUSH en localnodes_web3 -y \
+      || echo "Warning: localnodes_web3 could not be enabled on this redeploy; group funds and decisions are off."
   fi
 
   # Ensure the OpenRouter submodule matches AI_PROVIDER on redeploy, with the provider flip
@@ -492,7 +518,7 @@ else
   #   OpenRouter would query its embeddings against the old provider's vectors, and search
   #   answers would go wrong with no error. Refused unless AI_PROVIDER_SWITCH is exactly
   #   "reindex". A refusal logs one REFUSED line and skips: exit 0 and no FAIL_REASON code.
-  #   The codes are the sign-up callback contract (closed at four, sent only on fresh and
+  #   The codes are the sign-up callback contract (a closed list, sent only on fresh and
   #   resume runs), a redeploy sends no callback, and a non-zero exit would crash-loop a
   #   working live site over an env mismatch. The site keeps its current provider.
   # - The switch clears the vector server BEFORE enabling the module. If the clear fails, the
@@ -553,13 +579,21 @@ else
   if [ -n "$ORGANIZER_EMAIL" ] && [ -n "${PROVISION_ID:-}" ] && [ -n "${PROVISION_CALLBACK_TOKEN:-}" ]; then
     read_state localnodes.organizer_activated
     if [ -z "$STATE_VALUE" ]; then
-      echo "Organizer not activated yet; telling the sign-up app this site is ready."
-      provision_callback "ready"
+      # A practice site resends ready only once its group funds and decisions work. The
+      # check sits in an if, so a failure never ends the redeploy; no ready goes out, and a
+      # later redeploy that passes sends it (the sign-up app's stuck-provision timeout reports
+      # a site that never does).
+      if [ "${WEB3_ENABLED:-false}" = "true" ] && ! web3_ready_check; then
+        echo "Organizer not activated yet, but group funds and decisions are not working; ready not sent."
+      else
+        echo "Organizer not activated yet; telling the sign-up app this site is ready."
+        provision_callback "ready"
+      fi
     fi
   fi
 
   # Ensure instance-specific demo module is enabled (excluded from config sync)
-  DEMO_MODULE="${DEMO_MODULE:-localnodes_demo}"
+  DEMO_MODULE="${DEMO_MODULE:-none}"
   if [ "$DEMO_MODULE" != "none" ]; then
     echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true

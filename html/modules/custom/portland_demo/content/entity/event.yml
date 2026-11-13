@@ -16,12 +16,12 @@ p0rt1007-0001-4001-a001-000000000001:
     country_code: US
     locality: Portland
     postal_code: 97202
-    address_line1: 4507 SE Woodstock Boulevard
+    address_line1: 118 SE Larkspur Lane
   field_event_date: +30 day|09:00
   field_event_date_end: +30 day|16:00
   image: p0rt1003-0001-4001-a001-000000000005
   image_alt: Willamette Valley landscape
-  field_event_location: Woodstock Community Center
+  field_event_location: Larkspur Commons Hall
   field_content_visibility: community
   field_event_type: p0rt1002-0001-4001-a001-000000000001
   group: p0rt1005-0001-4001-a001-000000000001
@@ -41,12 +41,12 @@ p0rt1007-0001-4001-a001-000000000002:
     country_code: US
     locality: Portland
     postal_code: 97214
-    address_line1: 3530 SE Division Street
+    address_line1: 742 SE Quillwort Street
   field_event_date: +14 day|10:00
   field_event_date_end: +14 day|14:00
   image: p0rt1003-0001-4001-a001-000000000006
   image_alt: Community seed swap
-  field_event_location: Division Street Community Garden
+  field_event_location: Quillwort Street Community Garden
   field_content_visibility: community
   field_event_type: p0rt1002-0001-4001-a001-000000000002
   group: p0rt1005-0001-4001-a001-000000000002

@@ -158,7 +158,7 @@ function product(family, kind, fgs, bgs, source) {
 const SURFACES = ['semantic.surface', 'semantic.canvas', 'semantic.tint'];
 
 function textOnSurfaces() {
-  const roles = ['text', 'text-muted', 'link', 'primary', 'danger', 'success', 'warning-text', 'on-highlight'].map((r) => `semantic.${r}`);
+  const roles = ['text', 'text-strong', 'text-muted', 'link', 'primary', 'danger', 'success', 'warning-text', 'on-highlight'].map((r) => `semantic.${r}`);
   return product('P2', 'text', roles, SURFACES, 'text role on a light surface (22-UI-SPEC Part 1)');
 }
 
@@ -305,11 +305,29 @@ function nuxt(mode) {
   return out;
 }
 
+/**
+ * P14: the app look (2026-11-12). The raised fill of inputs, the composer and the question bubble, with the text and
+ * the control border drawn on it; and where an answer meets its source: the amber citation chip, the paper slip and
+ * the highlighted sentence on it.
+ */
+function appLook() {
+  return [
+    ...product('P14', 'text', ['text', 'text-strong', 'text-muted', 'link', 'primary'].map((r) => `semantic.${r}`), ['semantic.raised'], 'text, placeholder and links on the raised fill (inputs, the composer, the question bubble)'),
+    pairing('P14', 'non-text', 'semantic.border-control', 'semantic.raised', 'an input border on its own raised fill'),
+    pairing('P14', 'focus', 'semantic.focus', 'semantic.raised', 'the focus ring of a control on the raised fill'),
+    pairing('P14', 'text', 'semantic.on-cite', 'semantic.cite', 'the citation chip text on its amber fill'),
+    ...product('P14', 'text', ['semantic.on-paper', 'semantic.paper-label'], ['semantic.paper'], 'the quoted passage and its label line on the paper slip'),
+    pairing('P14', 'text', 'semantic.on-paper', 'semantic.mark', 'the cited sentence on its highlight'),
+  ];
+}
+
 /** P10: the DeepChat style file's roles (shadow DOM, so socialblue's CSS cannot reach it). */
 function deepchat() {
   const d = (n) => `targets.deepchat.${n}`;
   return [
-    ...product('P10', 'text', [d('text'), d('text-muted'), d('link')], [d('surface'), d('canvas')], 'DeepChat message and input text, placeholder and links on the bubble colours'),
+    ...product('P10', 'text', [d('text'), d('text-muted'), d('link')], [d('surface'), d('canvas'), d('raised')], 'DeepChat message and input text, placeholder and links on the bubble colours (the question bubble and the input are raised)'),
+    pairing('P10', 'text', d('on-cite'), d('cite'), 'DeepChat [n] citation chip: its number on the amber chip'),
+    pairing('P10', 'non-text', d('border-control'), d('raised'), 'DeepChat input border on the raised input'),
     ...product('P10', 'text', [d('surface')], [d('submit'), d('submit-hover')], 'DeepChat submit icon on its button and hover colour'),
     pairing('P10', 'focus', d('focus'), d('surface'), 'DeepChat focus outline on the panel'),
     pairing('P10', 'non-text', d('border-control'), d('surface'), 'DeepChat input border'),
@@ -369,6 +387,7 @@ export function declaredPairings(resolved, { overridesFile = OVERRIDES_FILE, tre
     ...status(),
     ...nuxt('light'),
     ...nuxt('dark'),
+    ...appLook(),
     ...deepchat(),
     ...email(),
     ...band(),

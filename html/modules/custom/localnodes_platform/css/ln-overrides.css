@@ -338,3 +338,43 @@ form .form-control::placeholder {
 .localnodes-import-alert.localnodes-import-alert {
   border-left-color: var(--ln-color-warning-text);
 }
+
+/* The welcome block without a picture. Open Social holds the hero open at
+   300px (410px from 600px wide) to show a cover photo; the platform leaves
+   out the stock photo, and with no photo that height was an empty blue
+   area. The block template adds .cover-img only when there is a picture, so
+   without one the block is as tall as its words and buttons, inside the
+   cover's own 40px padding. A community's picture keeps the full height. */
+.cover-with-canvas:not(.cover-img) .cover-wrap {
+  min-height: 0;
+}
+
+/* Under 976px the top bar stays fixed, but Open Social's navbar script
+   (navbarFlexibleHeight) sets the main column's top padding to 0 inline, so
+   the bar covered the top 50px of every page. The column starts below the
+   bar instead; !important is the only way past the script's inline style.
+   At 976px and up the script pads it to the bar's height itself. */
+@media (max-width: 975.98px) {
+  .main-container {
+    padding-top: 50px !important;
+  }
+
+  /* One row at 320px: the community's name gives way (cut with an
+     ellipsis); the menu button, a member's account icons and Sign in do
+     not. While the menu is open
+     the row wraps again, so the menu takes its own full-width line. */
+  .container--navbar:not(:has(> .navbar-collapse.in, > .navbar-collapse.collapsing)) {
+    flex-wrap: nowrap;
+  }
+  .container--navbar > .navbar-header,
+  .container--navbar > .navbar-header .navbar-brand {
+    min-width: 0;
+  }
+  .container--navbar > .navbar-header .ln-site-name {
+    max-width: 100%;
+  }
+  .container--navbar > .navbar-toggle,
+  .container--navbar > .navbar-user {
+    flex-shrink: 0;
+  }
+}

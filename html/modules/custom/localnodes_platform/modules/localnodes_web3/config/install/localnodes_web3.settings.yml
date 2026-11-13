@@ -1,0 +1,3 @@
+# The emailed sign-in link (/user/email-link). Off: its pages answer "not
+# found" and the sign-in page does not offer it.
+email_link: false

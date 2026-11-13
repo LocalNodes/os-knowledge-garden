@@ -1,0 +1,6 @@
+name: 'LocalNodes Web3 proof test'
+type: module
+description: 'Test only: one route marked as needing a proven session.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

@@ -4,6 +4,7 @@ description: 'Optional Web3 stack: SIWE login, Safe smart accounts, and group tr
 core_version_requirement: ^10
 package: 'LocalNodes'
 dependencies:
+  - localnodes_platform:localnodes_platform
   - siwe_login:siwe_login
   - siwe_login:siwe_login_waap
   - safe_smart_accounts:safe_smart_accounts

@@ -25,6 +25,7 @@ function localnodes_platform_install() {
   _localnodes_platform_configure_mailer();
   // Open Social's footer out of every mail, our own mail subjects in.
   _localnodes_platform_configure_email();
+  \Drupal\localnodes_platform\Mail\NoticeMailTemplates::configure();
   // Open Social's "#MadeToShare" footer block off.
   _localnodes_platform_configure_branding();
   // Brand tokens: the socialblue colour scheme and shapes.
@@ -43,6 +44,174 @@ function localnodes_platform_install() {
   // The anonymous front-page hero speaks for the community, not
   // for Open Social.
   _localnodes_platform_configure_hero_copy();
+  // The profile's feature hooks have now finished granting their defaults.
+  _localnodes_platform_protect_private_groups();
+  // The bootstrap account is reserved for deliberate server recovery.
+  _localnodes_platform_block_host_account();
+}
+
+/** Disables the bootstrap account's browser sign-in after fresh site setup. */
+function _localnodes_platform_block_host_account(): void {
+  $host = \Drupal::entityTypeManager()->getStorage('user')->load(1);
+  if ($host !== NULL && $host->isActive()) {
+    $host->block()->save();
+  }
+}
+
+/** Applies the fresh-install boundary between site roles and house access. */
+function _localnodes_platform_protect_private_groups(): void {
+  $entities = \Drupal::entityTypeManager();
+  $storage = $entities->getStorage('user_role');
+  foreach (['sitemanager', 'contentmanager'] as $id) {
+    $role = $storage->load($id);
+    if ($role === NULL) continue;
+    $changed = FALSE;
+    if ($role->isAdmin()) {
+      $role->set('is_admin', FALSE);
+      $changed = TRUE;
+    }
+    foreach ($role->getPermissions() as $permission) {
+      if (_localnodes_platform_house_permission_is_broad($permission, [], $id)) {
+        $role->revokePermission($permission);
+        $changed = TRUE;
+      }
+    }
+    if ($changed) $role->save();
+  }
+  if (!$entities->hasDefinition('group_role')) return;
+  foreach ($entities->getStorage('group_role')->loadMultiple() as $role) {
+    if (!in_array($role->getGlobalRoleId(), ['sitemanager', 'contentmanager'], TRUE)) continue;
+    if (!$role->isAdmin() && $role->getPermissions() === []) continue;
+    // Ordinary house membership and individual house-manager roles remain.
+    $role->set('admin', FALSE);
+    $role->set('permissions', []);
+    $role->save();
+  }
+}
+
+/** Exact site-role capabilities. New feature grants remain off until reviewed. */
+function _localnodes_platform_house_role_allowed_permissions(string $role_id = 'sitemanager'): array {
+  static $ordinary = [
+    'access comments',
+    'access content',
+    'access content search',
+    'access deepchat api',
+    'access group search',
+    'access mentions',
+    'access polls',
+    'access user profiles',
+    'access users search',
+    'add or remove like votes on comment of comment',
+    'add or remove like votes on event of node',
+    'add or remove like votes on photo of post',
+    'add or remove like votes on post of post',
+    'add or remove like votes on post_comment of comment',
+    'add or remove like votes on topic of node',
+    'add photo post entities',
+    'add post entities',
+    'add post post entities',
+    'cancel account',
+    'change own username',
+    'create album content',
+    'create event content',
+    'create flexible_group group',
+    'create landing_page content',
+    'create page content',
+    'create topic content',
+    'create video_recording_link media',
+    'delete own album content',
+    'delete own comments',
+    'delete own event content',
+    'delete own landing_page content',
+    'delete own page content',
+    'delete own post entities',
+    'delete own topic content',
+    'delete own video_recording_link media',
+    'edit own album content',
+    'edit own comments',
+    'edit own event content',
+    'edit own landing_page content',
+    'edit own page content',
+    'edit own post entities',
+    'edit own topic content',
+    'edit own video_recording_link media',
+    'flag follow_content',
+    'flag follow_term',
+    'flag follow_user',
+    'flag mute_group_notifications',
+    'flag report_comment',
+    'flag report_node',
+    'flag report_post',
+    'override album published option',
+    'override event published option',
+    'override landing_page published option',
+    'override page published option',
+    'override topic published option',
+    'post comments',
+    'request group membership',
+    'select account cancellation method',
+    'skip comment approval',
+    'unflag follow_content',
+    'unflag follow_term',
+    'unflag follow_user',
+    'unflag mute_group_notifications',
+    'use ai overview',
+    'use select2 autocomplete',
+    'use text format basic_html',
+    'use text format imported_html',
+    'use text format mail_html',
+    'use text format simple_text',
+    'view any profile profile',
+    'view community flexible_group group',
+    'view community posts',
+    'view events on my profile',
+    'view events on other profiles',
+    'view group stream page',
+    'view groups on my profile',
+    'view groups on other profiles',
+    'view members flexible_group group',
+    'view node.album.field_content_visibility:community content',
+    'view node.album.field_content_visibility:public content',
+    'view node.event.field_content_visibility:community content',
+    'view node.event.field_content_visibility:public content',
+    'view node.landing_page.field_content_visibility:community content',
+    'view node.landing_page.field_content_visibility:public content',
+    'view node.page.field_content_visibility:community content',
+    'view node.page.field_content_visibility:public content',
+    'view node.topic.field_content_visibility:community content',
+    'view node.topic.field_content_visibility:public content',
+    'view own unpublished content',
+    'view own unpublished post entities',
+    'view public flexible_group group',
+    'view public posts',
+    'view published post entities',
+    'view topics on my profile',
+    'view topics on other profiles',
+  ];
+  $site = $role_id === 'sitemanager' ? [
+    'access administration pages',
+    'access toolbar',
+    'administer social site configuration',
+    'administer social menu links',
+    'access social theme settings',
+    'view users',
+    'block users',
+    'view blocked user',
+    'export localnodes site',
+    'view network fee account',
+  ] : [];
+  return array_fill_keys(array_merge($ordinary, $site), TRUE);
+}
+
+/** Direct-message policy is unchanged by house access narrowing. */
+function _localnodes_platform_house_permission_is_direct_message(string $permission): bool {
+  return (bool) preg_match('/private[ _-]?messag/i', $permission);
+}
+
+/** Unknown role grants are removed; the metadata is not an authorization list. */
+function _localnodes_platform_house_permission_is_broad(string $permission, array $definition = [], string $role_id = 'sitemanager'): bool {
+  if (_localnodes_platform_house_permission_is_direct_message($permission)) return FALSE;
+  return !isset(_localnodes_platform_house_role_allowed_permissions($role_id)[$permission]);
 }
 
 /**
@@ -70,8 +239,12 @@ function _localnodes_platform_configure_event_calendar(): void {
  * visitor would meet someone else's product pitch, not the community. It reads
  * instead: heading "Welcome to [site name]",
  * body "Sign in to see what's new, find what the group knows and take part."
- * No crypto words. The block's buttons are left to the theme; with the Web3
- * stack on, localnodes_web3 swaps them for its sign-in at render time.
+ * No crypto words. Its two stored buttons, "Sign up" to the registration page
+ * and "Login" to the password page, become one "Sign in" to the log-in page,
+ * where the site's sign-in is; with the Web3 stack on, localnodes_web3 swaps
+ * it for that sign-in at render time. Open Social's stock photo is left
+ * stored (the field is required) and hidden at render time by
+ * localnodes_platform_block_content_view_alter().
  *
  * Why this lives in hook_install: the hero is a content entity created by
  * Open Social's own install, so neither config/install nor config/optional can
@@ -81,8 +254,8 @@ function _localnodes_platform_configure_event_calendar(): void {
  * filter, so localnodes_platform_block_content_view_alter() resolves it to the
  * site's name at render time.
  *
- * Idempotent: a hero that already holds this copy is not saved again, and a
- * site without the hero block is left alone.
+ * Idempotent: a hero that already holds this copy and this button is not
+ * saved again, and a site without the hero block is left alone.
  */
 function _localnodes_platform_configure_hero_copy() {
   $blocks = \Drupal::entityTypeManager()->getStorage('block_content')
@@ -91,12 +264,22 @@ function _localnodes_platform_configure_hero_copy() {
   if (!$block || !$block->hasField('field_text_block')) {
     return;
   }
+  $changed = FALSE;
   $want = '<h3>Welcome to [site:name]</h3><p>' . htmlspecialchars("Sign in to see what's new, find what the group knows and take part.", ENT_QUOTES | ENT_HTML5) . '</p>';
-  if ($block->get('field_text_block')->value === $want) {
-    return;
+  if ($block->get('field_text_block')->value !== $want) {
+    $block->set('field_text_block', ['value' => $want, 'format' => 'full_html']);
+    $changed = TRUE;
   }
-  $block->set('field_text_block', ['value' => $want, 'format' => 'full_html']);
-  $block->save();
+  if ($block->hasField('field_call_to_action_link')) {
+    $links = $block->get('field_call_to_action_link');
+    if ($links->count() !== 1 || $links->uri !== 'internal:/user/login' || $links->title !== 'Sign in') {
+      $block->set('field_call_to_action_link', [['uri' => 'internal:/user/login', 'title' => 'Sign in', 'options' => []]]);
+      $changed = TRUE;
+    }
+  }
+  if ($changed) {
+    $block->save();
+  }
 }
 
 /**
@@ -446,11 +629,20 @@ function _localnodes_platform_configure_mailer() {
  *   schema but no config/install file, and a copy here would collide with the
  *   object its own install writes (setDefaultDisabledGreetingKeys()).
  * - user.mail subjects, named for the site the person joined:
- *   "Reset your password for [site:name]" and, for the two welcome mails (an
+ *   "Your sign-in link for [site:name]" and, for the two welcome mails (an
  *   organizer-created account and a self-registration without approval),
  *   "Welcome to [site:name]". user.mail comes from core's config/install, so
  *   shipping a copy would be pre-existing config; it is edited here, as the
  *   other install helpers do (CLAUDE.md).
+ * - the bodies of the three mails whose link opens the page to choose a
+ *   password: the reset, an organizer-created account, and an approved
+ *   account. Core's say the member logs in with a password from then on.
+ *   A member may sign in another way (the Sign in button), so these say what
+ *   the link does: it signs in once and opens that page, and choosing a
+ *   password there leaves any other way of signing in as it is. Only the
+ *   reset link has core's one-day limit; a first sign-in link has none.
+ *   They start without core's "[user:display-name]," line: the mail wrapper
+ *   already greets the member by name.
  *
  * The look of the mail (the email--localnodes.html.twig wrapper) is not config;
  * localnodes_platform_theme() registers it. The transport is not touched: that
@@ -468,7 +660,7 @@ function _localnodes_platform_configure_email() {
   }
 
   $subjects = [
-    'password_reset' => 'Reset your password for [site:name]',
+    'password_reset' => 'Your sign-in link for [site:name]',
     'register_admin_created' => 'Welcome to [site:name]',
     'register_no_approval_required' => 'Welcome to [site:name]',
   ];
@@ -480,9 +672,35 @@ function _localnodes_platform_configure_email() {
       $changed = TRUE;
     }
   }
+  foreach (_localnodes_platform_user_mail_bodies() as $key => $body) {
+    if ($mail->get($key . '.body') !== $body) {
+      $mail->set($key . '.body', $body);
+      $changed = TRUE;
+    }
+  }
   if ($changed) {
     $mail->save();
   }
+}
+
+/**
+ * The user.mail bodies _localnodes_platform_configure_email() sets.
+ *
+ * @return array<string, string>
+ *   Bodies keyed by user.mail key.
+ */
+function _localnodes_platform_user_mail_bodies(): array {
+  $after = "On the page it opens you can choose a password for your next visits. Any other way you sign in to [site:name] stays as it is.";
+  // On Web3 sites the organizer-created welcome carries one more line, above
+  // the sign-off. localnodes_web3's install sets the body again once enabled.
+  $wallet = \Drupal::moduleHandler()->moduleExists('localnodes_web3')
+    ? "You can connect a wallet later from your account page.\n\n" : '';
+  return [
+    'password_reset' => "Someone asked for a sign-in link for your account at [site:name]. This link signs you in:\n\n[user:one-time-login-url]\n\n" . $after . "\n\nThe link works once. If you did not ask for it, ignore this email; nothing changes on your account.\n\n-- [site:name]",
+    'register_admin_created' => "An account at [site:name] was made for you. This link signs you in:\n\n[user:one-time-login-url]\n\n" . $after . "\n\nThe link works once. After that, sign in at [site:login-url]. Your username is [user:name].\n\n" . $wallet . "-- [site:name]",
+    'register_no_approval_required' => "Welcome to [site:name]. This link signs you in:\n\n[user:one-time-login-url]\n\n" . $after . "\n\nThe link works once. After that, sign in at [site:login-url]. Your username is [user:account-name].\n\n-- [site:name]",
+    'status_activated' => "Your account at [site:name] is now switched on. This link signs you in:\n\n[user:one-time-login-url]\n\n" . $after . "\n\nThe link works once. After that, sign in at [site:login-url]. Your username is [user:account-name].\n\n-- [site:name]",
+  ];
 }
 
 /**
@@ -610,9 +828,8 @@ function _localnodes_platform_configure_ai_defaults() {
  * - localnodes_ai_data_tier: 'local' on DDEV; off DDEV 'paid' when
  *   GEMINI_KEY_TIER=paid, 'unpaid' for any other value, '' when unset.
  * - localnodes_demo_module: DEMO_MODULE with the entrypoint's default
- *   'localnodes_demo'. A site whose value names a demo module (set and not
- *   'none') holds fictional content only and is exempt. A missing setting is
- *   not exempt.
+ *   'none'. A site whose value names a demo module (set and not 'none') holds
+ *   fictional content only and is exempt. A missing setting is not exempt.
  *
  * Also warns when CloudflareClientIpMiddleware had to fall back to
  * CF-Connecting-IP in the last 7 days (Traefik's trustedIPs missing).

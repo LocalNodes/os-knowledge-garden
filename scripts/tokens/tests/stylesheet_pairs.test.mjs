@@ -374,7 +374,7 @@ test('the repo: treasury.css is read, and its status rules, badges and IDs are m
   }
 });
 
-test('the repo: signin.css is read, and its "or" line and waiting strip are measured on what sits behind them', () => {
+test('the repo: signin.css is read, and its "or" line, wallet button and waiting strip are measured on what sits behind them', () => {
   assert.deepEqual(STYLESHEETS.signin, { rel: 'html/modules/custom/localnodes_platform/modules/localnodes_web3/css/signin.css', name: 'signin.css' });
   const r = REAL();
   const mine = r.pairs.filter((p) => p.id.startsWith('P13.signin.'));
@@ -386,6 +386,10 @@ test('the repo: signin.css is read, and its "or" line and waiting strip are meas
       id('text', 'text-muted', 'surface'),
       id('text', 'text-muted', 'canvas'),
       id('text', 'text-muted', 'tint'),
+      // "Use a browser wallet", link-coloured, on the same light surfaces.
+      id('text', 'link', 'surface'),
+      id('text', 'link', 'canvas'),
+      id('text', 'link', 'tint'),
       // The waiting line's text on the strip's own surface fill.
       id('text', 'text', 'surface'),
       // The strip's bottom border against the page under it.

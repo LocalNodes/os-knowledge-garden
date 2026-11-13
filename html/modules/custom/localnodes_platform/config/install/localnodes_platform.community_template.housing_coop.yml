@@ -1,0 +1,20 @@
+# A housing co-op with several houses: one group everyone in the co-op is in,
+# named after the community, plus houses the organizer adds one by one.
+# Group templates are named, not applied: house_v1 is the house template,
+# suggested on each house added; the organizer confirms it in the site.
+# Raise the version whenever the groups or kinds change.
+id: housing_coop
+version: 1
+label: 'Housing co-op with several houses'
+description: 'One group for the whole co-op, and a group for each house.'
+groups:
+  -
+    name: '{site}'
+    visibility: community
+    everyone: true
+    group_template: null
+repeatable:
+  -
+    kind: house
+    label: 'Add a house'
+    group_template: house_v1

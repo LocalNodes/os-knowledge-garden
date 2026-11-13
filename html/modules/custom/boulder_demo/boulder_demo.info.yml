@@ -5,3 +5,7 @@ core_version_requirement: ^9 || ^10
 package: LocalNodes
 dependencies:
   - social_demo:social_demo
+  # Demo content that shows the month calendar and a quick poll; the demo
+  # plugins' base classes live in these modules.
+  - localnodes_platform:localnodes_events_calendar
+  - localnodes_platform:localnodes_quick_poll

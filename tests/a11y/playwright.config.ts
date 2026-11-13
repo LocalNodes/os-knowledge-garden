@@ -73,8 +73,19 @@ MEMBER_SPECS.push('safety-help.spec.ts');
 // On a site with the sign-in off, set LN_WEB3_OFF=1; otherwise a missing
 // sign-in fails these tests instead of skipping them.
 ANONYMOUS_SPECS.push('sign-in-entry.spec.ts');
+// The signed-out welcome block's height, with and without a picture.
+ANONYMOUS_SPECS.push('welcome-block.spec.ts');
+// The fixed top bar at 320px (one row, Sign in a full target) and main
+// content below it at 320, 390 and 1280, signed out and as a member.
+ANONYMOUS_SPECS.push('top-bar.spec.ts');
 // The "Joined" button's computed colours, as the member (who has joined the a11y group).
 MEMBER_SPECS.push('joined-button.spec.ts');
+// Screenshots only, skipped unless LN_SHOTS_DIR is set.
+MEMBER_SPECS.push('palette-shots.spec.ts');
+ANONYMOUS_SPECS.push('palette-shots.spec.ts');
+// The app look's axe and sideways-scroll checks.
+MEMBER_SPECS.push('app-look.spec.ts');
+ANONYMOUS_SPECS.push('app-look.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test. The CLI's
 // --trace flag also works; there's no CLI flag for video.

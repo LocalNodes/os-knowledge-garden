@@ -7,7 +7,9 @@
 #   --ln-color-focus           focus ring;     --ln-color-link            links in a bubble
 #   --ln-color-text            text;           --ln-color-text-muted      placeholder, pulse
 #   --ln-color-border-control  input border;   --ln-color-divider         hairlines
-#   --ln-color-surface         window, bubble; --ln-color-canvas          user bubble, stop hover
+#   --ln-color-surface         window, bubble; --ln-color-canvas          stop hover
+#   --ln-color-raised          question bubble, input
+#   --ln-color-cite            [n] chip;       --ln-color-on-cite         its number
 # Custom properties inherit into DeepChat's shadow root, so these resolve there
 # (checked in a spike). Do not add a hex, rgb() or named colour:
 # scripts/tokens/check_raw_colors.mjs fails the build on one.
@@ -31,7 +33,9 @@ parameters:
           marginBottom: "8px"
       user:
         bubble:
-          backgroundColor: "var(--ln-color-canvas)"
+          backgroundColor: "var(--ln-color-raised)"
+          border: "1px solid var(--ln-color-divider)"
+          borderRadius: "12px"
           color: "var(--ln-color-text)"
       ai:
         outerContainer:
@@ -51,9 +55,9 @@ parameters:
         color: "var(--ln-color-text-muted)"
     styles:
       container:
-        backgroundColor: "var(--ln-color-surface)"
+        backgroundColor: "var(--ln-color-raised)"
         border: "1px solid var(--ln-color-border-control)"
-        borderRadius: "6px"
+        borderRadius: "8px"
         color: "var(--ln-color-text)"
       text:
         fontSize: "16px"
@@ -87,8 +91,22 @@ parameters:
       outline: 2px solid var(--ln-color-focus);
       outline-offset: 2px;
     }
+    /* The [n] citation: an amber chip, the one place amber is used, where
+       an answer meets its source. */
     .message-bubble a.ln-cite {
-      padding: 0 4px;
+      display: inline-block;
+      min-width: 24px;
+      min-height: 24px;
+      margin: 0 2px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background-color: var(--ln-color-cite);
+      color: var(--ln-color-on-cite);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 24px;
+      text-align: center;
+      text-decoration: none;
       white-space: nowrap;
     }
     .message-bubble .ln-sources-label {

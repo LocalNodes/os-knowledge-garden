@@ -1,0 +1,10 @@
+name: 'LocalNodes late role grant fixture'
+type: module
+package: Testing
+hidden: true
+core_version_requirement: ^10
+# The platform is already enabled by the test. Avoid pulling its complete
+# production dependency graph into this focused optional-module installation.
+dependencies:
+  - drupal:user
+  - group:group

@@ -31,7 +31,7 @@ class SiteTermsController extends ControllerBase {
    * template's text, so changing the words without this date (or the other
    * way round) fails the test.
    */
-  public const TERMS_CHANGED = '2026-11-11';
+  public const TERMS_CHANGED = '2026-11-12';
 
   public function __construct(
     ConfigFactoryInterface $configFactory,

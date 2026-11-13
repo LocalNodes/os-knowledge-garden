@@ -64,7 +64,7 @@ final class SiteTermsTest extends KernelTestBase {
    * UI-SPEC section 9: the four personal-data bullets (amended 2026-11-08).
    */
   private const DATA_BULLETS = [
-    'What this site keeps: your account name, email address and password record, and what you post or upload. A quick-poll answer is stored with your account; others in the group see only the totals.',
+    'What this site keeps: your account name, email address, a password record when a site password is used, and what you post or upload. A quick-poll answer is stored with your account; others in the group see only the totals.',
     'Who can see it: organizers and site managers can see your account details. Other members can\'t see your email unless you choose to show it on your profile. Posts follow their chosen audience; site managers and administrators can also read private-group records. People with access to the host\'s servers or hosting accounts, and tools using those accounts, can reach them too.',
     'The AI assistant: to prepare pages for search, this site sends the text of topics, events, posts and comments, and text from their attached files, to its AI service when they are saved. That includes private groups\' pages, even if nobody asks the assistant anything. The search index itself is kept with this site\'s other data. When you ask the assistant something, your question, the passages used and your recent conversation are sent to the same service. When the AI overview summarizes a search, your search words and the passages used are sent. The service may keep requests and answers for a time to check for abuse. Its rules for this site\'s account, including whether it may use them to improve its products, are being confirmed.',
     'Leaving: ask the site\'s organizers or hello@localnodes.xyz about closing your account or removing records; closing an account does not itself erase this community\'s records, recovery copies or AI-service logs. The host can also make a copy of the whole site, including every member\'s account and private pages, so the community can move it elsewhere. If this site was a three-month pilot that doesn\'t continue, it stays unchanged for 30 days, and the organizers get at least seven days\' written notice before it is removed. Removing the site deletes its pages, files and search data; backup copies and the AI service\'s logs are deleted on their own schedules, not at once.',
@@ -76,7 +76,7 @@ final class SiteTermsTest extends KernelTestBase {
    * There a member can connect a wallet and the site keeps its public
    * address; without the stack the bullet has no wallet word at all.
    */
-  private const KEEPS_BULLET_WITH_WALLETS = 'What this site keeps: your account name, email address and password record, what you post or upload, and the public address of any wallet you connect. A quick-poll answer is stored with your account; others in the group see only the totals.';
+  private const KEEPS_BULLET_WITH_WALLETS = 'What this site keeps: your account name, email address, a password record when a site password is used, what you post or upload, and the public address of any wallet you connect. A quick-poll answer is stored with your account; others in the group see only the totals.';
 
   /**
    * UI-SPEC section 9: the checkbox label and its error.
@@ -92,8 +92,8 @@ final class SiteTermsTest extends KernelTestBase {
    * makes the version date move with the words: change one without the
    * other and testVersionDateMovesWithTheText fails.
    */
-  private const TEMPLATE_TEXT_SHA256 = 'cde8a9ab7b17c382756f2739647a0f304cf6531174f9c99bab8868cfb8f0c743';
-  private const TERMS_CHANGED_PIN = '2026-11-11';
+  private const TEMPLATE_TEXT_SHA256 = '30ae15a78a34789e2351ab3c6794626144a23f511e48033b8533785a56a1359a';
+  private const TERMS_CHANGED_PIN = '2026-11-12';
 
   /**
    * {@inheritdoc}
@@ -230,7 +230,7 @@ final class SiteTermsTest extends KernelTestBase {
     $this->assertSame(self::DATA_BULLETS, $bullets, 'The personal-data list has the four approved bullets.');
     $this->assertSame(1, $xpath->query('//a[@href="mailto:hello@localnodes.xyz"]')->length, 'The help address is a mail link.');
 
-    $this->assertSame('Draft for review, November 11, 2026', end($paragraphs), 'The version line ends the page.');
+    $this->assertSame('Draft for review, November 12, 2026', end($paragraphs), 'The version line ends the page.');
     $this->assertSame(1, $xpath->query('(//section)[last()]/following::p[contains(@class, "localnodes-site-terms__version")]')->length, 'The version line comes after the sections.');
   }
 
@@ -409,7 +409,7 @@ final class SiteTermsTest extends KernelTestBase {
   public function testAdminCreateFormHasNoConsentBox(): void {
     $role = Role::create(['id' => 'people_admin', 'label' => 'People admin']);
     $role->grantPermission('administer users')->save();
-    $admin = User::create(['name' => 'people-admin', 'mail' => 'people-admin@mail.localnodes.xyz', 'status' => 1, 'roles' => ['people_admin']]);
+    $admin = User::create(['name' => 'people-admin', 'mail' => 'people-admin@example.invalid', 'status' => 1, 'roles' => ['people_admin']]);
     $admin->save();
     $this->container->get('current_user')->setAccount($admin);
 

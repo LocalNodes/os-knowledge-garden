@@ -90,6 +90,7 @@ class GuideController extends ControllerBase {
       '#get_help_link' => Link::fromTextAndUrl($this->t('Get help'), $help_url)->toString(),
       '#get_help_url' => $help_url->toString(),
       '#assistant_name' => $this->assistantName?->label(),
+      '#sign_in_button' => $web3,
       '#attached' => ['library' => ['localnodes_platform/guide']],
       '#cache' => [
         // The links depend on who is looking and on which group is first;

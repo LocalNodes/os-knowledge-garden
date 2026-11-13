@@ -24,3 +24,28 @@ signin:
     - core/drupal
     - core/once
     - localnodes_platform/tokens
+
+export_confirmation:
+  js:
+    js/export-confirmation.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+
+# "Confirm your sign-in" before a group fund or vote change (see
+# ProofRoutes). localnodes_web3_library_info_alter() makes the fund and vote
+# modules' scripts depend on it, and adds siwe_login's signer when the
+# installed siwe_login has one; localnodes_web3_form_alter() attaches it to
+# post forms on pages that need the proof.
+signature_proof:
+  version: VERSION
+  css:
+    theme:
+      css/signature-proof.css: {}
+  js:
+    js/signature-proof.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
+    - localnodes_platform/tokens

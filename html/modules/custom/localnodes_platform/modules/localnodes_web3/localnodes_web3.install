@@ -35,12 +35,80 @@ use Drupal\user\Entity\Role;
  * safe_governance.settings:platform_name and says "this site" while the
  * setting is empty, so the distribution sets its own name here. A name the
  * site already chose is kept. Idempotent.
+ *
+ * It also gives every member a confirmed email address. siwe_login ships
+ * require_email_verification off, so a member who signs in with the button
+ * would otherwise get only a made-up "@ethereum.local" address, and no way
+ * in by email if the sign-in service is down. Turned on, a member with no
+ * real address is asked for one at their next sign-in (see SignInEmail).
+ * The two mails siwe_login sends at that step are worded here for members:
+ * no wallet words, and a note to open the link in the same browser.
+ * Idempotent.
+ *
+ * And it shows siwe_login's wallet button, so a member whose only way in is
+ * a browser wallet (such as MetaMask) can sign in. siwe_login_waap ships it
+ * off; on our sites it is offered as a quiet "Use a browser wallet" under
+ * the main sign-in (see SignIn). Idempotent.
  */
 function localnodes_web3_install() {
   _localnodes_web3_configure_siwe_rpc_default();
   _localnodes_web3_grant_network_fee_permission();
   _localnodes_web3_enable_sponsored_execution();
   _localnodes_web3_set_governance_platform_name();
+  _localnodes_web3_require_member_email();
+  _localnodes_web3_word_welcome_mail();
+  _localnodes_web3_show_wallet_button();
+}
+
+/**
+ * Turns on siwe_login_waap's wallet button.
+ *
+ * Does nothing when siwe_login_waap has no settings, or the button is on.
+ */
+function _localnodes_web3_show_wallet_button(): void {
+  $settings = \Drupal::configFactory()->getEditable('siwe_login_waap.settings');
+  if (!$settings->isNew() && $settings->get('show_siwe_wallet_button') !== TRUE) {
+    $settings->set('show_siwe_wallet_button', TRUE)->save(TRUE);
+  }
+}
+
+/**
+ * Puts the wallet line into the organizer-created welcome mail.
+ *
+ * localnodes_platform sets the user mail bodies at its own install, before
+ * this module is on; with it on, that body gains one line above the sign-off.
+ */
+function _localnodes_web3_word_welcome_mail(): void {
+  if (!\Drupal::moduleHandler()->moduleExists('localnodes_platform')) {
+    return;
+  }
+  \Drupal::moduleHandler()->loadInclude('localnodes_platform', 'install');
+  $body = _localnodes_platform_user_mail_bodies()['register_admin_created'];
+  $mail = \Drupal::configFactory()->getEditable('user.mail');
+  if ($mail->get('register_admin_created.body') !== $body) {
+    $mail->set('register_admin_created.body', $body)->save();
+  }
+}
+
+/**
+ * Asks every member for a real email address, and words siwe_login's mails.
+ */
+function _localnodes_web3_require_member_email(): void {
+  $factory = \Drupal::configFactory();
+  $factory->getEditable('siwe_login.settings')
+    ->set('require_email_verification', TRUE)
+    ->save(TRUE);
+
+  $factory->getEditable('siwe_login.mail')
+    ->set('email_verification', [
+      'subject' => 'Confirm your email address for [site:name]',
+      'body' => "Hello,\n\nTo finish signing in to [site:name], confirm this is your email address. Open this link in the same browser where you signed in:\n\n[siwe:email-verification-url]\n\nThe link works once, for one day. If you did not just sign in to [site:name], you can ignore this email.\n\n-- [site:name]",
+    ])
+    ->set('account_link', [
+      'subject' => 'Add a sign-in to your [site:name] account',
+      'body' => "[user:display-name],\n\nSomeone just signed in to [site:name] with the sign-in button and gave this email address. If that was you, open this link in the same browser to add that sign-in to your account here:\n\n[siwe:email-verification-url]\n\nYou can then sign in either way, and you keep everything on your account.\n\nIf it was not you, ignore this email. Nothing changes on your account unless the link is opened. The link works once, for one day.\n\n-- [site:name]",
+    ])
+    ->save(TRUE);
 }
 
 /**

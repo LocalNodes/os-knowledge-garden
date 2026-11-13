@@ -1,0 +1,34 @@
+<?php
+
+/**
+ * @file
+ * Fresh feature defaults that deliberately regrant broad site-role access.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_role_grant_test_install(): void {
+  $grants = [
+    'manage everything enrollments',
+    'view published event enrollment entities',
+    'unknownfeaturepermission',
+  ];
+  $before_policy = [];
+  foreach (['sitemanager', 'contentmanager'] as $id) {
+    $role = \Drupal\user\Entity\Role::load($id);
+    foreach ($grants as $permission) {
+      $role->grantPermission($permission);
+    }
+    $role->save();
+    $before_policy[$id] = $role->getPermissions();
+  }
+  $ordinary = \Drupal\user\Entity\Role::load('verified');
+  $ordinary->grantPermission('late fixture ordinary access')->save();
+  $synced = \Drupal\group\Entity\GroupRole::load('flexible_group-sm-insider');
+  $synced->set('admin', TRUE)->save();
+  \Drupal::state()->set('localnodes_role_grant_test.before_policy', [
+    'permissions' => $before_policy,
+    'synced_admin' => $synced->isAdmin(),
+  ]);
+}

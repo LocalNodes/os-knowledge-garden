@@ -1,0 +1,29 @@
+--- a/modules/social_features/social_private_message/src/Element/SocialPrivateMessageEntityAutocomplete.php
++++ b/modules/social_features/social_private_message/src/Element/SocialPrivateMessageEntityAutocomplete.php
+@@ -2,7 +2,6 @@
+ 
+ namespace Drupal\social_private_message\Element;
+ 
+-use Drupal\Core\Form\FormStateInterface;
+ use Drupal\social_core\Entity\Element\EntityAutocomplete;
+ 
+ /**
+@@ -15,18 +14,4 @@
+  */
+ class SocialPrivateMessageEntityAutocomplete extends EntityAutocomplete {
+ 
+-  /**
+-   * {@inheritdoc}
+-   */
+-  public static function validateEntityAutocomplete(
+-    array &$element,
+-    FormStateInterface $form_state,
+-    array &$complete_form,
+-  ): void {
+-    parent::validateEntityAutocomplete($element, $form_state, $complete_form);
+-
+-    $value = $form_state->getValue('members');
+-    $form_state->setValue('members', $value['target_id']);
+-  }
+-
+ }

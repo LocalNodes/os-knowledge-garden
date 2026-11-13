@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\localnodes_platform\Drush\Commands;
 
 use Drupal\Core\Site\Settings;
+use Drupal\localnodes_platform\Backup\BackupCapture;
 use Drupal\localnodes_platform\Backup\BackupPause;
 use Drupal\localnodes_platform\Backup\BackupWrite;
 use Drupal\localnodes_platform\Export\SiteExporter;
@@ -89,10 +90,10 @@ class SiteBackupCommands extends DrushCommands {
     $created_destination = !file_exists($destination);
     $started = FALSE;
     try {
-      $result = (new \Drupal\localnodes_platform\Backup\BackupCapture())->run(new BackupPause($private), 'backup', $max_pause, $drain, $this->margin(), function (float $deadline) use ($destination, $options, &$started, &$capture_start, &$capture_end): array {
+      $result = (new BackupCapture())->run(new BackupPause($private), 'backup', $max_pause, $drain, $this->margin(), function (float $deadline) use ($destination, $options, &$started, &$capture_start, &$capture_end): array {
         $started = TRUE;
         $capture_start = gmdate('Y-m-d\TH:i:s\Z');
-        $result = \Drupal::service('localnodes_platform.site_exporter')->export($destination, $this->dumper($deadline), NULL, $deadline);
+        $result = \Drupal::service('localnodes_platform.site_exporter')->export($destination, $this->dumper($deadline), NULL, $deadline, NULL, TRUE);
         $capture_end = gmdate('Y-m-d\TH:i:s\Z');
         if ($options['with-secret-record']) $this->writeSecretRecord($destination . '/' . self::SECRET_RECORD);
         return $result;
@@ -101,7 +102,8 @@ class SiteBackupCommands extends DrushCommands {
     catch (\Throwable $e) {
       if (!$started) return $this->refuse(self::safeReason($e));
       $this->emptyFolder($destination, $created_destination);
-      $this->logger()->error('Backup failed: ' . self::safeReason($e) . '. What it wrote was deleted and the site is open again.');
+      $reopened = $e->getMessage() === BackupCapture::RELEASE_FAILED ? '' : ' and the site is open again';
+      $this->logger()->error('Backup failed: ' . self::safeReason($e) . '. What it wrote was deleted' . $reopened . '.');
       return self::EXIT_FAILURE;
     }
 
@@ -138,6 +140,9 @@ class SiteBackupCommands extends DrushCommands {
       'web requests that began before the pause were still running at the time limit',
       'Cannot make the folder for the pause file.',
       'Cannot write the pause file.',
+      BackupPause::NO_HARD_LINKS,
+      BackupPause::LOCK_BUSY,
+      BackupCapture::RELEASE_FAILED,
       'Cannot make the folder for the lock files.',
       'Cannot write the secret record (the name is taken).',
       'Cannot write the secret record.',

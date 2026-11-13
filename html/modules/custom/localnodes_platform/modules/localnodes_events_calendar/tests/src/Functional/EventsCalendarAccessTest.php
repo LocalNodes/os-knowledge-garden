@@ -67,6 +67,10 @@ final class EventsCalendarAccessTest extends BrowserTestBase {
 
   private GroupInterface $group;
 
+  private UserInterface $houseManager;
+
+  private NodeInterface $privateEvent;
+
   /**
    * {@inheritdoc}
    */
@@ -101,9 +105,16 @@ final class EventsCalendarAccessTest extends BrowserTestBase {
     // code loaded in this process, as a page request would have it.
     $this->container->get('module_handler')->loadAll();
 
+    $platform = DRUPAL_ROOT . '/' . $this->container->get('extension.list.module')->getPath('localnodes_platform');
+    require_once $platform . '/localnodes_platform.install';
+    if (function_exists('_localnodes_platform_protect_private_groups')) {
+      _localnodes_platform_protect_private_groups();
+    }
+
     $organizer = $this->createAccount('cal_organizer');
     $this->member = $this->createAccount('cal_member');
     $this->outsider = $this->createAccount('cal_outsider');
+    $this->houseManager = $this->createAccount('cal_house_manager');
 
     $this->group = Group::create([
       'type' => 'flexible_group',
@@ -115,13 +126,14 @@ final class EventsCalendarAccessTest extends BrowserTestBase {
     ]);
     $this->group->save();
     $this->group->addMember($this->member);
+    $this->group->addMember($this->houseManager, ['group_roles' => ['flexible_group-group_manager']]);
 
     // 18:00 MST on 10 March is 01:00 UTC on the 11th.
     $this->createEvent('Cedar Row repair cafe', '2027-03-11T01:00:00', 'public', $organizer);
     // 23:30 MST on 12 March is 06:30 UTC on the 13th.
     $this->createEvent('Late lantern walk', '2027-03-13T06:30:00', 'public', $organizer);
-    $supper = $this->createEvent('Juniper House supper planning', '2027-03-16T02:00:00', 'group', $organizer);
-    $this->group->addRelationship($supper, 'group_node:event');
+    $this->privateEvent = $this->createEvent('Juniper House supper planning', '2027-03-16T02:00:00', 'group', $organizer);
+    $this->group->addRelationship($this->privateEvent, 'group_node:event');
   }
 
   /**
@@ -189,6 +201,42 @@ final class EventsCalendarAccessTest extends BrowserTestBase {
     $this->assertStringContainsString('/user/login', $this->getSession()->getCurrentUrl(), 'A signed-out visitor is sent to sign in.');
   }
 
+  /** @dataProvider siteRoleAndHouseVisibility */
+  public function testSiteRoleDoesNotOpenPrivateEvents(string $role, string $visibility): void {
+    $this->group->set('field_flexible_group_visibility', $visibility)->save();
+    $manager = $this->createAccount('calendar_' . $role, ['verified', $role]);
+    $this->assertFalse($this->group->getMember($manager));
+    $this->drupalLogin($manager);
+    $this->drupalGet('/community-events/calendar', self::MONTH);
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertEventOnDay('Cedar Row repair cafe', 10);
+    $this->assertSession()->pageTextNotContains('Juniper House supper planning');
+    $this->drupalGet('/group/' . $this->group->id() . '/events/calendar', self::MONTH);
+    if ($visibility === 'members') {
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSession()->pageTextNotContains('Juniper House supper planning');
+    $this->drupalGet('/node/' . $this->privateEvent->id());
+    $this->assertSession()->statusCodeEquals(403);
+    $this->assertSession()->pageTextNotContains('Juniper House supper planning');
+
+    $this->drupalLogin($this->member);
+    $this->drupalGet('/group/' . $this->group->id() . '/events/calendar', self::MONTH);
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertEventOnDay('Juniper House supper planning', 15);
+    $this->drupalLogin($this->houseManager);
+    $this->drupalGet('/node/' . $this->privateEvent->id() . '/edit');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->fieldValueEquals('title[0][value]', 'Juniper House supper planning');
+  }
+
+  public static function siteRoleAndHouseVisibility(): array {
+    return [
+      ['sitemanager', 'community'], ['sitemanager', 'members'],
+      ['contentmanager', 'community'], ['contentmanager', 'members'],
+    ];
+  }
+
   /**
    * Asserts an event's link sits in the cell of a day of March 2027.
    */
@@ -204,9 +252,9 @@ final class EventsCalendarAccessTest extends BrowserTestBase {
   /**
    * Creates a verified account.
    */
-  private function createAccount(string $name): UserInterface {
+  private function createAccount(string $name, array $roles = ['verified']): UserInterface {
     $account = $this->createUser([], $name, FALSE, [
-      'roles' => ['verified'],
+      'roles' => $roles,
       'timezone' => self::TIMEZONE,
     ]);
     $this->assertInstanceOf(UserInterface::class, $account);

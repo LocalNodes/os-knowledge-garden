@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\localnodes_import\Form;
 
+use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Form\FormBase;
@@ -28,10 +30,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * puzzle (SC 3.3.8); paste works. The page must be an imported page, or the
  * route is a 404 (ReportAudience::isImportedPage()).
  *
- * A report is mailed, one mail each, to every active site manager, the
- * managers of the page's group, and the host address from the
+ * A report is mailed to the page's authorized site or house stewards,
+ * one mail each, and to the host address from the
  * localnodes_host_report_email setting (wired from HOST_REPORT_EMAIL in
  * 23-08). The mail links to the takedown confirmation; it never acts.
+ *
+ * The host gets the whole report only when a signed-out visitor could see
+ * the page. For any other page the host gets a bare alert instead: the site's
+ * name, the time, the page's id and whether an organizer got the report,
+ * with nothing from the page or the reporter. The form's words say which of
+ * the two happens.
  *
  * Spam: core flood control (5 reports an hour from one network address) and
  * a honeypot. A filled honeypot gets the normal thank-you and sends nothing.
@@ -76,6 +84,8 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
 
   protected LoggerInterface $logger;
 
+  protected TimeInterface $time;
+
   /**
    * {@inheritdoc}
    */
@@ -87,6 +97,7 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     $form->audience = $container->get('localnodes_import.report_audience');
     $form->languageManager = $container->get('language_manager');
     $form->logger = $container->get('logger.channel.localnodes_import');
+    $form->time = $container->get('datetime.time');
     return $form;
   }
 
@@ -120,6 +131,11 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
       throw new NotFoundHttpException();
     }
     $form_state->set('nid', (int) $topic->id());
+    // The words below depend on whether the page is public, so the built form
+    // changes when the page's or its groups' visibility does.
+    $cacheability = CacheableMetadata::createFromRenderArray($form);
+    $public = $this->audience->isPublicPage($topic, $cacheability);
+    $cacheability->applyTo($form);
     $form['#attributes']['class'][] = 'localnodes-import-report-problem';
     $form['#attached']['library'][] = 'localnodes_import/web';
 
@@ -136,7 +152,9 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     }
 
     $form['intro'] = [
-      '#markup' => $this->t("Tell us what's wrong with @title. Your report goes to this site's organizers and to the host of the site.", ['@title' => $topic->label()]),
+      '#markup' => $public
+        ? $this->t("Tell us what's wrong with @title. Your report goes to this site's organizers and to the host of the site.", ['@title' => $topic->label()])
+        : $this->t("Tell us what's wrong with @title. Your report goes to this site's organizers. The host is told a report was made, without its details.", ['@title' => $topic->label()]),
       '#prefix' => '<p class="localnodes-import-report-problem__intro">',
       '#suffix' => '</p>',
     ];
@@ -162,7 +180,9 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     $form['contact_email'] = [
       '#type' => 'email',
       '#title' => $this->t('Your email (optional)'),
-      '#description' => $this->t("Add it if you'd like a reply. The organizers and the host will see it."),
+      '#description' => $public
+        ? $this->t("Add it if you'd like a reply. The organizers and the host will see it.")
+        : $this->t("Add it if you'd like a reply. The organizers will see it. The host won't."),
       '#autocomplete' => 'off',
       // Replaces core's wording with the sign-up site's sentence.
       '#element_validate' => [[static::class, 'validateContact']],
@@ -280,17 +300,18 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     $this->flood->register(self::FLOOD_EVENT, self::FLOOD_WINDOW);
 
     $nid = (int) $form_state->get('nid');
-
-    // The honeypot: the usual thank-you, and nothing else happens.
-    if (trim((string) $form_state->getValue('website')) !== '') {
-      $form_state->setRedirect('localnodes_import.report_sent', ['topic' => $nid]);
-      $this->messenger()->addStatus($this->t("Thanks. We've sent your report to this site's organizers and to the host."));
-      return;
-    }
-
     $node = $this->entityTypeManager->getStorage('node')->load($nid);
     if (!$node instanceof NodeInterface || !$this->audience->isImportedPage($node)) {
       throw new NotFoundHttpException();
+    }
+    $public = $this->audience->isPublicPage($node);
+
+    // The honeypot: the thank-you a real report on this page gets, and
+    // nothing else happens.
+    if (trim((string) $form_state->getValue('website')) !== '') {
+      $form_state->setRedirect('localnodes_import.report_sent', ['topic' => $nid]);
+      $this->messenger()->addStatus($this->thanksToBoth($public));
+      return;
     }
     $reason = (string) $form_state->getValue('reason');
     if (!isset(static::reasonOptions()[$reason])) {
@@ -314,8 +335,24 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
     // it went; a failed send and one a mail hook cancelled both count as not
     // sent.
     $reached = ['organizers' => FALSE, 'host' => FALSE];
-    foreach ($recipients as $address => $kinds) {
-      $sent = $this->mailManager->mail('localnodes_import', 'report_problem', $address, $langcode, $params, NULL, TRUE);
+    // Organizers first, so the host's alert can say whether one was reached.
+    // An address that is an organizer's always gets the whole report.
+    $host_only = array_filter($recipients, fn (array $kinds) => !in_array('organizers', $kinds, TRUE));
+    $ordered = array_diff_key($recipients, $host_only) + $host_only;
+    foreach ($ordered as $address => $kinds) {
+      $key = 'report_problem';
+      $mail_params = $params;
+      if (!$public && !in_array('organizers', $kinds, TRUE)) {
+        // A page a signed-out visitor can't see: the host learns only that a
+        // report was made.
+        $key = 'report_host_alert';
+        $mail_params = [
+          'nid' => $nid,
+          'organizers_reached' => $reached['organizers'],
+          'reported_at' => $this->time->getRequestTime(),
+        ];
+      }
+      $sent = $this->mailManager->mail('localnodes_import', $key, $address, $langcode, $mail_params, NULL, TRUE);
       if (($sent['result'] ?? NULL) === TRUE) {
         foreach ($kinds as $kind) {
           $reached[$kind] = TRUE;
@@ -327,15 +364,17 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
       }
     }
 
-    // The reply names only the people the report really reached.
-    if (!$reached['organizers'] && !$reached['host']) {
+    // The reply names only the people the report really reached. On a page
+    // that is not public, an alert to the host alone carries no report, so
+    // the report counts as not sent.
+    if (!$reached['organizers'] && (!$reached['host'] || !$public)) {
       // The form comes back with the reporter's text still in it.
       $this->messenger()->addError($this->t("We couldn't send your report. Your text is still below. Try again in a few minutes, or email LocalNodes at hello@localnodes.xyz."));
       $form_state->setRebuild();
       return;
     }
     if ($reached['organizers'] && $reached['host']) {
-      $thanks = $this->t("Thanks. We've sent your report to this site's organizers and to the host.");
+      $thanks = $this->thanksToBoth($public);
     }
     elseif ($reached['organizers']) {
       $thanks = $this->t("Thanks. We've sent your report to this site's organizers. If it's urgent, email LocalNodes at hello@localnodes.xyz.");
@@ -348,19 +387,23 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
   }
 
   /**
-   * Who gets the report: stewards, then the group's managers, then the host.
+   * Who gets the report: page-authorized stewards, group managers and the host.
    *
    * Site managers and group managers are the organizers. An address that is
    * both an organizer's and the host's is mailed once and counts as both.
+   * What the host-only address is sent depends on whether the page is public;
+   * submitForm() decides that.
    *
    * @return array<string, string[]>
-   *   Each address once (case ignored), in the order the mails go out, with
+   *   Each address once (case ignored), organizers before the host, with
    *   what it stands for: 'organizers', 'host' or both.
    */
   protected function recipients(NodeInterface $node): array {
     $addresses = [];
     foreach ($this->audience->siteManagers() + $this->audience->groupManagers($node) as $account) {
-      $addresses[] = [(string) $account->getEmail(), 'organizers'];
+      if ($this->audience->isSteward($node, $account)) {
+        $addresses[] = [(string) $account->getEmail(), 'organizers'];
+      }
     }
     $host = trim((string) Settings::get(self::HOST_SETTING, ''));
     if ($host !== '' && \Drupal::service('email.validator')->isValid($host)) {
@@ -385,6 +428,17 @@ class ReportProblemForm extends FormBase implements TrustedCallbackInterface {
       $recipients[$address] = array_values($kinds[$key]);
     }
     return $recipients;
+  }
+
+  /**
+   * The thank-you when both the organizers and the host were reached.
+   *
+   * On a page that is not public the host got only an alert, and this says so.
+   */
+  protected function thanksToBoth(bool $public): TranslatableMarkup {
+    return $public
+      ? $this->t("Thanks. We've sent your report to this site's organizers and to the host.")
+      : $this->t("Thanks. We've sent your report to this site's organizers. The host is told a report was made, without its details.");
   }
 
   /**

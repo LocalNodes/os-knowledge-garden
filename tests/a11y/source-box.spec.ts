@@ -60,18 +60,26 @@ test.describe('S6 Source box', () => {
     // the Source box.
     const quote = page.locator('.localnodes-import-imported .body-text blockquote');
     await expect(quote).toBeVisible();
+    // Colours are read from the page's tokens, not copied into the spec. Each token must exist: with one undefined, a
+    // probe and the border would both fall back to the inherited text colour and match each other, so each border is
+    // also asserted to be drawn (width and style).
+    const rgb = async (name: string) => {
+      const hex = await page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+      expect(hex, `${name} is defined on the page (the tokens stylesheet is attached)`).toMatch(/^#[0-9a-f]{6}$/i);
+      const [red, green, blue] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+      return `rgb(${red}, ${green}, ${blue})`;
+    };
+    // The quote's left rule is the control-edge colour, 4px.
     await expect(quote).toHaveCSS('border-left-width', '4px');
-    await expect(quote).toHaveCSS('border-left-color', 'rgb(138, 138, 138)');
-    // The Source box's rule is the primary colour token, whatever the palette (22.1-06): read the token from the page
-    // instead of a hex copied into the spec. The token must exist. With it undefined, a probe and the box's border both
-    // fall back to the inherited text colour and would match each other (22.1 review, WR-05), so the border is also
-    // asserted to be drawn.
-    const token = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ln-color-primary').trim());
-    expect(token, '--ln-color-primary is defined on the page (the tokens stylesheet is attached)').toMatch(/^#[0-9a-f]{6}$/i);
-    const [red, green, blue] = [1, 3, 5].map((at) => parseInt(token.slice(at, at + 2), 16));
-    await expect(box).toHaveCSS('border-left-width', '4px');
-    await expect(box).toHaveCSS('border-left-style', 'solid');
-    await expect(box).toHaveCSS('border-left-color', `rgb(${red}, ${green}, ${blue})`);
+    await expect(quote).toHaveCSS('border-left-style', 'solid');
+    await expect(quote).toHaveCSS('border-left-color', await rgb('--ln-color-border-control'));
+    // The Source box is a slip of paper: the paper fill inside a 1px paper-rule edge.
+    await expect(box).toHaveCSS('background-color', await rgb('--ln-color-paper'));
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      await expect(box).toHaveCSS(`border-${side}-width`, '1px');
+      await expect(box).toHaveCSS(`border-${side}-style`, 'solid');
+      await expect(box).toHaveCSS(`border-${side}-color`, await rgb('--ln-color-paper-rule'));
+    }
 
     await checkA11y(page, 'S6', 'web', SCOPE);
   });

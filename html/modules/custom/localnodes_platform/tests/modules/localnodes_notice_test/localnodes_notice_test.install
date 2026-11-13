@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Digest table for the notice kernel fixture.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function localnodes_notice_test_schema(): array {
+  // Matches activity_send_email_schema() without booting mail producers.
+  return [
+    'user_activity_digest' => [
+      'fields' => [
+        'uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+        'activity' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+        'frequency' => ['type' => 'varchar', 'length' => 255, 'not null' => TRUE],
+        'timestamp' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0],
+      ],
+      'indexes' => [
+        'uad_uid' => ['uid'],
+        'uad_frequency' => ['frequency'],
+      ],
+    ],
+  ];
+}

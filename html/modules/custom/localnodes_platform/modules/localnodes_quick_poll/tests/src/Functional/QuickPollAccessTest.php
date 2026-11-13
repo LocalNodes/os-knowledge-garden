@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_quick_poll\Functional;
 
-use Drupal\Core\Test\AssertMailTrait;
+use Drupal\advancedqueue\Entity\Queue;
 use Drupal\group\Entity\Group;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\poll\PollInterface;
 use Drupal\search_api\Entity\Server;
+use Drupal\symfony_mailer_test\MailerTestServiceInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\user\UserInterface;
 use Symfony\Component\Process\Process;
@@ -31,8 +32,6 @@ use Symfony\Component\Process\Process;
  * @group phase22_functional
  */
 final class QuickPollAccessTest extends BrowserTestBase {
-
-  use AssertMailTrait;
 
   /**
    * {@inheritdoc}
@@ -79,6 +78,8 @@ final class QuickPollAccessTest extends BrowserTestBase {
    */
   private GroupInterface $group;
 
+  private UserInterface $houseManager;
+
   /**
    * {@inheritdoc}
    */
@@ -102,7 +103,11 @@ final class QuickPollAccessTest extends BrowserTestBase {
       $solr->setBackendConfig($backend_config)->save();
     }
 
-    $this->container->get('module_installer')->install(['localnodes_quick_poll']);
+    // symfony_mailer_test swaps the site's mailer transport for a null one
+    // and keeps every mail sent in state, so the "no mail" check reads the
+    // mailer the site really uses (core's getMails() sees only core's
+    // test_mail_collector, which this profile does not send through).
+    $this->container->get('module_installer')->install(['localnodes_quick_poll', 'symfony_mailer_test']);
     $this->rebuildContainer();
     // A page request rebuilds the router when it ends, after the install has
     // disabled the poll module's /polls view; this process has no such end.
@@ -111,10 +116,17 @@ final class QuickPollAccessTest extends BrowserTestBase {
     // code loaded in this process, as a page request would have it.
     $this->container->get('module_handler')->loadAll();
 
+    $platform = DRUPAL_ROOT . '/' . $this->container->get('extension.list.module')->getPath('localnodes_platform');
+    require_once $platform . '/localnodes_platform.install';
+    if (function_exists('_localnodes_platform_protect_private_groups')) {
+      _localnodes_platform_protect_private_groups();
+    }
+
     $organizer = $this->createAccount('poll_organizer');
     $this->asker = $this->createAccount('poll_asker');
     $this->member = $this->createAccount('poll_member');
     $this->outsider = $this->createAccount('poll_outsider');
+    $this->houseManager = $this->createAccount('poll_house_manager');
 
     $this->group = Group::create([
       'type' => 'flexible_group',
@@ -127,13 +139,17 @@ final class QuickPollAccessTest extends BrowserTestBase {
     $this->group->save();
     $this->group->addMember($this->asker);
     $this->group->addMember($this->member);
+    $this->group->addMember($this->houseManager, ['group_roles' => ['flexible_group-group_manager']]);
   }
 
   /**
    * A member asks, another answers once, and both see the answers.
    */
   public function testMemberAsksAndAnswers(): void {
-    $mails_before = count($this->getMails());
+    // Send the "joined your group" mail that setUp's memberships queued, then
+    // clear it, so the check below sees only what the poll sends.
+    $this->runActivityQueues();
+    $this->sentMails();
     $activities_before = $this->countActivities();
 
     $this->drupalLogin($this->asker);
@@ -190,7 +206,9 @@ final class QuickPollAccessTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains(self::QUESTION);
     $this->assertSession()->buttonExists('See answers so far');
 
-    $this->assertCount($mails_before, $this->getMails(), 'Asking and answering a quick poll sends no mail.');
+    // A notice would be queued, then sent by cron; run the queues first.
+    $this->runActivityQueues();
+    $this->assertSame([], $this->sentMails(), 'Asking and answering a quick poll sends no mail.');
     $this->assertSame($activities_before, $this->countActivities(), 'Asking and answering a quick poll writes no activity.');
   }
 
@@ -232,6 +250,87 @@ final class QuickPollAccessTest extends BrowserTestBase {
         || str_contains($this->getSession()->getCurrentUrl(), '/user/login');
       $this->assertTrue($refused, "A signed-out visitor is refused or sent to sign in at $path.");
     }
+  }
+
+  /** @dataProvider siteRoleAndHouseVisibility */
+  public function testSiteRoleDoesNotOpenPrivateQuestions(string $role, string $visibility): void {
+    $this->group->set('field_flexible_group_visibility', $visibility)->save();
+    $poll = $this->createPoll();
+    // Distinct labels cannot be confused with a weekday elsewhere on About.
+    foreach ($poll->get('choice')->referencedEntities() as $choice) {
+      $choice->set('choice', 'Private house option: ' . $choice->choice->value)->save();
+    }
+    $manager = $this->createAccount('poll_' . $role, ['verified', $role]);
+    $this->assertFalse($this->group->getMember($manager));
+    $this->drupalLogin($manager);
+    $groupPollPath = '/group/' . $this->group->id() . '/quick-polls';
+    $aboutPath = parse_url($this->buildUrl('/group/' . $this->group->id() . '/about'), PHP_URL_PATH);
+    $observed = [];
+    $expected = [];
+    foreach ([
+      '/poll/' . $poll->id(),
+      $groupPollPath,
+      $groupPollPath . '/add',
+      '/poll/' . $poll->id() . '/edit',
+      '/poll/' . $poll->id() . '/delete',
+      '/poll/' . $poll->id() . '/delete/vote/' . $manager->id(),
+      '/poll/add',
+      '/admin/content/poll',
+    ] as $path) {
+      $response = $this->getHttpClient()->get($this->buildUrl($path), [
+        'cookies' => $this->getSessionCookies(),
+        'http_errors' => FALSE,
+        'allow_redirects' => FALSE,
+      ]);
+      $this->drupalGet($path);
+      $observed[$path] = [
+        'initial_status' => $response->getStatusCode(),
+        'location' => $response->getHeaderLine('Location'),
+        'final_status' => $this->getSession()->getStatusCode(),
+        'final_path' => parse_url($this->getSession()->getCurrentUrl(), PHP_URL_PATH),
+        'question_visible' => str_contains($this->getSession()->getPage()->getText(), self::QUESTION),
+        'first_choice_visible' => str_contains($this->getSession()->getPage()->getText(), 'Private house option: Tuesday'),
+        'second_choice_visible' => str_contains($this->getSession()->getPage()->getText(), 'Private house option: Thursday'),
+        'poll_form_visible' => (bool) $this->getSession()->getPage()->find('css', 'form.poll-view-form, form[id^="poll-view-form"]'),
+      ];
+      // Open Social redirects a denied tab to About when the visitor may
+      // view the group. That page must contain none of the private poll.
+      $aboutRedirect = $visibility === 'community' && in_array($path, [$groupPollPath, $groupPollPath . '/add'], TRUE);
+      $expected[$path] = [
+        'initial_status' => $aboutRedirect ? 302 : 403,
+        'location' => $aboutRedirect ? $aboutPath : '',
+        'final_status' => $aboutRedirect ? 200 : 403,
+        'final_path' => $aboutRedirect ? $aboutPath : parse_url($this->buildUrl($path), PHP_URL_PATH),
+        'question_visible' => FALSE, 'first_choice_visible' => FALSE, 'second_choice_visible' => FALSE, 'poll_form_visible' => FALSE,
+      ];
+    }
+    $this->assertSame($expected, $observed, 'Poll paths refuse access or redirect to About without exposing the poll.');
+    $this->drupalGet('/polls');
+    $this->assertSession()->statusCodeEquals(404);
+    $this->drupalPlaceBlock('poll_recent_block', ['region' => 'content']);
+    $this->drupalGet('/user/' . $manager->id());
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextNotContains(self::QUESTION);
+
+    // A house's own manager retains the member's read/answer path. Global
+    // poll editing is not claimed as a house-manager capability here.
+    $this->drupalLogin($this->houseManager);
+    $this->drupalGet('/poll/' . $poll->id());
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains(self::QUESTION);
+    $this->submitForm(['choice' => $this->choiceId($poll, 'Private house option: Thursday')], 'Answer');
+    $this->assertSession()->pageTextContains('Your answer has been saved.');
+    $this->drupalLogin($this->member);
+    $this->drupalGet('/poll/' . $poll->id());
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains(self::QUESTION);
+  }
+
+  public static function siteRoleAndHouseVisibility(): array {
+    return [
+      ['sitemanager', 'community'], ['sitemanager', 'members'],
+      ['contentmanager', 'community'], ['contentmanager', 'members'],
+    ];
   }
 
   /**
@@ -606,6 +705,53 @@ PHP;
   }
 
   /**
+   * The mail sent so far, as captured by the mailer's test module; clears it.
+   *
+   * @return \Drupal\symfony_mailer\EmailInterface[]
+   */
+  private function sentMails(): array {
+    $state = $this->container->get('state');
+    $state->resetCache();
+    $mails = $state->get(MailerTestServiceInterface::STATE_KEY, []);
+    $state->delete(MailerTestServiceInterface::STATE_KEY);
+    return $mails;
+  }
+
+  /**
+   * Works through Open Social's activity queues, which send the notices.
+   *
+   * The activity steps use core queues; notice mail is a job in the Advanced
+   * Queue "default" queue on this profile.
+   */
+  private function runActivityQueues(): void {
+    $workers = $this->container->get('plugin.manager.queue_worker');
+    $factory = $this->container->get('queue');
+    $jobs = Queue::load('default');
+    for ($round = 0; $round < 10; $round++) {
+      $done = 0;
+      foreach (array_keys($workers->getDefinitions()) as $name) {
+        if (!str_starts_with($name, 'activity')) {
+          continue;
+        }
+        $queue = $factory->get($name);
+        $worker = $workers->createInstance($name);
+        while ($item = $queue->claimItem()) {
+          $worker->processItem($item->data);
+          $queue->deleteItem($item);
+          $done++;
+        }
+      }
+      if ($jobs !== NULL) {
+        $done += $this->container->get('advancedqueue.processor')->processQueue($jobs);
+      }
+      if ($done === 0) {
+        return;
+      }
+    }
+    $this->fail('The activity queues did not empty.');
+  }
+
+  /**
    * How many activity records the site holds.
    */
   private function countActivities(): int {
@@ -616,8 +762,8 @@ PHP;
   /**
    * Creates a verified account.
    */
-  private function createAccount(string $name): UserInterface {
-    $account = $this->createUser([], $name, FALSE, ['roles' => ['verified']]);
+  private function createAccount(string $name, array $roles = ['verified']): UserInterface {
+    $account = $this->createUser([], $name, FALSE, ['roles' => $roles]);
     $this->assertInstanceOf(UserInterface::class, $account);
     return $account;
   }

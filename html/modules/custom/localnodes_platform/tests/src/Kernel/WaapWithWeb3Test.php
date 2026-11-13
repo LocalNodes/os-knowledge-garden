@@ -50,13 +50,15 @@ final class WaapWithWeb3Test extends KernelTestBase {
     $this->assertArrayHasKey('siwe_login_waap', $modules['localnodes_web3']->requires, 'The web3 dependency graph must enable WaaP.');
     $this->assertFalse($this->container->get('module_handler')->moduleExists('siwe_login_waap'));
     $this->assertTrue($this->container->get('module_installer')->install(['siwe_login_waap']));
-    $this->enableModules(['localnodes_web3']);
+    $this->enableModules(['localnodes_platform', 'localnodes_web3']);
     $this->assertTrue($this->container->get('module_handler')->moduleExists('siwe_login_waap'));
     $this->assertTrue($this->container->get('module_handler')->moduleExists('siwe_login'));
 
-    // No distribution override is needed: upstream ships the single button.
+    // Upstream ships the single button. enableModules() runs no install hook,
+    // so localnodes_web3's turning the wallet button on is not seen here; see
+    // SignInEntryTest::testInstallShowsTheWalletButton().
     $settings = $this->config('siwe_login_waap.settings');
-    $this->assertSame('staging', $settings->get('environment'));
+    $this->assertSame('production', $settings->get('environment'), 'siwe_login 1.0.0-beta12 ships production.');
     $this->assertSame('', $settings->get('walletconnect_project_id'));
     $this->assertFalse($settings->get('show_siwe_wallet_button'));
 

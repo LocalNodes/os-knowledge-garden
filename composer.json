@@ -19,7 +19,7 @@
         "drupal/gemini_provider": "1.x-dev",
         "league/commonmark": "^2.10.2",
         "drupal/ai_vdb_provider_qdrant": "1.0.x-dev",
-        "drupal/siwe_login": "1.0.0-beta10",
+        "drupal/siwe_login": "1.0.0-beta12",
         "drupal/safe_smart_accounts": "^1.0.0-alpha5@alpha",
         "drupal/group_treasury": "^1.0.0-alpha6@alpha",
         "kornrunner/keccak": "^1.0",
@@ -113,7 +113,8 @@
                 "Map roles on copies in chat() so the caller's ChatMessage objects keep their roles": "patches/gemini-provider-map-roles-on-copies.patch"
             },
             "goalgorilla/open_social": {
-                "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch"
+                "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch",
+                "New private messages keep their recipients (private_message 3.x reads the members value unflattened)": "patches/social-private-message-keep-recipients.patch"
             },
             "drupal/ai_vdb_provider_qdrant": {
                 "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"

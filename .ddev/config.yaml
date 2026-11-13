@@ -12,7 +12,10 @@ database:
     version: "10.11"
 use_dns_when_possible: true
 composer_version: "2"
-web_environment: []
+# Development sites sign in through WaaP's staging service, so they never create
+# real WaaP accounts (siwe_login_waap ships production as its default).
+web_environment:
+  - WAAP_ENVIRONMENT=staging
 corepack_enable: false
 
 # Key features of DDEV's config.yaml:

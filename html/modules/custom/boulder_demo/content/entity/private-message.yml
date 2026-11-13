@@ -1,0 +1,30 @@
+---
+# A short thread between two Watershed Hub members, so "Messages" is alive for
+# mira_watershed and rowan_beaver.
+# Fictional people only; their @*.example addresses get no mail.
+41c39497-4003-4bf4-83c5-2263243e0431:
+  uuid: 41c39497-4003-4bf4-83c5-2263243e0431
+  members:
+    - aa11bb22-cc33-4dd4-ee55-ff6677889900
+    - 11223344-5566-4778-8990-aabbccddeef0
+  messages:
+    - uuid: 8337108b-9fae-4518-b280-778221f12594
+      uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+      created: -3 day|08:40
+      message: >
+        <p>Rowan, could you lead the cleanup morning on the creek? You know the beaver reaches better than anyone.</p>
+    - uuid: 24bc79d4-eff9-4c3d-87fe-0e4995461778
+      uid: 11223344-5566-4778-8990-aabbccddeef0
+      created: -3 day|12:15
+      message: >
+        <p>Happy to. I will bring the grabbers. Can we keep people off the east bank? There is a new dam there.</p>
+    - uuid: f53f2376-8ebf-4466-946a-edbb71908f77
+      uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+      created: -2 day|09:05
+      message: >
+        <p>Good call, I will mark it on the map I post in the group.</p>
+    - uuid: 6bf0ae8c-474e-4bed-9a71-59ff60738748
+      uid: 11223344-5566-4778-8990-aabbccddeef0
+      created: -1 day|19:30
+      message: >
+        <p>Thanks Mira. See you on the day.</p>

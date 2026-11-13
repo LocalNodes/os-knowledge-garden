@@ -2,6 +2,7 @@
 
 namespace Drupal\localnodes_demo\Plugin\DemoContent;
 
+use Drupal\localnodes_events_calendar\DemoContent\MonthAnchoredEventDates;
 use Drupal\social_demo\Plugin\DemoContent\Event;
 
 /**
@@ -15,5 +16,7 @@ use Drupal\social_demo\Plugin\DemoContent\Event;
  * )
  */
 class LocalnodesEvent extends Event {
+
+  use MonthAnchoredEventDates;
 
 }

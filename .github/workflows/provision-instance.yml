@@ -38,7 +38,7 @@ on:
           - boulder_demo
           - portland_demo
           - none
-        default: localnodes_demo
+        default: none
       gemini_key_tier:
         description: 'Gemini key tier: paid = key from a Cloud project with billing on. Required (paid) unless demo_module is a demo (AI-SPEC G8)'
         required: false
@@ -56,6 +56,14 @@ on:
         description: 'GHCR sha7 tag to pin as IMAGE_TAG (e.g., "9b8e2a1"); empty means latest'
         required: false
         type: string
+      web3:
+        description: 'Group funds and decisions: off, or practice (test network money only, Ethereum Sepolia). The sign-up app leaves it out until pilots turn it on'
+        required: false
+        type: choice
+        options:
+          - 'off'
+          - practice
+        default: 'off'
 
 env:
   COOLIFY_API: https://coolify.localnodes.xyz/api/v1
@@ -86,6 +94,7 @@ jobs:
           PROVISION_ID_INPUT: ${{ inputs.provision_id }}
           ATTEMPT_INPUT: ${{ inputs.attempt }}
           CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
+          WEB3_INPUT: ${{ inputs.web3 }}
         run: |
           SUBDOMAIN="$SUBDOMAIN_INPUT"
           # Sign-up runs carry an opaque provision id (22 url-safe characters) and an attempt number;
@@ -147,6 +156,16 @@ jobs:
             echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
             exit 1
           fi
+          # Group funds and decisions: off (also when the input is left out) or practice. Anything
+          # else is refused before any Coolify mutation.
+          case "$WEB3_INPUT" in
+            ''|off|practice) ;;
+            *)
+              echo "::error::Invalid web3. Use off or practice."
+              echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+              exit 1
+              ;;
+          esac
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
           echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
 
@@ -190,8 +209,14 @@ jobs:
           PROVIDER="$(field ai_provider)"
           KEY_SOURCE="$(field ai_key_source)"
           AI_KEY_VALUE="$(field ai_key)"
-          # The host's address for members' page reports (23 Q5); empty when the sign-up app has none.
+          # The host's address for members' page reports; empty when the sign-up app has none.
           HOST_REPORT="$(field host_report_email)"
+          # The community template id: a fixed machine name, empty when the invite has none.
+          # The raw JSON is checked first, because command substitution strips a trailing newline;
+          # jq's $ also matches before a final newline, hence \A and \z.
+          printf '%s' "$M" | jq -e '(.community_template | type) != "string" or (.community_template | test("\\A[a-z0-9_]{0,64}\\z"))' > /dev/null \
+            || manifest_failed "The manifest names an unusable community template."
+          TEMPLATE="$(field community_template)"
 
           # One line only: ::add-mask:: masks a single line, and a newline would also let a
           # value start a new $GITHUB_ENV entry.
@@ -209,6 +234,7 @@ jobs:
           if [ -n "$HOST_REPORT" ]; then
             [[ "$HOST_REPORT" =~ ^[^[:space:],\;\<\>\"@]+@[^[:space:],\;\<\>\"@]+$ ]] || manifest_failed "The manifest host report address is not one plain address."
           fi
+          [[ "$TEMPLATE" =~ ^[a-z0-9_]{0,64}$ ]] || manifest_failed "The manifest names an unusable community template."
 
           # Mask first; only then does any value go anywhere else.
           echo "::add-mask::$SITE"
@@ -234,6 +260,7 @@ jobs:
           put_env AI_PROVIDER "$PROVIDER"
           put_env AI_KEY_SOURCE "$KEY_SOURCE"
           put_env HOST_REPORT_EMAIL "$HOST_REPORT"
+          put_env COMMUNITY_TEMPLATE "$TEMPLATE"
           if [ -n "$AI_KEY_VALUE" ]; then
             put_env AI_KEY "$AI_KEY_VALUE"
           fi
@@ -244,7 +271,7 @@ jobs:
         # Members' content may only go to a paid (billing-enabled) Gemini key:
         # Google may use content sent with an unpaid key and have people
         # review it (AI-SPEC 1b, guardrail G8). Demo sites hold made-up
-        # content only and are exempt (Tom, 2026-11-05). Runs before any
+        # content only and are exempt. Runs before any
         # Coolify call, so a refused site creates nothing.
         env:
           DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
@@ -264,7 +291,7 @@ jobs:
         # (attempt 2) takes that app over instead of failing, but only when its description
         # says it belongs to this very provision (set at creation: ln-provision:{provision_id}).
         # Any other app on the domain, or a first attempt that finds one, is a real collision.
-        # Nothing is ever deleted here (D-18: deleting an app is Tom's call).
+        # This step never deletes an app; deleting one is left to a person.
         env:
           PROVISION_ID_INPUT: ${{ inputs.provision_id }}
           ATTEMPT_INPUT: ${{ inputs.attempt }}
@@ -363,12 +390,16 @@ jobs:
           PROVISION_ID_INPUT: ${{ inputs.provision_id }}
           ATTEMPT_INPUT: ${{ inputs.attempt }}
           RESEND_API_KEY_SECRET: ${{ secrets.RESEND_API_KEY }}
+          WEB3_INPUT: ${{ inputs.web3 }}
           # The OpenRouter backup chat model (23-40, ONB-07). Must equal backup_chat_model in
           # localnodes_openrouter/config/install/localnodes_openrouter.settings.yml; change both
           # in the same commit. Empty means no backup (no gate-passing model). Checked by
           # scripts/ops/tests/provision-workflow.test.sh. This is the workflow's only copy of the
           # id; 23-42 replaces it with the organizer's choice from the manifest.
           OPENROUTER_BACKUP_MODEL: "z-ai/glm-5.3"
+          # Practice sites' chain RPC: Pocket Network's public keyless Ethereum Sepolia portal,
+          # so a practice site needs no RPC account. No key, so nothing to mask.
+          PRACTICE_RPC_URL: "https://eth-sepolia-testnet.api.pocket.network"
         run: |
           # The shared callback secret (the repository secret) is not read here and never reaches a container:
           # each site gets only its own per-provision token (PROVISION_TOKEN, masked, from the
@@ -541,6 +572,36 @@ jobs:
             printf '%s' "$2"
           }
 
+          # A retry reuses its own half-made app. One that ran with group funds and decisions on
+          # (WEB3_ENABLED=true) may already have the web3 modules installed, and a retry with them
+          # off would leave them installed, skip the readiness check and report ready. So that
+          # change is refused before any setting is written. The other way round is allowed: the
+          # held false is also the compose default, so it can be an attempt that stopped before
+          # writing its mode, and on a redeploy with true the entrypoint turns the modules on and
+          # checks them before ready.
+          # The mode must read as exactly true or false; an unreadable, empty or non-list answer
+          # stops the workflow here. Any production copy holding true counts, since duplicates
+          # are only removed further down.
+          if [ "${REUSE:-}" = "true" ] && [ "${WEB3_INPUT:-}" != "practice" ]; then
+            HELD_UNREADABLE="::error::Could not read this app's settings to check its group funds mode; nothing was changed."
+            HELD_ENVS=$(curl -sS --fail-with-body "$ENVS_URL" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json") || { echo "$HELD_UNREADABLE"; exit 1; }
+            HELD_WEB3=$(printf '%s' "$HELD_ENVS" \
+              | jq -r 'if type == "array" then ([.[] | select(.key == "WEB3_ENABLED" and (.is_preview | not)) | .value] | any(. == "true")) else error("not a list") end') \
+              || { echo "$HELD_UNREADABLE"; exit 1; }
+            unset HELD_ENVS
+            # jq prints nothing for an empty or whitespace-only body and still exits 0
+            if [ "$HELD_WEB3" != "true" ] && [ "$HELD_WEB3" != "false" ]; then
+              echo "$HELD_UNREADABLE"
+              exit 1
+            fi
+            if [ "$HELD_WEB3" = "true" ]; then
+              echo "::error::This app was set up with group funds and decisions on (practice); a retry with them off is refused. Retry with practice, or start a new sign-up."
+              exit 1
+            fi
+          fi
+
           echo "Cleaning duplicate env vars (pass 1)..."
           dedup_envs
 
@@ -574,13 +635,17 @@ jobs:
           if [ -n "$COMMUNITY_SEED_B64" ]; then
             update_env "LOCALNODES_COMMUNITY_SEED" "$COMMUNITY_SEED_B64"
           fi
+          # A manual run or an older sign-up app sends no template and keeps the single starting group.
+          if [ -n "${COMMUNITY_TEMPLATE:-}" ]; then
+            update_env "COMMUNITY_TEMPLATE" "$COMMUNITY_TEMPLATE"
+          fi
           if [ -n "$AI_PROVIDER" ]; then
             update_env "AI_PROVIDER" "$AI_PROVIDER"
             # The chat-only failover (23-10, read by settings.php as localnodes_ai_backup). Only an
             # OpenRouter site gets one, and its provider is always openrouter: 23-10 refuses a
             # backup on another provider than the one that failed. The model is the shipped
             # backup_chat_model; empty means none. A Gemini site gets no backup until the 22.2-09
-            # gate result is in (orchestrator answer 91ab2f6): its failover stays off and a failed
+            # gate result is in: its failover stays off and a failed
             # call shows the busy message. Not secret: read back by value below.
             if [ "$AI_PROVIDER" = "openrouter" ] && [ -n "${OPENROUTER_BACKUP_MODEL:-}" ]; then
               update_env "AI_BACKUP_PROVIDER" "openrouter"
@@ -652,12 +717,29 @@ jobs:
           update_env "SPONSOR_RELAYER_TOKEN" "$T"
           unset K T
 
+          # Group funds and decisions. practice turns the web3 stack on against Ethereum Sepolia,
+          # test-network money only, through a public keyless RPC (no key to hold). off, or the
+          # input left out, writes false; a reused app that holds true never gets here with off
+          # (refused above). Both services read WEB3_ENABLED (docker-compose.yaml).
+          if [ "${WEB3_INPUT:-}" = "practice" ]; then
+            update_env "WEB3_ENABLED" "true"
+            update_env "SIWE_CHAIN_ID" "11155111"
+            update_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            # A pilot's email sign-in uses WaaP's production service, so
+            # members' wallets never sit on staging; settings.php reads WAAP_ENVIRONMENT. Demos
+            # and manual runs never get this write and use the module default (production from
+            # the siwe_login release after beta11; staging before it).
+            update_env "WAAP_ENVIRONMENT" "production"
+          else
+            update_env "WEB3_ENABLED" "false"
+          fi
+
           # Organizer provisioning env vars (entrypoint handles user creation + email)
           if [ -n "$ORGANIZER_EMAIL" ]; then
             update_env "ORGANIZER_EMAIL" "$ORGANIZER_EMAIL"
             update_env "ORGANIZER_NAME" "$SITE_NAME"
           fi
-          # Members' page reports go to the host (23 Q5); a run without one leaves the site's default.
+          # Members' page reports go to the host; a run without one leaves the site's default.
           if [ -n "${HOST_REPORT_EMAIL:-}" ]; then
             update_env "HOST_REPORT_EMAIL" "$HOST_REPORT_EMAIL"
           fi
@@ -684,12 +766,27 @@ jobs:
           if [ -n "$IMAGE_TAG_INPUT" ]; then
             verify_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
           fi
+          if [ -n "${COMMUNITY_TEMPLATE:-}" ]; then
+            verify_env "COMMUNITY_TEMPLATE" "$COMMUNITY_TEMPLATE"
+          fi
           # Write-once values: presence only, and the value is not even passed to the function
           if [ -n "$PROVISION_ID_INPUT" ]; then
             verify_env "PROVISION_CALLBACK_TOKEN" "" secret
           fi
           if [ -n "$SECRET_AI_NAME" ]; then
             verify_env "$SECRET_AI_NAME" "" secret
+          fi
+          if [ "${WEB3_INPUT:-}" = "practice" ]; then
+            # The relayer pair is never read back by value; a practice site needs it, so check
+            # that exactly one of each was saved. Off sign-ups skip it: with Web3 off nothing reads the pair.
+            verify_env "SPONSOR_RELAYER_PRIVATE_KEY" "" secret
+            verify_env "SPONSOR_RELAYER_TOKEN" "" secret
+            verify_env "WEB3_ENABLED" "true"
+            verify_env "SIWE_CHAIN_ID" "11155111"
+            verify_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            verify_env "WAAP_ENVIRONMENT" "production"
+          else
+            verify_env "WEB3_ENABLED" "false"
           fi
           # The backup pair, under the same condition it was written with (23-40)
           if [ "${AI_PROVIDER:-}" = "openrouter" ] && [ -n "${OPENROUTER_BACKUP_MODEL:-}" ]; then
@@ -836,7 +933,7 @@ jobs:
             printf '| **Demo Content** | %s |\n' "$(cell "$DEMO_MODULE_INPUT")"
             printf '| **Gemini Key Tier** | %s |\n' "$(cell "$GEMINI_KEY_TIER_INPUT")"
             printf '| **Coolify UUID** | `%s` |\n' "$APP_UUID"
-            printf '| **Admin Login** | admin / random per-run password, stored only in the Coolify app env (DRUPAL_ADMIN_PASS); never printed |\n'
+            printf '| **Server recovery** | Account 1 is blocked after installation. Use the server unblock, one-time sign-in and block steps in docs/SELF-HOST.md. Its random password is never printed |\n'
             printf '\n### Next Steps\n'
             printf -- '- Visit https://%s and verify the site\n' "$FQDN"
             printf -- '- The new site sends the organizer a welcome message itself\n'

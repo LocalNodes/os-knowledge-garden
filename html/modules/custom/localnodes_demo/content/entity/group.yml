@@ -21,6 +21,8 @@ f1d6ab6e-c246-4434-9283-d452bdf77f82:
     - group
   description: >
     <p>The Cascadia Bioregional Hub is the central coordination space for our bioregional network. Here we share updates across working groups, coordinate cross-watershed projects, and practice the cosmolocal organizing that connects our local efforts to the broader bioregional movement. Whether you are stewarding land, building mutual aid networks, or researching ecosystem health, this is your home base.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month; answer the quick poll under Quick polls.</p>
   members:
     - bcead200-a74f-4e24-93c4-2746436a5207
     - 9e4768e4-32fa-4191-8f58-6e519988c3d8
@@ -48,6 +50,8 @@ fdcc1818-ced4-4af6-b4b3-527b757da1f0:
     - group
   description: >
     <p>The Watershed Guardians Collective coordinates citizen science monitoring, salmon habitat restoration, and riparian zone stewardship across the rivers and streams of Cascadia. We share water quality data, organize volunteer monitoring days, and advocate for the health of our shared watersheds. Every stream connects to the whole bioregion.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - bcead200-a74f-4e24-93c4-2746436a5207
     - 6306b3d6-eaa9-4571-9973-f07e1dac1caa
@@ -55,7 +59,7 @@ fdcc1818-ced4-4af6-b4b3-527b757da1f0:
     - 3fe46397-9193-4d85-9848-f8972eba32f2
     - 5a1431bd-d7e5-4e62-916e-fbc89f89f003
 
-# Cascadia Commons Land Trust - Land stewardship
+# Hollyhock Commons Land Trust - Land stewardship
 cfb62c3f-6d94-4137-96b8-26cd70baadf4:
   uuid: cfb62c3f-6d94-4137-96b8-26cd70baadf4
   langcode: en
@@ -63,7 +67,7 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
   image_alt: Community garden with raised beds
   uid: 9e4768e4-32fa-4191-8f58-6e519988c3d8
   created: -80 day|09:00
-  label: Cascadia Commons Land Trust
+  label: Hollyhock Commons Land Trust
   type: flexible_group
   field_flexible_group_visibility: community
   field_group_allowed_join_method: direct
@@ -71,7 +75,9 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
     - community
     - group
   description: >
-    <p>The Cascadia Commons Land Trust holds land in common for community benefit, supporting affordable housing, community gardens, and ecological restoration. We practice a commons-based approach to land stewardship that draws on bioregional principles -- land belongs to the watershed, not to speculators. Join us to learn about community land trusts and contribute to our shared commons.</p>
+    <p>The Hollyhock Commons Land Trust holds land in common for community benefit, supporting affordable housing, community gardens, and ecological restoration. We practice a commons-based approach to land stewardship that draws on bioregional principles -- land belongs to the watershed, not to speculators. Join us to learn about community land trusts and contribute to our shared commons.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - 9e4768e4-32fa-4191-8f58-6e519988c3d8
     - 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
@@ -97,6 +103,8 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
     - group
   description: >
     <p>The Regenerative Economics Working Group explores how to build economic systems that regenerate rather than extract. We discuss mutual aid networks, community currencies, cooperative models, and resource pooling strategies that keep wealth circulating within our bioregion. Economics should serve life, not the other way around.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - 6bd61fae-71f2-4376-9b46-85cbd6bc2c59
     - 303fe4fb-3c84-4b95-bb20-cb4a5dcf9833
@@ -120,6 +128,8 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
     - group
   description: >
     <p>The Cascadia Governance Council is the deliberative body for our bioregional network. Council members are nominated by their local assemblies to participate in polycentric governance decisions affecting the whole bioregion. This is a closed group -- members are added by invitation to ensure accountability to the communities they represent.</p>
+
+    <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
     - 063ea337-4bcf-421b-b30c-1e75f3c5ef78
     - bcead200-a74f-4e24-93c4-2746436a5207

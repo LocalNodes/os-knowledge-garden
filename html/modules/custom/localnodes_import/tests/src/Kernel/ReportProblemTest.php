@@ -15,6 +15,7 @@ use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\symfony_mailer_test\MailerTestTrait;
 use Drupal\user\UserInterface;
+use Drupal\user\Entity\Role;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\Session;
@@ -57,7 +58,9 @@ final class ReportProblemTest extends ImportKernelTestBase {
 
   private const THANKS_HOST = "Thanks. We've sent your report to the people who host this site.";
 
-  private const NOT_SENT = "We couldn't send your report. Your text is still below. Try again in a few minutes, or email LocalNodes at hello@localnodes.xyz.";
+  private const THANKS_PRIVATE = "Thanks. We've sent your report to this site's organizers. The host is told a report was made, without its details.";
+
+  private const NOT_SENT ="We couldn't send your report. Your text is still below. Try again in a few minutes, or email LocalNodes at hello@localnodes.xyz.";
 
   /**
    * {@inheritdoc}
@@ -183,6 +186,102 @@ final class ReportProblemTest extends ImportKernelTestBase {
     $this->assertFalse($node->access('view', $this->member), 'Nor a member');
     $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
     $this->assertContains(self::PAGE_TITLE . ' is unpublished. To publish it again, edit the page and turn Published back on.', $messages);
+  }
+
+  public function testHousePrivacyChangeExpiresPublicTakedownAccess(): void {
+    require_once DRUPAL_ROOT . '/modules/custom/localnodes_platform/localnodes_platform.install';
+    if (function_exists('_localnodes_platform_protect_private_groups')) {
+      _localnodes_platform_protect_private_groups();
+    }
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $check = $this->container->get('localnodes_import.takedown_access');
+    $allowed = $check->check($this->topic, $this->steward);
+    $this->assertTrue($allowed->isAllowed());
+    $this->assertContains('group:' . $this->group->id(), $allowed->getCacheTags());
+    $cache = $this->container->get('cache.default');
+    $cache->set('house-report-takedown', TRUE, \Drupal\Core\Cache\Cache::PERMANENT, $allowed->getCacheTags());
+    $this->assertNotFalse($cache->get('house-report-takedown'));
+    $this->group->set('field_flexible_group_visibility', 'members')->save();
+    $this->assertFalse($cache->get('house-report-takedown'), 'The actual group save invalidates allowed route access.');
+    // A subsequent HTTP request has fresh field-reference objects as well as
+    // access results. The cached relationship above still holds its earlier
+    // referenced group object within this test request.
+    $this->container->get('entity_type.manager')->getStorage('group_content')->resetCache();
+    $this->container->get('entity_type.manager')->getStorage('group')->resetCache([$this->group->id()]);
+    $this->container->get('entity_type.manager')->getAccessControlHandler('group')->resetCache();
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->topic = $this->reloadNode((int) $this->topic->id());
+    $audience = $this->container->get('localnodes_import.report_audience');
+    $groups = $audience->groupsOf($this->topic);
+    $this->assertSame('members', $groups[(int) $this->group->id()]->get('field_flexible_group_visibility')->value);
+    $this->assertFalse($audience->isSteward($this->topic, $this->steward));
+    $this->assertFalse($check->check($this->topic, $this->steward)->isAllowed());
+    $this->assertTrue($check->check($this->topic, $this->organizer)->isAllowed());
+  }
+
+  /**
+   * A private-page report stays with its house managers and the host.
+   *
+   * @dataProvider privateHouseSiteRoles
+   */
+  public function testPrivateReportExcludesOutsideSiteRoles(string $role_id, string $visibility): void {
+    // The profile's feature install hooks provide these real site-wide grants;
+    // the kernel fixture imports its role config without running those hooks.
+    foreach (['sitemanager', 'contentmanager'] as $id) {
+      $role = Role::load($id);
+      $role->grantPermission('bypass node access')->grantPermission('manage all groups')->save();
+    }
+    $outside = $role_id === 'sitemanager' ? $this->steward : $this->createAccount('outside_content_manager', 'content.manager@example.test', ['contentmanager', 'verified']);
+    $this->group->set('field_flexible_group_visibility', $visibility)->save();
+    $this->topic->set('field_content_visibility', 'group')->save();
+    require_once DRUPAL_ROOT . '/modules/custom/localnodes_platform/localnodes_platform.install';
+    // The legacy-main baseline has no narrowing helper; the real access
+    // assertions below must then expose its shipped manager bypasses.
+    if (function_exists('_localnodes_platform_protect_private_groups')) {
+      _localnodes_platform_protect_private_groups();
+    }
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->topic = $this->reloadNode((int) $this->topic->id());
+
+    $this->assertFalse($this->topic->access('view', $outside), 'A site role is not private-house access.');
+    $this->assertFalse($this->routeAccess('localnodes_import.report_problem', $this->topic, $outside));
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $this->topic, $outside));
+    $this->assertFalse($this->container->get('localnodes_import.report_audience')->isSteward($this->topic, $outside));
+    $this->assertTrue($this->topic->access('view', $this->member));
+    $this->assertTrue($this->routeAccess('localnodes_import.report_problem', $this->topic, $this->member));
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $this->topic, $this->member));
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $this->topic, $this->organizer));
+
+    // A site manager may become an ordinary house member without becoming a
+    // house moderator or receiving private report details.
+    $this->addMember($this->group, $this->steward);
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->topic = $this->reloadNode((int) $this->topic->id());
+    $this->assertTrue($this->topic->access('view', $this->steward));
+    $this->assertTrue($this->routeAccess('localnodes_import.report_problem', $this->topic, $this->steward));
+    $this->assertFalse($this->container->get('localnodes_import.report_audience')->isSteward($this->topic, $this->steward));
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $this->topic, $this->steward));
+
+    $this->setCurrentUser($this->member);
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'other', 'details' => 'Private house report details.']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $addresses = array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $this->sentMails());
+    $this->assertEqualsCanonicalizing(['organizer@mail.localnodes.xyz', $this->siteOwner->getEmail(), self::HOST], $addresses);
+    $this->assertNotContains($outside->getEmail(), $addresses);
+    $this->assertNotContains($this->steward->getEmail(), $addresses);
+    $this->setCurrentUser($this->organizer);
+    [, $state] = $this->submitTakedown($this->topic);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $this->assertFalse($this->reloadNode((int) $this->topic->id())->isPublished(), 'The house manager retains takedown.');
+  }
+
+  public static function privateHouseSiteRoles(): array {
+    return [
+      'site manager, closed' => ['sitemanager', 'community'],
+      'site manager, secret' => ['sitemanager', 'members'],
+      'content manager, closed' => ['contentmanager', 'community'],
+      'content manager, secret' => ['contentmanager', 'members'],
+    ];
   }
 
   /**
@@ -445,6 +544,173 @@ final class ReportProblemTest extends ImportKernelTestBase {
   }
 
   /**
+   * A page a signed-out visitor can't see: the host gets a bare alert only.
+   *
+   * The organizers' mails carry the whole report as before. The host's mail
+   * names the site, the time, the page's id and whether an organizer got the
+   * report, and nothing that came from the page or the reporter.
+   *
+   * @dataProvider nonPublicPages
+   */
+  public function testNonPublicPageSendsTheHostAnAlertWithoutDetails(string $group_visibility, string $page_visibility): void {
+    $this->makeNonPublic($group_visibility, $page_visibility);
+    $details = 'Distinctive private details 4417.';
+
+    $this->setCurrentUser($this->member);
+    $this->messenger()->deleteAll();
+    [, $state] = $this->submitReport($this->topic, [
+      'reason' => 'personal_info',
+      'details' => $details,
+      'contact_email' => self::REPORTER,
+    ]);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+
+    $by_address = [];
+    foreach ($this->sentMails() as $mail) {
+      $by_address[$mail->getTo()[0]->getEmail()] = $mail;
+    }
+    $this->assertArrayHasKey(self::HOST, $by_address, 'The host is still told');
+    $host = $by_address[self::HOST];
+    unset($by_address[self::HOST]);
+    $this->assertNotEmpty($by_address, 'At least one organizer got the report');
+
+    // The organizers' mails are unchanged.
+    foreach ($by_address as $mail) {
+      $this->assertSame('A page was reported on ' . self::COMMUNITY, $mail->getSubject());
+      $body = $this->plain((string) $mail->getHtmlBody());
+      $this->assertStringContainsString('Someone reported ' . self::PAGE_TITLE, $body);
+      $this->assertStringContainsString("It shares someone's personal information", $body);
+      $this->assertStringContainsString($details, $body);
+      $this->assertStringContainsString(self::REPORTER, $body);
+      $this->assertStringContainsString('Unpublish this page', $body);
+    }
+
+    // The host's alert: no title, no details, no address, no page path.
+    $this->assertSame('A page was reported on ' . self::COMMUNITY, $host->getSubject());
+    $html = (string) $host->getHtmlBody();
+    $body = $this->plain($html);
+    foreach ([self::PAGE_TITLE, 'Watershed', $details, '4417', self::REPORTER, 'rights.holder', "It shares someone's personal information"] as $secret) {
+      $this->assertStringNotContainsString($secret, $html, "The host's mail leaves out: $secret");
+    }
+    $this->assertStringNotContainsString('/node/', $html, 'No link to the page or its takedown');
+    $this->assertStringNotContainsString('Unpublish this page', $body);
+    $this->assertStringContainsString('Someone reported a page on ' . self::COMMUNITY, $body);
+    $this->assertStringContainsString('Page id: ' . $this->topic->id(), $body);
+    $this->assertMatchesRegularExpression('/When: \S.*\d{4}/', $body, 'The time of the report');
+    $this->assertStringContainsString("The report reached this site's organizers.", $body);
+
+    // The thank-you says the same.
+    $this->assertSame([self::THANKS_PRIVATE], $this->statusMessages());
+  }
+
+  /**
+   * The form's words on a page a signed-out visitor can't see.
+   */
+  public function testNonPublicPageFormSaysTheHostGetsNoDetails(): void {
+    $this->makeNonPublic('members', 'group');
+    $this->setCurrentUser($this->member);
+    $form = $this->buildReport($this->topic);
+    $this->assertSame("Tell us what's wrong with " . self::PAGE_TITLE . ". Your report goes to this site's organizers. The host is told a report was made, without its details.", (string) $form['intro']['#markup']);
+    $this->assertSame("Add it if you'd like a reply. The organizers will see it. The host won't.", (string) $form['contact_email']['#description']);
+  }
+
+  public static function nonPublicPages(): array {
+    return [
+      'page in a members-only house' => ['members', 'group'],
+      'members-only page in a public house' => ['public', 'group'],
+      'signed-in-only page' => ['public', 'community'],
+    ];
+  }
+
+  /**
+   * A public page: the host still gets the whole report.
+   */
+  public function testPublicPageHostMailKeepsTheWholeReport(): void {
+    $this->assertTrue($this->topic->access('view', $this->anonymous()), 'The page is public');
+    $form = $this->buildReport($this->topic);
+    $this->assertSame("Tell us what's wrong with " . self::PAGE_TITLE . ". Your report goes to this site's organizers and to the host of the site.", (string) $form['intro']['#markup']);
+
+    $this->submitReport($this->topic, [
+      'reason' => 'owner',
+      'details' => 'Public page details 5521.',
+      'contact_email' => self::REPORTER,
+    ]);
+    $host = array_values(array_filter($this->sentMails(), fn ($mail) => $mail->getTo()[0]->getEmail() === self::HOST));
+    $this->assertCount(1, $host);
+    $html = (string) $host[0]->getHtmlBody();
+    $body = $this->plain($html);
+    $this->assertStringContainsString('Someone reported ' . self::PAGE_TITLE, $body);
+    $this->assertStringContainsString("Reason: I own this and didn't agree to it being shared", $body);
+    $this->assertStringContainsString('Public page details 5521.', $body);
+    $this->assertStringContainsString('Their email: ' . self::REPORTER, $body);
+    $this->assertMatchesRegularExpression('#href="https?://[^"/]+/node/' . $this->topic->id() . '/takedown"#', $html);
+    $this->assertStringNotContainsString('Page id:', $body, 'Not the bare alert');
+    $this->assertSame([self::THANKS_BOTH], $this->statusMessages());
+  }
+
+  /**
+   * A non-public page with no host address: the same single warning.
+   */
+  public function testNonPublicPageWithNoHostSettingWarnsOnce(): void {
+    $this->makeNonPublic('members', 'group');
+    $this->setSetting('localnodes_host_report_email', '');
+    $this->setCurrentUser($this->member);
+    $this->messenger()->deleteAll();
+    [, $state] = $this->submitReport($this->topic, ['reason' => 'owner', 'contact_email' => self::REPORTER]);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $to = array_map(fn ($mail) => $mail->getTo()[0]->getEmail(), $this->sentMails());
+    $this->assertEqualsCanonicalizing(['organizer@mail.localnodes.xyz', $this->siteOwner->getEmail()], $to);
+    $this->assertSame([self::THANKS_ORGANIZERS], $this->statusMessages());
+    $warnings = $this->watchdog('No host address is set');
+    $this->assertCount(1, $warnings, 'One warning');
+    $this->assertSame(RfcLogLevel::WARNING, (int) $warnings[0]->severity);
+  }
+
+  /**
+   * A non-public page where no organizer got it: not sent, and the host's
+   * alert says no organizer was reached.
+   */
+  public function testNonPublicPageWithNoOrganizerReachedIsNotSent(): void {
+    $this->makeNonPublic('members', 'group');
+    $this->setCurrentUser($this->member);
+    $calls = $this->stubMailResults(['*' => FALSE, self::HOST => TRUE]);
+    $this->assertNotSent(['reason' => 'owner', 'details' => 'Please look at this.']);
+    $this->assertSame(self::HOST, end($calls->addresses), 'The host is told last, after every organizer send');
+    $host = $calls->sends[count($calls->sends) - 1];
+    $this->assertSame('report_host_alert', $host['key']);
+    $this->assertFalse($host['params']['organizers_reached']);
+    $this->assertSame(['nid', 'organizers_reached', 'reported_at'], array_keys($host['params']), 'Nothing from the reporter reaches the host');
+    foreach (array_slice($calls->sends, 0, -1) as $send) {
+      $this->assertSame('report_problem', $send['key'], 'Organizers get the whole report');
+    }
+  }
+
+  /**
+   * The honeypot's reply matches what a real report on the page would say.
+   */
+  public function testHoneypotOnNonPublicPageGivesThatPagesThanks(): void {
+    $this->makeNonPublic('members', 'group');
+    $this->setCurrentUser($this->member);
+    $this->messenger()->deleteAll();
+    $this->submitReport($this->topic, ['reason' => 'owner', 'website' => 'https://spam.example']);
+    $this->assertSame([], $this->sentMails());
+    $this->assertSame([self::THANKS_PRIVATE], $this->statusMessages());
+  }
+
+  /**
+   * Makes the reported page one a signed-out visitor can't see.
+   */
+  private function makeNonPublic(string $group_visibility, string $page_visibility): void {
+    $this->group->set('field_flexible_group_visibility', $group_visibility)->save();
+    $this->topic->set('field_content_visibility', $page_visibility)->save();
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->container->get('entity_type.manager')->getAccessControlHandler('group')->resetCache();
+    $this->topic = $this->reloadNode((int) $this->topic->id());
+    $this->assertFalse($this->topic->access('view', $this->anonymous()), 'A signed-out visitor cannot see the page');
+    $this->assertTrue($this->topic->access('view', $this->member), 'A member can');
+  }
+
+  /**
    * Reads the log records whose message starts with the text.
    *
    * @return object[]
@@ -638,9 +904,11 @@ final class ReportProblemTest extends ImportKernelTestBase {
   private function stubMailResults(array $results): object {
     $calls = new \stdClass();
     $calls->addresses = [];
+    $calls->sends = [];
     $mail = $this->createMock(MailManagerInterface::class);
-    $mail->method('mail')->willReturnCallback(function ($module, $key, $to) use ($results, $calls) {
+    $mail->method('mail')->willReturnCallback(function ($module, $key, $to, $langcode, $params = []) use ($results, $calls) {
       $calls->addresses[] = $to;
+      $calls->sends[] = ['to' => $to, 'key' => $key, 'params' => $params];
       $result = array_key_exists($to, $results) ? $results[$to] : $results['*'];
       return ['result' => $result, 'send' => $result !== NULL];
     });

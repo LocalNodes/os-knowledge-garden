@@ -5,3 +5,68 @@ block.settings.localnodes_footer:
     repository_url:
       type: uri
       label: 'Where the "Open source" link points'
+
+localnodes_platform.community_template.*:
+  type: config_object
+  label: 'Community template: the groups a new site starts with'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name, the part of the config name after community_template.'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]{1,64}$/'
+    version:
+      type: integer
+      label: 'Version, raised whenever the groups or kinds change'
+      constraints:
+        Range:
+          min: 1
+    label:
+      type: label
+      label: 'Name shown when choosing a template'
+    description:
+      type: label
+      label: 'One line shown under the name'
+    groups:
+      type: sequence
+      label: 'Starting groups, made once at install with the organizer as manager'
+      sequence:
+        type: mapping
+        label: 'Starting group'
+        mapping:
+          name:
+            type: label
+            label: 'Group name; {site} is the community name'
+          visibility:
+            type: string
+            label: 'Who can see the group'
+            constraints:
+              Choice:
+                - public
+                - community
+                - members
+          everyone:
+            type: boolean
+            label: 'Every member belongs here (recorded only; nobody but the organizer is added)'
+          group_template:
+            type: string
+            label: 'Suggested group template, for the organizer to confirm; recorded, not applied'
+            nullable: true
+    repeatable:
+      type: sequence
+      label: 'Kinds of group the organizer can add more of later'
+      sequence:
+        type: mapping
+        label: 'Kind of group'
+        mapping:
+          kind:
+            type: string
+            label: 'Machine name of the kind'
+          label:
+            type: label
+            label: 'Words on the add link'
+          group_template:
+            type: string
+            label: 'Suggested group template for each one added'
+            nullable: true
