@@ -1,0 +1,6 @@
+name: 'LocalNodes course header test'
+type: module
+description: 'Registers a group type header of its own, as Open Social''s course groups do, for the group header suggestion test.'
+package: Testing
+core_version_requirement: ^10 || ^11
+hidden: true

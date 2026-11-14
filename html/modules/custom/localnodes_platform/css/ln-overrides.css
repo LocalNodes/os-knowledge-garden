@@ -1,6 +1,6 @@
 /**
  * @file
- * WCAG AA overrides for socialblue (DES-01, 22-UI-SPEC Part 1). Hand-written.
+ * WCAG AA overrides for socialblue. Hand-written.
  *
  * Why this file exists: socialblue compiles its status colours ($brand-danger,
  * -success, -warning, -info) into its own CSS, where the colour scheme
@@ -9,7 +9,7 @@
  *
  * It holds NO colour literal. Every colour is a var(--ln-*) from the generated
  * css/ln-tokens.css, so a palette swap is a token change and never edits this
- * file (D-03, D-09). scripts/tokens/tests checks that.
+ * file. scripts/tokens/tests checks that.
  *
  * Load order: socialblue's own CSS, then ln-tokens.css, then this file
  * (localnodes_platform/tokens library, weights 900 and 901; see
@@ -32,10 +32,10 @@
   color: var(--ln-color-on-danger);
 }
 
-/* The group page's "Joined" button (WINDOWS 46). Open Social's join template
+/* The group page's "Joined" button. Open Social's join template
    paints the joined state's toggle (a <button>; the "Join" call to action is an
-   <a> and keeps btn-accent) with socialblue's solid highlight fill. BRAND.md
-   section 5: the highlight colour is never a button. Ruled 2026-11-11: an
+   <a> and keeps btn-accent) with socialblue's solid highlight fill. The brand
+   rule: the highlight colour is never a button. Instead: an
    outlined navy button, the same in every state. */
 .hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle,
 .hero-footer__cta .btn-group > button.btn-accent.dropdown-toggle:hover,
@@ -77,7 +77,7 @@
   color: var(--ln-color-link);
 }
 
-/* Badges (22-UI-SPEC Part 4, status badge variants). */
+/* Badges (status badge variants). */
 .badge-danger {
   background-color: var(--ln-color-danger-bg);
   color: var(--ln-color-danger);
@@ -124,7 +124,29 @@
   outline-color: var(--ln-color-focus-on-dark) !important;
 }
 
-/* DeepChat bar focus rings (22.1-17; review 17-H1, WR-06). deepchat.css asks
+/* The welcome block's dark panel (socialblue draws it translucent dark grey,
+   over white or a cover picture; the token source records it as
+   primitive.color.opensocial.hero-panel). The teal ring is about 1.2:1 on it;
+   its links, Sign in and the wallet choice take the ring for dark surfaces. */
+.cover-with-canvas .hero-canvas :focus-visible {
+  outline-color: var(--ln-color-focus-on-dark) !important;
+}
+
+/* Buttons over a group or profile cover picture ("Edit group", "New post",
+   "Invite"): the ring goes inside the button's own opaque fill, because
+   outside it would sit on the photo, which may be the ring's own colour. On
+   the white fill of an outline button it is the usual focus colour; a filled
+   primary button is the focus colour itself, so its ring is the on-primary
+   white. Not the welcome block, whose dark panel has its own ring above. */
+.socialblue--sky .cover.cover-img:not(.cover-with-canvas) .btn:focus-visible {
+  outline-offset: -4px !important;
+}
+.socialblue--sky .cover.cover-img:not(.cover-with-canvas) .btn-primary:focus-visible {
+  outline-color: var(--ln-color-on-primary) !important;
+  outline-offset: -4px !important;
+}
+
+/* DeepChat bar focus rings. deepchat.css asks
    for an inset ring on the bar's two controls and the menu links, but the
    global rule above is !important, so it won: the controls drew the blue
    --ln-color-focus outside the dark bar (about 2.1:1 on it), where the fixed
@@ -143,7 +165,7 @@
   outline-offset: -4px !important;
 }
 
-/* The DeepChat bar's header text (WR-06). Contrib ai_chatbot's sticky-chatbot.css
+/* The DeepChat bar's header text. Contrib ai_chatbot's sticky-chatbot.css
    colours it with a literal white, which a palette swap cannot reach; the
    on-primary token is the same white. It sits on the bar fill, --ln-color-text
    (deepchat.css), 12.45:1. */
@@ -210,8 +232,8 @@ html:has(.ai-deepchat.chat-container) {
   text-decoration: underline;
 }
 
-/* Footer: "community · a community on LocalNodes · Open source" (22.1-07,
-   Tom's card 11). socialblue paints .site-footer in brand-secondary, a dark
+/* Footer: "community · a community on LocalNodes · Open source".
+   socialblue paints .site-footer in brand-secondary, a dark
    blue; the on-primary white is 8.9:1 on it. Links are underlined so colour is
    never their only cue. */
 .ln-site-footer {
@@ -238,7 +260,7 @@ html:has(.ai-deepchat.chat-container) {
   width: 16px;
 }
 
-/* The accent is a fill, never text (CANVAS-BRIEF "Forbidden uses"; 22.1-05, Q2).
+/* The accent is a fill, never text.
    socialblue's stock theme paints its brand-accent (the amber) as the text or
    icon colour of nine hover, focus and active states, 1.46 to 1.62:1 on the
    light surfaces. Each rule below is socialblue's own selector, word for word,
@@ -295,7 +317,7 @@ body:has(.ai-deepchat.chat-container) .main-container {
 /* Placeholder text and the small meta lines (published date, post date) are 2.8:1 and 4.48:1 on white in
    stock socialbase (a light grey and a mid grey); the muted text token is 7.46:1
    (WCAG 1.4.3). On the post and comment boxes the placeholder is the only
-   prompt, so a low-vision member could not read it (22.1-11, S6 and S7). */
+   prompt, so a low-vision member could not read it. */
 .form-control::placeholder,
 form .form-control::placeholder {
   color: var(--ln-color-text-muted);
@@ -308,7 +330,7 @@ form .form-control::placeholder {
   color: var(--ln-color-text-muted);
 }
 
-/* Sortable table headers (WINDOWS 45, 22.1-10). socialblue's generated
+/* Sortable table headers. socialblue's generated
    brand.css draws the sort icon as a data-URI background whose stroke is the
    stock primary (URL-encoded); the colour module does not rewrite
    hex inside a data URI. In the browser that stroke never painted: socialbase's
@@ -329,10 +351,10 @@ form .form-control::placeholder {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 12h14M3 6h18M3 18h10' fill='none' stroke='currentColor' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* The import alert's left bar (22.1-17, review WR-06, Q14). import.css draws the
+/* The import alert's left bar. import.css draws the
    4px bar in the accent (--ln-color-highlight), 1.62:1 on white and 1.46:1 on the
    canvas, under the 3:1 of SC 1.4.11. The accent is a fill, never a status mark
-   (CANVAS-BRIEF "Forbidden uses"), so the bar takes the warning-text role, 5.9:1
+   (a brand rule), so the bar takes the warning-text role, 5.9:1
    on white. The doubled class outranks import.css's single class without
    !important; the gate measures what this rule renders (OVERRIDDEN). */
 .localnodes-import-alert.localnodes-import-alert {

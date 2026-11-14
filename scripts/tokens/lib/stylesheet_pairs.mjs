@@ -84,6 +84,8 @@ const JOINED_AROUND = ['surface', 'canvas'];
 const JOINED_WHY = "the button sits in the group statistics .card (measured on the test site, 2026-11-11: rgb(250, 250, 250), between surface #fff and canvas #f3f3f3, so both bounds are measured)";
 const IMPORT_WHY = "import screens sit on socialblue's body or a white .card (measured on the test site, 2026-11-09: body rgb(243, 243, 243) = canvas, .card rgb(255, 255, 255) = surface)";
 
+/** The welcome block's dark panel, as Open Social draws it (no stylesheet here sets it). */
+const WELCOME_PANEL = 'primitive.color.opensocial.hero-panel';
 const barFill = { from: BAR, sheet: 'deepchat', bg: 'text' };
 const headerFill = { from: HEADER, sheet: 'deepchat', bg: 'text' };
 
@@ -174,6 +176,11 @@ export const PARTNERS = {
     [`${APP_TABS} .navbar-nav li a:focus::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the focus underline is a 2px bar under the tab, on the white tabs bar'),
     [`${APP_TABS} .navbar-nav li.active a::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the active underline is a 2px teal bar under the tab, on the white tabs bar'),
     [`${APP_TABS} .navbar-nav li a.is-active::after`]: fillOf({ boundary: [on(APP_TABS, 'surface', 'app-look')] }, 'the active underline is a 2px teal bar under the tab, on the white tabs bar'),
+    // An event card's date tile (EventDateTile, node--event--teaser--localnodes--sky.html.twig): its own dark fill.
+    '.socialblue--sky .teaser__content > .ln-event-date': {
+      ...text(['own'], 'the tile rule sets its text colour (surface) and its dark fill (text-strong) together; the weekday, day and month spans inherit the text colour'),
+      ...fillOf({ under: ['surface'] }, 'the weekday, day and month are drawn on the tile fill'),
+    },
     // Card headings: socialblue's .card is white (surface); its edge is the decorative divider.
     '.socialblue--sky .teaser--stream': fillOf({ under: ['text', 'text-strong', 'text-muted', 'link'] }, 'a stream teaser body holds the title, the tag, the meta badges and the read-more link on its own white fill'),
     '.socialblue--sky .teaser--stream .teaser__image': fillOf({ under: ['text-muted'] }, 'the picture column behind a teaser picture; with no picture it is hidden (same stylesheet)'),
@@ -185,6 +192,14 @@ export const PARTNERS = {
       ...text(PAGE, 'the outline button is transparent; its text sits on the white card, the canvas or a tinted band behind it'),
       ...border(PAGE, 'the outline is the button edge, on the card, canvas or tint around it'),
     },
+    // An outline button over a cover picture (socialblue group--hero--sky.html.twig with field_group_image, a profile
+    // header with a banner): the photo is behind it, so it has a white fill, and its text (text-strong, from the rule
+    // above) sits on that fill. Its edge is drawn on the photo, which no token describes; its focus ring is drawn 4px
+    // inside the fill (a rule in ln-overrides.css), so the ring is measured on the fill.
+    '.socialblue--sky .cover.cover-img .btn-default': fillOf(
+      { under: ['text-strong', { fg: 'focus', kind: 'focus' }] },
+      'the button text ("Edit group") and its focus ring, drawn inside the button, sit on the white fill this rule gives the button over a cover picture',
+    ),
     // Form fields: the raised fill, the text and placeholder on it, the control edge against the page around it.
     '.main-container .form-control': {
       ...text(['own'], 'the typed text sits on the raised fill of the same rule'),
@@ -238,6 +253,20 @@ export const PARTNERS = {
     '.navbar-default :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5 (focus-on-dark on navbar-bg, navbar-active-bg, navbar-sec-bg, second-line-navbar-bg)' } },
     '.navbar-secondary :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5; where the app look makes the secondary bar white (.socialblue--sky), ln-app-look.css replaces this ring with the focus colour, measured there' } },
     '.navbar-second-line :focus-visible': { outline: { measuredBy: P5_NAV, why: 'the navigation ring on the four navigation fills is P5' } },
+    // The welcome block's panel: socialblue's rgba(51, 51, 51, 0.8), recorded as a token-source fact at its lightest
+    // (over a white block). welcome-block.spec.ts reads the ring and the panel the browser renders.
+    '.cover-with-canvas .hero-canvas :focus-visible': ring(
+      [WELCOME_PANEL],
+      [WELCOME_PANEL],
+      'the links, Sign in and the wallet choice sit on the welcome panel (socialbase block--hero-call-to-action-block.html.twig, .hero-canvas) and their ring is drawn 2px outside them, still on the panel; a cover picture behind the panel only darkens it',
+    ),
+    // A filled primary button over a cover picture ("New post" in the group header): its ring is drawn inside its own
+    // primary fill, so the fill is on both sides of the ring. app-look.spec.ts reads the rendered ring on the button.
+    '.socialblue--sky .cover.cover-img:not(.cover-with-canvas) .btn-primary:focus-visible': ring(
+      ['primary'],
+      ['primary'],
+      'the ring is drawn 4px inside the filled primary button over a cover picture, so the primary fill is behind it and around it',
+    ),
     // The import alert's left bar: import.css draws it in the accent (1.62:1 on white), which is a fill, never a status mark,
     // so this rule re-colours it with the warning-text role, and the gate measures that.
     '.localnodes-import-alert.localnodes-import-alert': border(IMPORT_PAGE, 'the alert is a block in the web form (on the page) or inside the white status card; the 4px bar is its status mark'),

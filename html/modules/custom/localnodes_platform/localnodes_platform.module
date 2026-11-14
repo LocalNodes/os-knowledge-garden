@@ -243,9 +243,18 @@ function localnodes_platform_mailer_user__status_activated_build(EmailInterface 
  * - profile__profile__teaser__localnodes and its __sky variant: the member
  *   teaser without keyboard stops inside aria-hidden (22.1 quick task), see
  *   localnodes_platform_theme_suggestions_profile_alter().
+ * - group__hero__localnodes__sky: the group header with its one-line
+ *   description and buttons, see localnodes_platform_group_view().
+ * - node__event__teaser__localnodes__sky: socialblue's event card with the
+ *   date tile, see localnodes_platform_theme_suggestions_node_alter().
  */
 function localnodes_platform_theme($existing, $type, $theme, $path): array {
   return [
+    'node__event__teaser__localnodes__sky' => [
+      'base hook' => 'node',
+      'template' => 'node--event--teaser--localnodes--sky',
+      'path' => $path . '/templates/node',
+    ],
     'localnodes_site_export' => [
       'variables' => array_fill_keys(['status', 'parts', 'actions', 'failure', 'requested_by', 'requested_at', 'last_by', 'last_at', 'expires', 'reference'], NULL),
       'template' => 'localnodes-site-export',
@@ -340,6 +349,15 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'base hook' => 'profile',
       'template' => 'profile--profile--teaser--localnodes--sky',
       'path' => $path . '/templates/profile',
+    ],
+    // The group header with its one-line description and its buttons. Only
+    // the sky copy has a template: socialblue appends "__sky" after every
+    // suggestion, and the header is socialblue's sky header with two lines
+    // added (GroupHeroTemplateTest keeps it in step).
+    'group__hero__localnodes__sky' => [
+      'base hook' => 'group',
+      'template' => 'group--hero--localnodes--sky',
+      'path' => $path . '/templates/group',
     ],
   ];
 }
@@ -454,6 +472,78 @@ function localnodes_platform_preprocess_email(array &$variables): void {
   $variables['ln_radius_control'] = $tokens['radius']['control'] ?? '6px';
   $variables['ln_font'] = preg_replace('/[^A-Za-z0-9 ,_-]/', '', (string) ($tokens['font']['sans'] ?? '')) ?: 'sans-serif';
   $variables['ln_site_name'] = (string) \Drupal::config('system.site')->get('name');
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for group.
+ *
+ * The group header's footer row (socialblue group--hero--sky.html.twig) holds
+ * only the group's location and address. With neither, the row is still
+ * printed, empty, and leaves a gap above the tabs; the app look hides it on
+ * the class added here (ln-app-look.css). Whether a field shows is read from
+ * the built content, the same thing the template prints, so a location the
+ * visitor may not see does not count either.
+ */
+function localnodes_platform_preprocess_group(array &$variables): void {
+  if (($variables['view_mode'] ?? '') !== 'hero') {
+    return;
+  }
+  foreach (['field_group_location', 'field_group_address'] as $field) {
+    $build = $variables['content'][$field] ?? [];
+    if (Element::children($build) && ($build['#access'] ?? TRUE)) {
+      return;
+    }
+  }
+  $variables['attributes']['class'][] = 'ln-hero-no-place';
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for group.
+ *
+ * The group header (view mode hero) gets the group's description cut to one
+ * line and the "New post" and "Invite" buttons a member may use; see
+ * GroupHeader. Our header template prints both; a theme without it prints
+ * them after the header's fields.
+ */
+function localnodes_platform_group_view(array &$build, GroupInterface $group, EntityViewDisplayInterface $display, string $view_mode): void {
+  if ($view_mode !== 'hero') {
+    return;
+  }
+  $header = \Drupal::service('localnodes_platform.group_header');
+  $cache = new CacheableMetadata();
+  $summary = $header->summary($group, \Drupal::currentUser(), $cache);
+  $build['ln_group_summary'] = [];
+  $cache->applyTo($build['ln_group_summary']);
+  if ($summary !== '') {
+    $build['ln_group_summary'] += [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#attributes' => ['class' => ['ln-group-summary']],
+      // Plain text: a description that reads "<shared>" shows those words.
+      'text' => ['#plain_text' => $summary],
+    ];
+  }
+  $build['ln_group_actions'] = $header->actions($group);
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for group.
+ *
+ * The group header (view mode hero) takes our template, which socialblue then
+ * suggests as group__hero__localnodes__sky. Other themes have no such
+ * template and keep their own. A group type with a header of its own (Open
+ * Social's course groups register group__course_basic__hero) keeps it: ours
+ * is socialblue's general header with two lines added, not theirs.
+ */
+function localnodes_platform_theme_suggestions_group_alter(array &$suggestions, array $variables): void {
+  if (($variables['elements']['#view_mode'] ?? '') !== 'hero') {
+    return;
+  }
+  $group = $variables['elements']['#group'] ?? NULL;
+  if ($group instanceof GroupInterface && \Drupal::service('theme.registry')->getRuntime()->has('group__' . $group->bundle() . '__hero')) {
+    return;
+  }
+  $suggestions[] = 'group__hero__localnodes';
 }
 
 /**
@@ -662,4 +752,32 @@ function localnodes_platform_tour_tips_alter(array &$tour_tips, EntityInterface 
   }
   $group = \Drupal::routeMatch()->getParameter('group');
   \Drupal::service('localnodes_platform.group_tour')->alterTips($tour_tips, $group instanceof GroupInterface ? $group : NULL);
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * An event's card (teaser) gets the date tile, printed by
+ * node--event--teaser--localnodes--sky.html.twig.
+ */
+function localnodes_platform_node_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, string $view_mode): void {
+  if ($entity->bundle() !== 'event' || $view_mode !== 'teaser') {
+    return;
+  }
+  $build['ln_event_date'] = \Drupal::service('localnodes_platform.event_date_tile')->build($entity);
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for node.
+ *
+ * An event's card takes the module's template, which adds the date tile. Only
+ * its sky variant is registered, so another socialblue style keeps the stock
+ * card.
+ */
+function localnodes_platform_theme_suggestions_node_alter(array &$suggestions, array $variables): void {
+  $node = $variables['elements']['#node'] ?? NULL;
+  if (!$node instanceof EntityInterface || $node->bundle() !== 'event' || ($variables['elements']['#view_mode'] ?? '') !== 'teaser') {
+    return;
+  }
+  $suggestions[] = 'node__event__teaser__localnodes';
 }

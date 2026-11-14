@@ -240,6 +240,109 @@ test.describe('app look, member', () => {
   });
 });
 
+// Over a cover picture an outline button ("Edit group", which the group's
+// manager sees) has only the photo behind it, so it keeps a white fill: the
+// button's own background must be opaque, its text at 4.5:1 or more on it, at
+// rest, hovered and focused. Its keyboard focus ring is drawn inside that
+// fill (outside, it would sit on the photo, 1:1 on a patch of its own
+// colour), at 3:1 or more against the fill. The group is seed.php's "A11y
+// Cover Garden", which the steward manages.
+test.describe('app look, controls over a cover picture', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== 'member', 'runs once, as the steward');
+  });
+
+  for (const width of WIDTHS) {
+    test(`"Edit group" over a cover picture has an opaque fill, ${width}px`, async ({ browser, baseURL }) => {
+      const gid = process.env.LN_COVER_GROUP ?? '';
+      expect(gid, 'global-setup seeded a group with a cover picture').toMatch(/^\d+$/);
+      const context = await browser.newContext({
+        baseURL, viewport: { width, height: 900 },
+        storageState: join(dirname(fileURLToPath(import.meta.url)), '.auth', 'steward.json'),
+      });
+      const page = await context.newPage();
+      await page.goto(`/group/${gid}/stream`);
+      const button = page.locator('.cover.cover-img .btn-default', { hasText: 'Edit group' });
+      await expect(button).toBeVisible();
+      const surface = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ln-color-surface').trim().toLowerCase());
+      const paint = () => button.evaluate((el) => {
+        el.getAnimations().forEach((a) => a.finish());
+        const cs = getComputedStyle(el);
+        const parse = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);
+        const hex = (rgb: number[]) => '#' + rgb.slice(0, 3).map((n) => Math.round(n).toString(16).padStart(2, '0')).join('');
+        const lum = (rgb: number[]) => {
+          const [r, g, b] = rgb.slice(0, 3).map((c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const contrast = (a: number[], b: number[]) => {
+          const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+          return (hi + 0.05) / (lo + 0.05);
+        };
+        const bg = parse(cs.backgroundColor);
+        return {
+          bg: hex(bg), alpha: bg[3] ?? 1, ratio: contrast(parse(cs.color), bg),
+          focusVisible: el.matches(':focus-visible'), ringStyle: cs.outlineStyle, ring: hex(parse(cs.outlineColor)),
+          ringWidth: parseFloat(cs.outlineWidth), ringOffset: parseFloat(cs.outlineOffset), ringRatio: contrast(parse(cs.outlineColor), bg),
+        };
+      });
+      const rest = await paint();
+      expect(rest.bg, 'at rest: the white fill').toBe(surface);
+      for (const [state, m] of [['at rest', rest], ['hovered', await (async () => { await button.hover(); return paint(); })()],
+        ['focused', await (async () => { await button.focus(); return paint(); })()]] as const) {
+        expect.soft(m.alpha, `${state}: the fill is opaque`).toBe(1);
+        expect.soft(m.ratio, `${state}: the text on ${m.bg}`).toBeGreaterThanOrEqual(4.5);
+      }
+      // Reached with the keyboard, as a person tabbing through the header.
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      const ring = await paint();
+      expect(ring.focusVisible, 'Tab lands on "Edit group" and shows the ring').toBe(true);
+      expect.soft(ring.ringStyle, 'the ring is drawn').not.toBe('none');
+      expect.soft(ring.ringOffset + ring.ringWidth, `the ring (${ring.ringWidth}px at offset ${ring.ringOffset}px) is inside the fill`).toBeLessThanOrEqual(0);
+      expect.soft(ring.ringRatio, `the ring ${ring.ring} on the fill ${ring.bg}`).toBeGreaterThanOrEqual(3);
+      await context.close();
+    });
+  }
+});
+
+// The header's footer row holds only the group's location and address, both
+// plain text. With neither it is hidden (no gap above the tabs); with a
+// location it shows. The group is seed.php's "A11y Footer Garden", a fixture
+// with no picture, location or address: the test sets a location and takes it
+// off again, and the seed clears it on the next run if a run died between.
+test.describe('app look, the group header footer', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== 'member', 'runs as the member');
+  });
+
+  const drush = (...args: string[]) => execFileSync('ddev', ['drush', ...args], {
+    cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000,
+  }).trim();
+  const setLocation = (gid: string, value: string | null) => drush('php:eval',
+    `$g = \\Drupal::entityTypeManager()->getStorage('group')->load(${gid}); $g->set('field_group_location', ${value === null ? 'NULL' : JSON.stringify(value)}); $g->save();`);
+
+  test('a plain-text location shows; with none the row is gone', async ({ page }) => {
+    const gid = process.env.LN_FOOTER_GROUP ?? '';
+    expect(gid, 'global-setup seeded the footer fixture group').toMatch(/^\d+$/);
+    expect(drush('sqlq', `SELECT COUNT(*) FROM group__field_group_image WHERE entity_id = ${gid}`)
+      + drush('sqlq', `SELECT COUNT(*) FROM group__field_group_location WHERE entity_id = ${gid}`)
+      + drush('sqlq', `SELECT COUNT(*) FROM group__field_group_address WHERE entity_id = ${gid}`), 'the fixture has no picture, location or address').toBe('000');
+    const footer = page.locator('.cover:not(.cover-img) .hero-footer');
+    await page.goto(`/group/${gid}/about`);
+    await expect(footer).toHaveCount(1);
+    await expect(footer, 'no location or address: no empty row').toBeHidden();
+    try {
+      setLocation(gid, 'Riverside Hall');
+      await page.goto(`/group/${gid}/about`);
+      await expect(footer, 'a plain-text location shows').toBeVisible();
+      await expect(footer).toContainText('Riverside Hall');
+    }
+    finally {
+      setLocation(gid, null);
+    }
+  });
+});
+
 test.describe('app look, visitor', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.name !== 'anonymous', 'runs signed out');
