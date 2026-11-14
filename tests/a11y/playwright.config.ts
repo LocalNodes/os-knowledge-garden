@@ -94,6 +94,10 @@ ANONYMOUS_SPECS.push('app-look.spec.ts');
 // The group tour's scroll to each tip, with and without reduced motion, as
 // the member (who is in the a11y group the spec makes the community group).
 MEMBER_SPECS.push('tour-motion.spec.ts');
+// The search pill in the top bar: its label, the search form it opens, its
+// rings and the bar's fit, signed out and as the member.
+ANONYMOUS_SPECS.push('search-pill.spec.ts');
+MEMBER_SPECS.push('search-pill.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test. The CLI's
 // --trace flag also works; there's no CLI flag for video.
