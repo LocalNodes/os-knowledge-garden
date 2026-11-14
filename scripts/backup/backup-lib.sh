@@ -164,16 +164,45 @@ encrypt_to() {
 # decrypt_with SECRET_KEY IN OUT [PASSPHRASE_FILE]: decrypts with the
 # operator's private key, imported into a throwaway keyring that is removed
 # afterwards. A key with a passphrase needs the passphrase file.
-decrypt_with() {
-  local home rc=0 pass=()
+decrypt_with() ( _decrypt_with_worker "$@" )
+
+# Run only in a subshell (above) or as an asynchronous worker (restore-site).
+# A brace body lets restore-site signal the actual owner of the keyring.
+_decrypt_with_worker() {
+  set +xv
+  umask 077
+  home="" child="" rc=0
+  pass=()
+  # Called by the subshell EXIT trap, after an interrupted wait as well.
+  # shellcheck disable=SC2317
+  cleanup_keyring() {
+    trap - EXIT
+    trap '' HUP INT TERM
+    if [ -n "$child" ]; then
+      kill -TERM "$child" 2>/dev/null || true
+      wait "$child" 2>/dev/null || true
+    fi
+    if [ -n "$home" ]; then
+      gpgconf --homedir "$home" --kill all >/dev/null 2>&1 || true
+      rm -rf -- "$home"
+    fi
+  }
+  trap cleanup_keyring EXIT
+  trap 'exit 1' HUP INT TERM
+  run_gpg() {
+    "$GPG_BIN" "$@" 2>/dev/null &
+    child=$!
+    local result=0
+    wait "$child" || result=$?
+    child=""
+    return "$result"
+  }
   [ -n "${4:-}" ] && pass=(--pinentry-mode loopback --passphrase-file "$4")
-  home="$(mktemp -d)"
-  if "$GPG_BIN" --homedir "$home" --batch --quiet --no-tty "${pass[@]}" --import "$1" 2>/dev/null; then
-    "$GPG_BIN" --homedir "$home" --batch --quiet --no-tty "${pass[@]}" --yes --output "$3" --decrypt "$2" 2>/dev/null || rc=1
+  home="$(mktemp -d)" || exit 1
+  if run_gpg --homedir "$home" --batch --quiet --no-tty "${pass[@]}" --import "$1"; then
+    run_gpg --homedir "$home" --batch --quiet --no-tty "${pass[@]}" --yes --output "$3" --decrypt "$2" || rc=1
   else
     rc=1
   fi
-  gpgconf --homedir "$home" --kill all >/dev/null 2>&1 || true
-  rm -rf "$home"
-  return "$rc"
+  exit "$rc"
 }

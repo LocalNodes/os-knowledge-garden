@@ -1,0 +1,3 @@
+# At a member's first sign-in, join them to the community template's
+# everyone groups that anyone may join, and land them there with the tour.
+join_everyone: true

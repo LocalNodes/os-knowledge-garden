@@ -6,7 +6,9 @@ namespace Drupal\localnodes_platform\Controller;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Url;
+use Drupal\localnodes_platform\GroupTour;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -29,6 +31,7 @@ class GetHelpController extends ControllerBase {
 
   public function __construct(
     ConfigFactoryInterface $configFactory,
+    private readonly ?GroupTour $groupTour = NULL,
   ) {
     $this->configFactory = $configFactory;
   }
@@ -39,6 +42,7 @@ class GetHelpController extends ControllerBase {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('config.factory'),
+      $container->get('localnodes_platform.group_tour'),
     );
   }
 
@@ -46,16 +50,27 @@ class GetHelpController extends ControllerBase {
    * Renders the help page.
    */
   public function page(): array {
-    return [
+    $build = [
       '#theme' => 'localnodes_get_help',
       '#help_address' => static::HELP_ADDRESS,
       '#safety_help_url' => Url::fromRoute('localnodes_platform.safety_help')->toString(),
+      '#tour_url' => NULL,
       '#attached' => ['library' => ['localnodes_platform/site_terms']],
       '#cache' => [
         // As on /terms: a later line that names the community stays current.
         'tags' => $this->config('system.site')->getCacheTags(),
       ],
     ];
+    // Signed-in people who may see tours can replay the community-wide
+    // group's tour, if they may open that group. Opening it joins no one.
+    $cache = CacheableMetadata::createFromRenderArray($build)
+      ->addCacheContexts(['user.permissions'])
+      ->addCacheTags(['group_list']);
+    if ($this->currentUser()->isAuthenticated() && $this->currentUser()->hasPermission('access tour')) {
+      $build['#tour_url'] = $this->groupTour?->replayUrl($this->currentUser(), $cache)?->toString();
+    }
+    $cache->applyTo($build);
+    return $build;
   }
 
 }

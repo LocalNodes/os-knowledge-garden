@@ -1,0 +1,57 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - localnodes_platform
+id: localnodes_group
+label: 'Group tour'
+module: localnodes_platform
+# Open Social answers a group's address on its stream page; both names are
+# listed so the tour matches whichever the router picks.
+routes:
+  -
+    route_name: entity.group.canonical
+  -
+    route_name: social_group.stream
+# {community}, {kind}, {units} and {groups_url} are filled by GroupTour for the
+# community's everyone groups; on any other group the tour has no tips.
+tips:
+  shared-group:
+    id: shared-group
+    plugin: text
+    label: 'Your shared group'
+    weight: 1
+    selector: '#social-post-entity-form'
+    position: bottom-start
+    body: "{community} is the {kind}'s shared group. Read the stream, or use the post box to say hello."
+  coming-up:
+    id: coming-up
+    plugin: text
+    label: "What's coming up"
+    weight: 2
+    selector: '.navbar-secondary a[href$="/events"]'
+    position: bottom-start
+    body: "Open Events to see what's coming up in the {kind}. Choose an event for its time, place and sign-up options."
+  library:
+    id: library
+    plugin: text
+    label: 'Read the library'
+    weight: 3
+    selector: '.navbar-secondary a[href$="/topics"]'
+    position: bottom-start
+    body: "Open Topics for the {kind}'s documents, such as meeting notes and guides. You can read without opening the assistant."
+  ask-and-check:
+    id: ask-and-check
+    plugin: text
+    label: 'Ask and check'
+    weight: 4
+    selector: '.chatbot-socialblue'
+    position: top-end
+    body: "Ask the assistant about the {kind}'s documents. Open a Sources link and check the passage; an answer can be wrong."
+  other-groups:
+    id: other-groups
+    plugin: text
+    label: 'Your other groups'
+    weight: 5
+    body: 'Find {units} in <a href="{groups_url}">Groups</a>. Join makes you a member; Request to join asks an organizer for approval. Members-only groups need an invitation.'

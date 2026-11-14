@@ -86,6 +86,9 @@ ANONYMOUS_SPECS.push('palette-shots.spec.ts');
 // The app look's axe and sideways-scroll checks.
 MEMBER_SPECS.push('app-look.spec.ts');
 ANONYMOUS_SPECS.push('app-look.spec.ts');
+// The group tour's scroll to each tip, with and without reduced motion, as
+// the member (who is in the a11y group the spec makes the community group).
+MEMBER_SPECS.push('tour-motion.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test. The CLI's
 // --trace flag also works; there's no CLI flag for video.

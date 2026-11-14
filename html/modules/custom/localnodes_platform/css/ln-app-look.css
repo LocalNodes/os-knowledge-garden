@@ -203,6 +203,16 @@ body {
   line-height: 24px;
 }
 
+/* The group tour's close button is a bare "×" glyph, 8px wide; give it a
+   24px target (WCAG 2.5.8) without changing how it looks. */
+.shepherd-element .shepherd-cancel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}
+
 /* The group type ("Flexible group") is an internal name that means nothing to
    a member: not shown in the group header or on group cards
    (Open Social shows it in the header through a path-group rule, matched here.) */

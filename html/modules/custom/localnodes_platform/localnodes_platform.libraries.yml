@@ -25,6 +25,17 @@ group_tabs:
     - core/drupal
     - core/once
 
+# The group tour without scroll animation for people who ask for reduced
+# motion. Made a dependency of core's tour/tour library by
+# localnodes_platform_library_info_alter(), so it loads, and its behavior
+# runs, before the tour's own.
+tour_reduced_motion:
+  version: VERSION
+  js:
+    js/tour-reduced-motion.js: {}
+  dependencies:
+    - core/drupal
+
 # The organizer guide's reading width, 72 characters (23-UI-SPEC section 8,
 # Typography; 23-13). No colour in it: colours come from the theme and tokens.
 guide:

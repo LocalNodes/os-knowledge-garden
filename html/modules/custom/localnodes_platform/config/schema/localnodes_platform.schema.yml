@@ -6,6 +6,14 @@ block.settings.localnodes_footer:
       type: uri
       label: 'Where the "Open source" link points'
 
+localnodes_platform.first_landing:
+  type: config_object
+  label: 'First sign-in: join the community-wide group'
+  mapping:
+    join_everyone:
+      type: boolean
+      label: "Join a new member to the template's everyone groups at their first sign-in"
+
 localnodes_platform.community_template.*:
   type: config_object
   label: 'Community template: the groups a new site starts with'

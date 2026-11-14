@@ -112,10 +112,18 @@ exec 8>"$LOCK_DIR/$ACCEPTS_UUID.lock"
 flock -n 8 || refuse "another restore of this site is running from this machine"
 
 # --- the set, checked before the site is touched ----------------------------------
-WORK=""
-cleanup() { [ -n "$WORK" ] && rm -rf -- "$WORK"; }
+WORK="" DECRYPT_PID=""
+cleanup() {
+  trap - EXIT
+  trap '' HUP INT TERM
+  if [ -n "$DECRYPT_PID" ]; then
+    kill -TERM "$DECRYPT_PID" 2>/dev/null || true
+    wait "$DECRYPT_PID" 2>/dev/null || true
+  fi
+  if [ -n "$WORK" ]; then rm -rf -- "$WORK"; fi
+}
 trap cleanup EXIT
-trap 'exit 1' INT TERM
+trap 'exit 1' HUP INT TERM
 WORK="$(mktemp -d)"
 chmod 700 "$WORK"
 
@@ -123,7 +131,12 @@ s3_get "$SET" "$WORK/set.tar.gpg" || refuse "could not download $SET"
 head="$(s3api head-object --bucket "$S3_BUCKET" --key "$SET")" || refuse "could not read the set's stored checksum"
 [ "$(jq -r '.Metadata.sha256 // empty' <<<"$head")" = "$(sha256sum "$WORK/set.tar.gpg" | cut -d' ' -f1)" ] \
   || refuse "the download does not match the checksum stored with the set"
-decrypt_with "$PRIVATE_KEY" "$WORK/set.tar.gpg" "$WORK/set.tar" "$PASSFILE" || refuse "could not decrypt the set with this key"
+_decrypt_with_worker "$PRIVATE_KEY" "$WORK/set.tar.gpg" "$WORK/set.tar" "$PASSFILE" &
+DECRYPT_PID=$!
+decrypt_rc=0
+wait "$DECRYPT_PID" || decrypt_rc=$?
+DECRYPT_PID=""
+[ "$decrypt_rc" = 0 ] || refuse "could not decrypt the set with this key"
 rm -f -- "$WORK/set.tar.gpg"
 mkdir "$WORK/set"
 tar -xf "$WORK/set.tar" -C "$WORK/set" --no-same-owner identity.json 2>/dev/null || refuse "the set holds no identity.json"

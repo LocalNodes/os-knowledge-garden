@@ -7713,17 +7713,17 @@
         },
         {
             "name": "drupal/safe_smart_accounts",
-            "version": "1.0.0-alpha6",
+            "version": "1.0.0-alpha7",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_smart_accounts.git",
-                "reference": "1.0.0-alpha6"
+                "reference": "1.0.0-alpha7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha6.zip",
-                "reference": "1.0.0-alpha6",
-                "shasum": "a9c3b5584af273160bf2d108e6125b0f69644798"
+                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha7.zip",
+                "reference": "1.0.0-alpha7",
+                "shasum": "59847c26c0667ab3f7b9a569ced1a0d64e70e5c9"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7738,8 +7738,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha6",
-                    "datestamp": "1794514984",
+                    "version": "1.0.0-alpha7",
+                    "datestamp": "1794616754",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7763,10 +7763,14 @@
             ],
             "description": "Provides Safe Smart Account integration for SIWE authenticated users",
             "homepage": "https://www.drupal.org/project/safe_smart_accounts",
+            "keywords": [
+                "Actively maintained",
+                "E-commerce"
+            ],
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_smart_accounts"
             },
-            "published-time": "2026-11-12T20:22:43+00:00"
+            "published-time": "2026-11-14T00:37:53+00:00"
         },
         {
             "name": "drupal/search_api",
