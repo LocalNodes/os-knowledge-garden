@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * @file
+ * Refuses a group, or its description, to the accounts a test names.
+ *
+ * The state keys hold user ids. While a key is set, its result varies by
+ * user, as an access check that looks at the person (not their permissions)
+ * does; while it is empty the module has no say and adds no cache context.
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Session\AccountInterface;
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for group.
+ */
+function localnodes_group_access_test_group_access(EntityInterface $group, string $operation, AccountInterface $account): AccessResultInterface {
+  $refused = \Drupal::state()->get('localnodes_group_access_test.group', []);
+  if (!$refused) {
+    return AccessResult::neutral();
+  }
+  return AccessResult::forbiddenIf($operation === 'view' && in_array((int) $account->id(), $refused, TRUE))->cachePerUser();
+}
+
+/**
+ * Implements hook_entity_field_access().
+ */
+function localnodes_group_access_test_entity_field_access(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResultInterface {
+  if ($field_definition->getName() !== 'field_group_description') {
+    return AccessResult::neutral();
+  }
+  $refused = \Drupal::state()->get('localnodes_group_access_test.description', []);
+  if (!$refused) {
+    return AccessResult::neutral();
+  }
+  return AccessResult::forbiddenIf($operation === 'view' && in_array((int) $account->id(), $refused, TRUE))->cachePerUser();
+}

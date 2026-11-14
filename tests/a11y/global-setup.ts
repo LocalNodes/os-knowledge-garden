@@ -1,12 +1,15 @@
 // Seeds the a11y personas on the local DDEV site and saves their sessions.
 //
 // 1. `ddev drush php:script tests/a11y/seed.php` (idempotent) creates the
-//    fictional users a11y-steward and a11y-member and the group "A11y Garden",
-//    and prints LN_GROUP=<id>.
+//    fictional users a11y-steward and a11y-member, the group "A11y Garden" and
+//    two fixture groups the steward manages (one with a cover picture, one
+//    with no picture or location), and prints LN_GROUP, LN_COVER_GROUP and
+//    LN_FOOTER_GROUP=<id>.
 // 2. `ddev drush uli --name=<persona> --uri=<base>` gives a one-time login
 //    link per persona; visiting it in Chrome logs in, and the session is saved
 //    to tests/a11y/.auth/<persona>.json (gitignored, T-22-27).
-// 3. LN_GROUP is exported through process.env, which the test workers inherit.
+// 3. The group ids are exported through process.env, which the test workers
+//    inherit.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -58,6 +61,13 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     throw new Error(`seed.php did not print LN_GROUP=<id>. Output:\n${seedOutput}`);
   }
   process.env.LN_GROUP = match[1];
+  for (const name of ['LN_COVER_GROUP', 'LN_FOOTER_GROUP', 'LN_EVENT', 'LN_EVENT_LONG']) {
+    const id = seedOutput.match(new RegExp(`^${name}=(\\d+)\\s*$`, 'm'));
+    if (!id) {
+      throw new Error(`seed.php did not print ${name}=<id>. Output:\n${seedOutput}`);
+    }
+    process.env[name] = id[1];
+  }
 
   mkdirSync(AUTH_DIR, { recursive: true });
   const channel = process.env.LN_BROWSER_CHANNEL ?? 'chrome';

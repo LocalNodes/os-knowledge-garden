@@ -50,6 +50,11 @@ services:
   localnodes_platform.group_tour:
     class: Drupal\localnodes_platform\GroupTour
     arguments: ['@state', '@entity_type.manager']
+  # The group header's one-line description and its New post and Invite
+  # buttons.
+  localnodes_platform.group_header:
+    class: Drupal\localnodes_platform\GroupHeader
+    arguments: ['@access_manager', '@current_user', '@router.route_provider']
   # drush localnodes:export writes one
   # archive a community can restore on its own server. key.repository is
   # optional so Kernel tests without the key module still build a container.
@@ -112,3 +117,6 @@ services:
     class: Drupal\localnodes_platform\Routing\HouseEnrollmentRouteSubscriber
     tags:
       - { name: event_subscriber }
+  localnodes_platform.event_date_tile:
+    class: Drupal\localnodes_platform\EventDateTile
+    arguments: ['@date.formatter']

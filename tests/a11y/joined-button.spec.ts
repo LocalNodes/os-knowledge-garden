@@ -1,8 +1,8 @@
-// The group page's "Joined" button, as the browser draws it (WINDOWS 46).
+// The group page's "Joined" button, as the browser draws it.
 //
-// BRAND.md section 5: the highlight colour is never a button. Open Social's
+// The brand rule: the highlight colour is never a button. Open Social's
 // join template paints the joined state's toggle with socialblue's btn-accent,
-// a solid amber fill. The ruling of 2026-11-11 (option a): an outlined navy
+// a solid amber fill. Instead: an outlined navy
 // button. The fix is one rule in ln-overrides.css. The rule targets the
 // template branch whose primary has no link (a state, not an action), so the
 // "Join" call to action keeps its own style.
@@ -73,7 +73,7 @@ async function lookOf(page: Page): Promise<Look> {
   });
 }
 
-test.describe('WINDOWS 46: the "Joined" button is outlined navy, never the highlight', () => {
+test.describe('the "Joined" button is outlined navy, never the highlight', () => {
   let guard: AiGuard;
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'member', 'the member has joined the a11y group');

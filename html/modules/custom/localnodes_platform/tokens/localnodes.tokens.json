@@ -75,6 +75,14 @@
         "line2-text": { "$value": "#fffff1", "$type": "color" },
         "line2-active-text": { "$value": "#0a3f3b", "$type": "color" }
       },
+      "opensocial": {
+        "$description": "Fills that Open Social draws itself, recorded so the contrast check can measure what sits on them. No target outputs them.",
+        "hero-panel": {
+          "$value": "#5c5c5c",
+          "$type": "color",
+          "$description": "The welcome block's panel (.cover .hero-canvas, socialblue hero.css: rgba(51, 51, 51, 0.8)) over a white block: the lightest it renders. A cover picture behind it can only darken it."
+        }
+      },
       "dark": {
         "$description": "The landing page's dark-band values (the sign-up site's home-v5.css, .home-dark; 2026-11-12): near-black page and raised surfaces, warm off-white text, its muted text and lines, and the amber that marks focus there. They serve the landing's dark bands and Nuxt UI's .dark roles; the app has no dark mode.",
         "bg": { "$value": "#09090b", "$type": "color" },

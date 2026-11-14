@@ -70,7 +70,8 @@
    siwe_login's own wallet button stays in the top bar's block, hidden, so
    it doesn't crowd the bar; this choice hands its click to it. */
 .ln-signin-topbar #siwe-login-button,
-.ln-signin-wallet[hidden] {
+.ln-signin-wallet[hidden],
+.ln-signin-wallet .ln-signin-wallet__button[hidden] {
   display: none;
 }
 

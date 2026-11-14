@@ -192,10 +192,13 @@ final class SignIn {
   /**
    * The quiet "Use a browser wallet" choice; nothing when it is switched off.
    *
-   * siwe_login_waap's show_siwe_wallet_button decides. The wrapper is hidden
-   * until js/signin.js finds siwe_login's wallet button in the page. The
-   * note under the button is empty until a click finds no wallet; it is a
-   * status region, so the words are read out when they appear.
+   * The show_siwe_wallet_button setting of siwe_login_waap decides. The
+   * wrapper is hidden until js/signin.js runs. It shows the button once
+   * siwe_login's wallet button, the script that handles it and the ethers
+   * library are all in the page; otherwise the note under it says the wallet
+   * sign-in is not available. The note is also where a click that finds no
+   * wallet says so; it is a status region, so the words are read out when
+   * they appear.
    *
    * @return array<string, mixed>
    *   A render array. Switched off, it holds only the setting's cache tag, so

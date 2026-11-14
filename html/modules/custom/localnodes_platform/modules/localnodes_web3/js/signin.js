@@ -105,18 +105,39 @@
   }
 
   /**
-   * "Use a browser wallet": shown once siwe_login's wallet button is there,
-   * and a click is handed to it. With no wallet in this browser the click
-   * says so under the choice instead; siwe_login would only show a message
-   * at the top of the page, under the fixed top bar.
+   * Whether siwe_login's wallet sign-in can take a click.
+   *
+   * Its button is written by the server, so it can be in the page while the
+   * script that handles its click never loaded, or loaded without the
+   * ethers library it signs with (from a CDN); a click would then do
+   * nothing. All three have to be there. siwe_login sends no ready signal of
+   * its own, so its behaviour being defined stands in for one: behaviours
+   * attach only after every script on the page has run.
+   */
+  function walletReady() {
+    return !!liveWallet() && !!Drupal.behaviors.siweLogin && typeof window.ethers !== 'undefined';
+  }
+
+  /**
+   * "Use a browser wallet": shown once siwe_login's wallet sign-in is ready,
+   * and a click is handed to it. When it is not, a plain line under the
+   * other choices says so instead of a button that does nothing. With no
+   * wallet in this browser the click says so under the choice; siwe_login
+   * would only show a message at the top of the page, under the fixed top
+   * bar.
    */
   Drupal.behaviors.localnodesWalletChoice = {
     attach(context) {
       once('ln-wallet', '[data-ln-wallet]', context).forEach((control) => {
         const wrap = control.closest('[data-ln-wallet-wrap]');
         const note = wrap?.querySelector('[data-ln-wallet-note]');
+        const ready = walletReady();
+        control.hidden = !ready;
+        if (!ready && note) {
+          note.textContent = Drupal.t('Signing in with a browser wallet is not available right now. Use Sign in instead.');
+        }
         if (wrap) {
-          wrap.hidden = !liveWallet();
+          wrap.hidden = false;
         }
         control.addEventListener('click', () => {
           const button = liveWallet();

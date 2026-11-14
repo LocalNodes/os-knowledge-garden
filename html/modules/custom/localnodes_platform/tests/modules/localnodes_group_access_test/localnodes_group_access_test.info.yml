@@ -1,0 +1,6 @@
+name: 'LocalNodes group access test'
+type: module
+description: 'Refuses a group, or its description, to named accounts, varying by user. Tests only.'
+package: Testing
+hidden: true
+core_version_requirement: ^10 || ^11

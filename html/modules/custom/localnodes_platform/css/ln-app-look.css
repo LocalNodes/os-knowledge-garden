@@ -33,8 +33,10 @@ body {
 }
 
 /* Open Social holds the header 410px tall for a photo; without one it is as
-   tall as its words, with room at the foot for the tabs bar that overlaps it. */
-.socialblue--sky .cover:not(.cover-img) .cover-wrap {
+   tall as its words, with room at the foot for the tabs bar that overlaps it.
+   Not the signed-out welcome block (.cover-with-canvas): it has no tabs bar,
+   and ln-overrides.css already sizes it to its panel. */
+.socialblue--sky .cover:not(.cover-img):not(.cover-with-canvas) .cover-wrap {
   min-height: 0;
   padding-top: 24px;
   padding-bottom: 56px;
@@ -145,6 +147,12 @@ body {
   min-height: 40px;
 }
 
+/* Over a cover picture there is no page behind an outline button, only the
+   photo ("Edit group", a profile's edit button): it keeps a white fill. */
+.socialblue--sky .cover.cover-img .btn-default {
+  background: var(--ln-color-surface);
+}
+
 /* Form fields in the page (not the search box in the dark top bar). */
 .main-container .form-control {
   background-color: var(--ln-color-raised);
@@ -221,9 +229,11 @@ body {
   display: none;
 }
 
-/* Open Social leaves an empty footer row in the header when there is no
-   button to show there; drop it so the tabs follow the header closely. */
-.socialblue--sky .cover:not(.cover-img) .hero-footer:not(:has(a, button, img, input)) {
+/* The header's footer row holds only the group's location and address. Open
+   Social prints it empty when there are neither; drop it then, so the tabs
+   follow the header closely. Our group preprocess hook marks that case
+   (ln-hero-no-place); CSS cannot tell plain text from nothing. */
+.socialblue--sky .cover.ln-hero-no-place:not(.cover-img) .hero-footer {
   display: none;
 }
 
@@ -250,4 +260,72 @@ body {
     margin-left: 14px;
     margin-right: 14px;
   }
+}
+
+/* The group header's one-line description, under the group's name. It takes
+   the header's own text colour: muted on the white header, white over a
+   cover picture. */
+.socialblue--sky .cover .ln-group-summary {
+  margin: 8px 0 0;
+  max-width: 60ch;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* The header's buttons ("New post", "Invite"): a row under the name that
+   wraps on a narrow screen instead of running off it. */
+.socialblue--sky .cover .ln-group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  position: relative;
+}
+
+.socialblue--sky .cover .ln-group-actions .btn {
+  min-height: 40px;
+  margin: 0;
+}
+
+/* An event card's date tile (EventDateTile): a dark block left of the tag,
+   title and date line. It sits in the text column, not the picture column,
+   which Open Social hides on small screens. */
+.socialblue--sky .teaser__content:has(> .ln-event-date) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+}
+
+.socialblue--sky .teaser__content:has(> .ln-event-date) > * {
+  grid-column: 2;
+}
+
+.socialblue--sky .teaser__content > .ln-event-date {
+  grid-column: 1;
+  grid-row: 1 / span 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--ln-color-text-strong);
+  color: var(--ln-color-surface);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.socialblue--sky .ln-event-date__weekday,
+.socialblue--sky .ln-event-date__month {
+  font-family: var(--ln-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.socialblue--sky .ln-event-date__day {
+  font-size: 22px;
+  font-weight: 700;
 }

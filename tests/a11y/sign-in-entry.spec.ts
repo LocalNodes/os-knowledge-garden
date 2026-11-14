@@ -266,5 +266,37 @@ test.describe('sign-in entry points', () => {
       expect(await page.evaluate(() => (window as any).__lnWallet)).toBe(1);
       await expect(page.locator('[data-ln-wallet-note]')).toHaveText('');
     });
+
+    // siwe_login's wallet button is written by the server, so it is in the
+    // page even when the script that handles its click, or the ethers library
+    // that script signs with, never loads. Then there is no choice to press,
+    // only a plain line that it is unavailable.
+    for (const missing of ['handler', 'ethers'] as const) {
+      test(`"Use a browser wallet" is not offered when the wallet ${missing} never loads, ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        let blocked = 0;
+        if (missing === 'ethers') {
+          await page.route(/\/ethers(@[^/]*)?\/.*\.js/, (route) => { blocked++; return route.abort(); });
+        }
+        else {
+          // Scripts are aggregated, so the handler has no file of its own to
+          // block: the aggregate is served without its definition instead.
+          await page.route(/\/files\/js\/js_.*\.js/, async (route) => {
+            const response = await route.fetch();
+            const body = await response.text();
+            const cut = body.replace(/Drupal\.behaviors\.siweLogin\s*=/g, 'void');
+            if (cut !== body) blocked++;
+            await route.fulfill({ response, body: cut });
+          });
+        }
+        for (const path of ['/', '/user/login']) {
+          await page.goto(path);
+          await expect(page.locator('#siwe-login-button'), `${path}: the server wrote the wallet button`).toHaveCount(1);
+          await expect(page.getByRole('button', { name: 'Use a browser wallet' }), path).toBeHidden();
+          await expect(page.locator('[data-ln-wallet-note]:visible'), path).toHaveText(/not available right now/);
+        }
+        expect(blocked, `the ${missing} was requested and kept out`).toBeGreaterThan(0);
+      });
+    }
   }
 });

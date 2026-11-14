@@ -85,6 +85,11 @@ MEMBER_SPECS.push('palette-shots.spec.ts');
 ANONYMOUS_SPECS.push('palette-shots.spec.ts');
 // The app look's axe and sideways-scroll checks.
 MEMBER_SPECS.push('app-look.spec.ts');
+// The group header's description and its New post and Invite buttons, as
+// the member and the steward (each test opens its own persona).
+MEMBER_SPECS.push('group-header.spec.ts');
+// The date tile on event cards, as the member.
+MEMBER_SPECS.push('event-date-tile.spec.ts');
 ANONYMOUS_SPECS.push('app-look.spec.ts');
 // The group tour's scroll to each tip, with and without reduced motion, as
 // the member (who is in the a11y group the spec makes the community group).

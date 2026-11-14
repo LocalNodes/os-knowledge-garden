@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * A group type header of its own, as social_course registers for courses.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function localnodes_course_hero_test_theme(): array {
+  return [
+    'group__course_basic__hero' => [
+      'render element' => 'elements',
+    ],
+  ];
+}
