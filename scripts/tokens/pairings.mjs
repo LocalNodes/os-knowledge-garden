@@ -95,7 +95,11 @@ const fillId = (d) => `P12.${d.key}.socialblue.brand-accent.on.surface`;
  *   focusTwin: <pair id>   the pair is decoration and the control keeps a focus ring, measured at 3:1 as that pair.
  *                          The twin must exist and be a focus pair (assertExclusionsKnown), and if it fails the
  *                          exclusion is void (check_contrast.mjs): the exclusion rests on something measured.
- * check_contrast.mjs also fails when an excluded pair now passes (STALE: remove it).
+ * check_contrast.mjs also fails when an excluded pair now passes (STALE: remove it), except for an entry flagged
+ *   paintedElsewhere: true  the gate measures a colour the browser does not paint for this pair (the static gate does not
+ *                          follow the cascade there), so whether that colour passes says nothing. Such an entry must
+ *                          have a focusTwin, the ring that is painted; the twin is measured and must pass, or the
+ *                          exclusion is void and the twin FAILs.
  * No dark pair is excluded since the teal palette (2026-11-12): on the landing's dark values every Nuxt dark pair
  * passes, so the two that were excluded (dimmed text and error on the accented fill) are measured like any other.
  * voidedBy stays supported, and the tripwire still fails the gate when dark mode is rendered.
@@ -103,6 +107,13 @@ const fillId = (d) => `P12.${d.key}.socialblue.brand-accent.on.surface`;
 export const EXCLUDED = Object.freeze(
   [
     ...DECORATIVE_FILLS.map((d) => ({ id: fillId(d), reason: DECORATIVE_REASON, focusTwin: focusTwinId(d) })),
+    {
+      id: 'P13.app-look.focus.drupal-css.--ln-color-focus.on.socialblue.navbar-bg',
+      reason:
+        'not measured here: on the open search form in the dark top bar the browser paints focus-on-dark on this ring, not the global focus colour; tests/a11y/search-pill.spec.ts asserts the painted ring',
+      focusTwin: 'P5.focus-on-dark.on.socialblue.navbar-bg',
+      paintedElsewhere: true,
+    },
   ].map((e) => Object.freeze(e)),
 );
 
@@ -115,6 +126,7 @@ export function assertExclusionsKnown(excluded, pairings) {
   for (const e of excluded) {
     if (typeof e.reason !== 'string' || e.reason.trim() === '') throw new TokenError(`exclusion ${e.id} has no reason`);
     if (!byId.has(e.id)) throw new TokenError(`exclusion ${e.id}: no such pairing (remove it from EXCLUDED in scripts/tokens/pairings.mjs)`);
+    if (e.paintedElsewhere && !e.focusTwin) throw new TokenError(`exclusion ${e.id} is flagged paintedElsewhere but names no focus twin, the ring that is painted (set focusTwin in EXCLUDED)`);
     if (!e.voidedBy && !e.focusTwin) throw new TokenError(`exclusion ${e.id} rests on neither a tripwire or a focus twin (set voidedBy or focusTwin in EXCLUDED)`);
     if (e.focusTwin) {
       const twin = byId.get(e.focusTwin);

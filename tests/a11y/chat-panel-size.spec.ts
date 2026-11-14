@@ -12,13 +12,22 @@
 //   long name      a site may rename the assistant: with a long name, or one
 //                  long word, the bar stays inside the window, open or closed,
 //                  and the name itself still shows (at 320 the 40-character
-//                  name wraps to a second line).
+//                  name wraps to a second line). From 900 up the name stays
+//                  on one line and a long one ends in an ellipsis, like the
+//                  site name in the top bar; its title holds the whole name.
 //   short phone    at 320x568 and 320x640 the open panel is 80% of the
 //                  window: the chat box gives up height so the line under
 //                  the input ends inside the panel and inside the window.
 //   Sources links  on a search page with an AI overview, the closed bar's
 //                  box meets no Sources link, with the default name and the
-//                  40-character name, at 1280 and 320.
+//                  40-character name, at 1280 and 320: when a keyboard user
+//                  Tabs onto the link from the top of the page (the page's
+//                  scroll-padding keeps the focused link above the bar), and
+//                  when the link is scrolled to the window's bottom edge.
+//                  The page as it first loads is not checked: the bar floats
+//                  over whatever sits at the window's bottom, so at some
+//                  window heights it covers part of a link until the page is
+//                  scrolled.
 //
 // Each check prints its measures ("SIZE ..."), so a failing run records the
 // defect.
@@ -38,10 +47,12 @@ const LONG_NAMES = ['Bread and Roses Neighborhood Cooperative', 'Supercalifragil
 const NAME = `${HEADER} .ln-assistant-name`;
 
 // Puts a name into the bar as a site's setting renders it: the visible name
-// (aria-hidden, clamped) and the visually hidden spoken name beside it.
+// (aria-hidden, clamped, with the whole name as its title) and the visually
+// hidden spoken name beside it.
 async function setName(page: Page, name: string): Promise<void> {
   await page.locator(NAME).evaluate((e, n) => {
     e.textContent = n;
+    e.setAttribute('title', n);
     const spoken = e.parentElement!.querySelector('.visually-hidden');
     if (spoken) {
       spoken.textContent = `${n},`;
@@ -51,6 +62,26 @@ async function setName(page: Page, name: string): Promise<void> {
 
 // The name shows: visible, with a real box. With multiline, it also takes
 // more than one line's height.
+// From 900 up: one line, cut with an ellipsis like the top bar's site name,
+// with the whole name in the title and in what a screen reader gets.
+async function expectNameOnOneLine(page: Page, label: string, fullName: string): Promise<void> {
+  const fit = await page.locator(NAME).evaluate((e) => {
+    const cs = getComputedStyle(e);
+    return {
+      h: e.getBoundingClientRect().height, lh: parseFloat(cs.lineHeight), sw: e.scrollWidth, cw: e.clientWidth,
+      ws: cs.whiteSpace, to: cs.textOverflow, clamp: cs.webkitLineClamp, title: e.getAttribute('title'), text: e.textContent,
+    };
+  });
+  console.log(`FIT ${label}: ${JSON.stringify(fit)}`);
+  expect(Math.abs(fit.h - fit.lh), `${label}: the name is one line high`).toBeLessThanOrEqual(1);
+  expect([fit.ws, fit.to], `${label}: a long name is cut with an ellipsis on its one line`).toEqual(['nowrap', 'ellipsis']);
+  expect(fit.clamp, `${label}: no two-line clamp`).toBe('none');
+  expect(fit.sw, `${label}: the long name is wider than its box, so the ellipsis shows`).toBeGreaterThan(fit.cw);
+  expect(fit.text, `${label}: the whole name is in the text`).toBe(fullName);
+  expect(fit.title, `${label}: the title holds the whole name`).toBe(fullName);
+  expect(await page.locator(HEADER).ariaSnapshot(), `${label}: a screen reader gets the whole name`).toContain(fullName);
+}
+
 async function expectNameShows(page: Page, label: string, multiline: boolean, fullName = ''): Promise<void> {
   await expect(page.locator(NAME), `${label}: the name is visible`).toBeVisible();
   const { w, h, lh } = await page.locator(NAME).evaluate((e) => {
@@ -181,6 +212,9 @@ for (const width of [320, 390, 768, 769, 1024, 1280]) {
             await expect(page.locator(HEADER)).toHaveAttribute('aria-expanded', 'true');
           }
           await expectNameShows(page, `${width} ${state} ${longName.slice(0, 12)}`, width === 320 && longName === LONG_NAMES[0], longName);
+          if (width >= 900) {
+            await expectNameOnOneLine(page, `${width} ${state} ${longName.slice(0, 12)}`, longName);
+          }
           for (const part of [`${CONTAINER} .ln-chat-bar`, HEADER, `${HEADER} .ln-ai-label`]) {
             const b = await box(page, part);
             console.log(`SIZE ${width} ${state} long name: ${part} ${b.left}..${b.right}`);
@@ -265,7 +299,18 @@ for (const view of [{ width: 1280, height: 900 }, { width: 320, height: 640 }]) 
       }, [`${CONTAINER} .ln-chat-bar`, '[data-ai-overview] ol.ai-overview__source-list a'] as const);
       const bar = await box(page, `${CONTAINER} .ln-chat-bar`);
       console.log(`SIZE ${view.width} sources ${name.slice(0, 12)}: bar ${bar.left}..${bar.right} x ${bar.height}`);
-      expect(await meets(), 'as the page first shows').toEqual([]);
+      for (let i = 0; i < (await sources.count()); i++) {
+        // From the top of the page, focus the element before the link without scrolling, then Tab onto the link.
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await sources.nth(i).evaluate((a) => {
+          const tabbable = Array.from(document.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]'))
+            .filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length > 0);
+          tabbable[tabbable.indexOf(a as HTMLElement) - 1].focus({ preventScroll: true });
+        });
+        await page.keyboard.press('Tab');
+        await expect(sources.nth(i)).toBeFocused();
+        await expect.poll(meets, { message: `Tab onto Sources link ${i + 1} from the top of the page`, timeout: 2000 }).toEqual([]);
+      }
       for (let i = 0; i < (await sources.count()); i++) {
         await sources.nth(i).evaluate((a) => a.scrollIntoView({ block: 'end' }));
         expect(await meets(), `Sources link ${i + 1} at the window's bottom edge`).toEqual([]);

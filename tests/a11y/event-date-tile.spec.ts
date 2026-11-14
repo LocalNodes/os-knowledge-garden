@@ -45,8 +45,14 @@ test.describe('event date tile', () => {
       await expect(tile.locator('span')).toHaveText([...parts]);
       await expect(tile).toHaveAttribute('aria-hidden', 'true');
       await expect(tile.locator('a, button, [tabindex]')).toHaveCount(0);
-      // The stock date line stays, with its screen-reader label.
-      await expect(card(page, nid).getByText('Event date', { exact: false }).first()).toBeAttached();
+      // The stock date line stays, and a screen reader gets its label and the date.
+      const dateLine = card(page, nid)
+        .locator('span.sr-only')
+        .filter({ hasText: /^Event date\s*$/ })
+        .locator('..');
+      await expect(dateLine).toHaveCount(1);
+      await expect.poll(() => dateLine.ariaSnapshot()).toContain('Event date');
+      await expect.poll(() => dateLine.ariaSnapshot()).toMatch(new RegExp(`\\b${parts[1]}\\b`));
     }
     await context.close();
   });

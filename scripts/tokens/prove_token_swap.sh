@@ -94,6 +94,8 @@ step() {
     if [ "${STEP_SHOW_LOG:-}" = 1 ]; then sed 's/^/    /' "$log"; fi
   else
     echo "FAIL $label"
+    # The failing lines first: a long check (the contrast gate) ends with notes, so its tail alone can hide them.
+    grep -E '^[[:space:]]*(FAIL|ERROR|DIFF|not ok)\b' "$log" | sed 's/^[[:space:]]*/    /' | awk '!seen[$0]++' | head -n 20 || true
     tail -n 25 "$log" | sed 's/^/    /'
     FAILS=$((FAILS + 1))
   fi
@@ -142,7 +144,7 @@ const fixture = JSON.parse(fs.readFileSync(fixtureFile, 'utf8'));
 delete fixture.$description;
 const merged = merge(source, fixture);
 const count = (a, b) => (isObject(a) && isObject(b)
-  ? Object.keys({ ...a, ...b }).reduce((n, k) => n + count(a[k], b[k]), 0)
+  ? Object.keys({ ...a, ...b }).filter((k) => k !== '$description').reduce((n, k) => n + count(a[k], b[k]), 0)
   : (JSON.stringify(a) === JSON.stringify(b) ? 0 : 1));
 const changed = count(source, merged);
 if (changed === 0) {
@@ -154,7 +156,6 @@ if (changed === 0) {
 NODE
 )"
 echo "$TOKEN_EDIT_LINE"
-TOKEN_EDIT_COUNT="$(sed -E 's/^TOKEN-EDIT ([0-9]+).*/\1/' <<<"$TOKEN_EDIT_LINE")"
 
 step "generator writes every target from the swapped source" node "$W/scripts/tokens/build_tokens.mjs" --sibling "$N"
 
@@ -198,6 +199,9 @@ check_changes() { # check_changes <fresh3|nuxt> <dir> <leak prefix>
 }
 check_changes fresh3 "$W" ''
 check_changes nuxt "$N" 'nuxt:'
+# How many Nuxt files the swap rewrote. A known gap can only be judged closed when the swap reached the Nuxt copy:
+# a palette that changes only Drupal-side values (or none) leaves the Nuxt tests nothing new to fail on.
+NUXT_CHANGED_COUNT="$(git -C "$N" status --porcelain --untracked-files=all | grep -c . || true)"
 
 # --- 5: every check, against the swapped copies --------------------------------------------------
 
@@ -247,7 +251,7 @@ step "token test suite" token_suite
 # closes, so the list cannot rot; any other new failure is a NEW FAILURE. Recorded in .planning/WINDOWS.md (44).
 nuxt_tests_unchanged() {
   [ -s "$TMP/nuxt-after.json" ] || { echo "the Nuxt unit tests did not run after the swap"; tail -n 20 "$TMP/nuxt-after.log"; return 1; }
-  node "$W/scripts/tokens/lib/nuxt_gaps.mjs" "$TMP/nuxt-before.json" "$TMP/nuxt-after.json" "$TOKEN_EDIT_COUNT"
+  node "$W/scripts/tokens/lib/nuxt_gaps.mjs" "$TMP/nuxt-before.json" "$TMP/nuxt-after.json" "$NUXT_CHANGED_COUNT"
 }
 STEP_SHOW_LOG=1 step "Nuxt unit tests: no failure the swap introduced (failures already in the ref are unchanged)" nuxt_tests_unchanged
 

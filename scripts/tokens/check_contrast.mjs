@@ -109,7 +109,8 @@ try {
     const pass = meets(ratio, p.min);
     if (live.has(p.id)) {
       const e = live.get(p.id);
-      if (pass) {
+      // A paintedElsewhere entry is not stale when it passes: the colour measured is not the one painted.
+      if (pass && !e.paintedElsewhere) {
         stale++;
         console.log(`STALE ${p.id} now passes (${ratio.toFixed(2)} >= ${p.min}): remove it from EXCLUDED in scripts/tokens/pairings.mjs`);
       } else {

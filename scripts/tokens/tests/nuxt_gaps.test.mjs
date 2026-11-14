@@ -1,11 +1,12 @@
 /**
- * Tests for the Nuxt known-gap comparator (22.1-14, DES-01, WINDOWS 44).
+ * Tests for the Nuxt known-gap comparator.
  *
  * scripts/tokens/prove_token_swap.sh runs the Nuxt repo's unit tests before and after a palette
  * swap and hands both vitest JSON reports to scripts/tokens/lib/nuxt_gaps.mjs. This file feeds
  * the comparator synthetic reports in the shape vitest writes (testResults with name, status
  * and assertionResults; numPassedTests, numFailedTests, numTotalTests) and shows each rule
- * firing: GAP, STALE GAP, NEW FAILURE, a changed test count, and the no-edit case.
+ * firing: GAP, STALE GAP, NEW FAILURE, a changed test count, and a swap that changed no Nuxt file.
+ * The real list is empty, so the judge tests pass a gap entry of their own.
  *
  * Run: node --test scripts/tokens/tests/*.test.mjs
  */
@@ -48,19 +49,17 @@ const withMail = (status) => report([{ file: MAIL_FILE, tests: [[MAIL_FULL, stat
 
 const has = (lines, re) => lines.some((l) => re.test(l));
 
-test('the list holds one entry: the mail-copy test, WINDOWS 44, with its reason and the rule that closes it', () => {
-  assert.equal(KNOWN_NUXT_GAPS.length, 1);
-  const [gap] = KNOWN_NUXT_GAPS;
-  assert.equal(gap.test, MAIL_ENTRY, 'the entry the proof listed in 22.1-09');
-  assert.equal(gap.windows, 44);
-  assert.match(gap.reason, /literal|hand-written/i);
-  assert.match(gap.closes, /import/i, 'it closes with Phase 23\'s import');
-  assert.match(gap.closes, /link/i, 'and the re-pinned link');
-  assert.doesNotMatch(gap.closes, /generated file (exists|lands)\b/i, 'not when the generated file merely exists');
+/** A gap entry in the list's shape, so the judge rules can be shown while the real list is empty. */
+const GAPS = Object.freeze([
+  Object.freeze({ test: MAIL_ENTRY, windows: 44, reason: 'the test holds its own copy of the mail colours', closes: 'the test reads the generated values' }),
+]);
+
+test('the real list is empty: no Nuxt test holds its own copy of palette values now', () => {
+  assert.deepEqual(KNOWN_NUXT_GAPS, []);
 });
 
-test('unwired: the mail test passes before and fails after a real swap (3 edits): one GAP line, not bad', () => {
-  const { lines, bad } = judge(withMail('passed'), withMail('failed'), 3, KNOWN_NUXT_GAPS);
+test('unwired: the mail test passes before and fails after a real swap (3 Nuxt files changed): one GAP line, not bad', () => {
+  const { lines, bad } = judge(withMail('passed'), withMail('failed'), 3, GAPS);
   assert.equal(bad, false, lines.join('\n'));
   const gaps = lines.filter((l) => l.startsWith('GAP '));
   assert.equal(gaps.length, 1, lines.join('\n'));
@@ -69,13 +68,13 @@ test('unwired: the mail test passes before and fails after a real swap (3 edits)
 });
 
 test('the count lines are printed before and after', () => {
-  const { lines } = judge(withMail('passed'), withMail('failed'), 3, KNOWN_NUXT_GAPS);
+  const { lines } = judge(withMail('passed'), withMail('failed'), 3, GAPS);
   assert.ok(lines.includes('before the swap: 3 passed, 0 failed of 3'), lines.join('\n'));
   assert.ok(lines.includes('after the swap:  2 passed, 1 failed of 3'), lines.join('\n'));
 });
 
 test('wired and re-pinned: the mail test passes before and after a real swap: STALE GAP naming the entry, bad', () => {
-  const { lines, bad } = judge(withMail('passed'), withMail('passed'), 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(withMail('passed'), withMail('passed'), 3, GAPS);
   assert.equal(bad, true);
   const stale = lines.filter((l) => l.startsWith('STALE GAP '));
   assert.equal(stale.length, 1, lines.join('\n'));
@@ -85,8 +84,8 @@ test('wired and re-pinned: the mail test passes before and after a real swap: ST
   assert.equal(has(lines, /^GAP /), false);
 });
 
-test('palette B (0 edits): the mail test passes after, so there is no STALE GAP and the run is not bad', () => {
-  const { lines, bad } = judge(withMail('passed'), withMail('passed'), 0, KNOWN_NUXT_GAPS);
+test('a swap that changed no Nuxt file: the mail test passes after, so there is no STALE GAP and the run is not bad', () => {
+  const { lines, bad } = judge(withMail('passed'), withMail('passed'), 0, GAPS);
   assert.equal(bad, false, lines.join('\n'));
   assert.equal(has(lines, /STALE GAP|^GAP |NEW FAILURE/), false);
 });
@@ -96,7 +95,7 @@ test('a test not on the list that fails only after the swap is a NEW FAILURE nam
     { file: MAIL_FILE, tests: [[MAIL_FULL, 'failed']] },
     { file: 'tests/unit/billing.test.ts', tests: [['billing mail sends the invite', 'failed'], ['checkout creates a session', 'passed']] },
   ]);
-  const { lines, bad } = judge(withMail('passed'), after, 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(withMail('passed'), after, 3, GAPS);
   assert.equal(bad, true);
   assert.ok(lines.includes('NEW FAILURE after the swap: tests/unit/billing.test.ts :: billing mail sends the invite'), lines.join('\n'));
   assert.equal(lines.filter((l) => l.startsWith('GAP ')).length, 1, 'the real gap is still named as a GAP');
@@ -104,7 +103,7 @@ test('a test not on the list that fails only after the swap is a NEW FAILURE nam
 
 test('a failure already in the ref before the swap is not new', () => {
   const before = report([{ file: 'tests/unit/billing.test.ts', tests: [['billing mail sends the invite', 'failed'], ['checkout creates a session', 'passed']] }]);
-  const { lines, bad } = judge(before, before, 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(before, before, 3, GAPS);
   assert.equal(bad, false, lines.join('\n'));
   assert.equal(has(lines, /NEW FAILURE/), false);
 });
@@ -115,26 +114,26 @@ test('a test file that fails to load only after the swap is a NEW FAILURE', () =
     { file: 'tests/unit/broken.test.ts', status: 'failed', tests: [] },
     { file: 'tests/unit/billing.test.ts', tests: otherTests },
   ]);
-  const { lines, bad } = judge(withMail('passed'), after, 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(withMail('passed'), after, 3, GAPS);
   assert.equal(bad, true);
   assert.ok(lines.includes('NEW FAILURE after the swap: tests/unit/broken.test.ts (file failed to load)'), lines.join('\n'));
 });
 
 test('a changed total test count is bad, even when nothing else differs', () => {
   const after = report([{ file: MAIL_FILE, tests: [[MAIL_FULL, 'passed']] }, { file: 'tests/unit/billing.test.ts', tests: [otherTests[0]] }]);
-  const { bad } = judge(withMail('passed'), after, 0, KNOWN_NUXT_GAPS);
+  const { bad } = judge(withMail('passed'), after, 0, GAPS);
   assert.equal(bad, true);
 });
 
-test('the gap test absent from the ref (origin/main today): neither GAP nor STALE GAP, not bad', () => {
+test('the gap test absent from the ref: neither GAP nor STALE GAP, not bad', () => {
   const noMail = report([{ file: 'tests/unit/billing.test.ts', tests: otherTests }]);
-  const { lines, bad } = judge(noMail, noMail, 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(noMail, noMail, 3, GAPS);
   assert.equal(bad, false, lines.join('\n'));
   assert.equal(has(lines, /STALE GAP|^GAP /), false);
 });
 
 test('a gap whose test failed before the swap does not become a STALE GAP when it still fails after', () => {
-  const { lines, bad } = judge(withMail('failed'), withMail('failed'), 3, KNOWN_NUXT_GAPS);
+  const { lines, bad } = judge(withMail('failed'), withMail('failed'), 3, GAPS);
   assert.equal(bad, false, lines.join('\n'));
   assert.equal(has(lines, /STALE GAP|^GAP /), false);
 });
@@ -147,28 +146,22 @@ test('with an empty list the same mail failure is a NEW FAILURE: the deleted ent
 
 /* ---- the CLI the proof calls ---- */
 
-function cli(before, after, editCount) {
+function cli(before, after, nuxtChangedCount) {
   const dir = testTmpDir('gaps');
   writeFileSync(join(dir, 'before.json'), JSON.stringify(before));
   writeFileSync(join(dir, 'after.json'), JSON.stringify(after));
   const args = [script, join(dir, 'before.json'), join(dir, 'after.json')];
-  if (editCount !== undefined) args.push(String(editCount));
+  if (nuxtChangedCount !== undefined) args.push(String(nuxtChangedCount));
   const r = spawnSync(process.execPath, args, { encoding: 'utf8' });
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
-test('the CLI prints the same lines as judge() and exits 0 on a GAP', () => {
-  const want = judge(withMail('passed'), withMail('failed'), 3, KNOWN_NUXT_GAPS).lines.join('\n');
+test('the CLI uses the real list: a mail failure after a swap is a NEW FAILURE (exit 1), printed as judge() prints it', () => {
+  const want = judge(withMail('passed'), withMail('failed'), 3).lines.join('\n');
   const r = cli(withMail('passed'), withMail('failed'), 3);
-  assert.equal(r.code, 0, r.out);
-  assert.equal(r.out.trimEnd(), want);
-  assert.match(r.out, /^GAP tests\/unit\/mail-copy\.test\.ts/m);
-});
-
-test('the CLI exits 1 and prints STALE GAP when the gap has closed', () => {
-  const r = cli(withMail('passed'), withMail('passed'), 3);
   assert.equal(r.code, 1, r.out);
-  assert.match(r.out, /^STALE GAP /m);
+  assert.equal(r.out.trimEnd(), want);
+  assert.match(r.out, /^NEW FAILURE after the swap: tests\/unit\/mail-copy\.test\.ts/m);
 });
 
 test('the CLI exits 1 on a NEW FAILURE and 0 when nothing differs', () => {
@@ -176,7 +169,7 @@ test('the CLI exits 1 on a NEW FAILURE and 0 when nothing differs', () => {
   const bad = cli(withMail('passed'), after, 0);
   assert.equal(bad.code, 1, bad.out);
   assert.match(bad.out, /^NEW FAILURE after the swap: tests\/unit\/billing\.test\.ts/m);
-  const same = cli(withMail('passed'), withMail('passed'), 0);
+  const same = cli(withMail('passed'), withMail('passed'), 3);
   assert.equal(same.code, 0, same.out);
 });
 

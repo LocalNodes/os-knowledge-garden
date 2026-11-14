@@ -94,7 +94,7 @@ test('the checker passes on the repo: no FAIL, no UNCOVERED, no STALE, exit 0, a
   assert.equal(lines(r.out, 'STALE ').length, 0, r.out);
   assert.equal(lines(r.out, 'TRIPWIRE ').length, 0, r.out);
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /RESULT: PASS \(\d+ OK, 3 EXCLUDED\)/);
+  assert.match(r.out, /RESULT: PASS \(\d+ OK, 4 EXCLUDED\)/);
 });
 
 test('stock socialblue fails: exit 1, FAIL lines, RESULT: FAIL', () => {
@@ -436,6 +436,12 @@ const FOCUS_IDS = [
 ];
 const DECORATIVE_REASON = 'decorative hover affordance; the control keeps its 3:1 focus ring and text';
 const lineFor = (out, id) => out.split('\n').find((l) => l.split(' ')[1] === id);
+// The one exclusion flagged paintedElsewhere: the global focus ring measured on the dark top bar for the open search
+// form, which the browser paints with focus-on-dark instead (its twin). Every exclusion the gate prints.
+const TAKE_OVER_ID = 'P13.app-look.focus.drupal-css.--ln-color-focus.on.socialblue.navbar-bg';
+const TAKE_OVER_TWIN = 'P5.focus-on-dark.on.socialblue.navbar-bg';
+const EXCLUDED_IDS = [...FILL_IDS, TAKE_OVER_ID];
+const sorted = (xs) => [...xs].sort();
 
 for (const id of ACCENT_IDS) {
   test(`Group A: ${id} passes because ln-overrides.css re-colours the accent-as-text rules`, () => {
@@ -459,9 +465,10 @@ test(`Group A: ${NUXT_SECONDARY_ID} passes as the text role on the secondary fil
   assert.ok(Number(l.split(' ')[2]) >= 4.5, l);
 });
 
-test('Group A guard: the accent pairs measure the override, so with no override file they FAIL on the stock accent', () => {
+test('Group A guard: the accent pairs measure the override, so with no override rule they FAIL on the stock accent', () => {
+  // Only the global focus ring stays: the take-over ring's exclusion rests on it (paintedElsewhere, below).
   const empty = join(sandbox(), 'none.css');
-  writeFileSync(empty, '/* nothing */\n');
+  writeFileSync(empty, ':focus-visible { outline: 2px solid var(--ln-color-focus) !important; outline-offset: 2px !important; }\n');
   const r = run(['--overrides', empty]);
   assert.equal(r.code, 1, r.out);
   for (const id of ACCENT_IDS) {
@@ -536,7 +543,7 @@ test('Group B: the two dark pairs that used to be excluded are measured and OK a
 test('Group B: the exclusion list is frozen, has an id and a reason on every entry, and an id that is no pairing is an error', async () => {
   const { EXCLUDED, declaredPairings, assertExclusionsKnown } = await import('../pairings.mjs');
   assert.ok(Object.isFrozen(EXCLUDED));
-  assert.deepEqual(EXCLUDED.map((e) => e.id), FILL_IDS);
+  assert.deepEqual(EXCLUDED.map((e) => e.id), EXCLUDED_IDS);
   for (const e of EXCLUDED) assert.ok(typeof e.reason === 'string' && e.reason.length > 20, `${e.id} has a reason`);
   assert.throws(() => assertExclusionsKnown([{ id: 'P9.nuxt.dark.--ui-nothing.on.nuxt.dark.--ui-bg', reason: 'x'.repeat(30) }], []), /no such pairing/);
   assert.throws(() => assertExclusionsKnown([{ id: 'a', reason: '' }], [{ id: 'a' }]), /reason/);
@@ -546,7 +553,7 @@ test('Group B: the exclusion list is frozen, has an id and a reason on every ent
 test('Group B tripwire: the token-source flag, when it says dark mode is rendered, still fails the gate; the decorative fills keep their exclusion', () => {
   const r = run(['--palette', overlay('dark-on.json', { targets: { nuxt: { 'dark-mode-rendered': { $value: true } } } })]);
   assert.equal(r.code, 1, r.out);
-  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'the decorative fills do not depend on dark mode');
+  assert.deepEqual(sorted(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1])), sorted(EXCLUDED_IDS), 'the decorative fills and the take-over ring do not depend on dark mode');
   assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]).filter((id) => DARK_IDS.includes(id)), []);
   assert.ok(lines(r.out, 'TRIPWIRE ').some((l) => l.includes('dark-mode-rendered')), r.out);
 });
@@ -570,7 +577,7 @@ test('Group B tripwire: a Nuxt page without colorMode light renders in the defau
   const r = run(['--nuxt', dir]);
   assert.equal(r.code, 1, r.out);
   assert.ok(lines(r.out, 'TRIPWIRE ').some((l) => l.includes('app/pages/new-page.vue')), r.out);
-  assert.deepEqual(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1]), FILL_IDS, 'the decorative fills keep their exclusion');
+  assert.deepEqual(sorted(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1])), sorted(EXCLUDED_IDS), 'the decorative fills and the take-over ring keep their exclusion');
   assert.deepEqual(lines(r.out, 'FAIL ').map((l) => l.split(' ')[1]), [], 'every dark pair passes, so only the TRIPWIRE line fails the run');
 });
 
@@ -598,6 +605,53 @@ test('Group B: an exclusion that no longer fails is STALE and fails the run, so 
   assert.match(lines(r.out, 'STALE ')[0], /remove it from EXCLUDED/);
 });
 
+// An exclusion flagged paintedElsewhere says the gate measures a colour the browser does not paint for this pair; the
+// painted colour is its focus twin, which must exist, be a focus pair and pass. The flag only stops the STALE rule.
+
+test('paintedElsewhere: a flagged exclusion on a pair that passes prints EXCLUDED, not STALE, with its passing twin', () => {
+  const r = run([]);
+  assert.equal(r.code, 0, r.out);
+  const l = lineFor(r.out, TAKE_OVER_ID);
+  assert.ok(l?.startsWith(`EXCLUDED ${TAKE_OVER_ID} `), l);
+  assert.match(l, new RegExp(` \\| focus ring ${TAKE_OVER_TWIN.replace(/\./g, '\\.')} \\d+\\.\\d\\d >= 3$`));
+  assert.equal(lines(r.out, 'STALE ').length, 0, r.out);
+  assert.ok(lineFor(r.out, TAKE_OVER_TWIN)?.startsWith('OK '), 'the twin is measured and passes');
+});
+
+test('paintedElsewhere: a flagged exclusion with no focus twin is an error, and the gate exits 1', async () => {
+  const { assertExclusionsKnown } = await import('../pairings.mjs');
+  const pair = { id: TAKE_OVER_ID, kind: 'focus' };
+  const twin = { id: TAKE_OVER_TWIN, kind: 'focus' };
+  const reason = 'x'.repeat(30);
+  assert.doesNotThrow(() => assertExclusionsKnown([{ id: TAKE_OVER_ID, reason, paintedElsewhere: true, focusTwin: TAKE_OVER_TWIN }], [pair, twin]));
+  assert.throws(() => assertExclusionsKnown([{ id: TAKE_OVER_ID, reason, paintedElsewhere: true, voidedBy: 'dark-mode' }], [pair, twin]), /paintedElsewhere.*focus twin/);
+  assert.throws(() => assertExclusionsKnown([{ id: TAKE_OVER_ID, reason, paintedElsewhere: true, focusTwin: 'P5.no-such-ring' }], [pair, twin]), /is missing/);
+  assert.throws(() => assertExclusionsKnown([{ id: 'P13.gone', reason, paintedElsewhere: true, focusTwin: TAKE_OVER_TWIN }], [pair, twin]), /no such pairing/);
+});
+
+test('paintedElsewhere: when the pair is no longer emitted (no global ring overrides the take-over ring), the entry is unknown and the gate exits 1', () => {
+  const empty = join(sandbox(), 'none.css');
+  writeFileSync(empty, '/* nothing */\n');
+  const r = run(['--overrides', empty]);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, new RegExp(`^ERROR exclusion ${TAKE_OVER_ID.replace(/\./g, '\\.')}: no such pairing`, 'm'));
+});
+
+test('paintedElsewhere: when the twin fails, the flagged exclusion is void, the twin FAILs and the gate exits 1', () => {
+  const r = run(['--palette', overlay('on-dark-weak.json', { semantic: { 'focus-on-dark': { $value: '#444444' } } })]);
+  assert.equal(r.code, 1, r.out);
+  assert.ok(lineFor(r.out, TAKE_OVER_TWIN)?.startsWith('FAIL '), r.out);
+  assert.ok(!lineFor(r.out, TAKE_OVER_ID)?.startsWith('EXCLUDED '), 'the exclusion rests on the twin, so it is void');
+});
+
+test('paintedElsewhere: exactly one exclusion is flagged, the take-over ring, with the painted ring as its twin', async () => {
+  const { EXCLUDED } = await import('../pairings.mjs');
+  const flagged = EXCLUDED.filter((e) => e.paintedElsewhere);
+  assert.deepEqual(flagged.map((e) => [e.id, e.focusTwin]), [[TAKE_OVER_ID, TAKE_OVER_TWIN]]);
+  assert.match(flagged[0].reason, /focus-on-dark/);
+  assert.match(flagged[0].reason, /tests\/a11y\/search-pill\.spec\.ts/);
+});
+
 test('stock socialblue still fails with the exclusions and overrides in place (the floor is unchanged: at least 10)', () => {
   const r = run(['--palette', stockFixture]);
   assert.equal(r.code, 1, r.out);
@@ -622,7 +676,7 @@ test('Q3: the three amber fills are declared as non-text pairs at 3:1 and are EX
     assert.ok(l.endsWith(` | focus ring ${FOCUS_IDS[i]} ${focusRatio.get(FOCUS_IDS[i]).toFixed(2)} >= 3`), `the line carries the measured focus ring: ${l}`);
     assert.ok(!r.out.split('\n').some((x) => (x.startsWith('OK ') || x.startsWith('FAIL ')) && x.split(' ')[1] === id), `${id} is not also OK or FAIL`);
   });
-  assert.equal(lines(r.out, 'EXCLUDED ').length, 3);
+  assert.deepEqual(sorted(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1])), sorted(EXCLUDED_IDS));
 });
 
 test('Q3: each of the three controls has a focus pair, the colour that applies to it on the background it sits on, and it is OK at 3:1 or better', () => {
@@ -671,7 +725,7 @@ test('Q3: each decorative exclusion names its focus twin, and nothing else is ex
     assert.equal(e.focusTwin, FOCUS_IDS[i]);
     assert.ok(Object.isFrozen(e));
   });
-  assert.equal(byId.size, FILL_IDS.length);
+  assert.equal(byId.size, FILL_IDS.length + 1, 'besides the three fills, only the flagged take-over ring');
 });
 
 test('Q3 guard: an exclusion with a focus twin fails the gate when the twin is missing or is not a focus pair', async () => {
@@ -756,7 +810,7 @@ test('22.1-17: the header name, the bar text and the bar rings are declared P13 
     assert.ok(l.startsWith('OK '), l);
   }
   assert.ok(lines(r.out, 'OK P13.').length >= 5);
-  assert.equal(lines(r.out, 'EXCLUDED ').length, 3, 'no exclusion was added (Q12)');
+  assert.deepEqual(sorted(lines(r.out, 'EXCLUDED ').map((l) => l.split(' ')[1])), sorted(EXCLUDED_IDS), 'no chat pair is excluded (Q12)');
 });
 
 test('22.1-17: the bar ring pair names both bar controls, and the header text sits on --ln-color-text', async () => {
@@ -848,7 +902,7 @@ test('22.1-17: the gate prints no UNMAPPED and no STALE-PARTNER on the repo, and
   assert.equal(lines(r.out, 'STALE-PARTNER ').length, 0, r.out);
   assert.ok(lines(r.out, 'OK ').length > 216, 'every declaration of the four stylesheets adds pairs');
   assert.ok(lines(r.out, 'DECORATIVE ').length >= 5, 'the divider lines print DECORATIVE');
-  assert.match(r.out, /RESULT: PASS \(\d+ OK, 3 EXCLUDED\)/);
+  assert.match(r.out, /RESULT: PASS \(\d+ OK, 4 EXCLUDED\)/);
 });
 
 test('22.1-17 guard: a colour rule that no partner names is UNMAPPED, the line says where to name it, and the run FAILs', () => {
