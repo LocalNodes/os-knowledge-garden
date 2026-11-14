@@ -181,6 +181,28 @@ export const PARTNERS = {
       ...text(['own'], 'the tile rule sets its text colour (surface) and its dark fill (text-strong) together; the weekday, day and month spans inherit the text colour'),
       ...fillOf({ under: ['surface'] }, 'the weekday, day and month are drawn on the tile fill'),
     },
+    // The search pill in the top bar (block--system-menu-block--main--localnodes--sky.html.twig). socialblue gives
+    // .navbar__open-search-block the navbar-bg fill, so the pill's label, icon and edge sit on the dark bar.
+    '.socialblue--sky .navbar__open-search-block.ln-search-pill': {
+      ...text(['targets.socialblue.navbar-bg'], "the label and the icon sit on the pill's fill, which socialblue paints navbar-bg like the bar around it"),
+      ...border(['targets.socialblue.navbar-bg'], 'the pill edge is drawn between its navbar-bg fill and the navbar-bg bar'),
+    },
+    '.socialblue--sky .ln-search-pill:hover': border(['targets.socialblue.navbar-bg'], 'a hovered pill edge is still on the dark bar'),
+    '.socialblue--sky .ln-search-pill:focus': border(['targets.socialblue.navbar-bg'], 'a focused pill edge is still on the dark bar'),
+    // The open search form: Open Social scales the pill's navbar-bg fill up to cover the page, and the form floats on it.
+    '.socialblue--sky .main-container .search-take-over .form-text': {
+      ...text(['targets.socialblue.navbar-bg'], 'the field is transparent; the typed words sit on the scaled-up navbar-bg fill of the search link'),
+      ...border(['targets.socialblue.navbar-bg'], 'the line under the field is on the same navbar-bg cover'),
+    },
+    '.socialblue--sky .main-container .search-take-over .form-text:focus': {
+      ...text(['targets.socialblue.navbar-bg'], 'a focused field is still transparent on the navbar-bg cover'),
+      ...border(['targets.socialblue.navbar-bg'], 'the line under a focused field is on the navbar-bg cover'),
+    },
+    '.socialblue--sky .search-take-over :focus-visible': ring(
+      ['targets.socialblue.navbar-bg'],
+      ['targets.socialblue.navbar-bg'],
+      'the field, the search button and the close button sit on the navbar-bg cover, and their ring is drawn on it too',
+    ),
     // Card headings: socialblue's .card is white (surface); its edge is the decorative divider.
     '.socialblue--sky .teaser--stream': fillOf({ under: ['text', 'text-strong', 'text-muted', 'link'] }, 'a stream teaser body holds the title, the tag, the meta badges and the read-more link on its own white fill'),
     '.socialblue--sky .teaser--stream .teaser__image': fillOf({ under: ['text-muted'] }, 'the picture column behind a teaser picture; with no picture it is hidden (same stylesheet)'),

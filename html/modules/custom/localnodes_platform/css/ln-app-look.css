@@ -1,10 +1,10 @@
 /**
  * The app look (Day): neutral surfaces, hairline cards, teal only on the one
  * main action and the active state. It restyles Open Social's own markup and
- * replaces no template. Loads after ln-overrides.css (theme group, weight 902;
- * see localnodes_platform_css_alter()). Colours come only from the --ln-*
- * custom properties in ln-tokens.css, which the contrast gate measures through
- * scripts/tokens/lib/stylesheet_pairs.mjs.
+ * the few templates this module copies from it. Loads after ln-overrides.css
+ * (theme group, weight 902; see localnodes_platform_css_alter()). Colours
+ * come only from the --ln-* custom properties in ln-tokens.css, which the
+ * contrast gate measures through scripts/tokens/lib/stylesheet_pairs.mjs.
  *
  * Where it applies: on purpose, every page the member theme (socialblue)
  * renders, sign-in and its other forms included. The app look is the look of
@@ -328,4 +328,89 @@ body {
 .socialblue--sky .ln-event-date__day {
   font-size: 22px;
   font-weight: 700;
+}
+
+/* The search pill in the top bar (the main menu block's template): the round
+   search icon becomes a pill that says what it does. It keeps the icon's
+   class, so Open Social's script still opens the full-screen search form on
+   click, and that form's dark backdrop is still this link, scaled up from its
+   own centre with its navbar fill. Open Social hides the control below 900px,
+   where the search field is in the opened menu instead. */
+@media (min-width: 900px) {
+  .socialblue--sky .navbar__open-search-control.ln-search-pill-control {
+    display: flex;
+    align-items: center;
+    width: auto;
+    padding: 0 var(--ln-space-sm);
+  }
+
+  .socialblue--sky .navbar__open-search-block.ln-search-pill {
+    display: flex;
+    align-items: center;
+    gap: var(--ln-space-sm);
+    width: auto;
+    height: 36px;
+    padding: 0 14px 0 10px;
+    border: 1px solid var(--ln-color-border-control);
+    border-radius: var(--ln-radius-pill);
+    color: var(--ln-color-on-primary);
+    font-size: 14px;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .socialblue--sky .ln-search-pill:hover,
+  .socialblue--sky .ln-search-pill:focus {
+    border-color: var(--ln-color-on-primary);
+  }
+
+  .socialblue--sky .ln-search-pill .navbar-nav__icon--search {
+    position: static;
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+
+  /* With the pill's longer label a long community name would push a member's
+     account icons onto a second row just above 900px. The name gives way
+     first, as it does on a phone: a shorter cap, still cut with an ellipsis. */
+  @media (max-width: 1023px) {
+    .socialblue--sky .navbar-brand .ln-site-name {
+      max-width: 200px;
+    }
+  }
+
+  /* While the search form is open the pill is only its backdrop: no edge,
+     no label. Socialblue scales it up 100 times to cover the window, so it
+     takes the stock circle's 50px height back; at 36px the cover stops short
+     of the bottom of a 2160px-tall window. */
+  .socialblue--sky.mode-search .ln-search-pill {
+    height: 50px;
+    border-color: transparent;
+  }
+
+  .socialblue--sky.mode-search .ln-search-pill__label {
+    opacity: 0;
+  }
+
+  /* The open search form's field sits on that dark backdrop. The field rule
+     above (".main-container .form-control") would give it the light raised
+     fill and dark typed text, so here it keeps Open Social's open line: no
+     fill, white text, a white underline. */
+  .socialblue--sky .main-container .search-take-over .form-text,
+  .socialblue--sky .main-container .search-take-over .form-text:focus {
+    background-color: transparent;
+    color: var(--ln-color-on-primary);
+    border-width: 0 0 2px;
+    border-color: var(--ln-color-on-primary);
+    border-radius: 0;
+  }
+
+  /* The ring for dark fills on everything in the open search form (the field,
+     the search button and the close button). !important because the global
+     ring it replaces is. */
+  .socialblue--sky .search-take-over :focus-visible {
+    outline-color: var(--ln-color-focus-on-dark) !important;
+  }
 }

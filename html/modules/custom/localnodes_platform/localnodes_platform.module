@@ -247,6 +247,8 @@ function localnodes_platform_mailer_user__status_activated_build(EmailInterface 
  *   description and buttons, see localnodes_platform_group_view().
  * - node__event__teaser__localnodes__sky: socialblue's event card with the
  *   date tile, see localnodes_platform_theme_suggestions_node_alter().
+ * - block__system_menu_block__main__localnodes__sky: the main menu block with
+ *   the search pill, see localnodes_platform_theme_suggestions_block_alter().
  */
 function localnodes_platform_theme($existing, $type, $theme, $path): array {
   return [
@@ -269,7 +271,12 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'block--system-branding-block--localnodes',
       'path' => $path . '/templates/block',
     ],
-    // 23-04: the organizer welcome mail's body, printed inside the wrapper.
+    'block__system_menu_block__main__localnodes__sky' => [
+      'base hook' => 'block',
+      'template' => 'block--system-menu-block--main--localnodes--sky',
+      'path' => $path . '/templates/block',
+    ],
+    // The organizer welcome mail's body, printed inside the wrapper.
     'localnodes_organizer_welcome' => [
       'variables' => [
         'reset_url' => '',
@@ -279,7 +286,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'localnodes-organizer-welcome',
       'path' => $path . '/templates/email',
     ],
-    // 23-13: the organizer guide at /guide (GuideController).
+    // The organizer guide at /guide (GuideController).
     'localnodes_guide' => [
       'variables' => [
         'show_fund' => FALSE,
@@ -296,7 +303,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'localnodes-guide',
       'path' => $path . '/templates',
     ],
-    // 23-26: the site terms at /terms (SiteTermsController).
+    // The site terms at /terms (SiteTermsController).
     'localnodes_site_terms' => [
       'variables' => [
         'site_name' => '',
@@ -306,7 +313,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'localnodes-site-terms',
       'path' => $path . '/templates',
     ],
-    // 22.1-15: the "Hacked or Phished?" help page (SafetyHelpController).
+    // The "Hacked or Phished?" help page (SafetyHelpController).
     'localnodes_safety_help' => [
       'variables' => [
         'seal_911_url' => '',
@@ -336,10 +343,10 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'localnodes-footer',
       'path' => $path . '/templates/footer',
     ],
-    // 22.1 quick task: socialbase's member teaser with its two aria-hidden
-    // profile links out of the Tab order. socialblue appends "__sky" after
-    // every suggestion when its style is sky, so the sky copy (socialblue's
-    // own, extending this teaser) is registered too.
+    // socialbase's member teaser with its two aria-hidden profile links out of
+    // the Tab order. socialblue appends "__sky" after every suggestion when
+    // its style is sky, so the sky copy (socialblue's own, extending this
+    // teaser) is registered too.
     'profile__profile__teaser__localnodes' => [
       'base hook' => 'profile',
       'template' => 'profile--profile--teaser--localnodes',
@@ -380,12 +387,41 @@ function localnodes_platform_theme_suggestions_email_alter(array &$suggestions, 
  *
  * The site branding block (the header) gets the name-as-text template. Appended
  * last, so it outranks socialbase's block--system-branding-block.html.twig,
- * which prints only the Open Social logo image. No other block is touched.
+ * which prints only the Open Social logo image.
+ *
+ * The main menu block gets the search pill: socialblue suggests it as
+ * block__system_menu_block__main__localnodes__sky, the only copy registered,
+ * so another socialblue style keeps the round search icon. No other block is
+ * touched.
  */
 function localnodes_platform_theme_suggestions_block_alter(array &$suggestions, array $variables): void {
-  if (($variables['elements']['#plugin_id'] ?? '') === 'system_branding_block') {
+  $plugin_id = $variables['elements']['#plugin_id'] ?? '';
+  if ($plugin_id === 'system_branding_block') {
     $suggestions[] = 'block__system_branding_block__localnodes';
   }
+  elseif ($plugin_id === 'system_menu_block:main') {
+    $suggestions[] = 'block__system_menu_block__main__localnodes';
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for block.
+ *
+ * The search pill's label in the main menu block. A search there also brings
+ * an AI answer to whoever has "use ai overview" (signed-in members, not
+ * anonymous visitors), so only they read "Search or ask a question"; everyone
+ * else reads "Search". The label varies by permissions, so it carries that
+ * cache context.
+ */
+function localnodes_platform_preprocess_block(array &$variables): void {
+  if (($variables['elements']['#plugin_id'] ?? '') !== 'system_menu_block:main') {
+    return;
+  }
+  $may_ask = \Drupal::currentUser()->hasPermission('use ai overview');
+  $variables['ln_search_label'] = [
+    '#markup' => $may_ask ? t('Search or ask a question') : t('Search'),
+    '#cache' => ['contexts' => ['user.permissions']],
+  ];
 }
 
 /**
