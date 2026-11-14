@@ -7,8 +7,11 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Access\AccessManagerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\Schema;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\KeyValueStore\MemoryStorage;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -23,9 +26,11 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemList;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_platform\FirstLanding;
 use Drupal\localnodes_platform\Mail\GroupNoticeCleanup;
 use Drupal\message\Entity\Message;
 use Drupal\Tests\UnitTestCase;
+use Drupal\user\UserDataInterface;
 use Drupal\user\UserInterface;
 
 /**
@@ -194,6 +199,7 @@ final class GroupNoticeCleanupTest extends UnitTestCase {
     \Drupal::getContainer()->set('logger.factory', $factory);
     localnodes_platform_group_content_predelete($this->membership());
     $this->assertSame(self::NOW, $this->departures->get('7:5'));
+    $this->assertSame([[FirstLanding::MODULE, 7, FirstLanding::LEFT, [5]]], $this->userDataWrites, 'The departure is still recorded for the first-sign-in join.');
   }
 
   public function testNoActivityModuleDoesNotQueryAnyTables(): void {
@@ -315,10 +321,28 @@ final class GroupNoticeCleanupTest extends UnitTestCase {
     return $time;
   }
 
+  /**
+   * What the first-sign-in join's user data store was asked to write.
+   */
+  private array $userDataWrites = [];
+
   private function installHookContainer(?GroupNoticeCleanup $cleanup = NULL): void {
     require_once $this->root . '/modules/custom/localnodes_platform/localnodes_platform.module';
     $container = new ContainerBuilder();
     $container->set('localnodes_platform.group_notice_cleanup', $cleanup ?? $this->cleanup);
+    $userData = $this->createMock(UserDataInterface::class);
+    $userData->method('set')->willReturnCallback(function (...$args): void {
+      $this->userDataWrites[] = $args;
+    });
+    $container->set('localnodes_platform.first_landing', new FirstLanding(
+      $this->createMock(StateInterface::class),
+      $userData,
+      $this->createMock(EntityTypeManagerInterface::class),
+      $this->createMock(ConfigFactoryInterface::class),
+      $this->createMock(LoggerChannelFactoryInterface::class),
+      $this->createMock(TimeInterface::class),
+      $this->createMock(AccessManagerInterface::class),
+    ));
     \Drupal::setContainer($container);
   }
 

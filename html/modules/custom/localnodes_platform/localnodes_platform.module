@@ -12,6 +12,8 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_platform\GroupTour;
 use Drupal\localnodes_platform\Form\TermsConsent;
 use Drupal\localnodes_platform\InviteLanding;
 use Drupal\localnodes_platform\Mail\ReservedRecipientFilter;
@@ -308,6 +310,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'variables' => [
         'help_address' => '',
         'safety_help_url' => '',
+        'tour_url' => NULL,
       ],
       'template' => 'localnodes-get-help',
       'path' => $path . '/templates',
@@ -506,6 +509,9 @@ function localnodes_platform_modules_installed(array $modules, $is_syncing): voi
 
 /**
  * Implements hook_group_content_predelete().
+ *
+ * When a membership ends: clears the member's waiting group notices, and
+ * notes the departure for the first-sign-in join.
  */
 function localnodes_platform_group_content_predelete(\Drupal\group\Entity\GroupRelationshipInterface $relationship): void {
   if ($relationship->getPluginId() === 'group_membership') {
@@ -519,17 +525,32 @@ function localnodes_platform_group_content_predelete(\Drupal\group\Entity\GroupR
         '@code' => $exception->getCode(),
       ]);
     }
+    // Someone who leaves or is removed is never joined back at a first
+    // sign-in (see FirstLanding).
+    try {
+      \Drupal::service('localnodes_platform.first_landing')->recordDeparture((int) $relationship->getEntityId(), (int) $relationship->getGroupId());
+    }
+    catch (\Throwable $exception) {
+      \Drupal::logger('localnodes_platform')->warning('Recording a group departure failed (@class, code @code).', [
+        '@class' => get_class($exception),
+        '@code' => $exception->getCode(),
+      ]);
+    }
   }
 }
 
 /**
  * Implements hook_user_login().
  *
+ * Joins a new member to the community-wide group and, on a sign-in that ends
+ * in a page redirect, sets where they land (see InviteLanding).
+ *
  * Records how this session signed in (see SignInMethod), so that screens
  * which need the account holder, not only their inbox, can tell.
  */
 function localnodes_platform_user_login(UserInterface $account): void {
   $request = \Drupal::request();
+  \Drupal::service('localnodes_platform.invite_landing')->afterSignIn($account, $request, \Drupal::routeMatch()->getRouteName());
   if (!$request->hasSession()) {
     return;
   }
@@ -613,4 +634,32 @@ function localnodes_platform_views_plugins_filter_alter(array &$plugins): void {
   if (isset($plugins['activity_filter_personalised_homepage'])) {
     $plugins['activity_filter_personalised_homepage']['class'] = \Drupal\localnodes_platform\Plugin\views\filter\HouseActivityHomepageFilter::class;
   }
+}
+
+/**
+ * Implements hook_library_info_alter().
+ *
+ * Core's tour scrolls to each tip with a smooth animation, set in its
+ * script settings; our small script before it switches that off for people
+ * who ask for reduced motion.
+ */
+function localnodes_platform_library_info_alter(array &$libraries, string $extension): void {
+  if ($extension === 'tour' && isset($libraries['tour'])) {
+    $libraries['tour']['dependencies'][] = 'localnodes_platform/tour_reduced_motion';
+  }
+}
+
+/**
+ * Implements hook_tour_tips_alter().
+ *
+ * Fills the group tour's tips for the community-wide group, and empties them
+ * on every other group's page (see GroupTour). The page already carries the
+ * group's cache tag, so a renamed group shows its new name here too.
+ */
+function localnodes_platform_tour_tips_alter(array &$tour_tips, EntityInterface $entity): void {
+  if ($entity->id() !== GroupTour::TOUR_ID) {
+    return;
+  }
+  $group = \Drupal::routeMatch()->getParameter('group');
+  \Drupal::service('localnodes_platform.group_tour')->alterTips($tour_tips, $group instanceof GroupInterface ? $group : NULL);
 }

@@ -35,12 +35,21 @@ services:
   localnodes_platform.organizer_activation:
     class: Drupal\localnodes_platform\OrganizerActivation
     arguments: ['@state', '@entity_type.manager', '@?email_factory', '@logger.factory', '@lock']
-  # Sends a member invited by email on to their invitation after they set
-  # their first password. The loader is optional so a site or Kernel test
-  # without group invitations still builds a container.
+  # Where a member lands after signing in: their invitations, or at the
+  # first sign-in the community-wide group. The loader is optional so a site
+  # or Kernel test without group invitations still builds a container.
   localnodes_platform.invite_landing:
     class: Drupal\localnodes_platform\InviteLanding
-    arguments: ['@?ginvite.invitation_loader']
+    arguments: ['@?ginvite.invitation_loader', '@localnodes_platform.first_landing', '@messenger', '@localnodes_platform.group_tour']
+  # Joins a member to the community template's one everyone group at their
+  # first sign-in, once, and lands them there once.
+  localnodes_platform.first_landing:
+    class: Drupal\localnodes_platform\FirstLanding
+    arguments: ['@state', '@user.data', '@entity_type.manager', '@config.factory', '@logger.factory', '@datetime.time', '@access_manager']
+  # Fills the community-wide group's tour, and words the first landing's line.
+  localnodes_platform.group_tour:
+    class: Drupal\localnodes_platform\GroupTour
+    arguments: ['@state', '@entity_type.manager']
   # drush localnodes:export writes one
   # archive a community can restore on its own server. key.repository is
   # optional so Kernel tests without the key module still build a container.

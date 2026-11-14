@@ -22,6 +22,7 @@ function localnodes_platform_install() {
   // by $config[] overrides in settings.php, which take effect at runtime without
   // writing to the database. No need to apply them here.
   _localnodes_platform_grant_chatbot_access();
+  _localnodes_platform_grant_tour_access();
   _localnodes_platform_configure_mailer();
   // Open Social's footer out of every mail, our own mail subjects in.
   _localnodes_platform_configure_email();
@@ -747,6 +748,20 @@ function _localnodes_platform_grant_chatbot_access() {
       $role->grantPermission('access deepchat api');
       $role->save();
     }
+  }
+}
+
+/**
+ * Lets members see the community-wide group's tour.
+ *
+ * Granted here for the same reason as the chatbot: the role already exists
+ * from the Open Social install profile.
+ */
+function _localnodes_platform_grant_tour_access(): void {
+  $role = \Drupal\user\Entity\Role::load('authenticated');
+  if ($role && !$role->hasPermission('access tour')) {
+    $role->grantPermission('access tour');
+    $role->save();
   }
 }
 

@@ -14,6 +14,8 @@
  * Variables:
  * - help_address: the address for sign-in and site problems.
  * - safety_help_url: the "Hacked or phished?" page.
+ * - tour_url: the community-wide group with its tour started, for signed-in
+ *   members; empty otherwise.
  */
 #}
 <div class="localnodes-site-terms localnodes-get-help">
@@ -21,4 +23,7 @@
   <p>{% trans %}Something wrong in an imported document, such as private information or a mistake? Open the document and choose Report a problem with this page. That link is only on imported documents; for anything else, ask your group's organizers.{% endtrans %}</p>
   <p>{% trans %}Can't sign in, or the site isn't working? Email LocalNodes at <a href="mailto:{{ help_address }}">{{ help_address }}</a>.{% endtrans %}</p>
   <p>{% trans %}If someone else got into your account: <a href="{{ safety_help_url }}">Hacked or phished?</a>{% endtrans %}</p>
+  {% if tour_url %}
+    <p><a href="{{ tour_url }}">{{ 'Take the group tour'|t }}</a></p>
+  {% endif %}
 </div>

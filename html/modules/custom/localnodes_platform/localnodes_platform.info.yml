@@ -24,6 +24,10 @@ dependencies:
   - ai_usage_limits:ai_usage_limits
   - gemini_provider:gemini_provider
   - key:key
+  # The community-wide group's tour (tour.tour.localnodes_group). Core's Tour
+  # module is in Drupal 10 core; it moves to the contrib project drupal/tour
+  # in Drupal 11, so add that package before upgrading.
+  - drupal:tour
   # Search
   - search_api:search_api
   - search_api_solr:search_api_solr

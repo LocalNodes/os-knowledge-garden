@@ -246,38 +246,19 @@ function _localnodes_web3_mail_paragraph(\Stringable|string $text): MarkupInterf
 /**
  * Implements hook_siwe_login_response_alter().
  *
- * A member who signs in with the sign-in button and has invitations
- * waiting goes to their invitations, as after a first password.
+ * After the sign-in button signs a member in, the browser goes where the
+ * platform's landing order says: a destination in the page's address, their
+ * invitations, or at the first sign-in the community-wide group. The email
+ * and name steps sign in on their own pages, where the platform's
+ * hook_user_login sets the same landing.
  */
 function localnodes_web3_siwe_login_response_alter(array &$response_data, $user): void {
   if (!$user instanceof UserInterface) {
     return;
   }
-  $target = \Drupal::service('localnodes_platform.invite_landing')->target($user);
-  if ($target !== NULL) {
-    $response_data['redirect'] = $target->toString();
-  }
-}
-
-/**
- * Implements hook_user_login().
- *
- * The same for a member who finishes signing in from the email that
- * confirms their address: siwe_login then sends them home, and a
- * destination sends them on to their invitations instead. A destination
- * already in the address is kept.
- */
-function localnodes_web3_user_login(UserInterface $account): void {
-  if (\Drupal::routeMatch()->getRouteName() !== 'siwe_login.email_verification_confirm') {
-    return;
-  }
-  $request = \Drupal::request();
-  if ($request->query->has('destination')) {
-    return;
-  }
-  $target = \Drupal::service('localnodes_platform.invite_landing')->target($account);
-  if ($target !== NULL) {
-    $request->query->set('destination', $target->toString());
+  $redirect = \Drupal::service('localnodes_platform.invite_landing')->walletRedirect($user, \Drupal::request());
+  if ($redirect !== NULL) {
+    $response_data['redirect'] = $redirect;
   }
 }
 
