@@ -115,9 +115,10 @@
  * a narrow window) and two lines, and a longer name ends in an ellipsis
  * rather than pushing the launcher off a narrow window; the label is never
  * squeezed. The default "LocalNodes LiAIson" sits on one line wherever the
- * bar has room for it. The full name stays in the accessible name
- * (visually-hidden span in the template), so the cap hides nothing from a
- * screen reader.
+ * bar has room for it. From 900px up the name keeps to one line, cut with an
+ * ellipsis like the site name in the top bar. The full name stays in the
+ * accessible name (visually-hidden span in the template) and in the title,
+ * so the cap hides nothing from a screen reader or a pointer.
  */
 .ai-deepchat .ai-deepchat--label {
   display: flex;
@@ -137,6 +138,15 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+@media (min-width: 900px) {
+  .ai-deepchat .ln-assistant-name {
+    display: block;
+    -webkit-line-clamp: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+  }
 }
 .ai-deepchat .ln-ai-label {
   flex: none;

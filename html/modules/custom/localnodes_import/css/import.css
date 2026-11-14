@@ -557,7 +557,7 @@
 .localnodes-import-source a {
   display: inline-block;
   min-height: 24px;
-  color: var(--ln-color-link);
+  color: var(--ln-color-paper-link);
   text-decoration: underline;
 }
 

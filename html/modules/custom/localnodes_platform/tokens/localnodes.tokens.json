@@ -193,6 +193,10 @@
     "paper": { "$value": "{primitive.color.source.paper}" },
     "on-paper": { "$value": "{primitive.color.source.paper-ink}" },
     "paper-label": { "$value": "{primitive.color.source.paper-label}" },
+    "paper-link": {
+      "$value": "{primitive.color.brand.800}",
+      "$description": "A link on the paper slip. The paper is a fixed warm fill, darker than white, so the slip takes the darkest link step of the brand scale on its own role rather than the general link colour, which a palette may tune against white alone."
+    },
     "paper-rule": {
       "$value": "{primitive.color.source.paper-rule}",
       "decorative": true,
@@ -312,6 +316,7 @@
       "--ln-color-paper": "{semantic.paper}",
       "--ln-color-on-paper": "{semantic.on-paper}",
       "--ln-color-paper-label": "{semantic.paper-label}",
+      "--ln-color-paper-link": "{semantic.paper-link}",
       "--ln-color-paper-rule": "{semantic.paper-rule}",
       "--ln-color-mark": "{semantic.mark}",
       "--ln-space-xs": "{primitive.space.xs}",

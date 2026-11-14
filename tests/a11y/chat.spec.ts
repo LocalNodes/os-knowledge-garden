@@ -93,6 +93,8 @@ test.describe('S7 chat', () => {
     // The shipped default name, spoken as "LocalNodes Liaison, AI".
     await expect(header(page)).toHaveAccessibleName('LocalNodes Liaison, AI');
     await expect(header(page).locator('.ln-assistant-name')).toHaveText('LocalNodes LiAIson');
+    // The whole name as a tooltip, for when a long name is cut with an ellipsis.
+    await expect(header(page).locator('.ln-assistant-name')).toHaveAttribute('title', 'LocalNodes LiAIson');
     await expect(header(page).locator('.ln-ai-label')).toBeVisible();
     await expect(header(page).locator('.ln-ai-label')).toHaveText('AI');
     await expect(header(page)).toHaveAttribute('aria-expanded', 'false');

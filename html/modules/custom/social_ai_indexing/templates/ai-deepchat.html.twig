@@ -17,6 +17,8 @@
  *   2.5.3 holds: same words, same order, differing in case and a comma.
  *   The "AI" label is template text on purpose, so no setting removes it
  *   (EU AI Act Art. 50).
+ * - The visible name carries the whole name as its title, for when a long
+ *   name is cut with an ellipsis.
  * - A line under the input, always shown, says the question and passages
  *   from pages the person can see are sent to the AI service.
  */
@@ -40,7 +42,7 @@
     <div class="ai-deepchat--header" tabindex="0" role="button" aria-expanded="false">
       <div class="ai-deepchat--label">
         <span class="ai-deepchat--bullet" aria-hidden="true"></span>
-        <span class="ln-assistant-name" aria-hidden="true">{{ settings.label }}</span>
+        <span class="ln-assistant-name" aria-hidden="true" title="{{ settings.label }}">{{ settings.label }}</span>
         <span class="visually-hidden">{{ assistant_spoken_name }},</span>
         <span class="ln-ai-label">{{ 'AI'|t }}</span>
       </div>

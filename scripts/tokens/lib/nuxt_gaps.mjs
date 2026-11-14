@@ -10,22 +10,18 @@
  * list cannot rot (the same rule as EXCLUDED in pairings.mjs). A gap only applies when its test
  * exists and passes before the swap in the ref being read.
  *
- * WHEN THE MAIL GAP CLOSES (WINDOWS 44): when Phase 23's import lands and its test is re-pinned, not
- * when server/utils/mail-colors.generated.ts merely exists. The generated file alone changes nothing
- * the pinned test reads, so with the file present but unwired a swap still fails the test and the GAP
- * still prints. Once mail-copy.ts imports ./mail-colors.generated and tests/unit/mail-copy.test.ts
- * reads the generated values, the first proof run against that ref prints `STALE GAP` and fails.
- * Whoever sees it deletes the entry below (one line) and marks WINDOWS 44 fixed
- * (`gsd-tools windows fixed 44`). The token suite's proof tests read origin/main by default, so they
- * go red on that day by design: that is the reminder. If Phase 23 wires the import without re-pinning
- * `link` (the email link role is semantic.link, the old pin was --color-ln-brand-800), palette C prints
- * STALE GAP (its link equals brand 800), and once the entry is gone palette A prints NEW FAILURE on
- * `link`. Either way the proof forces the re-pin.
+ * THE MAIL GAP IS CLOSED: the Nuxt repo's mail-copy.ts imports ./mail-colors.generated and
+ * tests/unit/mail-copy.test.ts reads the generated values, so a swap that rewrites the mail colours no longer
+ * fails that test (palette B shows it), and the entry is gone. The test still pins `link` to the brand 800 step
+ * rather than the token source's link role, so a palette whose link is another colour (palette A) fails it as a
+ * NEW FAILURE until the Nuxt repo re-pins it. Add an entry here only for a Nuxt test that holds its own copy of
+ * palette values, with the WINDOWS entry that tracks it.
  *
  * CLI (what the proof calls):
- *   node scripts/tokens/lib/nuxt_gaps.mjs <before.json> <after.json> <editCount>
+ *   node scripts/tokens/lib/nuxt_gaps.mjs <before.json> <after.json> <nuxtChangedCount>
  * prints the comparison lines and exits 1 when the comparison is bad, 0 otherwise, 2 on a usage error.
- * editCount is how many token values the swap changed (0: the palette is already the source's).
+ * nuxtChangedCount is how many files of the Nuxt copy the swap rewrote. With 0 (the palette is the source's, or it
+ * changes only Drupal-side values) the Nuxt tests have nothing new to fail on, so no gap is judged closed.
  * Node built-ins only.
  */
 import { readFileSync } from 'node:fs';
@@ -36,14 +32,7 @@ import { pathToFileURL } from 'node:url';
  * `windows` the .planning/WINDOWS.md entry, `reason` why the test fails after a swap, `closes` the
  * rule that closes it.
  */
-export const KNOWN_NUXT_GAPS = Object.freeze([
-  Object.freeze({
-    test: 'tests/unit/mail-copy.test.ts :: the mail look every colour is a role in the generated token file',
-    windows: 44,
-    reason: 'server/utils/mail-copy.ts MAIL_COLORS are literal hexes (mail clients cannot read CSS custom properties) and tests/unit/mail-copy.test.ts pins them to the generated token file',
-    closes: "Phase 23's import of ./mail-colors.generated in mail-copy.ts plus the re-pinned link in the test, not the generated file existing",
-  }),
-]);
+export const KNOWN_NUXT_GAPS = Object.freeze([]);
 
 const prefixOf = (gap) => (typeof gap === 'string' ? gap : gap.test);
 
@@ -75,7 +64,7 @@ function passes(report) {
  * Compare the reports taken before and after a swap.
  * Returns { lines, bad }: the output lines, and whether the proof must fail.
  */
-export function judge(before, after, editCount, gaps = KNOWN_NUXT_GAPS) {
+export function judge(before, after, nuxtChangedCount, gaps = KNOWN_NUXT_GAPS) {
   const prefixes = gaps.map(prefixOf);
   const lines = [
     `before the swap: ${before.numPassedTests} passed, ${before.numFailedTests} failed of ${before.numTotalTests}`,
@@ -95,8 +84,8 @@ export function judge(before, after, editCount, gaps = KNOWN_NUXT_GAPS) {
       bad = true;
     }
   }
-  // A gap that no longer fails after a real swap is closed: delete it from KNOWN_NUXT_GAPS.
-  if (Number(editCount) > 0) {
+  // A gap that no longer fails after a swap that reached the Nuxt copy is closed: delete it from KNOWN_NUXT_GAPS.
+  if (Number(nuxtChangedCount) > 0) {
     for (const gap of gaps) {
       const g = prefixOf(gap);
       const applies = [...passedBefore].some((x) => x.startsWith(g));
@@ -112,12 +101,12 @@ export function judge(before, after, editCount, gaps = KNOWN_NUXT_GAPS) {
 
 function main(argv) {
   if (argv.length < 3) {
-    console.error('usage: nuxt_gaps.mjs <before.json> <after.json> <editCount>');
+    console.error('usage: nuxt_gaps.mjs <before.json> <after.json> <nuxtChangedCount>');
     return 2;
   }
-  const [beforeFile, afterFile, editCount] = argv;
+  const [beforeFile, afterFile, nuxtChangedCount] = argv;
   const read = (f) => JSON.parse(readFileSync(f, 'utf8'));
-  const { lines, bad } = judge(read(beforeFile), read(afterFile), editCount);
+  const { lines, bad } = judge(read(beforeFile), read(afterFile), nuxtChangedCount);
   console.log(lines.join('\n'));
   return bad ? 1 : 0;
 }

@@ -1,5 +1,5 @@
 {
-  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: option C, the provisional teal (Tailwind v3.4.17 teal and amber). Values copied from .planning/brand/CANVAS-BRIEF.md (section 3: the option C column). Deep-merged over localnodes.tokens.json by the swap proof; it sets the brand and accent scales, the socialblue chrome fields, the roles that point at them and the one socialblue field that is not a reference. It also sets targets.nuxt.light.--ui-bg-accented to neutral 100: with this palette's primary on Nuxt UI's default accented fill (neutral 200) the pair is under 4.5:1 (CANVAS-BRIEF.md section 4, summary per option: A 4.07, C 4.31), the 'override --ui-bg-accented' route that section names.",
+  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: option C, the provisional teal (Tailwind v3.4.17 teal and amber). Values copied from .planning/brand/CANVAS-BRIEF.md (section 3: the option C column), except chrome navbar-bg: the brief's #27272a is also this palette's text colour, and the 15 socialblue values must be distinct (drupal/color replaces by value), so navbar-bg is #2b2b30, a dark zinc between that text colour and navbar-active-bg #18181b. Deep-merged over localnodes.tokens.json by the swap proof; it sets the brand and accent scales, the socialblue chrome fields, the roles that point at them and the one socialblue field that is not a reference. It also sets targets.nuxt.light.--ui-bg-accented to neutral 100: with this palette's primary on Nuxt UI's default accented fill (neutral 200) the pair is under 4.5:1 (CANVAS-BRIEF.md section 4, summary per option: A 4.07, C 4.31), the 'override --ui-bg-accented' route that section names.",
   "primitive": {
     "color": {
       "brand": {
@@ -74,7 +74,7 @@
       },
       "chrome": {
         "navbar-bg": {
-          "$value": "#27272a"
+          "$value": "#2b2b30"
         },
         "navbar-active-bg": {
           "$value": "#18181b"
