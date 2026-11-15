@@ -22,3 +22,6 @@ html/modules/contrib/
 html/profiles/contrib/
 html/themes/contrib/
 html/libraries/
+
+# Pack source copies (members-only demo text and expected answers) are test material; Apache would serve .md files.
+html/modules/custom/localnodes_demo_packs/tests/fixtures/expect/*/source.md

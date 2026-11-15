@@ -1,0 +1,72 @@
+# What the smoke pack must hold once loaded.
+#
+# counts: how many of each kind load; a kind the pack lacks counts 0.
+# visibility: who sees a page. persona is "anonymous" or a user uuid; sees is
+#   true when the page opens with its title, false when it is refused.
+# listings: pages a persona must not see in a group's topic list (titles).
+# left_out: sentences the source states that no loaded page may carry.
+# search_hidden: queries that must not find a page for a member (tier 2). A row
+#   is {id, as, keys, title, control_as}: `as` is a user uuid or "anonymous",
+#   `control_as` is a member who may see the page and must find it, so a
+#   search that finds nothing for anyone fails.
+# sections: every `## ` heading of source.md, by its exact text, and what the
+#   pack does with it: `loaded` (its text is in the YAML), `test_only` (it
+#   states what a test expects), or a mapping `left_out: <owner>` (the pack
+#   leaves it out) or `pending: <dependency>` (it waits on other work).
+# likes: likes each post holds, by post uuid; going: enrolments each event
+#   holds, by event uuid; poll_votes: votes each choice of a poll holds, in
+#   choice order, by poll uuid.
+counts:
+  user: 3
+  group: 2
+  topic: 3
+  event: 1
+  event_enrollment: 1
+  post: 1
+  comment: 0
+  like: 1
+  poll: 2
+  howto: 10
+visibility:
+  - id: visitor-sees-group
+    persona: anonymous
+    uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+    sees: true
+  - id: visitor-misses-topic
+    persona: anonymous
+    uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+    sees: false
+  - id: outsider-misses-topic
+    persona: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d03
+    uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+    sees: false
+  - id: member-sees-topic
+    persona: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+    sees: true
+listings:
+  - persona: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d03
+    group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+    hidden_titles:
+      - Smoke page
+left_out:
+  - id: smoke-pot
+    text: The smoke pot balance is 480 PRACTICE.
+search_hidden: []
+likes:
+  5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40: 1
+going:
+  5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60: 1
+poll_votes:
+  5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d30: [1, 1]
+  5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d31: [2, 0]
+sections:
+  People: loaded
+  Groups: loaded
+  Library: loaded
+  Posts: loaded
+  Events: loaded
+  Polls: loaded
+  Pot:
+    left_out: the Practice Money work
+  Walk: test_only

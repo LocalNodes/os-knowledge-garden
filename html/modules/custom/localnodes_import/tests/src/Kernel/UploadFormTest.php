@@ -166,6 +166,67 @@ final class UploadFormTest extends ImportKernelTestBase {
   }
 
   /**
+   * Site guide is a page type only the site's editor roles may choose.
+   *
+   * A group organizer holds neither role: the type is not offered, and sending
+   * its id is refused with no run made. The editor roles may choose it, and an
+   * ordinary type still passes for the organizer.
+   */
+  public function testSiteGuideTypeIsChosenOnlyByEditors(): void {
+    $guide = $this->createSiteGuideTerm();
+
+    $form = $this->buildFresh();
+    $this->assertArrayNotHasKey($guide, $form['topic_type']['#options'], 'An organizer without an editor role is not offered Site guide.');
+    $this->assertNotEmpty($form['topic_type']['#options'], 'The organizer is offered the other types.');
+
+    [, $state] = $this->submit($this->validValues(['topic_type' => $guide]));
+    $this->assertArrayHasKey('topic_type', $state->getErrors(), 'Site guide sent by an organizer without an editor role is refused.');
+    $this->assertNoRun();
+
+    $blog = (int) array_search('Blog', array_map('strval', $form['topic_type']['#options']), TRUE);
+    [, $state] = $this->submit($this->validValues(['topic_type' => $blog]));
+    $this->assertSame([], $this->errors($state), 'An ordinary type still passes for the organizer.');
+
+    foreach (['sitemanager', 'contentmanager'] as $role) {
+      $editor = $this->createSiteEditor("guide_$role", $role);
+      $this->addManager($this->group, $editor);
+      $this->setCurrentUser($editor);
+      $form = $this->buildFresh();
+      $this->assertArrayHasKey($guide, $form['topic_type']['#options'], "$role is offered Site guide.");
+      [, $state] = $this->submit($this->validValues(['topic_type' => $guide]));
+      $this->assertSame([], $this->errors($state), "$role may choose Site guide.");
+    }
+    $storage = $this->container->get('entity_type.manager')->getStorage('localnodes_import_run');
+    $storage->resetCache();
+    $chosen = array_filter($storage->loadMultiple(), static fn ($run): bool => (int) $run->get('topic_type')->target_id === $guide);
+    $this->assertCount(2, $chosen, "Each editor's run holds the Site guide type.");
+  }
+
+  /**
+   * The server-side check refuses Site guide on its own, without the select.
+   *
+   * The select's own option check also refuses a value it does not offer, so
+   * the form-level test above does not show that the importer's check works.
+   * This calls the check with a form state that holds the id.
+   */
+  public function testValidationRefusesSiteGuideForANonEditor(): void {
+    $guide = $this->createSiteGuideTerm();
+    $blog = (int) array_search('Blog', array_map('strval', $this->buildFresh()['topic_type']['#options']), TRUE);
+    $check = function (int $tid): array {
+      $form = \Drupal::classResolver(UploadFilesForm::class);
+      $method = new \ReflectionMethod($form, 'validateTopicType');
+      $state = (new FormState())->setValues(['topic_type' => $tid]);
+      $method->invoke($form, $state);
+      return array_keys($state->getErrors());
+    };
+
+    $this->assertSame(['topic_type'], $check($guide), 'The check refuses Site guide for an organizer without an editor role.');
+    $this->assertSame([], $check($blog), 'The check passes an ordinary type for the organizer.');
+    $this->setCurrentUser($this->createSiteEditor('guide_validator', 'sitemanager'));
+    $this->assertSame([], $check($guide), 'The check passes Site guide for a site manager.');
+  }
+
+  /**
    * Not ticked: copy-table error in the summary, no run, no item. Ticked: who and when.
    */
   public function testRightsCheckbox(): void {
@@ -343,7 +404,7 @@ final class UploadFormTest extends ImportKernelTestBase {
   }
 
   /**
-   * A temporary file bound to the manager and group, as the endpoint leaves it.
+   * A temporary file bound to the current user and the group, as the endpoint leaves it.
    */
   private function boundUpload(): File {
     $folder = 'private://localnodes_import/' . $this->group->id();
@@ -351,7 +412,7 @@ final class UploadFormTest extends ImportKernelTestBase {
     $file_system->prepareDirectory($folder, $file_system::CREATE_DIRECTORY);
     $uri = $file_system->getDestinationFilename($folder . '/notes.txt', FileExists::Rename);
     file_put_contents($uri, 'Orchard pruning notes for the spring work day.');
-    $file = File::create(['uri' => $uri, 'filename' => 'notes.txt', 'uid' => $this->manager->id()]);
+    $file = File::create(['uri' => $uri, 'filename' => 'notes.txt', 'uid' => $this->container->get('current_user')->id()]);
     $file->setTemporary();
     $file->save();
     $store = $this->container->get('tempstore.private')->get('localnodes_import');

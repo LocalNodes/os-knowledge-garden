@@ -7,6 +7,7 @@ namespace Drupal\Tests\localnodes_platform\Unit;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\localnodes_platform\Demo\DemoPlugins;
@@ -34,6 +35,7 @@ final class DemoPluginsTest extends UnitTestCase {
     $this->assertSame(array_merge(array_map(fn ($name) => "boulder_$name", $order), ['boulder_quick_poll']), DemoPlugins::ids('boulder_demo'));
     $this->assertSame(array_merge(array_map(fn ($name) => "localnodes_$name", $order), ['localnodes_quick_poll']), DemoPlugins::ids('localnodes_demo'));
     $this->assertSame(array_map(fn ($name) => "portland_$name", $order), DemoPlugins::ids('portland_demo'));
+    $this->assertSame(array_merge(array_map(fn ($name) => "pack_$name", $order), ['pack_quick_poll', 'pack_howto']), DemoPlugins::ids('localnodes_demo_packs'));
     $this->assertSame($order, DemoPlugins::ids('social_demo'));
     foreach (array_keys(DemoPlugins::PREFIXES) as $module) {
       foreach (DemoPlugins::ids($module) as $id) {
@@ -47,7 +49,7 @@ final class DemoPluginsTest extends UnitTestCase {
    */
   public function testPluginsCommandPrintsTheList(): void {
     $commands = new LocalNodesDemoCommands();
-    foreach (['localnodes_demo', 'boulder_demo', 'portland_demo', 'social_demo'] as $module) {
+    foreach (['localnodes_demo', 'boulder_demo', 'portland_demo', 'localnodes_demo_packs', 'social_demo'] as $module) {
       $this->assertSame(DemoPlugins::ids($module), explode(' ', $commands->demoPlugins($module)));
     }
   }
@@ -60,16 +62,65 @@ final class DemoPluginsTest extends UnitTestCase {
     $this->assertNotFalse($script);
     $this->assertStringContainsString('DEMO_PLUGINS="$($DRUSH localnodes-demo:plugins "$DEMO_MODULE")"', $script);
     $this->assertSame(1, preg_match_all('/\$DRUSH (social-demo:add\b.*)$/m', $script, $loads), 'One demo load.');
-    $this->assertSame('social-demo:add $DEMO_PLUGINS', trim($loads[1][0]), 'The load passes the list as it is.');
+    $this->assertSame('social-demo:add $DEMO_PLUGINS $DEMO_PROFILE_OPT', trim($loads[1][0]), 'The load passes the list as it is, plus a pack\'s profile option.');
   }
 
   /**
    * drush localnodes-demo:install loads exactly the list, in order.
    */
   public function testInstallLoadsTheList(): void {
-    foreach (array_keys(DemoPlugins::PREFIXES) as $module) {
+    foreach (array_diff(array_keys(DemoPlugins::PREFIXES), DemoPlugins::PACK_MODULES) as $module) {
       $this->assertSame(DemoPlugins::ids($module), $this->install($module));
     }
+  }
+
+  /**
+   * A pack module is refused without --pack: the pack is named by the caller.
+   */
+  public function testInstallRefusesPackModuleWithoutPack(): void {
+    foreach ([[], ['pack' => NULL]] as $options) {
+      $this->assertRefused('localnodes_demo_packs', $options, '--pack');
+    }
+  }
+
+  /**
+   * A pack name that is not a plain name, or has no directory, is refused.
+   *
+   * The name rule comes first: "../packs/smoke" is malformed yet its path
+   * exists, so only the name rule stops it.
+   */
+  public function testInstallRefusesABadPackName(): void {
+    foreach (['Bad_Name', '../x', '../packs/smoke', "smoke\n", 'smoke/', 'sm oke', ''] as $name) {
+      $this->assertRefused('localnodes_demo_packs', ['pack' => $name], 'lower-case letters', "pack name '$name'");
+    }
+    $this->assertRefused('localnodes_demo_packs', ['pack' => 'nosuchpack'], 'No pack directory', 'a missing directory');
+  }
+
+  /**
+   * --pack on any module but the pack module is refused.
+   */
+  public function testInstallRefusesPackOnOtherModules(): void {
+    foreach (array_diff(array_keys(DemoPlugins::PREFIXES), DemoPlugins::PACK_MODULES) as $module) {
+      $this->assertRefused($module, ['pack' => 'smoke'], '--pack');
+    }
+  }
+
+  /**
+   * A good pack name loads the pack's plugins in order, from packs/<name>/.
+   */
+  public function testInstallLoadsAPackInOrder(): void {
+    $loaded = [];
+    $this->assertSame(0, $this->runInstall('localnodes_demo_packs', ['pack' => 'smoke'], $loaded, 'packs/smoke/'));
+    $this->assertSame(DemoPlugins::ids('localnodes_demo_packs'), $loaded);
+  }
+
+  /**
+   * A module that is not enabled fails the command, with nothing loaded.
+   */
+  public function testInstallFailsWhenTheModuleIsNotEnabled(): void {
+    $loaded = [];
+    $this->assertSame(1, $this->runInstall('localnodes_demo', [], $loaded, '', FALSE));
+    $this->assertSame([], $loaded);
   }
 
   /**
@@ -107,45 +158,79 @@ final class DemoPluginsTest extends UnitTestCase {
    */
   private function install(string $module): array {
     $loaded = [];
-    $manager = new class($this, $loaded) {
+    $this->assertSame(0, $this->runInstall($module, [], $loaded, ''));
+    return $loaded;
+  }
 
-      public function __construct(private DemoPluginsTest $test, private array &$loaded) {}
+  /**
+   * Runs the command and asserts it throws, with nothing created or loaded.
+   */
+  private function assertRefused(string $module, array $options, string $message, string $what = ''): void {
+    $loaded = [];
+    try {
+      $this->runInstall($module, $options, $loaded, NULL);
+      $this->fail("Not refused: $module " . ($what ?: json_encode($options)));
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertStringContainsString($message, $e->getMessage(), $what);
+    }
+    $this->assertSame([], $loaded, "A refused call creates no plugin: $module " . ($what ?: json_encode($options)));
+  }
+
+  /**
+   * Sets up the container, runs localnodes-demo:install, returns its exit code.
+   *
+   * @param string|null $profile
+   *   The profile each plugin must be handed, or NULL when the call must not
+   *   reach a plugin.
+   */
+  private function runInstall(string $module, array $options, array &$loaded, ?string $profile, bool $enabled = TRUE): int {
+    $manager = new class($this, $loaded, $profile) {
+
+      public function __construct(private DemoPluginsTest $test, private array &$loaded, private ?string $profile) {}
 
       public function createInstance(string $id): DemoContentInterface {
         $this->loaded[] = $id;
-        return $this->test->plugin();
+        return $this->test->plugin($this->profile);
       }
 
     };
 
     $module_handler = $this->createMock(ModuleHandlerInterface::class);
-    $module_handler->method('moduleExists')->willReturn(TRUE);
+    $module_handler->method('moduleExists')->willReturn($enabled);
     $admin = $this->createMock(UserInterface::class);
     $storage = $this->createMock(EntityStorageInterface::class);
     $storage->method('load')->with(1)->willReturn($admin);
     $entity_type_manager = $this->createMock(EntityTypeManagerInterface::class);
     $entity_type_manager->method('getStorage')->with('user')->willReturn($storage);
     $current_user = $this->createMock(AccountProxyInterface::class);
-    $current_user->expects($this->once())->method('setAccount')->with($admin);
+    $current_user->expects($enabled && $profile !== NULL ? $this->once() : $this->never())->method('setAccount')->with($admin);
+    // The pack directories are resolved from the Drupal root and the module's
+    // path. Here the module's path is the test fixtures, so packs/smoke is the
+    // shipped pack.
+    $module_list = $this->createMock(ModuleExtensionList::class);
+    $module_list->method('getPath')->willReturn('modules/custom/localnodes_demo_packs/tests/fixtures');
 
     $container = new ContainerBuilder();
+    $container->setParameter('app.root', dirname(__DIR__, 6));
     $container->set('module_handler', $module_handler);
     $container->set('entity_type.manager', $entity_type_manager);
     $container->set('current_user', $current_user);
     $container->set('plugin.manager.demo_content', $manager);
+    $container->set('extension.list.module', $module_list);
     \Drupal::setContainer($container);
 
     $commands = new LocalNodesDemoCommands();
     $commands->setLogger(new DrushLoggerManager());
-    $commands->installDemoContent($module);
-    return $loaded;
+    return $commands->installDemoContent($module, $options);
   }
 
   /**
-   * A demo content plugin that is loaded once.
+   * A demo content plugin that is loaded once, with the given profile.
    */
-  public function plugin(): DemoContentInterface {
+  public function plugin(?string $profile): DemoContentInterface {
     $plugin = $this->createMock(DemoContentInterface::class);
+    $plugin->expects($this->once())->method('setProfile')->with($profile ?? '');
     $plugin->expects($this->once())->method('createContent');
     $plugin->method('count')->willReturn(1);
     return $plugin;

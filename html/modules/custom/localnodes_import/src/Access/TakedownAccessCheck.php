@@ -10,13 +10,15 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\localnodes_import\Service\ReportAudience;
+use Drupal\localnodes_platform\SiteGuide;
 use Drupal\node\NodeInterface;
 
 /**
  * Who may take a reported page down (ONB-05, T-23-17).
  *
  * Anyone who can edit the page, or is one of its authorized site or house
- * stewards. Everyone else, signed in or not, gets 403. The report mail
+ * stewards. A Site guide page is the exception: only the editor roles may
+ * take it down. Everyone else, signed in or not, gets 403. The report mail
  * links here, but the link carries only the page's id: this check is the
  * only thing that lets someone in. The takedown form asks the same question
  * again right before it saves.
@@ -42,12 +44,20 @@ final class TakedownAccessCheck implements AccessInterface {
    * Whether the account may unpublish the page.
    */
   public function check(NodeInterface $topic, AccountInterface $account): AccessResultInterface {
-    $result = AccessResult::allowedIf($account->isAuthenticated() && (
+    $allowed = $account->isAuthenticated() && (
       $topic->access('update', $account) || $this->audience->isSteward($topic, $account)
-    ))
+    );
+    // A Site guide page is changed only by the editor roles, so a group
+    // steward without one may not unpublish it. Where the platform's class is
+    // not there, no page is a Site guide page.
+    if ($allowed && class_exists(SiteGuide::class) && SiteGuide::isGuide($topic)) {
+      $allowed = SiteGuide::isEditor($account);
+    }
+    $result = AccessResult::allowedIf($allowed)
       ->cachePerUser()
       ->addCacheContexts(['user.permissions', 'user.roles'])
       ->addCacheableDependency($topic)
+      ->addCacheTags(['taxonomy_term_list'])
       ->addCacheTags($this->entityTypeManager->getDefinition('group_content')->getListCacheTags());
     foreach ($this->audience->groupsOf($topic) as $group) {
       $result->addCacheableDependency($group);

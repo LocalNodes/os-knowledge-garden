@@ -38,7 +38,7 @@ const OVERRIDES_REL = 'html/modules/custom/localnodes_platform/css/ln-overrides.
 const IMAGES_REL = 'html/modules/custom/localnodes_platform/images';
 const GENERATED_CSS_REL = 'html/modules/custom/localnodes_platform/css/ln-tokens.css';
 const OPTIONS = ['a', 'b', 'c', 'teal'];
-/** The palette the token source holds: the landing page's teal (BRAND.md section 5, 2026-11-12), which replaced option B. */
+/** The palette the token source holds: the landing page's teal, which replaced option B. */
 const CHOSEN = 'teal';
 
 const nuxtRepo = process.env.LN_SWAP_NUXT_REPO ?? resolve(repoRoot, '../localnodes-onboarding');
@@ -134,11 +134,12 @@ test('the other two fixtures change at least one source value each, so the swap 
   }
 });
 
-test('every fixture cites CANVAS-BRIEF.md, sets only token leaves and never flips dark mode on', () => {
+test('every fixture says what it is, sets only token leaves and never flips dark mode on', () => {
   for (const o of OPTIONS) {
     const text = readFileSync(fixturePath(o), 'utf8');
     const json = JSON.parse(text);
-    assert.match(String(json.$description), /CANVAS-BRIEF\.md/, `palette-${o}.json $description must cite CANVAS-BRIEF.md`);
+    assert.match(String(json.$description), /^Palette overlay for scripts\/tokens\/prove_token_swap\.sh: /, `palette-${o}.json $description must say it is a swap-proof palette overlay`);
+    assert.ok(!/\.planning|\.md\b/.test(String(json.$description)), `palette-${o}.json $description must stand on its own, without naming a planning file`);
     assert.ok(!/dark-mode-rendered/.test(text), `palette-${o}.json must not set targets.nuxt.dark-mode-rendered (the tripwire guards it)`);
     for (const { path, raw } of leaves(json)) {
       assert.ok(typeof raw === 'string' && (/^#[0-9a-fA-F]{6}$/.test(raw) || /^\{[a-z0-9.-]+\}$/.test(raw)), `palette-${o}.json ${path} is "${raw}", not a 6-digit hex or a reference`);

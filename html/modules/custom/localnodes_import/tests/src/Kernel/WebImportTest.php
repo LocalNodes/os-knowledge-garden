@@ -281,6 +281,48 @@ final class WebImportTest extends ImportKernelTestBase {
   }
 
   /**
+   * A run by a member without an editor role never gets the Site guide type.
+   *
+   * The form withholds Site guide from such a member; the run's own type and
+   * every fallback must withhold it too, even when Site guide sorts first and
+   * no Reference term exists. With no other type left the page fails.
+   */
+  public function testNonEditorRunNeverGetsSiteGuide(): void {
+    $storage = $this->container->get('entity_type.manager')->getStorage('taxonomy_term');
+    $guide = $this->createSiteGuideTerm();
+    $storage->load($guide)->setWeight(-100)->save();
+    $storage->load($this->referenceTid)->delete();
+
+    $items = $this->importWeb($this->group, ['https://wiki.p2pfoundation.net/Cosmo-Localism'], ['topic_type' => $guide]);
+    $type = (int) $this->topicOf($items[0])->get('field_topic_type')->target_id;
+    $this->assertNotSame($guide, $type, 'A run holding Site guide does not give it to a non-editor');
+    $this->assertSame('topic_types', $storage->load($type)->bundle());
+
+    $gone = Term::create(['vid' => 'topic_types', 'name' => 'Gone']);
+    $gone->save();
+    $gone_id = (int) $gone->id();
+    $gone->delete();
+    $items = $this->importWeb($this->group, ['https://wiki.p2pfoundation.net/Cosmo-Localization'], ['topic_type' => $gone_id]);
+    $type = (int) $this->topicOf($items[0])->get('field_topic_type')->target_id;
+    $this->assertNotSame($guide, $type, 'The first-by-weight fallback skips Site guide for a non-editor');
+
+    $editor = $this->createSiteEditor('guide_editor', 'sitemanager');
+    $this->addManager($this->group, $editor);
+    $items = $this->importWeb($this->group, ['https://wiki.p2pfoundation.net/Commons-Based_Peer_Production'], ['topic_type' => $guide, 'uid' => $editor->id()]);
+    $this->assertSame($guide, (int) $this->topicOf($items[0])->get('field_topic_type')->target_id, 'An editor keeps the Site guide type');
+
+    foreach ($storage->loadByProperties(['vid' => 'topic_types']) as $term) {
+      if ((int) $term->id() !== $guide) {
+        $term->delete();
+      }
+    }
+    $before = $this->groupTopicIds($this->group);
+    $items = $this->importWeb($this->group, ['https://wiki.p2pfoundation.net/Commons_Transition']);
+    $this->assertSame([ImportItem::OUTCOME_FAILED, 'unknown'], $this->result($items[0]), 'With only Site guide left, a non-editor page fails');
+    $this->assertSame($before, $this->groupTopicIds($this->group), 'and no Topic is saved');
+  }
+
+  /**
    * A blocked site fails its own row and the run goes on; empty is no_text.
    */
   public function testBotChallengeAndEmptyPage(): void {

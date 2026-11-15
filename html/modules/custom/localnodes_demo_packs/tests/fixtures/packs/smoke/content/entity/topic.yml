@@ -1,0 +1,47 @@
+---
+# Smoke fixture: a group-only page in the common room, a page the community
+# may read in the back room, and a group-only page in the back room.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+  title: Smoke page
+  type: topic
+  langcode: en
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -1 day|11:00
+  body: >
+    <p>This page exists to prove that a pack loads from its own directory. We meet again on {{day:+7}}.</p>
+  field_topic_type: Reference
+  image:
+  image_alt:
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  field_content_visibility: group
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d21:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d21
+  title: Smoke shared page
+  type: topic
+  langcode: en
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -1 day|11:30
+  body: >
+    <p>This page is shared with the whole community. The common room may read it.</p>
+  field_topic_type: Reference
+  image:
+  image_alt:
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11
+  field_content_visibility: community
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d22:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d22
+  title: Smoke back room page
+  type: topic
+  langcode: en
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -1 day|12:00
+  body: >
+    <p>The back room holds the brass lantern.</p>
+  field_topic_type: Reference
+  image:
+  image_alt:
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11
+  field_content_visibility: group

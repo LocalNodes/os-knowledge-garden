@@ -6,7 +6,7 @@
 # fresh3-e2e and fresh3-p21-a11y are allowed; any other name is refused with exit 2.
 # Exit codes: 0 done, 1 failed, 2 usage or refused.
 #
-# The site dir is /home/dev/Code/localnodes/<project>, a sibling of fresh3-work. It runs
+# The site dir is <parent of the checkout>/<project>, a sibling of the checkout. It runs
 # committed code only:
 #   - the site dir is a detached `git worktree` of fresh3-work;
 #   - repos/safe_smart_accounts and repos/group_treasury in it are detached worktrees of the
@@ -28,11 +28,11 @@
 #   git -C <fresh3-work> worktree remove --force <dir>
 set -euo pipefail
 
-EXPECTED_ROOT=/home/dev/Code/localnodes/fresh3-work
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The checkout is the one this script lives in.
+HERE="$(dirname "$(readlink -f -- "${BASH_SOURCE[0]}")")"
 ROOT="$(git -C "$HERE" rev-parse --show-toplevel 2>/dev/null || true)"
-if [ "$ROOT" != "$EXPECTED_ROOT" ]; then
-  echo "site refused: run from fresh3-work" >&2
+if [ -z "$ROOT" ] || [ ! -f "$ROOT/tests/e2e/site/site.sh" ]; then
+  echo "site refused: run from inside a fresh3 checkout" >&2
   exit 2
 fi
 PROJECT="${LN_SITE_PROJECT:-fresh3-e2e}"

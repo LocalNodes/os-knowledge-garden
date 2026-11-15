@@ -4,7 +4,7 @@ A community library with an AI assistant that answers questions using your group
 
 ## Run it on a server
 
-To start a community site on your own server with Docker Compose, follow [docs/SELF-HOST.md](docs/SELF-HOST.md). To move an existing LocalNodes site, use the `RESTORE.md` inside its export archive (`drush localnodes:export`).
+To start a community site on your own server with Docker Compose, follow [docs/SELF-HOST.md](docs/SELF-HOST.md). To move an existing LocalNodes site, use the `RESTORE.md` inside its export archive (`drush localnodes:export`). To keep a running site current, read [docs/hosting/UPDATES.md](docs/hosting/UPDATES.md).
 
 ## Quick Start (for development)
 

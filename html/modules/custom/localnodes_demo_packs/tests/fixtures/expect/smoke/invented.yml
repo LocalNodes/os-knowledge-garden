@@ -1,0 +1,15 @@
+# Every person, organisation, place and street the smoke pack and its expectation
+# files name. Each is made up. A name in the pack or its expectations that is not
+# listed here (or in the how-to inventory) fails the fiction test.
+people:
+  - Smoke One
+  - Smoke Two
+  - Smoke Out
+organisations: []
+places:
+  - Smoke Town
+  - Smoke hall
+  - Smoke common room
+  - Smoke back room
+streets:
+  - 1 Smoke Lane

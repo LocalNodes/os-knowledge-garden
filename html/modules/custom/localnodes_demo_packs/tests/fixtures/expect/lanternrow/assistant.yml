@@ -1,0 +1,244 @@
+# Assistant rows for the Lantern Row Housing Co-op pack, run on a site by
+# scripts/check_demo_pack.php. as and group are uuids of the pack; cites,
+# may_cite and forbidden are uuids of pages; must_say phrases are in
+# source.md. needs lists what the row depends on (for example shared_pages).
+# Every row asks as Ines inside Willow House (the guide-page row asks site-wide)
+# and forbids the two Rowan House pages Ines cannot read: the minutes of 8
+# September and the handbook.
+- id: lr-01
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: Has anyone looked at the back steps?
+  cites:
+    - 3a593310-9622-46f0-9ad2-38d5139a1465
+  must_say:
+    - 'three quotes'
+    - 'spring meeting'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-02
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What quotes did we get for the back steps?
+  cites:
+    - 0d2fe151-a0b2-470e-9796-03c5daaea9a0
+  must_say:
+    - 'Hollis the joiner'
+    - 'decking firm'
+    - 'second carpenter'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-03
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What are the quiet hours?
+  cites:
+    - 2aae2f0d-34f3-46cd-9410-7bed95189877
+  must_say:
+    - '10 pm'
+    - '7 am'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-04
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How long can a guest stay?
+  cites:
+    - 2aae2f0d-34f3-46cd-9410-7bed95189877
+  must_say:
+    - '7 nights'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-05
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What happens if someone blocks a decision?
+  cites:
+    - d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  # Each entry: the source's wording first, then the assistant's own wordings
+  # of the same fact, read by eye.
+  must_say:
+    - ['talk to them', 'talk to the person who blocked']
+    - ['bring it back', 'submit it again']
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-06
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How many people need to respond for a decision to pass?
+  cites:
+    - d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  # The count entry: the source's wording first, then the assistant's own.
+  must_say:
+    - two-thirds
+    - ['8 of 12', '8 out of 12', '8 of the 12']
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-07
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How long is a decision to change the house rules open?
+  cites:
+    - d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  must_say:
+    - '14 days'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-08
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How much is the monthly house charge?
+  cites:
+    - 918c68e1-d040-453a-8e49-7321c3609d83
+  must_say:
+    - '$725'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-09
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: Who do I ask if I lose my key?
+  cites:
+    - 6603bc81-d8d6-43ca-bb65-c4301a44f93f
+  must_say:
+    - Farah
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-10
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: When do the bins go out?
+  cites:
+    - 6603bc81-d8d6-43ca-bb65-c4301a44f93f
+  must_say:
+    - Tuesday
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-11
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: Where can I borrow the co-op drill, and how long can I keep it?
+  cites:
+    - 407fbedc-377e-487f-ba04-a3bb6bf74bb8
+  must_say:
+    - '48 hours'
+    - 'Jo or Ari'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: [shared_pages]
+- id: lr-12
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What did Rowan's boiler replacement cost, and what did the price include?
+  cites:
+    - e805350e-253e-471a-acf2-d541ad0f5dd6
+  must_say:
+    - '$4,200'
+    - fitting
+    - 'removal of the old unit'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: [shared_pages]
+- id: lr-13
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: Which room did Rowan House choose for its quiet workspace?
+  refusal: true
+  expected_words: "The library does not say."
+  may_cite: []
+  must_not_say:
+    - 'front room'
+    - '$240'
+    - 'quiet desk'
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: [shared_pages]
+- id: lr-14
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How much did Rowan House set aside for its quiet workspace?
+  refusal: true
+  expected_words: "The library does not say."
+  may_cite: []
+  must_not_say:
+    - '$240'
+    - 'front room'
+    - 'quiet desk'
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: [shared_pages]
+- id: lr-nowifi
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What's the wifi password?
+  refusal: true
+  expected_words: "The library does not say. The Budget lists internet as a cost, but no document gives the password. You could ask in the stream."
+  may_cite: []
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-nohollisdate
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: What day is Hollis coming to fix the back steps?
+  refusal: true
+  expected_words: "The library does not say. The Repair log has Hollis the joiner's quote, but no date for the work. Ana keeps the Repair log and may know."
+  may_cite: []
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+# lr-emails asks site-wide (no group key) and cites a shared guide page. The
+# source names that page only by its title, so the one phrase tied to it is a
+# word of that title; the row passes on the citation.
+- id: lr-emails
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  question: How do I change which emails I get?
+  cites:
+    - bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  must_say:
+    - emails
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []

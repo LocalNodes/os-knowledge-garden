@@ -1,5 +1,5 @@
 {
-  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: option B, the darker Open Social blue (Tom's choice, card P, 2026-11-06). Values copied from .planning/brand/CANVAS-BRIEF.md (section 3: socialblue's 15 fields, Nuxt UI 11-shade scales; the section 3 option B column). Deep-merged over localnodes.tokens.json by the swap proof; it sets the brand and accent scales, the socialblue chrome fields, the roles that point at them and the one socialblue field that is not a reference.",
+  "$description": "Palette overlay for scripts/tokens/prove_token_swap.sh: option B, the darker Open Social blue. Deep-merged over localnodes.tokens.json by the swap proof; it sets the brand and accent scales, the socialblue chrome fields, the roles that point at them and the one socialblue field that is not a reference.",
   "primitive": {
     "color": {
       "brand": {

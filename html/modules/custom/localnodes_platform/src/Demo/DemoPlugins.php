@@ -38,7 +38,16 @@ final class DemoPlugins {
     'localnodes_demo' => 'localnodes',
     'boulder_demo' => 'boulder',
     'portland_demo' => 'portland',
+    'localnodes_demo_packs' => 'pack',
   ];
+
+  /**
+   * Demo modules whose content comes from a pack directory.
+   *
+   * drush social-demo:add needs --profile=packs/<name>/ for these, so only
+   * docker/entrypoint.sh (which has DEMO_PACK) loads them.
+   */
+  public const PACK_MODULES = ['localnodes_demo_packs'];
 
   /**
    * Content only some demo modules have. It loads after the rest, since a
@@ -47,6 +56,7 @@ final class DemoPlugins {
   public const EXTRAS = [
     'localnodes_demo' => ['quick_poll'],
     'boulder_demo' => ['quick_poll'],
+    'localnodes_demo_packs' => ['quick_poll', 'howto'],
   ];
 
   /**

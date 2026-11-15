@@ -1,0 +1,82 @@
+# One passage per page a pack's assistant rows cite: the text exactly as the
+# source states it. source_line is the line of source.md where the passage starts.
+- id: lr-minutes-0312
+  uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+  field: body
+  text: "Back steps. Two treads are loose. Agreed to get three quotes before the spring meeting. Ana will call round."
+  source_line: 129
+- id: lr-repairlog-0406
+  uuid: 0d2fe151-a0b2-470e-9796-03c5daaea9a0
+  field: body
+  text: "Back steps quotes in. Hollis the joiner 600 PRACTICE (two new hardwood treads, refix the stringer, check the rest). A decking firm 800 PRACTICE. A second carpenter 900 PRACTICE, and that one does not include taking the old treads away."
+  source_line: 153
+- id: lr-rules-quiet
+  uuid: 2aae2f0d-34f3-46cd-9410-7bed95189877
+  field: body
+  text: "Quiet hours. 10 pm to 7 am, every night. Keep music and calls in your room, doors closed."
+  source_line: 204
+- id: lr-rules-guests
+  uuid: 2aae2f0d-34f3-46cd-9410-7bed95189877
+  field: body
+  text: "Guests. A guest can stay up to 7 nights in a row. Post in the stream if a guest is staying more than one night. Longer stays need a house decision."
+  source_line: 208
+- id: lr-bylaws-pass
+  uuid: d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  field: body
+  text: "A decision passes when, by the deadline, at least two-thirds of the house has responded (8 of 12 when the house is full), at least one member has agreed, and nobody has blocked."
+  source_line: 184
+- id: lr-bylaws-deadlines
+  uuid: d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  field: body
+  text: "Deadlines: 7 days for everyday decisions and money decisions. 14 days for changing these bylaws or the house rules."
+  source_line: 186
+- id: lr-bylaws-block
+  uuid: d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  field: body
+  text: "If a decision does not pass, the person who proposed it can change it and bring it back as a new decision. If someone blocks, talk to them first. Most blocks point at something that can be fixed."
+  source_line: 188
+- id: lr-budget-charge
+  uuid: 918c68e1-d040-453a-8e49-7321c3609d83
+  field: body
+  text: "12 members pay a house charge of $725 a month."
+  source_line: 234
+- id: lr-handbook-key
+  uuid: 6603bc81-d8d6-43ca-bb65-c4301a44f93f
+  field: body
+  text: "If you lose a key, tell Farah. She holds the spares."
+  source_line: 286
+- id: lr-handbook-bins
+  uuid: 6603bc81-d8d6-43ca-bb65-c4301a44f93f
+  field: body
+  text: "Bins go out on Tuesday night. Recycling (blue lid) goes out every other week. The rota says which week."
+  source_line: 296
+- id: lr-tools-borrow
+  uuid: 407fbedc-377e-487f-ba04-a3bb6bf74bb8
+  field: body
+  text: "Co-op members can borrow them for up to 48 hours (two days). Put your name, the item and its return time on the sheet inside the cupboard."
+  source_line: 342
+- id: lr-tools-access
+  uuid: 407fbedc-377e-487f-ba04-a3bb6bf74bb8
+  field: body
+  text: "Ask Jo or Ari to arrange access."
+  source_line: 344
+- id: lr-boiler-cost
+  uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+  field: body
+  text: "Ellis the heating fitter replaced Rowan's boiler. The total was $4,200, including the boiler, fitting and removal of the old unit."
+  source_line: 400
+- id: lr-rowan-workspace
+  uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+  field: body
+  text: "Quiet workspace. Agreed to try a quiet desk in the front room for six weeks, starting when it is ready. Set aside $240 from the house budget for a used desk and a lamp."
+  source_line: 384
+- id: lr-workday-body
+  uuid: 908f14a7-ad83-4445-a2fc-f213a35acc2d
+  field: body
+  text: "Bring gloves. We're clearing the ivy off the shed, cutting back the brambles by the fence and moving the old pots. Use the side gate, not the back steps. Tea and toast from 8:45."
+  source_line: 529
+- id: lr-emails-title
+  uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  field: title
+  text: "Change which emails you get"
+  source_line: 811

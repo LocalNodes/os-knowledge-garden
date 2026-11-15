@@ -1,0 +1,120 @@
+---
+# Lantern Row Housing Co-op: the co-op common room, two houses and a repairs team.
+# Each group is loaded by its organizer, who is also a member.
+cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d:
+  uuid: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  langcode: en
+  image: null
+  image_alt: ''
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: now|00:00
+  label: Co-op common room
+  type: flexible_group
+  field_flexible_group_visibility: public
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+  - public
+  - community
+  description: <p>Welcome to Lantern Row Housing Co-op. This is the common room for Willow House and Rowan House. Everyone in either house belongs here. Find shared tools, people we have hired, joining notes and co-op meeting notes. You can join this group on the demo. Anyone can read the shared-tools page; sign in to read the other shared pages. Joining this group does not make you a member of either house.</p>
+  members:
+  - b8963366-a516-4bd2-b545-1cea263bc859
+  - d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  - 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  - 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  - a7f4cd7f-3076-425c-b052-28048648a454
+  - dfeab05a-4e26-4c70-a918-adbff3104d18
+  - 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  - 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  - b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  - 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  - 13d5ed06-1442-4613-8bcd-de213a0e0293
+  - ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  - bfc9de5e-e309-4307-a207-9caa5a826eaa
+  - f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  - 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  - 0f4efd66-e78f-45f1-8dfe-f020182d1f55
+  - 60094548-e91e-4fa8-8bb9-933fab340b3c
+  - 53c559cd-7844-46da-80eb-ce802cd3e34b
+  - 7489783b-7e23-4de6-92aa-8dc205ec108f
+  managers:
+  - 9070d9de-6644-46ae-8c7e-50716e8dfd84
+
+0e1ab3bf-8944-4d4c-832e-71c6cac308f6:
+  uuid: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  langcode: en
+  image: null
+  image_alt: ''
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: now|00:00
+  label: Willow House
+  type: flexible_group
+  field_flexible_group_visibility: public
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+  - group
+  description: <p>We are twelve people living in one house at Lantern Row Housing Co-op. Our library, stream, house decisions and repair fund are here. Anyone may join Willow House on this demo to explore its made-up records. A real house is invitation-only. Joining the demo does not give you a room or create a tenancy. The fund uses practice money.</p>
+  members:
+  - b8963366-a516-4bd2-b545-1cea263bc859
+  - d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  - 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  - 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  - a7f4cd7f-3076-425c-b052-28048648a454
+  - dfeab05a-4e26-4c70-a918-adbff3104d18
+  - 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  - 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  - b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  - 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  - 13d5ed06-1442-4613-8bcd-de213a0e0293
+  - ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  managers:
+  - 9070d9de-6644-46ae-8c7e-50716e8dfd84
+
+4995fa17-ec83-4b34-936e-03e0e559815b:
+  uuid: 4995fa17-ec83-4b34-936e-03e0e559815b
+  langcode: en
+  image: null
+  image_alt: ''
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: now|00:00
+  label: Rowan House
+  type: flexible_group
+  field_flexible_group_visibility: public
+  field_group_allowed_join_method: added
+  field_group_allowed_visibility:
+  - community
+  - group
+  description: '<p>We are seven people living in the other house at Lantern Row Housing Co-op. Our house records are for our members. Membership is by invitation. We have shared one page with the whole co-op: Replacing our boiler: notes for another house. Sign in to read it; you do not need to join Rowan.</p>'
+  members:
+  - bfc9de5e-e309-4307-a207-9caa5a826eaa
+  - f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  - 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  - 0f4efd66-e78f-45f1-8dfe-f020182d1f55
+  - 60094548-e91e-4fa8-8bb9-933fab340b3c
+  - 53c559cd-7844-46da-80eb-ce802cd3e34b
+  - 7489783b-7e23-4de6-92aa-8dc205ec108f
+  managers:
+  - bfc9de5e-e309-4307-a207-9caa5a826eaa
+
+fd3a5994-616b-42e9-b06c-d429f7ce6080:
+  uuid: fd3a5994-616b-42e9-b06c-d429f7ce6080
+  langcode: en
+  image: null
+  image_alt: ''
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  created: now|00:00
+  label: Co-op Repairs
+  type: flexible_group
+  field_flexible_group_visibility: public
+  field_group_allowed_join_method: added
+  field_group_allowed_visibility:
+  - group
+  description: <p>We are six people from Willow House and Rowan House who help arrange repairs and look after shared tools. Ask Ana about a Willow job, Ben about a Rowan job, and Jo or Ari about borrowing tools. Membership is by invitation. Each house keeps its own records and makes its own spending decisions.</p>
+  members:
+  - b8963366-a516-4bd2-b545-1cea263bc859
+  - d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  - 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  - 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  - f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  - 0f4efd66-e78f-45f1-8dfe-f020182d1f55
+  managers:
+  - b8963366-a516-4bd2-b545-1cea263bc859

@@ -1,0 +1,123 @@
+---
+# Events. No event states an end time, and the end date is required, so each end equals its start;
+# the page then shows the start alone.
+# Created: every event is dated 14 days back, older than the oldest post or comment (12 days back), so the posts
+# lead the home stream. The event date fields are the event's own and are not touched.
+9a05ab58-f40f-4c36-abd2-8e4de2aff28f:
+  uuid: 9a05ab58-f40f-4c36-abd2-8e4de2aff28f
+  title: Fridge clear-out
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: ''
+  field_event_address: {}
+  field_event_date: +1 day|20:00
+  field_event_date_end: +1 day|20:00
+  image: null
+  image_alt: ''
+  field_event_location: Kitchen
+  field_content_visibility: group
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  created: -14 day|09:00
+
+3bc52bc4-71ca-4f6a-84da-df563ff23a59:
+  uuid: 3bc52bc4-71ca-4f6a-84da-df563ff23a59
+  title: Shared dinner (Owen cooking)
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: ''
+  field_event_address: {}
+  field_event_date: +2 day|18:30
+  field_event_date_end: +2 day|18:30
+  image: null
+  image_alt: ''
+  field_event_location: Kitchen
+  field_content_visibility: group
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  created: -14 day|09:00
+
+908f14a7-ad83-4445-a2fc-f213a35acc2d:
+  uuid: 908f14a7-ad83-4445-a2fc-f213a35acc2d
+  title: 'Work day: clear the back yard'
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: <p>Bring gloves. We're clearing the ivy off the shed, cutting back the brambles by the fence and moving the old pots. Use the side gate, not the back steps. Tea and toast from 8:45.</p>
+  field_event_address: {}
+  field_event_date: next saturday|09:00
+  field_event_date_end: next saturday|09:00
+  image: null
+  image_alt: ''
+  field_event_location: Back garden
+  field_content_visibility: group
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  created: -14 day|09:00
+
+cdcc5d66-8c30-419d-8713-504a88f52b32:
+  uuid: cdcc5d66-8c30-419d-8713-504a88f52b32
+  title: House meeting
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: '<p>Agenda so far: the third board on the back steps (Jo''s quotes), the gutter, the quiet hours decision, Ines''s first month.</p>'
+  field_event_address: {}
+  field_event_date: +9 day|19:30
+  field_event_date_end: +9 day|19:30
+  image: null
+  image_alt: ''
+  field_event_location: Front room
+  field_content_visibility: group
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  created: -14 day|09:00
+
+56a719b2-6336-4c7b-be7a-e76a5b03e1fb:
+  uuid: 56a719b2-6336-4c7b-be7a-e76a5b03e1fb
+  title: Seed swap and garden plan for spring
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: ''
+  field_event_address: {}
+  field_event_date: +16 day|14:00
+  field_event_date_end: +16 day|14:00
+  image: null
+  image_alt: ''
+  field_event_location: Front room
+  field_content_visibility: group
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  created: -14 day|09:00
+
+1d56eb09-66d0-45ac-8b70-1fbbc304a603:
+  uuid: 1d56eb09-66d0-45ac-8b70-1fbbc304a603
+  title: Tool-share day
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: <p>Bring the shared drill, socket set and pipe wrench so we can check the parts and show anyone new how to borrow them. Jo and Ari will be by the tool cupboard. Members of both houses welcome.</p>
+  field_event_address: {}
+  field_event_date: +7 day|11:00
+  field_event_date_end: +7 day|11:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op courtyard
+  field_content_visibility: community
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  created: -14 day|09:00
+
+c6ea4f1e-172e-4b94-aa83-36230471140c:
+  uuid: c6ea4f1e-172e-4b94-aa83-36230471140c
+  title: Quarterly co-op meeting
+  type: event
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  body: <p>How is the shared tool library working? What useful page could each house share next? Bring co-op-wide questions. House spending and private house business stay with each house. All 19 members are invited; the going list is who has signed up so far.</p>
+  field_event_address: {}
+  field_event_date: +21 day|18:30
+  field_event_date_end: +21 day|18:30
+  image: null
+  image_alt: ''
+  field_event_location: Co-op common room
+  field_content_visibility: community
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  created: -14 day|09:00

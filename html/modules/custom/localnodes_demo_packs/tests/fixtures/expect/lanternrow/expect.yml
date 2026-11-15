@@ -1,0 +1,230 @@
+# What the Lantern Row Housing Co-op pack must hold once loaded. The keys are
+# those of the smoke pack's expect.yml; this file grows as the pack's pages,
+# posts, events and poll load.
+#
+# sections: every `## ` heading of source.md, by its exact text, and what the
+#   pack does with it: `loaded`, `test_only`, or a mapping `left_out: <owner>`
+#   or `pending: <dependency>`.
+counts:
+  user: 19
+  group: 4
+  topic: 14
+  event: 7
+  event_enrollment: 46
+  post: 9
+  comment: 8
+  like: 45
+  poll: 1
+  howto: 10
+visibility:
+  - id: visitor-sees-commonroom
+    persona: anonymous
+    uuid: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+    sees: true
+  - id: visitor-sees-willow
+    persona: anonymous
+    uuid: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+    sees: true
+  - id: visitor-sees-rowan
+    persona: anonymous
+    uuid: 4995fa17-ec83-4b34-936e-03e0e559815b
+    sees: true
+  - id: visitor-sees-repairs
+    persona: anonymous
+    uuid: fd3a5994-616b-42e9-b06c-d429f7ce6080
+    sees: true
+  - id: visitor-sees-shared-tools
+    persona: anonymous
+    uuid: 407fbedc-377e-487f-ba04-a3bb6bf74bb8
+    sees: true
+  - id: visitor-misses-tradespeople
+    persona: anonymous
+    uuid: 1b6f5527-e38e-459f-894b-51f824af0212
+    sees: false
+  - id: visitor-misses-joining
+    persona: anonymous
+    uuid: 5260c3ba-8ac4-4416-8169-fda493651a5f
+    sees: false
+  - id: visitor-misses-quarterly-notes
+    persona: anonymous
+    uuid: 60a04708-5bbf-4251-ba88-bc46d4bd0ae1
+    sees: false
+  - id: visitor-misses-repairs-help
+    persona: anonymous
+    uuid: 3a8fe17d-e60e-4f4e-bda5-d29c3c28c949
+    sees: false
+  - id: visitor-misses-tool-share-day
+    persona: anonymous
+    uuid: 1d56eb09-66d0-45ac-8b70-1fbbc304a603
+    sees: false
+  - id: visitor-misses-quarterly-meeting
+    persona: anonymous
+    uuid: c6ea4f1e-172e-4b94-aa83-36230471140c
+    sees: false
+  - id: visitor-misses-house-minutes
+    persona: anonymous
+    uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+    sees: false
+  - id: visitor-misses-boiler-page
+    persona: anonymous
+    uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+    sees: false
+  - id: visitor-misses-rowan-minutes
+    persona: anonymous
+    uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+    sees: false
+  - id: visitor-misses-rowan-handbook
+    persona: anonymous
+    uuid: 54eb5317-2acc-4c64-b440-8a63d242f3a7
+    sees: false
+  - id: ines-sees-house-minutes
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+    sees: true
+  - id: ines-sees-tradespeople
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: 1b6f5527-e38e-459f-894b-51f824af0212
+    sees: true
+  - id: ines-sees-tool-share-day
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: 1d56eb09-66d0-45ac-8b70-1fbbc304a603
+    sees: true
+  - id: ines-sees-boiler-page
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+    sees: true
+  - id: ines-misses-rowan-minutes
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+    sees: false
+  - id: ines-misses-rowan-handbook
+    persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    uuid: 54eb5317-2acc-4c64-b440-8a63d242f3a7
+    sees: false
+  - id: nell-sees-rowan-minutes
+    persona: bfc9de5e-e309-4307-a207-9caa5a826eaa
+    uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+    sees: true
+  - id: nell-sees-rowan-handbook
+    persona: bfc9de5e-e309-4307-a207-9caa5a826eaa
+    uuid: 54eb5317-2acc-4c64-b440-8a63d242f3a7
+    sees: true
+  - id: nell-misses-house-minutes
+    persona: bfc9de5e-e309-4307-a207-9caa5a826eaa
+    uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+    sees: false
+  - id: nell-misses-willow-budget
+    persona: bfc9de5e-e309-4307-a207-9caa5a826eaa
+    uuid: 918c68e1-d040-453a-8e49-7321c3609d83
+    sees: false
+listings:
+  - persona: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    group: 4995fa17-ec83-4b34-936e-03e0e559815b
+    hidden_titles:
+      - Rowan House minutes, 8 September
+      - Rowan House handbook
+left_out:
+  - id: thread-ladder
+    text: borrow your long ladder on Friday
+  - id: thread-hook
+    text: Leave it lying flat after, the hook on the wall is bent.
+  - id: thread-chutney
+    text: I'm going to try the chutney again.
+  - id: decision-liam-first
+    text: I'd rather Marcus and I tried it first, but I won't hold it up.
+  - id: decision-owen-seven
+    text: I'd agree to 7 nights, and longer if the house says yes for that guest.
+  - id: decision-farah-earplugs
+    text: I won't stand in the way, and I'll keep earplugs for Fridays.
+  - id: decision-jo-fund
+    text: Fund checked, fine.
+  - id: fund-pending-leaves
+    text: paying it later would leave 260 PRACTICE
+  - id: fund-threshold
+    text: It is under the 300 PRACTICE threshold
+# search_hidden: a page a member of another group, or a visitor, must not find
+#   by searching its own words. The control is a member of the page's group, who
+#   must find it, so a search that finds nothing for anyone fails.
+# indexed: the pages the walk and the assistant rows lean on are tracked and
+#   indexed by the keyword search and by the index the assistant reads.
+# search_found: a member who searches for a page's title finds it.
+search_hidden:
+  - id: lr-search-rowan-minutes
+    as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    keys: quiet desk
+    title: Rowan House minutes, 8 September
+    control_as: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  - id: lr-search-visitor-minutes
+    as: anonymous
+    keys: back steps
+    title: House minutes
+    control_as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+indexed:
+  - id: lr-indexed-minutes
+    uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+    indexes:
+      - social_content
+      - social_posts
+  - id: lr-indexed-boiler
+    uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+    indexes:
+      - social_content
+      - social_posts
+  - id: lr-indexed-emails
+    uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
+    indexes:
+      - social_content
+      - social_posts
+search_found:
+  - id: lr-found-boiler
+    as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    keys: Replacing our boiler
+    title: 'Replacing our boiler: notes for another house'
+  - id: lr-found-emails
+    as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+    keys: Change which emails you get
+    title: Change which emails you get
+  - id: lr-found-rowan-minutes
+    as: bfc9de5e-e309-4307-a207-9caa5a826eaa
+    keys: quiet desk
+    title: Rowan House minutes, 8 September
+likes:
+  b94df212-2c8a-48d7-9817-372243e76969: 7
+  368e7e97-4b90-4b0e-b946-c9eb45abd15a: 2
+  2325fa9d-6643-46d3-bba0-db8b5fcc839c: 5
+  76b6bbde-f20d-47a9-ae09-e833b0ea2eb9: 4
+  0424c0c8-eeba-42ed-bdee-edd9afbca2b4: 5
+  9745fdcb-1fe1-47d3-811d-bca76807b996: 3
+  f81903bf-b9a9-4698-bcac-a22a68e130c1: 6
+  587ddf38-b50e-4abd-9468-0906358a21ba: 9
+  85bb39aa-cd18-4e24-ac7e-c5b9dca55c86: 4
+going:
+  9a05ab58-f40f-4c36-abd2-8e4de2aff28f: 3
+  3bc52bc4-71ca-4f6a-84da-df563ff23a59: 8
+  908f14a7-ad83-4445-a2fc-f213a35acc2d: 6
+  cdcc5d66-8c30-419d-8713-504a88f52b32: 9
+  56a719b2-6336-4c7b-be7a-e76a5b03e1fb: 4
+  1d56eb09-66d0-45ac-8b70-1fbbc304a603: 6
+  c6ea4f1e-172e-4b94-aa83-36230471140c: 10
+poll_votes:
+  4f85a61b-04ad-4673-a467-712979d3c818: [7, 3, 2]
+sections:
+  1. People: loaded
+  2. Groups: loaded
+  3. The library: loaded
+  4. Assistant questions: test_only
+  5. The stream: loaded
+  6. Events: loaded
+  7. Quick poll: loaded
+  8. Decisions:
+    left_out: the decisions work (decision screens)
+  9. The fund:
+    pending: the Practice Money work
+  10. Message thread:
+    left_out: direct messages are off
+  11. Consistency table: test_only
+  12. What a visitor sees: test_only
+  13. Home page follow-up — list only:
+    left_out: the home page work
+  Demo-loader additions:
+    pending: the decisions work and the Practice Money work; the imported reference is left out because no real organisation's text belongs in a demo site; the how-to pages are the shared how-to pages, loaded with every pack

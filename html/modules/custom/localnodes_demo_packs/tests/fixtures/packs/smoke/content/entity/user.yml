@@ -1,0 +1,60 @@
+---
+# Smoke fixture: three made-up accounts. The keys match what social_demo's
+# DemoUser reads.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -3 day|09:00
+  name: smoke_one
+  mail: smoke-one@smoke.example
+  export_owner: true
+  timezone: UTC
+  status: 1
+  image:
+  image_alt:
+  first_name: Smoke
+  last_name: One
+  organization: ""
+  function: ""
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "A test account for the pack loader."
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  created: -2 day|09:00
+  name: smoke_two
+  mail: smoke-two@smoke.example
+  timezone: UTC
+  status: 1
+  image:
+  image_alt:
+  first_name: Smoke
+  last_name: Two
+  organization: ""
+  function: ""
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "A second test account for the pack loader."
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d03:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d03
+  created: -1 day|09:00
+  name: smoke_out
+  mail: smoke-out@smoke.example
+  timezone: UTC
+  status: 1
+  image:
+  image_alt:
+  first_name: Smoke
+  last_name: Out
+  organization: ""
+  function: ""
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "A third test account, outside every group."

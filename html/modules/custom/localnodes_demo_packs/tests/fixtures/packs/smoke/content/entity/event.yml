@@ -1,0 +1,22 @@
+---
+# Smoke fixture: one event in the common room, in a made-up place.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60
+  title: Smoke meetup
+  type: event
+  langcode: en
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  body: >
+    <p>Smoke meetup: Smoke hall, {{day:+9}} at 18:00.</p>
+  field_event_address:
+    country_code: US
+    locality: Smoke Town
+    postal_code: "00000"
+    address_line1: 1 Smoke Lane
+  field_event_date: +9 day|18:00
+  field_event_date_end: +9 day|20:00
+  field_event_location: Smoke hall
+  field_content_visibility: group
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  image:
+  image_alt:

@@ -1,0 +1,140 @@
+# Assistant rows for the how-to pages, run on a site by
+# scripts/check_demo_pack.php --pack=howto. The member is smoke_two (as). The
+# group is empty, so the question is asked site-wide, as a member does from
+# the assistant's own page. cites are uuids of the how-to pages, in the order
+# of shared/content/entity/howto.yml; must_say are the control names the
+# page's steps use plus one phrase of the page's substance (the approval step,
+# the audience, the permission, the original passage, the frequency, the confirmation),
+# and each row also pins one instruction or limit the page states (the organizer
+# approves, check the group, the rights box, the numbered source, Save, the
+# group name). must_not_say rules out a promise the page denies, one or more per row. The two refusal rows ask what no how-to page covers: the
+# assistant must say it found nothing and cite none of the ten pages.
+# expected_words records the sentence in Part 3 of source.md for a reader; the
+# judge accepts the product's own fixed no-answer reply.
+- id: howto-p01-join
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I join a group that needs approval?
+  cites:
+    - 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+  must_say:
+    - Request to join
+    - Send request
+    - approval
+    - organizer
+  must_not_say:
+    - automatic
+    - automatically
+    - immediately become
+  needs: []
+- id: howto-p02-post
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I write a post in my group?
+  cites:
+    - b8d8e848-e2a3-4caa-bbca-247fa7e07759
+  must_say:
+    - Say something to the group
+    - Post
+    - audience
+    - Check the group
+  must_not_say:
+    - only you can see
+    - everyone can see
+    - anyone can see
+  needs: []
+- id: howto-p03-add-file
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I add a file the assistant can read?
+  cites:
+    - 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  must_say:
+    - Upload files
+    - Choose files
+    - permission
+    - rights box
+  must_not_say:
+    - replaces the old
+    - overwrites
+    - can read scanned
+  needs: []
+- id: howto-p04-check-sources
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I check whether the assistant's answer is right?
+  cites:
+    - f4d742fe-20f6-40ac-b989-6b361efdbf10
+  must_say:
+    - Sources
+    - original
+    - numbered
+  must_not_say:
+    - guarantee
+    - always right
+    - always correct
+    - no need to check
+    - no need to verify
+  needs: []
+- id: howto-p07-emails
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I stop one kind of notification email?
+  cites:
+    - bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  must_say:
+    - Email notifications
+    - Never
+    - kind of notification
+    - Save
+  must_not_say:
+    - no more emails
+    - never receive another
+    - stops every email
+    - stops all email
+  needs: []
+- id: howto-p08-leave
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: How do I leave a group?
+  cites:
+    - 80647fee-c455-45bb-a191-32bfdf55fca2
+  must_say:
+    - Joined
+    - Leave group
+    - confirm
+    - Check the group name
+  must_not_say:
+    - delete all your
+    - erase all your
+    - closes your account
+    - deletes your account
+  needs: []
+- id: howto-boundary-key
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: Who has the spare key to our meeting room?
+  refusal: true
+  expected_words: "I couldn't find that in the library pages I can use. Ask your group's organizers."
+  may_cite: []
+  forbidden: &all_howto
+    - 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+    - b8d8e848-e2a3-4caa-bbca-247fa7e07759
+    - 41177da8-52b7-47f4-83c3-bff8d4fb3433
+    - f4d742fe-20f6-40ac-b989-6b361efdbf10
+    - 83737855-1f79-4c2e-965f-7f8f8e7d350c
+    - ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+    - bd9829b7-0e22-423b-ac3c-f4b754f70a63
+    - 80647fee-c455-45bb-a191-32bfdf55fca2
+    - 9e55d601-cbef-4c2e-946c-39503b37941b
+    - f42f8def-e88f-48e5-b194-737527cdeecc
+  needs: []
+- id: howto-boundary-quiet-hours
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: ''
+  question: What did our group agree about quiet hours last month?
+  refusal: true
+  expected_words: "I couldn't find that agreement in the library pages I can use. Ask your group's organizers or check the meeting notes."
+  may_cite: []
+  forbidden: *all_howto
+  needs: []

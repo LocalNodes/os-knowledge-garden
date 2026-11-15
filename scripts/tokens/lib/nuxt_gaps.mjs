@@ -1,12 +1,12 @@
 /**
- * Known Nuxt gaps and the before/after comparator for the palette-swap proof (22.1-14, 22.1-09, DES-01, WINDOWS 44).
+ * Known Nuxt gaps and the before/after comparator for the palette-swap proof.
  *
  * scripts/tokens/prove_token_swap.sh runs the Nuxt repo's unit tests (vitest JSON) before and after a
  * palette swap and hands both reports to this file. A test that fails only after the swap is a NEW
  * FAILURE, unless it is one of the KNOWN_NUXT_GAPS below: tests DESIGNED to fail when the palette
  * changes, because the Nuxt repo holds a second, hand-written copy of palette values that the
- * generator does not write. A gap is printed as a `GAP` line, never counted as a pass, and is
- * recorded in .planning/WINDOWS.md. It stops the proof (`STALE GAP`) the moment it closes, so this
+ * generator does not write. A gap is printed as a `GAP` line, never counted as a pass, and carries
+ * the number of the open item that tracks it. It stops the proof (`STALE GAP`) the moment it closes, so this
  * list cannot rot (the same rule as EXCLUDED in pairings.mjs). A gap only applies when its test
  * exists and passes before the swap in the ref being read.
  *
@@ -15,7 +15,7 @@
  * fails that test (palette B shows it), and the entry is gone. The test still pins `link` to the brand 800 step
  * rather than the token source's link role, so a palette whose link is another colour (palette A) fails it as a
  * NEW FAILURE until the Nuxt repo re-pins it. Add an entry here only for a Nuxt test that holds its own copy of
- * palette values, with the WINDOWS entry that tracks it.
+ * palette values, with the number of the open item that tracks it.
  *
  * CLI (what the proof calls):
  *   node scripts/tokens/lib/nuxt_gaps.mjs <before.json> <after.json> <nuxtChangedCount>
@@ -29,7 +29,7 @@ import { pathToFileURL } from 'node:url';
 
 /**
  * Each entry: `test` is the prefix of a failure key (`<file under tests/> :: <full test name>`),
- * `windows` the .planning/WINDOWS.md entry, `reason` why the test fails after a swap, `closes` the
+ * `windows` the number of the open item that tracks it (printed as WINDOWS <n>), `reason` why the test fails after a swap, `closes` the
  * rule that closes it.
  */
 export const KNOWN_NUXT_GAPS = Object.freeze([]);
@@ -78,7 +78,7 @@ export function judge(before, after, nuxtChangedCount, gaps = KNOWN_NUXT_GAPS) {
   if (bad) lines.push(`the number of Nuxt tests changed with the swap: ${before.numTotalTests} before, ${after.numTotalTests} after`);
   for (const x of [...failedAfter].filter((y) => !failedBefore.has(y))) {
     if (isGap(x)) {
-      lines.push(`GAP ${x}: the Nuxt repo holds a hand-written copy of palette values; a swap needs it edited (see .planning/WINDOWS.md)`);
+      lines.push(`GAP ${x}: the Nuxt repo holds a hand-written copy of palette values; a swap needs it edited`);
     } else {
       lines.push(`NEW FAILURE after the swap: ${x}`);
       bad = true;

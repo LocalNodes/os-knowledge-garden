@@ -1,0 +1,91 @@
+---
+# Posts: field_visibility 1 is public, 2 community, 3 members only.
+b94df212-2c8a-48d7-9817-372243e76969:
+  uuid: b94df212-2c8a-48d7-9817-372243e76969
+  langcode: en
+  type: post
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  field_visibility: 3
+  created: +0 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: '<p>Welcome to the Willow House group on the Lantern Row Housing Co-op site. This is where the 12 of us keep the house running: the library (minutes, repair log, bylaws, house rules, budget, handbook), house decisions, the repair fund and the everyday chat. If you''re visiting, a few things to try: ask the assistant "Has anyone looked at the back steps?" and see which document it quotes. Open the back-steps decision to see how everyone responded. Say you''re coming to Saturday''s work day. Answer the sofa poll. The fund here uses practice money, not real money.</p>'
+
+368e7e97-4b90-4b0e-b946-c9eb45abd15a:
+  uuid: 368e7e97-4b90-4b0e-b946-c9eb45abd15a
+  langcode: en
+  type: post
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  field_visibility: 3
+  created: -1 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>New chore rota is on the fridge. Owen is off mornings now, I've swapped him to the evening kitchen slot. Ines starts on bins next week, with me.</p>
+
+2325fa9d-6643-46d3-bba0-db8b5fcc839c:
+  uuid: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  langcode: en
+  type: post
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  field_visibility: 3
+  created: -2 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>The back steps are getting worse. The third board is loose now. Can we get them fixed before winter?</p>
+
+76b6bbde-f20d-47a9-ae09-e833b0ea2eb9:
+  uuid: 76b6bbde-f20d-47a9-ae09-e833b0ea2eb9
+  langcode: en
+  type: post
+  uid: 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  field_visibility: 3
+  created: -3 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>Tomatoes are done. If anyone wants green ones for chutney, they're in a crate by the back door. Mind the steps.</p>
+
+0424c0c8-eeba-42ed-bdee-edd9afbca2b4:
+  uuid: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  langcode: en
+  type: post
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  field_visibility: 3
+  created: -5 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>The back-steps payment went out today. $600 to Hollis the joiner, approved by Ana and me. The fund is at $400, still above our $200 floor. Hollis will come as soon as he has a dry week.</p>
+
+9745fdcb-1fe1-47d3-811d-bca76807b996:
+  uuid: 9745fdcb-1fe1-47d3-811d-bca76807b996
+  langcode: en
+  type: post
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  field_visibility: 3
+  created: -6 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>The kitchen tap is dripping again. I've put a bowl under it. Is this one for the repair log?</p>
+
+f81903bf-b9a9-4698-bcac-a22a68e130c1:
+  uuid: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  langcode: en
+  type: post
+  uid: 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  field_visibility: 3
+  created: -8 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: '<p>To whoever keeps moving my oat milk to the bottom shelf: the top left shelf is mine. It says so on the tape.</p>'
+
+587ddf38-b50e-4abd-9468-0906358a21ba:
+  uuid: 587ddf38-b50e-4abd-9468-0906358a21ba
+  langcode: en
+  type: post
+  uid: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  field_visibility: 3
+  created: -12 day|09:00
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_post: <p>Hello everyone. I moved into the small top room on Sunday. Thank you for all the help with the boxes, and for the plant on the windowsill.</p>
+
+85bb39aa-cd18-4e24-ac7e-c5b9dca55c86:
+  uuid: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+  langcode: en
+  type: post
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  field_visibility: 2
+  created: -1 day|09:00
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_post: <p>Hello from Rowan House. The common room library now has our tool-borrowing notes and people the houses have hired. Rowan has also shared what we learned when we replaced our boiler. You can read that page without joining our house group. Tool-share day is in the courtyard on day +7 at 11 am. Our quarterly co-op meeting is on day +21 at 6:30 pm in the common room. Both events are open to members of either house; add your name if you are coming.</p>

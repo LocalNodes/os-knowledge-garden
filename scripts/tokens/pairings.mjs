@@ -304,8 +304,8 @@ function nuxt(mode) {
       const p = pairing(family, 'text', ui(mode, 'text-inverted'), ui(mode, s), `Nuxt ${mode}: inverted text on the solid ${s} fill`);
       if (mode !== 'light' || s !== 'secondary') return p;
       // Nuxt UI draws a solid secondary with --ui-text-inverted (white): 1.62:1 on the amber. The light --ui-text role
-      // (#343434, BRAND.md's text on the highlight) is 7.68:1. It takes a compound variant in the Nuxt repo's
-      // app.config.ts (22.1-05 SUMMARY, Q2 resolution); no solid secondary is used on the site today.
+      // (#343434, the brand text colour on the highlight) is 7.68:1. It takes a compound variant in the Nuxt repo's
+      // app.config.ts; no solid secondary is used on the site today.
       const note = `Nuxt UI's white text-inverted is 1.62:1 on this fill, so it is measured as ${ui(mode, 'text')}, which the Nuxt repo's app.config.ts must apply: compoundVariants { color: 'secondary', variant: 'solid', class: 'text-default' }; no solid secondary is used on the site today`;
       return { ...p, fg: ui(mode, 'text'), note, source: `${p.source}; ${note}` };
     }),
@@ -357,10 +357,10 @@ function email() {
   ];
 }
 
-/** PB: the landing page's dark hero band (BRAND.md section 5; CANVAS-BRIEF "Option B dark band"). */
+/** PB: the landing page's dark hero band: its text, link, button and focus roles on the band background. */
 function band() {
   const b = (n) => `semantic.band.${n}`;
-  const src = 'dark hero band (CANVAS-BRIEF Option B dark band)';
+  const src = 'dark hero band';
   return [
     ...product('PB', 'text', [b('text'), b('text-muted'), b('link')], [b('bg')], `${src}: text, muted text and link on the band`),
     pairing('PB', 'non-text', b('button'), b('bg'), `${src}: primary button fill against the band`),

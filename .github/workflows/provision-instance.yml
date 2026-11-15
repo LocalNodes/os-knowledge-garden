@@ -30,13 +30,14 @@ on:
         type: string
         default: '1'
       demo_module:
-        description: 'Demo content module (none = blank instance)'
+        description: 'Demo content (none = blank instance). pack:<name> loads the demo pack of that name'
         required: true
         type: choice
         options:
           - localnodes_demo
           - boulder_demo
           - portland_demo
+          - pack:lanternrow
           - none
         default: none
       gemini_key_tier:
@@ -95,6 +96,7 @@ jobs:
           ATTEMPT_INPUT: ${{ inputs.attempt }}
           CALLBACK_URL_INPUT: ${{ inputs.callback_url }}
           WEB3_INPUT: ${{ inputs.web3 }}
+          DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
         run: |
           SUBDOMAIN="$SUBDOMAIN_INPUT"
           # Sign-up runs carry an opaque provision id (22 url-safe characters) and an attempt number;
@@ -164,6 +166,19 @@ jobs:
               echo "::error::Invalid web3. Use off or practice."
               echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
               exit 1
+              ;;
+          esac
+          # A demo pack is chosen as pack:<name>. The name becomes DEMO_PACK, and the container
+          # builds a path from it (packs/<name>/), so it is held to the entrypoint's rule here,
+          # before any Coolify mutation: lower-case letters, digits and underscores. Bash =~
+          # tests the whole string, as for the subdomain above.
+          case "$DEMO_MODULE_INPUT" in
+            pack:*)
+              if [[ ! "${DEMO_MODULE_INPUT#pack:}" =~ ^[a-z0-9_]+$ ]]; then
+                echo "::error::Invalid demo_module. A pack is pack:<name>, the name in lower-case letters, digits and underscores."
+                echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+                exit 1
+              fi
               ;;
           esac
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
@@ -606,7 +621,17 @@ jobs:
           dedup_envs
 
           echo "Setting instance-specific values..."
-          update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
+          # A pack:<name> choice is the pack loader plus the pack's name (Validate inputs has
+          # checked the name); any other value is the module as given and no pack.
+          case "$DEMO_MODULE_INPUT" in
+            pack:*)
+              update_env "DEMO_MODULE" "localnodes_demo_packs"
+              update_env "DEMO_PACK" "${DEMO_MODULE_INPUT#pack:}"
+              ;;
+            *)
+              update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
+              ;;
+          esac
           # Demo and staging instances send from the demo.localnodes.xyz subdomain, so a demo
           # mistake (e.g. a bounce spike) cannot hurt localnodes.xyz's sending reputation.
           # Blank instances (none) keep the default localnodes.xyz sender.

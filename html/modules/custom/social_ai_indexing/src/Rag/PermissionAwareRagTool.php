@@ -188,9 +188,9 @@ class PermissionAwareRagTool extends RagTool {
     }
 
     try {
-      // Inside a group, fetch twice the amount so the group's own pages are
-      // not pushed out by shared pages from elsewhere before buildBlocks()
-      // puts them first and cuts back to the amount.
+      // Inside a group, fetch twice the amount, so that after buildBlocks()
+      // drops what the asker may not see, enough results are left to keep
+      // the best `amount` by score.
       $query = $index->query(['limit' => $scope === NULL ? $amount : min(50, 2 * $amount)]);
       // Chunks rather than whole entities. Never set the bypass-access option
       // or PROCESSING_NONE here (AI-SPEC pitfall 4).
@@ -217,18 +217,23 @@ class PermissionAwareRagTool extends RagTool {
   /**
    * Turns results into labelled, fenced blocks, in rank order.
    *
-   * Inside a group, the group's own results come first, each part in rank
-   * order, before any label is given; so its pages take the first numbers
-   * and the source budget. A block from elsewhere carries a note naming the
-   * group it is shared from.
+   * At most `amount` allowed results are kept: the best by score, own and
+   * shared together, so a shared page that outranks some of the group's own
+   * pages is kept and the lowest-scoring result is cut. Ties keep rank
+   * order. Inside a group, the kept own results then come first, each part
+   * in rank order, before any label is given; so its pages take the first
+   * numbers and the source budget. A block from elsewhere carries a note
+   * naming the group it is shared from.
    *
    * @return array<string, array{source: \Drupal\social_ai_indexing\Citation\RetrievedSource, texts: string[], note: string}>
    *   Blocks keyed by entity key, in first-seen (rank) order.
    */
   protected function buildBlocks(ResultSetInterface $result_set, float $min_score, ?int $scope, ?int $amount = NULL): array {
-    $own = [];
-    $shared = [];
+    $kept = [];
     foreach ($result_set->getResultItems() as $item) {
+      if ($amount !== NULL && count($kept) >= $amount) {
+        break;
+      }
       if ($item->getScore() < $min_score) {
         continue;
       }
@@ -245,27 +250,23 @@ class PermissionAwareRagTool extends RagTool {
         // Anything we can't load or check is never shown (fail closed).
         continue;
       }
-      if ($in_scope) {
-        $own[] = [$item, $entity];
-      }
-      else {
-        $shared[] = [$item, $entity];
-      }
+      $kept[] = [$item, $entity, $in_scope];
     }
-    $candidates = array_merge($own, $shared);
-    if ($amount !== NULL) {
-      $candidates = array_slice($candidates, 0, $amount);
-    }
+    // Own results first, then shared ones, each part in rank order.
+    $candidates = array_merge(
+      array_filter($kept, static fn (array $candidate): bool => $candidate[2]),
+      array_filter($kept, static fn (array $candidate): bool => !$candidate[2]),
+    );
 
     $blocks = [];
-    foreach ($candidates as $index => [$item, $entity]) {
+    foreach ($candidates as [$item, $entity, $in_scope]) {
       try {
         $key = $entity->getEntityTypeId() . ':' . (int) $entity->id();
         if (!isset($blocks[$key]) && !$this->isRegistered($key) && $this->sourceRegistry->count() >= self::MAX_SOURCES) {
           // The request's source budget is used up (AI-SPEC §4b).
           continue;
         }
-        $note = $index < count($own) ? '' : $this->sharedFrom($entity);
+        $note = $in_scope ? '' : $this->sharedFrom($entity);
         $source = $this->sourceRegistry->register($entity, $this->citationType($entity, $item->getExtraData('citation_type')));
       }
       catch (\Throwable) {

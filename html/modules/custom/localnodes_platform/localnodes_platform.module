@@ -54,9 +54,93 @@ function _localnodes_platform_member_status_actions_after_build(array $form, For
   return $form;
 }
 
-/** Implements hook_node_access(). */
+/**
+ * Implements hook_node_access().
+ *
+ * The private-house rule decides first and a refusal from it always stands.
+ * Site guide pages add one grant and one refusal on top: the site roles named
+ * in SiteGuide::EDITOR_ROLES may update a page marked Site guide, which no site
+ * role may do to a member's topic, and every other account, owner included,
+ * may neither update nor delete such a page.
+ */
 function localnodes_platform_node_access(EntityInterface $node, $operation, AccountInterface $account) {
-  return _localnodes_platform_private_house_access($node, (string) $operation, $account);
+  $house = _localnodes_platform_private_house_access($node, (string) $operation, $account);
+  return $house->orIf(_localnodes_platform_site_guide_access($node, (string) $operation, $account));
+}
+
+/**
+ * Settles who may change a Site guide page.
+ *
+ * On a topic that carries the Site guide type, an update or a delete is
+ * refused to every account that holds neither editor role, owner included:
+ * a member's own-content rights end when the page becomes a guide page. The
+ * editor roles may update a guide page they can already view, and that view
+ * check is the grant's own condition, so a page in a private house, or an
+ * unpublished one the account cannot read, stays out of reach. The view call
+ * asks about viewing and this rule acts only on updating and deleting, so
+ * the two cannot call each other. Accounts that bypass node access are
+ * answered by core before this hook runs.
+ */
+function _localnodes_platform_site_guide_access(EntityInterface $node, string $operation, AccountInterface $account): \Drupal\Core\Access\AccessResultInterface {
+  $neutral = \Drupal\Core\Access\AccessResult::neutral()->addCacheContexts(['user.roles'])->addCacheableDependency($node);
+  if (!in_array($operation, ['update', 'delete'], TRUE) || !$node instanceof \Drupal\node\NodeInterface || $node->bundle() !== 'topic'
+    || $node->isNew()) {
+    return $neutral;
+  }
+  $neutral->addCacheTags(['taxonomy_term_list']);
+  if (!\Drupal\localnodes_platform\SiteGuide::isGuide($node)) {
+    return $neutral;
+  }
+  if (!\Drupal\localnodes_platform\SiteGuide::isEditor($account)) {
+    return \Drupal\Core\Access\AccessResult::forbidden('Only the site manager and content manager roles change a Site guide page.')
+      ->addCacheContexts(['user.roles'])
+      ->addCacheTags(['taxonomy_term_list'])
+      ->addCacheableDependency($node);
+  }
+  if ($operation !== 'update') {
+    return $neutral;
+  }
+  $view = $node->access('view', $account, TRUE);
+  if (!$view->isAllowed()) {
+    return $neutral->addCacheableDependency($view);
+  }
+  return \Drupal\Core\Access\AccessResult::allowed()
+    ->addCacheContexts(['user.roles'])
+    ->addCacheTags(['taxonomy_term_list'])
+    ->addCacheableDependency($node)
+    ->addCacheableDependency($view);
+}
+
+/**
+ * Implements hook_form_node_form_alter().
+ *
+ * On a topic's form: tells an editor what a change to a Site guide page does,
+ * and keeps the Site guide type out of the options of anyone who is not an
+ * editor, so a member cannot mark their own topic as the site's. Does nothing
+ * on a site that has no Site guide type.
+ */
+function localnodes_platform_form_node_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  $form_object = $form_state->getFormObject();
+  if (!$form_object instanceof \Drupal\Core\Entity\EntityFormInterface) return;
+  $node = $form_object->getEntity();
+  if (!$node instanceof \Drupal\node\NodeInterface || $node->bundle() !== 'topic') return;
+  $term_id = \Drupal\localnodes_platform\SiteGuide::termId();
+  if ($term_id === NULL) return;
+  $form['#cache']['tags'][] = 'taxonomy_term_list';
+  $form['#cache']['contexts'][] = 'user.roles';
+  $is_guide = \Drupal\localnodes_platform\SiteGuide::isGuide($node);
+  if (!$node->isNew() && $is_guide) {
+    $form['localnodes_guide_note'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => t("The assistant answers 'how do I' questions from this page. If you change it, its answers change."),
+      '#attributes' => ['class' => ['localnodes-guide-note']],
+      '#weight' => -100,
+    ];
+  }
+  if (!$is_guide && !\Drupal\localnodes_platform\SiteGuide::isEditor(\Drupal::currentUser())) {
+    unset($form['field_topic_type']['widget']['#options'][$term_id]);
+  }
 }
 
 /** Implements hook_post_access(). */
@@ -257,7 +341,7 @@ function localnodes_platform_theme($existing, $type, $theme, $path): array {
       'template' => 'node--event--teaser--localnodes--sky',
       'path' => $path . '/templates/node',
     ],
-    'localnodes_site_export' => [
+    'localnodes_site_export_screen' => [
       'variables' => array_fill_keys(['status', 'parts', 'actions', 'failure', 'requested_by', 'requested_at', 'last_by', 'last_at', 'expires', 'reference'], NULL),
       'template' => 'localnodes-site-export',
     ],

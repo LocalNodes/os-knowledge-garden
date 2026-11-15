@@ -1,0 +1,39 @@
+# Assistant rows for the smoke pack, run on a site by
+# scripts/check_demo_pack.php. as and group are uuids of the pack; cites,
+# may_cite and forbidden are uuids of pages; must_say phrases are in
+# source.md. needs lists what the row depends on (for example shared_pages).
+- id: smoke-next-meeting
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  question: When is the next meeting of the Smoke common room?
+  cites:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+  must_say:
+    - meet again
+  must_not_say:
+    - 480 PRACTICE
+  forbidden: []
+  needs: []
+- id: smoke-spare-key
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  question: Who has the spare key to our meeting room?
+  refusal: true
+  expected_words: "I couldn't find that in the library pages I can use. Ask your group's organizers."
+  may_cite: []
+  must_not_say:
+    - 480 PRACTICE
+  needs: []
+- id: smoke-cross-group
+  as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  question: What is the shared page for the whole community about?
+  cites:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d21
+  must_say:
+    - shared with the whole community
+  must_not_say:
+    - brass lantern
+  forbidden:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d22
+  needs: []

@@ -1,0 +1,89 @@
+---
+# Comments on posts, in source order.
+52ea061b-23fe-4a47-a432-2d6a3f9e2b2a:
+  uuid: 52ea061b-23fe-4a47-a432-2d6a3f9e2b2a
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  type: post_comment
+  langcode: en
+  body: <p>I can get three quotes by Friday.</p>
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  field_name: field_post_comments
+  created: -2 day|10:00
+
+e2ebb8b1-2f12-4255-880f-8ac019280684:
+  uuid: e2ebb8b1-2f12-4255-880f-8ac019280684
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  type: post_comment
+  langcode: en
+  body: <p>Thanks Jo. Hollis is already booked for the first two treads. Ask him to price the third board too, then his can be one of the three.</p>
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  field_name: field_post_comments
+  created: -2 day|10:00
+
+7bdac396-4386-4ed0-bc25-2b0773f96998:
+  uuid: 7bdac396-4386-4ed0-bc25-2b0773f96998
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  type: post_comment
+  langcode: en
+  body: <p>Thank you both. I'll use the side gate until then.</p>
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  field_name: field_post_comments
+  created: -2 day|10:00
+
+75803b0d-ffc2-4fda-a6b6-c0d697164dde:
+  uuid: 75803b0d-ffc2-4fda-a6b6-c0d697164dde
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  type: post_comment
+  langcode: en
+  body: <p>Logged. Marcus's washer only lasted so long. A plumber can come and fit a new tap for $140. The payment is in the fund waiting for a second approval.</p>
+  entity_id: 9745fdcb-1fe1-47d3-811d-bca76807b996
+  entity_type: post
+  field_name: field_post_comments
+  created: -6 day|10:00
+
+fef9954b-1712-4734-bb7a-224527f4de08:
+  uuid: fef9954b-1712-4734-bb7a-224527f4de08
+  uid: b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  type: post_comment
+  langcode: en
+  body: <p>That was me, sorry. I read the tape as "Pat".</p>
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  field_name: field_post_comments
+  created: -8 day|10:00
+
+abd9bbc0-e579-4a72-a887-d13db2bfa8dc:
+  uuid: abd9bbc0-e579-4a72-a887-d13db2bfa8dc
+  uid: 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  type: post_comment
+  langcode: en
+  body: <p>Fair. My handwriting is terrible. I'll redo the label.</p>
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  field_name: field_post_comments
+  created: -8 day|10:00
+
+46289396-54ef-4dc6-b1aa-82831308cd2f:
+  uuid: 46289396-54ef-4dc6-b1aa-82831308cd2f
+  uid: b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  type: post_comment
+  langcode: en
+  body: <p>Welcome! The Handbook is in the library, and ask me anything.</p>
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  field_name: field_post_comments
+  created: -12 day|10:00
+
+c15250c8-ec70-4d1d-8d68-50592ddbf718:
+  uuid: c15250c8-ec70-4d1d-8d68-50592ddbf718
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  type: post_comment
+  langcode: en
+  body: <p>You're on bins with me next week. Tuesday night, I'll knock.</p>
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  field_name: field_post_comments
+  created: -12 day|10:00

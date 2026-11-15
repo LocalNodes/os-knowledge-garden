@@ -1,0 +1,54 @@
+# One passage per how-to page: the text exactly as the source states it
+# (markup left out). source_line is the line of source.md where the passage
+# starts. The assistant's "how do I" checks for P01, P02, P03, P04, P07 and
+# P08 use these pages.
+- id: howto-p01
+  uuid: 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+  field: body
+  text: "This asks an organizer for approval; sending a request does not make you a member."
+  source_line: 32
+- id: howto-p02
+  uuid: b8d8e848-e2a3-4caa-bbca-247fa7e07759
+  field: body
+  text: "If you need to add a lasting reference document, use the library instead."
+  source_line: 40
+- id: howto-p03
+  uuid: 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  field: body
+  text: "A changed file becomes a new document; it does not replace the old one."
+  source_line: 50
+- id: howto-p04
+  uuid: f4d742fe-20f6-40ac-b989-6b361efdbf10
+  field: body
+  text: "Your question and passages used to answer it are sent to the AI service."
+  source_line: 58
+- id: howto-p05
+  uuid: 83737855-1f79-4c2e-965f-7f8f8e7d350c
+  field: body
+  text: "Enrolled shows an existing sign-up."
+  source_line: 68
+- id: howto-p06
+  uuid: ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+  field: body
+  text: "A quick poll checks how members lean. It does not settle a decision for the group."
+  source_line: 78
+- id: howto-p07
+  uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  field: body
+  text: "These choices concern the notifications listed on that form; they do not promise to stop every email about your account or the site."
+  source_line: 84
+- id: howto-p08
+  uuid: 80647fee-c455-45bb-a191-32bfdf55fca2
+  field: body
+  text: "Leaving a group is different from closing your site account."
+  source_line: 92
+- id: howto-p09
+  uuid: 9e55d601-cbef-4c2e-946c-39503b37941b
+  field: body
+  text: "Your report goes to the site's organizers and the host."
+  source_line: 102
+- id: howto-p10
+  uuid: f42f8def-e88f-48e5-b194-737527cdeecc
+  field: body
+  text: "Do not send sign-in codes or passwords."
+  source_line: 110

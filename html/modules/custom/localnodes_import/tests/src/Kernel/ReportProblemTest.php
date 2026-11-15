@@ -11,6 +11,7 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_import\Entity\ImportItem;
 use Drupal\localnodes_import\Entity\ImportRun;
+use Drupal\localnodes_platform\SiteGuide;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\symfony_mailer_test\MailerTestTrait;
@@ -186,6 +187,44 @@ final class ReportProblemTest extends ImportKernelTestBase {
     $this->assertFalse($node->access('view', $this->member), 'Nor a member');
     $messages = array_map('strval', $this->container->get('messenger')->messagesByType('status'));
     $this->assertContains(self::PAGE_TITLE . ' is unpublished. To publish it again, edit the page and turn Published back on.', $messages);
+  }
+
+  /**
+   * A Site guide page is changed only by the editor roles, takedown included.
+   *
+   * A group organizer without an editor role may still take down an ordinary
+   * imported page, and may not unpublish a page that carries Site guide: the
+   * route refuses, and so does the form's own recheck on submit.
+   */
+  public function testNonEditorOrganizerCannotTakeDownASiteGuidePage(): void {
+    $guide_term = $this->createSiteGuideTerm();
+    $guide = $this->importedTopic($this->group, 'Neighbourhood how-to');
+    $guide->set('field_topic_type', $guide_term)->save();
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $guide = $this->reloadNode((int) $guide->id());
+    $this->assertTrue(SiteGuide::isGuide($guide), 'The page carries Site guide.');
+    $this->assertFalse(SiteGuide::isGuide($this->topic), 'The ordinary page does not.');
+
+    $check = $this->container->get('localnodes_import.takedown_access');
+    $this->assertFalse($check->check($guide, $this->organizer)->isAllowed(), 'An organizer without an editor role is refused for a guide page.');
+    $this->assertFalse($this->routeAccess('localnodes_import.takedown', $guide, $this->organizer), '403 on the takedown route.');
+    $this->assertContains('taxonomy_term_list', $check->check($guide, $this->organizer)->getCacheTags());
+
+    // Controls: the same organizer takes an ordinary page down, and a site
+    // manager who may view the guide page takes it down.
+    $this->assertTrue($check->check($this->topic, $this->organizer)->isAllowed(), 'The organizer still takes an ordinary page down.');
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $this->topic, $this->organizer));
+    $this->assertTrue($guide->access('view', $this->steward));
+    $this->assertTrue($check->check($guide, $this->steward)->isAllowed(), 'A site manager may take a guide page down.');
+    $this->assertTrue($this->routeAccess('localnodes_import.takedown', $guide, $this->steward));
+
+    // The form asks the same check again on submit.
+    $this->setCurrentUser($this->organizer);
+    $this->submitTakedown($guide);
+    $this->assertTrue($this->reloadNode((int) $guide->id())->isPublished(), 'The organizer could not unpublish the guide page by submitting.');
+    $this->setCurrentUser($this->steward);
+    $this->submitTakedown($guide);
+    $this->assertFalse($this->reloadNode((int) $guide->id())->isPublished(), 'A site manager can.');
   }
 
   public function testHousePrivacyChangeExpiresPublicTakedownAccess(): void {

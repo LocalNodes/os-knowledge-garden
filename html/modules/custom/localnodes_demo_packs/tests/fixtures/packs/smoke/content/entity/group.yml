@@ -1,0 +1,43 @@
+---
+# Smoke fixture: a public common room with both accounts as members, and a
+# back room (visible to the community, members added by hand) with only the
+# first account in it.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  langcode: en
+  image:
+  image_alt:
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -2 day|10:00
+  label: Smoke common room
+  type: flexible_group
+  field_flexible_group_visibility: public
+  field_group_allowed_join_method: direct
+  field_group_allowed_visibility:
+    - public
+    - community
+    - group
+  description: >
+    <p>A test group for the pack loader.</p>
+  members:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11
+  langcode: en
+  image:
+  image_alt:
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  created: -2 day|10:30
+  label: Smoke back room
+  type: flexible_group
+  field_flexible_group_visibility: community
+  field_group_allowed_join_method: added
+  field_group_allowed_visibility:
+    - community
+    - group
+  description: >
+    <p>A closed test group. Only Smoke One is in it.</p>
+  members:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01

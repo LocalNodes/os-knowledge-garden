@@ -1,0 +1,562 @@
+---
+# Library pages, each in its group and audience (group = members only).
+# Created: every page is dated 14 days back, older than the oldest post or comment (12 days back). The home stream
+# orders by changed time, which the loader sets equal to created, so the posts lead the first page.
+3a593310-9622-46f0-9ad2-38d5139a1465:
+  uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+  title: House minutes
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>House meetings are once a month in the front room. Mei takes the minutes. If something is wrong, add a correction under the meeting, don't edit it.</p>
+    <p><strong>12 January</strong></p>
+    <p>Present: Sam (chair), Mei (minutes), Ana, Jo, Rosa, Marcus, Grace, Farah, Pete, Liam, Dana. Owen at work.</p>
+    <p>Budget. Jo went through the budget for the year (it's in the library as Budget). House charge stays at $725 a month. The household repair allowance stays $700 a month within that fictional budget; none is deposited into the separate practice fund. Agreed.</p>
+    <p>Fund approvers. Ana, Jo and Rosa stay on as the three approvers. Any payment from the fund still needs two of the three.</p>
+    <p>Bathroom 2 fan. Marcus replaced the extractor fan, $64. Thanks Marcus.</p>
+    <p>Fridge. Shelves are labelled now. Please don't move other people's things to make room. Pete asked that the top left shelf stays his. Nobody argued.</p>
+    <p>Chores. Liam will redo the rota so nobody has bins two weeks running.</p>
+    <p>Next meeting 9 February.</p>
+    <p><strong>9 February</strong></p>
+    <p>Present: everyone.</p>
+    <p>Gutter. The gutter over the kitchen window overflows when it rains hard. Ana has a quote of $40 to clear and refix it. Wait for drier weather, then decide.</p>
+    <p>Garden. Grace ordered seeds, $45 from the garden budget. She wants a work day in the yard once it warms up.</p>
+    <p>Quiet hours. Reminder that quiet hours start at 10 pm. Owen sleeps late after his shifts, so please go easy on the stairs in the mornings.</p>
+    <p>Dana. Dana is moving out at the end of summer. Farah will start showing the small top room to people in the summer.</p>
+    <p>Next meeting 12 March.</p>
+    <p><strong>12 March</strong></p>
+    <p>Present: Sam (chair), Mei (minutes), Ana, Jo, Rosa, Marcus, Grace, Pete, Owen, Dana. Apologies: Farah, Liam.</p>
+    <p>Back steps. Two treads are loose. Agreed to get three quotes before the spring meeting. Ana will call round.</p>
+    <p>Repair fund. Jo says the practice fund will receive 1,000 PRACTICE once when created, with no later top-ups. Jo asked that we keep at least 200 PRACTICE in it for emergencies; bigger jobs wait for quotes and a house decision rather than future house-charge deposits. Nobody objected.</p>
+    <p>Washing machine. Liam left a note: the filter was blocked with a sock again. Please check pockets.</p>
+    <p>House site. Sam has set up the Willow House group on the co-op site so house decisions and fund payments can be done there instead of on paper. The library will hold the minutes, Repair log, Bylaws, House rules, Budget and Handbook. Sam will show anyone who wants a hand.</p>
+    <p>Next meeting: the spring meeting, date to be set.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+0d2fe151-a0b2-470e-9796-03c5daaea9a0:
+  uuid: 0d2fe151-a0b2-470e-9796-03c5daaea9a0
+  title: Repair log
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>Ana keeps this. Add anything that breaks, even if you fixed it yourself. Anything over $300 needs three quotes and a house decision (see House rules). Payments from the repair fund need two of the three fund approvers.</p>
+    <table>
+    <thead>
+    <tr>
+    <th>Date</th>
+    <th>What</th>
+    <th>Who</th>
+    <th>Cost</th>
+    <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>8 Jan</td>
+    <td>Bathroom 2 extractor fan stopped working. Replaced with the same model.</td>
+    <td>Marcus</td>
+    <td>$64</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>20 Jan</td>
+    <td>Front door lock sticking. Graphite powder, worked it loose.</td>
+    <td>Pete</td>
+    <td>$6</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>3 Feb</td>
+    <td>Gutter over the kitchen window overflows in heavy rain. Quote from Brook Gutters to clear and refix.</td>
+    <td>Ana</td>
+    <td>$40 (quote)</td>
+    <td>Waiting for dry weather</td>
+    </tr>
+    <tr>
+    <td>9 Feb</td>
+    <td>Back steps: one tread loose, Rosa noticed it. Put two screws in for now.</td>
+    <td>Marcus</td>
+    <td>$0</td>
+    <td>Temporary fix</td>
+    </tr>
+    <tr>
+    <td>10 Mar</td>
+    <td>Washing machine filter blocked (a sock, again). Cleared it.</td>
+    <td>Liam</td>
+    <td>$0</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>12 Mar</td>
+    <td>Back steps: two treads loose now. House meeting agreed to get three quotes, see House minutes, 12 March.</td>
+    <td>Ana</td>
+    <td>none yet</td>
+    <td>Getting quotes</td>
+    </tr>
+    <tr>
+    <td>6 Apr</td>
+    <td>Back steps quotes in. Hollis the joiner 600 PRACTICE (two new hardwood treads, refix the stringer, check the rest). A decking firm 800 PRACTICE. A second carpenter 900 PRACTICE, and that one does not include taking the old treads away. Hollis asks to be paid when booked because he buys the hardwood first.</td>
+    <td>Ana</td>
+    <td>600 PRACTICE (cheapest)</td>
+    <td>Waiting for the practice fund to be created and a house decision; 1,000 less 600 leaves 400, above the 200 floor</td>
+    </tr>
+    <tr>
+    <td>22 Apr</td>
+    <td>Kitchen tap dripping. New washer.</td>
+    <td>Marcus</td>
+    <td>$3</td>
+    <td>Done, for now</td>
+    </tr>
+    <tr>
+    <td>15 May</td>
+    <td>Bike shed door hinge rusted through. New hinge and screws.</td>
+    <td>Pete</td>
+    <td>$12</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>2 Jun</td>
+    <td>Smoke alarms tested on every floor. Landing one needed a battery.</td>
+    <td>Marcus</td>
+    <td>$5</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>18 Jul</td>
+    <td>Back garden tap washer.</td>
+    <td>Marcus</td>
+    <td>$3</td>
+    <td>Done</td>
+    </tr>
+    <tr>
+    <td>30 Aug</td>
+    <td>Small top room repainted after Dana moved out. Paint from the shed, rollers bought.</td>
+    <td>Farah, Ines</td>
+    <td>$22</td>
+    <td>Done</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Things to keep an eye on: the kitchen tap (it keeps coming back), the gutter, the back steps.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+d294588d-0fc4-4df4-8eb8-c50caa4f1406:
+  uuid: d294588d-0fc4-4df4-8eb8-c50caa4f1406
+  title: Bylaws
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p><strong>Bylaws of Willow House, Lantern Row Housing Co-op</strong></p>
+    <ol>
+    <li>
+    <p>Name and purpose. Willow House is one house in Lantern Row Housing Co-op. These bylaws apply to Willow House. The members run the house together and live in it. The house has 12 rooms and up to 12 members. Rowan House has its own house records.</p>
+    </li>
+    <li>
+    <p>Members. A member is someone who lives in the house, has paid the $500 member share, and has been agreed by a house decision. The share is paid back within 60 days of leaving, less anything owed. Each member has one voice in decisions.</p>
+    </li>
+    <li>
+    <p>House charge. Each member pays a monthly house charge, set in the yearly budget. It is due by the 5th of the month. If you are going to be late, tell the treasurer before the 5th, not after.</p>
+    </li>
+    <li>
+    <p>Officers. Each January the house picks a treasurer, a minutes-taker, a keeper of the repair log and three fund approvers. One person can do more than one job. Any of these can be changed by a house decision at any time.</p>
+    </li>
+    <li>
+    <p>House decisions. Most decisions are made on the house site. Any member can propose one. A proposal says what will happen, what it costs if anything, and when it closes.</p>
+    </li>
+    </ol>
+    <p>Each member responds in one of three ways:</p>
+    <ul>
+    <li>Agree.</li>
+    <li>Stand aside. You won't stop it, but you have doubts or don't want to take part. A reason is welcome but not needed.</li>
+    <li>Block. You think this would harm the house and should not go ahead. You cannot Block without writing a reason.</li>
+    </ul>
+    <p>A decision passes when, by the deadline, at least two-thirds of the house has responded (8 of 12 when the house is full), at least one member has agreed, and nobody has blocked.</p>
+    <p>Deadlines: 7 days for everyday decisions and money decisions. 14 days for changing these bylaws or the house rules.</p>
+    <p>If a decision does not pass, the person who proposed it can change it and bring it back as a new decision. If someone blocks, talk to them first. Most blocks point at something that can be fixed.</p>
+    <ol start="6">
+    <li>
+    <p>The repair fund. The demo fund receives 1,000 PRACTICE once at creation; house charges and spare household money never top it up. Any payment from the fund needs approval from two of the three fund approvers. A payment over 300 PRACTICE also needs a house decision first. The fund should not go below 200 PRACTICE except in an emergency, meaning roof, heating, water, or anything unsafe.</p>
+    </li>
+    <li>
+    <p>Meetings. The house meets once a month. Minutes go in the library. Small things can be agreed at a meeting if two-thirds of the house is there and nobody blocks. Anything else goes on the site.</p>
+    </li>
+    <li>
+    <p>Leaving. Give one month's notice to the treasurer and the house.</p>
+    </li>
+    <li>
+    <p>Changing these bylaws. By house decision, open for 14 days.</p>
+    </li>
+    </ol>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+2aae2f0d-34f3-46cd-9410-7bed95189877:
+  uuid: 2aae2f0d-34f3-46cd-9410-7bed95189877
+  title: House rules
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>These are the rules we have agreed. They change by house decision, open for 14 days. The guest rule was last changed that way.</p>
+    <p><strong>Quiet hours.</strong> 10 pm to 7 am, every night. Keep music and calls in your room, doors closed. Owen sleeps late after shifts, so go easy on the stairs in the mornings.</p>
+    <p><strong>Kitchen and fridge.</strong> Wash up the same day. Each person has a labelled fridge shelf; don't move someone else's food to make room. The shelf in the door is shared (milk, butter, sauces). Anything unlabelled on the bottom shelf after a week goes on the side with a note, then out.</p>
+    <p><strong>Guests.</strong> A guest can stay up to 7 nights in a row. Post in the stream if a guest is staying more than one night. Longer stays need a house decision. Guests follow quiet hours and wash their own dishes.</p>
+    <p><strong>Bikes.</strong> Bikes go in the bike shed, not the hall. The hall has to stay clear.</p>
+    <p><strong>Shared rooms.</strong> The front room is for everyone. If you book it for something, post in the stream at least two days ahead.</p>
+    <p><strong>Smoking.</strong> Not inside. Outside, away from the windows, and take your ends with you.</p>
+    <p><strong>Pets.</strong> No new pets without a house decision.</p>
+    <p><strong>Repairs.</strong> Report anything broken to Ana or add it to the Repair log. Under $300, Willow's members of Co-op Repairs can just get it done. Over $300 needs three quotes and a house decision. Payments from the repair fund need two of the three fund approvers.</p>
+    <p><strong>How we decide.</strong> House decisions are made by consensus on the site. Each member responds Agree, Stand aside, or Block. A Block needs a written reason. A decision passes when at least two-thirds of the house has responded by the deadline, someone agrees and nobody blocks. Everyday and money decisions are open for 7 days. Changing these rules or the bylaws is open for 14 days.</p>
+    <p><strong>Bins.</strong> Bins out on Tuesday night. See the chore rota for whose turn it is.</p>
+    <p><strong>Be decent.</strong> If something bothers you, talk to the person first. If that doesn't work, bring it to the monthly meeting.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+918c68e1-d040-453a-8e49-7321c3609d83:
+  uuid: 918c68e1-d040-453a-8e49-7321c3609d83
+  title: Budget
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p><strong>Willow House budget for the year.</strong> Agreed at the house meeting on 12 January. Jo keeps the books.</p>
+    <p><strong>Money in</strong></p>
+    <p>12 members pay a house charge of $725 a month.</p>
+    <table>
+    <thead>
+    <tr>
+    <th></th>
+    <th>Monthly</th>
+    <th>Yearly</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>House charges (12 x $725)</td>
+    <td>$8,700</td>
+    <td>$104,400</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><strong>Money out</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th></th>
+    <th>Monthly</th>
+    <th>Yearly</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>Mortgage</td>
+    <td>$5,400</td>
+    <td>$64,800</td>
+    </tr>
+    <tr>
+    <td>Property tax and insurance</td>
+    <td>$1,050</td>
+    <td>$1900</td>
+    </tr>
+    <tr>
+    <td>Gas, electric and water</td>
+    <td>$1,150</td>
+    <td>$13,800</td>
+    </tr>
+    <tr>
+    <td>Internet</td>
+    <td>$90</td>
+    <td>$1,080</td>
+    </tr>
+    <tr>
+    <td>Household supplies (cleaning, loo roll, bulbs)</td>
+    <td>$230</td>
+    <td>$2,760</td>
+    </tr>
+    <tr>
+    <td>Garden</td>
+    <td>$80</td>
+    <td>$960</td>
+    </tr>
+    <tr>
+    <td>Household repair allowance, outside the practice fund</td>
+    <td>$700</td>
+    <td>$8,400</td>
+    </tr>
+    <tr>
+    <td><strong>Total</strong></td>
+    <td><strong>$8,700</strong></td>
+    <td><strong>$104,400</strong></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Money in and money out match. Nothing is left over on purpose: spare household money stays in the fictional household budget and is not a practice-fund deposit.</p>
+    <p><strong>Notes</strong></p>
+    <p>Gas and electric are higher in winter and lower in summer. The $1,150 is an average. Jo moves money between months, so don't panic at the January bill.</p>
+    <p>Household supplies: Liam buys the big packs once a month. Keep receipts and give them to Jo.</p>
+    <p>Garden: $80 a month covers seeds, compost and small tools. Grace keeps the receipts.</p>
+    <p><strong>The repair fund</strong></p>
+    <p>The practice fund receives 1,000 PRACTICE once at creation and no other outside income. Keep at least 200 PRACTICE for emergencies (roof, heating, water, anything unsafe), as the Bylaws say. The separate $700 monthly household repair allowance and older repair-log costs are fictional household-budget records, not extra practice-fund transfers.</p>
+    <p>The practice fund began at 1,000 PRACTICE. The back steps (Hollis the joiner, 600 PRACTICE) leave 400 PRACTICE, above the 200 PRACTICE floor. The job waited for creation and the house decision, not for monthly contributions.</p>
+    <p>Expected practice-fund costs; only the back steps have been paid:</p>
+    <ul>
+    <li>Back steps, $600 (agreed by house decision)</li>
+    <li>Gutter over the kitchen window, about $40</li>
+    <li>Boiler service, $18</li>
+    <li>Small fixes as they come, usually under $100 each</li>
+    </ul>
+    <p>After the back steps, the quoted gutter work (40 PRACTICE) and boiler service (18 PRACTICE), if later agreed and paid, would leave 342 PRACTICE. Paying the separate pending tap (140 PRACTICE) as well would leave 202 PRACTICE, still above the 200 floor. No future contribution is assumed; Jo will report at each meeting.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+6603bc81-d8d6-43ca-bb65-c4301a44f93f:
+  uuid: 6603bc81-d8d6-43ca-bb65-c4301a44f93f
+  title: Handbook
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p><strong>Welcome to Willow House.</strong> Farah keeps this handbook. If something here is out of date, tell her.</p>
+    <p><strong>Moving in</strong></p>
+    <p>Farah will meet you on moving day with your keys: front door, back door, your room, and the bike shed. If you lose a key, tell Farah. She holds the spares. Before you move in you pay the $500 member share (you get it back when you leave) and your first month's house charge of $725 to Jo.</p>
+    <p>Your room should be clean and empty when you arrive. If anything is broken, tell Ana and it goes in the Repair log, so nobody blames you later.</p>
+    <p>You get a labelled shelf in the fridge and a cupboard in the kitchen. Ask Farah which ones are free. The top left fridge shelf is Pete's. It has been Pete's for years.</p>
+    <p><strong>Chores</strong></p>
+    <p>Liam runs the chore rota. It's on the fridge and changes every Monday. Jobs are: kitchen, bathrooms, hall and stairs, bins, front room. New members start on the rota in their second week.</p>
+    <p>Bins go out on Tuesday night. Recycling (blue lid) goes out every other week. The rota says which week. If you can't do your turn, swap with someone and tell Liam.</p>
+    <p><strong>Guests</strong></p>
+    <p>Guests are welcome. A guest can stay up to 7 nights in a row. If someone is staying more than one night, post it in the stream. Longer stays need a house decision.</p>
+    <p><strong>Quiet hours</strong></p>
+    <p>10 pm to 7 am, every night. Owen works late shifts and sleeps in, so please go easy on the stairs in the mornings.</p>
+    <p><strong>Meetings and decisions</strong></p>
+    <p>The house meets once a month in the front room. Sam chairs, Mei takes minutes. Bigger things are decided on the house site: you'll get a notice, and you respond Agree, Stand aside, or Block. If you Block, you write why.</p>
+    <p><strong>Who to ask</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>For</th>
+    <th>Ask</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>Keys, moving in, your room</td>
+    <td>Farah</td>
+    </tr>
+    <tr>
+    <td>Something broken</td>
+    <td>Ana, or add it to the Repair log</td>
+    </tr>
+    <tr>
+    <td>House charge, receipts, the fund</td>
+    <td>Jo</td>
+    </tr>
+    <tr>
+    <td>Chore rota and swaps</td>
+    <td>Liam</td>
+    </tr>
+    <tr>
+    <td>The garden</td>
+    <td>Grace</td>
+    </tr>
+    <tr>
+    <td>Bikes and the bike shed</td>
+    <td>Pete</td>
+    </tr>
+    <tr>
+    <td>Meetings, the house site</td>
+    <td>Sam</td>
+    </tr>
+    <tr>
+    <td>Old minutes</td>
+    <td>Mei</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>If you're not sure, ask Rosa. She has lived here longest and usually knows.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  field_content_visibility: group
+
+1b6f5527-e38e-459f-894b-51f824af0212:
+  uuid: 1b6f5527-e38e-459f-894b-51f824af0212
+  title: Tradespeople we would use again
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>Jo keeps this list. These are people our houses have hired and would ask again. Check their availability and ask for a written price for your own job.</p>
+    <table>
+    <thead>
+    <tr>
+    <th>Person</th>
+    <th>Trade</th>
+    <th>Who can tell you about their work</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>Hollis</td>
+    <td>Joiner; repaired Rowan's hall cupboard</td>
+    <td>Ben at Rowan House</td>
+    </tr>
+    <tr>
+    <td>Ellis</td>
+    <td>Heating fitter</td>
+    <td>Leah at Rowan House</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Ask the named house contact for an introduction. No private phone numbers or home addresses are stored on this page.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_content_visibility: community
+
+407fbedc-377e-487f-ba04-a3bb6bf74bb8:
+  uuid: 407fbedc-377e-487f-ba04-a3bb6bf74bb8
+  title: 'Shared tools: borrowing and returns'
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>Our shared cordless drill, socket set and pipe wrench live in the courtyard tool cupboard. Co-op members can borrow them for up to 48 hours (two days). Put your name, the item and its return time on the sheet inside the cupboard. Return everything clean, with all its parts, and cross your name off.</p>
+    <p>Ask Jo or Ari to arrange access. Tell them about a broken or missing part before the next person borrows it. This page is public so a visitor can see how our tool library works; borrowing is for co-op members.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_content_visibility: public
+
+5260c3ba-8ac4-4416-8169-fda493651a5f:
+  uuid: 5260c3ba-8ac4-4416-8169-fda493651a5f
+  title: 'Joining a house: our first week'
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>Ask Farah at Willow House or Omar at Rowan House about a room. Each house decides who joins and explains its own house charge and member share before anyone agrees to move in. Read that house's handbook and ask about anything unclear.</p>
+    <p>The house welcome contact arranges keys, shows you shared rooms and helps you find your house group on this site. Read the chore rota together. Both houses use this common room for shared notices and knowledge; the houses keep their private records in their own groups.</p>
+    <p>On this demo, Willow lets visitors join its group to try the records. A real house is invitation-only, as Willow's About text explains. Joining a demo group is not an offer of housing.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_content_visibility: community
+
+60a04708-5bbf-4251-ba88-bc46d4bd0ae1:
+  uuid: 60a04708-5bbf-4251-ba88-bc46d4bd0ae1
+  title: Quarterly co-op meeting notes, 15 September
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>Mei took these notes. Ana and Jo came from Willow; Nell and Ari came from Rowan.</p>
+    <p>Shared tools. Agreed to put the drill, socket set and pipe wrench together in the courtyard tool cupboard. Jo and Ari will keep the borrowing sheet. The borrowing limit is 48 hours so another house is not left waiting all week.</p>
+    <p>Useful records. Each house will choose practical notes it can share. Sharing a page does not open the rest of that house's records.</p>
+    <p>House spending. Each house keeps its own budget and spending decisions. Co-op Repairs can help arrange a job; it does not decide how another house spends its money.</p>
+    <p>Next time: check how tool borrowing is working and hear what each house wants to share.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_content_visibility: community
+
+3a8fe17d-e60e-4f4e-bda5-d29c3c28c949:
+  uuid: 3a8fe17d-e60e-4f4e-bda5-d29c3c28c949
+  title: 'Repairs across both houses: asking for help'
+  type: topic
+  langcode: en
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: -14 day|09:00
+  body: |-
+    <p>For a Willow job, ask Ana. For a Rowan job, ask Ben. For shared tools, ask Jo or Ari. They can bring a job to Co-op Repairs so people from both houses can help with practical work.</p>
+    <p>Keep private room details in your own house group. The repairs team only needs the details required to arrange the work. Each house follows its own spending rules and approves its own payments. The team has no shared fund in this demo.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+  field_content_visibility: community
+
+18787c43-4408-4e97-90c0-52ceab013b91:
+  uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+  title: Rowan House minutes, 8 September
+  type: topic
+  langcode: en
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: -14 day|09:00
+  body: |-
+    <p>Nell took these minutes. Present: Nell, Ben, Tessa, Ari, Kit, Leah and Omar. All seven house members were there.</p>
+    <p>Quiet workspace. Agreed to try a quiet desk in the front room for six weeks, starting when it is ready. Set aside $240 from the house budget for a used desk and a lamp. Tessa will keep the receipts. Review the trial at a house meeting after the six weeks. These are private house arrangements; do not copy them into the common room or the shared boiler notes.</p>
+    <p>Keys. Omar will check that everyone has the keys they need. Tell him privately if a key is missing.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 4995fa17-ec83-4b34-936e-03e0e559815b
+  field_content_visibility: group
+
+54eb5317-2acc-4c64-b440-8a63d242f3a7:
+  uuid: 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  title: Rowan House handbook
+  type: topic
+  langcode: en
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: -14 day|09:00
+  body: |-
+    <p>Welcome to Rowan House. Omar will show you the house, arrange your keys and help you find your cupboard and fridge shelf. Ask Kit about the chore rota. Nell keeps the minutes; Tessa keeps budget notes and receipts. Tell Ben about anything that needs fixing. Ari helps with shared tools. Leah keeps our boiler replacement notes.</p>
+    <p>Put house questions in this group. Use the Co-op common room for notices useful to both houses. Read Shared tools: borrowing and returns before taking a co-op tool. Rowan's house records stay members-only unless we choose a particular page to share.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 4995fa17-ec83-4b34-936e-03e0e559815b
+  field_content_visibility: group
+
+e805350e-253e-471a-acf2-d541ad0f5dd6:
+  uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+  title: 'Replacing our boiler: notes for another house'
+  type: topic
+  langcode: en
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: -14 day|09:00
+  body: |-
+    <p>Ellis the heating fitter replaced Rowan's boiler. The total was $4,200, including the boiler, fitting and removal of the old unit. The work took one full day.</p>
+    <p>We would ask for the included work to be written down before booking. In particular, check whether the price includes removing the old unit and clearing up. Agree the access time and choose someone to be home while the work is done.</p>
+    <p>We shared this page so another house can learn from the job. It contains no other Rowan house business.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  group: 4995fa17-ec83-4b34-936e-03e0e559815b
+  field_content_visibility: community

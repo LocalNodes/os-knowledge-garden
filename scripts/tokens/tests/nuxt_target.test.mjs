@@ -106,7 +106,7 @@ test(':root holds every light --ui-* role and .dark every dark one, from targets
   assert.match(dark, /--ui-primary: #[0-9a-f]{6};/);
 });
 
-test('the .dark roles are the landing page\'s dark band: near-black surfaces, mint primary, amber focus (BRAND.md section 5, 2026-11-12)', () => {
+test('the .dark roles are the landing page\'s dark band: near-black surfaces, mint primary, amber focus', () => {
   const dark = block(read(generatedSibling()), '.dark');
   const d = (name) => source.primitive.color.dark[name].$value.toLowerCase();
   const hex = (shade) => source.primitive.color.brand[shade].$value.toLowerCase();

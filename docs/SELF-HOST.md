@@ -84,7 +84,7 @@ Then open `.env` in an editor (`nano .env`) and fill in the rest of the first bl
 | `SERVICE_URL_OPENSOCIAL` | Put `http://localhost:8080` for the SSH tunnel. This is the full address your browser opens; sign-in and mail links use it. In step 7, change it to your full HTTPS address, such as `https://community.example.org`. |
 | `DRUPAL_SITE_NAME` | Your community's name. |
 | `DRUPAL_ADMIN_EMAIL` | Your own email address, for the first administrator account. |
-| `DEMO_MODULE` | Leave it as `none` for an empty site. Any other value fills the site with made-up demo people and pages, which is only for looking around. |
+| `DEMO_MODULE` | Leave it as `none` for an empty site. Any other value fills the site with made-up demo people and pages, which is only for looking around. A demo pack is `DEMO_MODULE=localnodes_demo_packs` together with `DEMO_PACK=<pack>`. |
 
 You can leave the mail and AI keys empty for now (step 6). Leave other settings unset unless this guide describes them. In particular, never set `ORGANIZER_EMAIL` or any `PROVISION_*` variable: they belong to LocalNodes' own sign-up service.
 
@@ -214,7 +214,7 @@ This page does not install a web server or proxy for you. You need one to provid
 | See what the site did at start | `docker compose logs opensocial` |
 | See the site's own recent errors | `drush watchdog:show` |
 | Sign in without a password (for example before mail works) | Repeat the sign-in command in [step 5](#5-sign-in-for-the-first-time); it uses the address in your settings |
-| Update to a newer LocalNodes release | `docker compose pull opensocial && docker compose up -d opensocial` (the site updates its database as it starts) |
+| Update to a newer LocalNodes release | `docker compose pull opensocial && docker compose up -d opensocial` (the site updates its database as it starts). Take a copy with the site closed first, as [Keeping your site up to date](hosting/UPDATES.md) step 3b shows |
 | Stop everything | `docker compose stop` |
 | Start the site again after it exits | `docker compose up -d opensocial` |
 | Make a full copy of the site | `drush localnodes:export` prints the path of an archive inside the container. Copy it out with `docker compose cp opensocial:<that path> .`, then delete it inside with `docker compose exec opensocial rm <that path>` (the container's copy is lost whenever the container is recreated). Its `RESTORE.md` says how to bring the site up again |
