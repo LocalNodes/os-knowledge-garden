@@ -172,6 +172,17 @@ x" "$INJECT"; do
   reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT= WEB3_INPUT="$W3"
   check "web3='${W3:0:12}' is refused before any request" '[ $RC -ne 0 ] && grep -q "Invalid web3" <<<"$OUT" && [ "$(genv FAIL_REASON)" = invalid_request ] && [ ! -s "$WORK/state/requests.log" ] && ! ls "$WORK"/PWNED* >/dev/null 2>&1'
 done
+# A demo pack is chosen as pack:<name>. The name becomes part of a path in the container, so it
+# is held to the entrypoint's rule (lower-case letters, digits, underscores) before any request.
+for DM in pack:lanternrow pack:a_1 none localnodes_demo; do
+  reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT= DEMO_MODULE_INPUT="$DM"
+  check "demo_module='$DM' is accepted" '[ $RC -eq 0 ] && [ "$(genv SUBDOMAIN)" = demo ]'
+done
+for DM in pack: pack:Bad pack:../x pack:a-b "pack:a b" "pack:lanternrow
+x" "pack:$INJECT"; do
+  reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT= DEMO_MODULE_INPUT="$DM"
+  check "demo_module='$(printf '%.14s' "$DM" | tr '\n' ' ')' is refused before any request" '[ $RC -ne 0 ] && grep -q "Invalid demo_module" <<<"$OUT" && [ "$(genv FAIL_REASON)" = invalid_request ] && [ ! -s "$WORK/state/requests.log" ] && ! ls "$WORK"/PWNED* >/dev/null 2>&1'
+done
 reset_state; run_step "Validate inputs" ok SUBDOMAIN_INPUT=demo IMAGE_TAG_INPUT=9B8E2A1
 check "uppercase image_tag fails validation" '[ $RC -ne 0 ] && grep -q "Invalid image_tag" <<<"$OUT"'
 check "  ...and nothing was sent to Coolify" '[ ! -s "$WORK/state/requests.log" ]'
@@ -359,6 +370,31 @@ for DM in localnodes_demo boulder_demo portland_demo; do
   reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=$DM
   check "$DM instance sends from noreply@demo.localnodes.xyz" '[ $RC -eq 0 ] && [ "$(stored MAIL_FROM)" = noreply@demo.localnodes.xyz ]'
 done
+echo "# Configure environment variables: a demo pack (pack:<name>)"
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=pack:lanternrow
+check "pack:lanternrow stores DEMO_MODULE=localnodes_demo_packs and DEMO_PACK=lanternrow" \
+  '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = localnodes_demo_packs ] && [ "$(stored DEMO_PACK)" = lanternrow ]'
+check "  ...and the pack site sends from the demo sender" '[ "$(stored MAIL_FROM)" = noreply@demo.localnodes.xyz ]'
+check "  ...and the pack value itself is never stored" '! grep -q "pack:" "$WORK/state/envs.json"'
+for DM in none localnodes_demo boulder_demo portland_demo; do
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=$DM
+  check "$DM stores DEMO_MODULE as given and no DEMO_PACK" '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = "$DM" ] && [ -z "$(stored DEMO_PACK)" ] && ! grep -q " DEMO_PACK$" "$WORK/state/requests.log"'
+done
+reset_state; run_step "Check Gemini key tier (G8)" ok DEMO_MODULE_INPUT=pack:lanternrow GEMINI_KEY_TIER_INPUT=undeclared
+check "a pack site skips the paid-key check, as any demo does" '[ $RC -eq 0 ] && grep -q "paid-key check skipped" <<<"$OUT"'
+reset_state; run_step "Summary" ok DEMO_MODULE_INPUT=pack:lanternrow GEMINI_KEY_TIER_INPUT=paid
+check "the Summary shows the pack value as chosen" '[ $RC -eq 0 ] && grep -qF "pack:lanternrow" "$WORK/summary.md"'
+# One pack:<name> option per shipped pack: a pack that ships without its option fails here, and
+# an option for a pack that is not shipped fails here too.
+PACKS_DIR="$REPO/html/modules/custom/localnodes_demo_packs/packs"
+SHIPPED_PACKS="$(find "$PACKS_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort | tr '\n' ' ')"
+OPTION_PACKS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module.options | map(select(startswith("pack:")) | sub("^pack:"; "")) | sort | join(" ")' "$WORK/wf.json" | tr -d '\n'; echo -n ' ')"
+check "the pack:<name> options are the shipped packs (shipped: ${SHIPPED_PACKS% })" '[ -n "$SHIPPED_PACKS" ] && [ "$OPTION_PACKS" = "$SHIPPED_PACKS" ]'
+OTHER_OPTIONS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module | [.options[] | select(startswith("pack:") | not)] | join(" ")' "$WORK/wf.json")"
+check "the other demo_module options are unchanged, and the default is none" \
+  '[ "$OTHER_OPTIONS" = "localnodes_demo boulder_demo portland_demo none" ] && [ "$(jq -r "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.default" "$WORK/wf.json")" = none ]'
+check "the pack loader module is not an option on its own (a pack module with no pack stops the install)" \
+  '! jq -e "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.options | index(\"localnodes_demo_packs\")" "$WORK/wf.json" >/dev/null'
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=none
 check "blank instance (none) leaves MAIL_FROM unset (default localnodes.xyz sender)" '[ $RC -eq 0 ] && [ -z "$(stored MAIL_FROM)" ] && ! grep -q " MAIL_FROM$" "$WORK/state/requests.log"'
 # The welcome mail is sent from Drupal since 23-12 (the entrypoint no longer mails with curl), so its

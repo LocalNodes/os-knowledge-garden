@@ -7,13 +7,15 @@ namespace Drupal\localnodes_import\Form;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_platform\SiteGuide;
 use Drupal\taxonomy\TermInterface;
 
 /**
  * Pieces the import forms share (S2, S3 and the refresh confirmation).
  *
  * - The visibility picker (D-09): only what the group allows.
- * - The page type select (D-26): topic_types terms, default Reference.
+ * - The page type select: topic_types terms, default Reference, and
+ *   without Site guide for an account that may not choose it.
  * - The rights checkbox (D-25b) and its server check: the raw posted value
  *   must be exactly "1", because core's checkbox value callback treats any
  *   posted value, even "0", as ticked.
@@ -149,7 +151,7 @@ trait ImportFormTrait {
   }
 
   /**
-   * The "Type of page" select, default Reference (D-26).
+   * The "Type of page" select, default Reference.
    */
   protected function topicTypeElement(): array {
     $types = $this->topicTypeOptions();
@@ -161,18 +163,38 @@ trait ImportFormTrait {
       '#options' => $types,
       '#default_value' => $reference !== FALSE ? $reference : array_key_first($types),
       '#required' => TRUE,
+      '#cache' => ['contexts' => ['user.roles'], 'tags' => ['taxonomy_term_list']],
     ];
   }
 
   /**
    * Refuses a page type outside topic_types (T-22-84, T-22-89).
+   *
+   * The Site guide type is refused too unless the account holds a role that
+   * edits Site guide pages, even when its id is posted by hand.
    */
   protected function validateTopicType(FormStateInterface $form_state): void {
     $tid = (int) $form_state->getValue('topic_type');
     $term = $tid > 0 ? $this->entityTypeManager->getStorage('taxonomy_term')->load($tid) : NULL;
-    if (!$term instanceof TermInterface || $term->bundle() !== 'topic_types') {
+    if (!$term instanceof TermInterface || $term->bundle() !== 'topic_types' || $tid === $this->withheldTopicTypeId()) {
       $form_state->setErrorByName('topic_type', $this->t('Choose a type of page.'));
     }
+  }
+
+  /**
+   * The id of the Site guide type when the current account may not choose it.
+   *
+   * The rules for Site guide pages live in the platform module, which enables
+   * this importer and so is always present with it on a running site; where
+   * its class cannot be loaded there are no such rules and nothing is
+   * withheld. The platform cannot be a declared dependency of this module,
+   * because it already depends on this one.
+   */
+  protected function withheldTopicTypeId(): ?int {
+    if (!class_exists(SiteGuide::class) || SiteGuide::isEditor($this->currentUser())) {
+      return NULL;
+    }
+    return SiteGuide::termId();
   }
 
   /**
@@ -183,8 +205,11 @@ trait ImportFormTrait {
    */
   protected function topicTypeOptions(): array {
     $options = [];
+    $withheld = $this->withheldTopicTypeId();
     foreach ($this->entityTypeManager->getStorage('taxonomy_term')->loadTree('topic_types') as $term) {
-      $options[(int) $term->tid] = (string) $term->name;
+      if ((int) $term->tid !== $withheld) {
+        $options[(int) $term->tid] = (string) $term->name;
+      }
     }
     return $options;
   }

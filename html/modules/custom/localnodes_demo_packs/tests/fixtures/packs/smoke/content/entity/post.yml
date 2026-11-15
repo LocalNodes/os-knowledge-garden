@@ -1,0 +1,12 @@
+---
+# Smoke fixture: one post by the first account in the common room.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40
+  langcode: en
+  type: post
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  field_visibility: 3
+  created: -1 day|12:30
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  field_post: >
+    <p>Smoke One tells the common room that the smoke kettle is warm.</p>

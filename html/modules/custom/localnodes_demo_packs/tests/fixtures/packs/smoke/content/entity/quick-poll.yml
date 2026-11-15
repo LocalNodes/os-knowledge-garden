@@ -1,0 +1,33 @@
+---
+# Smoke fixture: two polls in the smoke group by smoke_one, answered by both
+# members. The first is finished and must load closed.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d30:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d30
+  question: Smoke closed poll
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  created: -2 day|10:00
+  closed: true
+  choices:
+    - "Yes"
+    - "No"
+  answers:
+    - uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+      choice: 0
+    - uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+      choice: 1
+
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d31:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d31
+  question: Smoke open poll
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+  group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  created: -1 day|10:00
+  choices:
+    - "Yes"
+    - "No"
+  answers:
+    - uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+      choice: 0
+    - uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+      choice: 0

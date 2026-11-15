@@ -1,0 +1,18 @@
+# One passage per page a pack's assistant rows cite: the text exactly as the
+# source states it, with "day +N" written as the token. source_line is the
+# line of source.md where the passage starts.
+- id: smoke-topic-meeting
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+  field: body
+  text: "We meet again on {{day:+7}}."
+  source_line: 26
+- id: smoke-shared-page
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d21
+  field: body
+  text: "This page is shared with the whole community."
+  source_line: 30
+- id: smoke-back-room-page
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d22
+  field: body
+  text: "The back room holds the brass lantern."
+  source_line: 34

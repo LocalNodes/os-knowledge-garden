@@ -1,0 +1,111 @@
+# Every person, organisation, place and street the Lantern Row Housing Co-op
+# pack and its expectation files name. Each is made up. A name in the pack or
+# its expectations that is not listed here (or in the how-to inventory) fails
+# the fiction test.
+#
+# people: the nineteen people of the source's People tables; Dana, who has left
+#   the house; Hollis and Ellis, the tradespeople the pack names by first name;
+#   Pat, a name misread off a tape in one post; and the two-letter initials the
+#   source's tables use for the listed people.
+people:
+  - Ana Kowalski
+  - Jo Sutherland
+  - Rosa Martins
+  - Sam Okafor
+  - Mei Chen
+  - "Liam O'Brien"
+  - Grace Adeyemi
+  - Marcus Bell
+  - Farah Haddad
+  - Pete Lindqvist
+  - Owen Price
+  - Ines Duarte
+  - Nell Patel
+  - Ben Ivers
+  - Tessa Moreno
+  - Ari Mensah
+  - Kit Novak
+  - Leah Tan
+  - Omar Vale
+  - Dana
+  - Hollis
+  - Ellis
+  - Pat
+  # The initials of the people above, as the tables write them.
+  - AK
+  - JS
+  - RM
+  - SO
+  - MC
+  - LO
+  - GA
+  - MB
+  - FH
+  - PL
+  - OP
+  - ID
+  - NP
+  - BI
+  - TM
+  - KN
+  - LT
+  - OV
+organisations:
+  - Lantern Row Housing Co-op
+  - Willow House
+  - Rowan House
+  - Co-op Repairs
+  - Co-op common room
+  - Brook Gutters
+places:
+  - Bathroom 2
+  - Kitchen
+  - Back garden
+  - Front room
+  - Co-op courtyard
+streets: []
+
+# ordinary: plain words this pack's text uses that the scan would otherwise
+#   read as a possible name: a month or a weekday standing alone; a number word
+#   that opens a sentence ("Two"); "Smoke" at the start of a sentence in the
+#   repair log; and the capitalised word that opens a sentence, a heading or a
+#   topic title in the library pages, posts, comments and events ("Quarterly",
+#   "Tomatoes", "Getting", "Landing", "Bikes", "Gas", "Internet", "Tradespeople",
+#   "Joining", "Sharing", "Where", "You" and the like). None of them is a person, an
+#   organisation or a place.
+ordinary:
+  - January
+  - March
+  - April
+  - Monday
+  - Tuesday
+  - Friday
+  - Saturday
+  - Sunday
+  - Fridays
+  - Saturdays
+  - Smoke
+  - Two
+  - That
+  - Fair
+  - My
+  - "You're"
+  - Quarterly
+  - All
+  - Tomatoes
+  - Both
+  - Book
+  - Cost
+  - Getting
+  - Landing
+  - Block
+  - Bikes
+  - Gas
+  - Internet
+  - Expected
+  - Tradespeople
+  - Joining
+  - Read
+  - Sharing
+  - Where
+  - You

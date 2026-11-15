@@ -1,0 +1,452 @@
+---
+# Likers: the pack gives each post a count, not names. The likers of a post are the first N members of its
+# group in the order of the source's People section, skipping the post's author.
+d03d4670-f640-56b1-be66-702132910daa:
+  uuid: d03d4670-f640-56b1-be66-702132910daa
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+e96afc82-e536-5006-ae45-079b03ba4c3d:
+  uuid: e96afc82-e536-5006-ae45-079b03ba4c3d
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+eeb0d439-cfeb-59bb-afa9-6e8c55befb2e:
+  uuid: eeb0d439-cfeb-59bb-afa9-6e8c55befb2e
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+ea6bb38b-844b-54c6-8623-f50fb89c1ce8:
+  uuid: ea6bb38b-844b-54c6-8623-f50fb89c1ce8
+  type: like
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+000a77b0-9f69-53be-b1f1-fb9821d230d3:
+  uuid: 000a77b0-9f69-53be-b1f1-fb9821d230d3
+  type: like
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+9d0018b6-3790-5a27-bc81-27cfad110bad:
+  uuid: 9d0018b6-3790-5a27-bc81-27cfad110bad
+  type: like
+  uid: 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+751659ff-b3a2-55f3-959b-0c9ed8ec4e05:
+  uuid: 751659ff-b3a2-55f3-959b-0c9ed8ec4e05
+  type: like
+  uid: 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  entity_id: b94df212-2c8a-48d7-9817-372243e76969
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+c9b6f2a8-8e4a-581f-95f2-4c323c7847d8:
+  uuid: c9b6f2a8-8e4a-581f-95f2-4c323c7847d8
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 368e7e97-4b90-4b0e-b946-c9eb45abd15a
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+20e62bc5-923c-5007-9185-35ac1b8efd44:
+  uuid: 20e62bc5-923c-5007-9185-35ac1b8efd44
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 368e7e97-4b90-4b0e-b946-c9eb45abd15a
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+bf5963c0-3a79-594a-b83a-7dfa8c70f7a8:
+  uuid: bf5963c0-3a79-594a-b83a-7dfa8c70f7a8
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+8525bfcd-399e-57c1-b5a0-0005c3ba5f5a:
+  uuid: 8525bfcd-399e-57c1-b5a0-0005c3ba5f5a
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+1a1cfd9e-8d9f-5785-b0c6-f5ef46accf4f:
+  uuid: 1a1cfd9e-8d9f-5785-b0c6-f5ef46accf4f
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+7cb0d8ce-cc02-5b9c-92e1-c050dea54edb:
+  uuid: 7cb0d8ce-cc02-5b9c-92e1-c050dea54edb
+  type: like
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+9337d5f7-bfb8-57fb-b5bb-15baa2f9648a:
+  uuid: 9337d5f7-bfb8-57fb-b5bb-15baa2f9648a
+  type: like
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  entity_id: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+fe9ff95e-f31a-5425-8855-2626fc21ed7d:
+  uuid: fe9ff95e-f31a-5425-8855-2626fc21ed7d
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 76b6bbde-f20d-47a9-ae09-e833b0ea2eb9
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+7f34bf40-b1cb-5fd4-8193-77bf02a45c7b:
+  uuid: 7f34bf40-b1cb-5fd4-8193-77bf02a45c7b
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 76b6bbde-f20d-47a9-ae09-e833b0ea2eb9
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+0194f9c1-4cbc-5c1d-90e1-bff6a9f88963:
+  uuid: 0194f9c1-4cbc-5c1d-90e1-bff6a9f88963
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: 76b6bbde-f20d-47a9-ae09-e833b0ea2eb9
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+2d571a92-532b-59a1-9a7c-13023aa1dcea:
+  uuid: 2d571a92-532b-59a1-9a7c-13023aa1dcea
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: 76b6bbde-f20d-47a9-ae09-e833b0ea2eb9
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+3d11cc84-4bb5-5c46-8869-c7237180d838:
+  uuid: 3d11cc84-4bb5-5c46-8869-c7237180d838
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+e99e53ff-2914-5199-890e-6a817ba22a9e:
+  uuid: e99e53ff-2914-5199-890e-6a817ba22a9e
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+13c4d8a6-9fc8-59f9-bbbd-437202dada79:
+  uuid: 13c4d8a6-9fc8-59f9-bbbd-437202dada79
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+a70f516b-b0c9-5b97-9337-07889df83b8f:
+  uuid: a70f516b-b0c9-5b97-9337-07889df83b8f
+  type: like
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  entity_id: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+4a6d9357-2cf8-5be0-936d-8cc653ab6396:
+  uuid: 4a6d9357-2cf8-5be0-936d-8cc653ab6396
+  type: like
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  entity_id: 0424c0c8-eeba-42ed-bdee-edd9afbca2b4
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+d31821dd-5dde-50bc-822a-843129c174cb:
+  uuid: d31821dd-5dde-50bc-822a-843129c174cb
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 9745fdcb-1fe1-47d3-811d-bca76807b996
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+b46b5661-1336-530a-a7ad-f30c16381e9b:
+  uuid: b46b5661-1336-530a-a7ad-f30c16381e9b
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 9745fdcb-1fe1-47d3-811d-bca76807b996
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+45eb7945-0586-59de-b29f-a7bce88579a3:
+  uuid: 45eb7945-0586-59de-b29f-a7bce88579a3
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: 9745fdcb-1fe1-47d3-811d-bca76807b996
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+45056182-f9ce-5ac8-896f-c71f97881609:
+  uuid: 45056182-f9ce-5ac8-896f-c71f97881609
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+d43f9e1b-fdca-5351-9bac-de9adb2a750a:
+  uuid: d43f9e1b-fdca-5351-9bac-de9adb2a750a
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+6bdfa664-303d-54a8-acba-6343978f257b:
+  uuid: 6bdfa664-303d-54a8-acba-6343978f257b
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+8752f880-d88f-5e60-b12d-5e942259d37b:
+  uuid: 8752f880-d88f-5e60-b12d-5e942259d37b
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+302965da-9153-5356-9d23-0c88b4659085:
+  uuid: 302965da-9153-5356-9d23-0c88b4659085
+  type: like
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+efff0f4a-cbbe-54b4-9e43-eeabe3a47bf4:
+  uuid: efff0f4a-cbbe-54b4-9e43-eeabe3a47bf4
+  type: like
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  entity_id: f81903bf-b9a9-4698-bcac-a22a68e130c1
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+f9e1cdea-6f46-5d82-8e1c-7fc85ee8dc9d:
+  uuid: f9e1cdea-6f46-5d82-8e1c-7fc85ee8dc9d
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+d311d082-d4f4-5187-b91b-ab50cdd1240c:
+  uuid: d311d082-d4f4-5187-b91b-ab50cdd1240c
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+263f79f9-52b1-5bcd-891e-339e776f6884:
+  uuid: 263f79f9-52b1-5bcd-891e-339e776f6884
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+36be846a-33a5-5074-b7f8-a00093702cf4:
+  uuid: 36be846a-33a5-5074-b7f8-a00093702cf4
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+3cf2baad-95ad-5dc8-9b33-fe32b7fa10ba:
+  uuid: 3cf2baad-95ad-5dc8-9b33-fe32b7fa10ba
+  type: like
+  uid: a7f4cd7f-3076-425c-b052-28048648a454
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+cfb2b06e-7b84-532c-82d4-cd7a8dc9a954:
+  uuid: cfb2b06e-7b84-532c-82d4-cd7a8dc9a954
+  type: like
+  uid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+4d60366e-2f8f-5ee2-8520-2686bd2a34f6:
+  uuid: 4d60366e-2f8f-5ee2-8520-2686bd2a34f6
+  type: like
+  uid: 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+f5342b6b-254c-58db-8b00-51c4678e677b:
+  uuid: f5342b6b-254c-58db-8b00-51c4678e677b
+  type: like
+  uid: 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+a780bcac-3f03-5cfd-83a1-d55dc6d3e2f9:
+  uuid: a780bcac-3f03-5cfd-83a1-d55dc6d3e2f9
+  type: like
+  uid: b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  entity_id: 587ddf38-b50e-4abd-9468-0906358a21ba
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+5b88a21b-65b3-5181-9c54-a5b291bc3535:
+  uuid: 5b88a21b-65b3-5181-9c54-a5b291bc3535
+  type: like
+  uid: b8963366-a516-4bd2-b545-1cea263bc859
+  entity_id: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+d55e123d-08ab-574f-a4fd-9fbdd139620f:
+  uuid: d55e123d-08ab-574f-a4fd-9fbdd139620f
+  type: like
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  entity_id: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+8a37a724-48f8-55a4-97ab-c3bd1c99f2ae:
+  uuid: 8a37a724-48f8-55a4-97ab-c3bd1c99f2ae
+  type: like
+  uid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  entity_id: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost
+
+11d797cd-90ba-5403-8dba-7e202f50742e:
+  uuid: 11d797cd-90ba-5403-8dba-7e202f50742e
+  type: like
+  uid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  entity_id: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost

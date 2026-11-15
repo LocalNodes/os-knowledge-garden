@@ -248,7 +248,7 @@ step "token test suite" token_suite
 # second, hand-written copy of palette values that the generator does not write. The list (KNOWN_NUXT_GAPS),
 # the before/after comparison and the rule for when a gap closes live in scripts/tokens/lib/nuxt_gaps.mjs, where
 # they are unit-tested: a gap prints as a GAP line, never a pass; it stops the proof (STALE GAP) the moment it
-# closes, so the list cannot rot; any other new failure is a NEW FAILURE. Recorded in .planning/WINDOWS.md (44).
+# closes, so the list cannot rot; any other new failure is a NEW FAILURE.
 nuxt_tests_unchanged() {
   [ -s "$TMP/nuxt-after.json" ] || { echo "the Nuxt unit tests did not run after the swap"; tail -n 20 "$TMP/nuxt-after.log"; return 1; }
   node "$W/scripts/tokens/lib/nuxt_gaps.mjs" "$TMP/nuxt-before.json" "$TMP/nuxt-after.json" "$NUXT_CHANGED_COUNT"

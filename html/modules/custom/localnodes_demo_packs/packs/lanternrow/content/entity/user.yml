@@ -1,0 +1,364 @@
+---
+# Lantern Row Housing Co-op: nineteen made-up people, in the order the source lists them.
+# Sam Okafor is the export owner.
+b8963366-a516-4bd2-b545-1cea263bc859:
+  uuid: b8963366-a516-4bd2-b545-1cea263bc859
+  created: now|00:00
+  name: ana_kowalski
+  mail: ana.kowalski@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Ana
+  last_name: Kowalski
+  organization: Lantern Row Housing Co-op
+  function: Keeps the repair log and gets quotes; fund approver; Co-op Repairs
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Keeps the repair log and gets quotes; fund approver; Co-op Repairs
+
+d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c:
+  uuid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  created: now|00:00
+  name: jo_sutherland
+  mail: jo.sutherland@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Jo
+  last_name: Sutherland
+  organization: Lantern Row Housing Co-op
+  function: Treasurer; fund approver; Co-op Repairs
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Treasurer; fund approver; Co-op Repairs
+
+41bdd5a3-b183-4120-8d31-a2447c8757e1:
+  uuid: 41bdd5a3-b183-4120-8d31-a2447c8757e1
+  created: now|00:00
+  name: rosa_martins
+  mail: rosa.martins@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Rosa
+  last_name: Martins
+  organization: Lantern Row Housing Co-op
+  function: Longest-standing member (nine years in the house); fund approver; helps with the Willow garden
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Longest-standing member (nine years in the house); fund approver; helps with the Willow garden
+
+9070d9de-6644-46ae-8c7e-50716e8dfd84:
+  uuid: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+  created: now|00:00
+  name: sam_okafor
+  mail: sam.okafor@lanternrow.example
+  export_owner: true
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Sam
+  last_name: Okafor
+  organization: Lantern Row Housing Co-op
+  function: Chairs the monthly meeting; set up the Willow House group (its organizer)
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Chairs the monthly meeting; set up the Willow House group (its organizer)
+
+a7f4cd7f-3076-425c-b052-28048648a454:
+  uuid: a7f4cd7f-3076-425c-b052-28048648a454
+  created: now|00:00
+  name: mei_chen
+  mail: mei.chen@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Mei
+  last_name: Chen
+  organization: Lantern Row Housing Co-op
+  function: Takes the minutes
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Takes the minutes
+
+dfeab05a-4e26-4c70-a918-adbff3104d18:
+  uuid: dfeab05a-4e26-4c70-a918-adbff3104d18
+  created: now|00:00
+  name: liam_obrien
+  mail: liam.obrien@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Liam
+  last_name: O'Brien
+  organization: Lantern Row Housing Co-op
+  function: Runs the chore rota; helps with the Willow garden
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Runs the chore rota; helps with the Willow garden
+
+8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f:
+  uuid: 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  created: now|00:00
+  name: grace_adeyemi
+  mail: grace.adeyemi@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Grace
+  last_name: Adeyemi
+  organization: Lantern Row Housing Co-op
+  function: Looks after the Willow garden
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Looks after the Willow garden
+
+139298ed-4f8e-49ab-994c-2c5fb6117f5f:
+  uuid: 139298ed-4f8e-49ab-994c-2c5fb6117f5f
+  created: now|00:00
+  name: marcus_bell
+  mail: marcus.bell@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Marcus
+  last_name: Bell
+  organization: Lantern Row Housing Co-op
+  function: The handy one, does the small fixes; Co-op Repairs
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: The handy one, does the small fixes; Co-op Repairs
+
+b6fffa4d-bc95-4d1f-9d5a-8c2187feb455:
+  uuid: b6fffa4d-bc95-4d1f-9d5a-8c2187feb455
+  created: now|00:00
+  name: farah_haddad
+  mail: farah.haddad@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Farah
+  last_name: Haddad
+  organization: Lantern Row Housing Co-op
+  function: Welcomes new members, holds the spare keys, keeps the Handbook
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Welcomes new members, holds the spare keys, keeps the Handbook
+
+339ec9f4-b107-4165-8e73-0edb9253bb2e:
+  uuid: 339ec9f4-b107-4165-8e73-0edb9253bb2e
+  created: now|00:00
+  name: pete_lindqvist
+  mail: pete.lindqvist@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Pete
+  last_name: Lindqvist
+  organization: Lantern Row Housing Co-op
+  function: Looks after the bike shed and the compost; owns the top left fridge shelf
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Looks after the bike shed and the compost; owns the top left fridge shelf
+
+13d5ed06-1442-4613-8bcd-de213a0e0293:
+  uuid: 13d5ed06-1442-4613-8bcd-de213a0e0293
+  created: now|00:00
+  name: owen_price
+  mail: owen.price@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Owen
+  last_name: Price
+  organization: Lantern Row Housing Co-op
+  function: Works late shifts and sleeps in
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Works late shifts and sleeps in
+
+ca7ebede-0f4c-4e60-a921-4dc94c203db3:
+  uuid: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  created: now|00:00
+  name: ines_duarte
+  mail: ines.duarte@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Ines
+  last_name: Duarte
+  organization: Lantern Row Housing Co-op
+  function: Newest member, moved into the small top room about two weeks before install
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Newest member, moved into the small top room about two weeks before install
+
+bfc9de5e-e309-4307-a207-9caa5a826eaa:
+  uuid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: now|00:00
+  name: nell_patel
+  mail: nell.patel@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Nell
+  last_name: Patel
+  organization: Lantern Row Housing Co-op
+  function: Organizes the house group and takes minutes
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Organizes the house group and takes minutes
+
+f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8:
+  uuid: f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  created: now|00:00
+  name: ben_ivers
+  mail: ben.ivers@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Ben
+  last_name: Ivers
+  organization: Lantern Row Housing Co-op
+  function: Keeps Rowan's repair notes; Co-op Repairs
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Keeps Rowan's repair notes; Co-op Repairs
+
+13ba1c40-5647-4f5a-9c03-80a8f697e790:
+  uuid: 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  created: now|00:00
+  name: tessa_moreno
+  mail: tessa.moreno@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Tessa
+  last_name: Moreno
+  organization: Lantern Row Housing Co-op
+  function: Keeps budget notes and receipts
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Keeps budget notes and receipts
+
+0f4efd66-e78f-45f1-8dfe-f020182d1f55:
+  uuid: 0f4efd66-e78f-45f1-8dfe-f020182d1f55
+  created: now|00:00
+  name: ari_mensah
+  mail: ari.mensah@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Ari
+  last_name: Mensah
+  organization: Lantern Row Housing Co-op
+  function: Looks after shared tools with Jo; Co-op Repairs
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Looks after shared tools with Jo; Co-op Repairs
+
+60094548-e91e-4fa8-8bb9-933fab340b3c:
+  uuid: 60094548-e91e-4fa8-8bb9-933fab340b3c
+  created: now|00:00
+  name: kit_novak
+  mail: kit.novak@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Kit
+  last_name: Novak
+  organization: Lantern Row Housing Co-op
+  function: Runs Rowan's chore rota
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Runs Rowan's chore rota
+
+53c559cd-7844-46da-80eb-ce802cd3e34b:
+  uuid: 53c559cd-7844-46da-80eb-ce802cd3e34b
+  created: now|00:00
+  name: leah_tan
+  mail: leah.tan@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Leah
+  last_name: Tan
+  organization: Lantern Row Housing Co-op
+  function: Wrote the boiler replacement notes
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Wrote the boiler replacement notes
+
+7489783b-7e23-4de6-92aa-8dc205ec108f:
+  uuid: 7489783b-7e23-4de6-92aa-8dc205ec108f
+  created: now|00:00
+  name: omar_vale
+  mail: omar.vale@lanternrow.example
+  timezone: UTC
+  status: 1
+  image: null
+  image_alt: ''
+  first_name: Omar
+  last_name: Vale
+  organization: Lantern Row Housing Co-op
+  function: Welcomes new members and keeps spare keys
+  phone_number: ''
+  expertise: []
+  interests: []
+  address: ''
+  self_introduction: Welcomes new members and keeps spare keys

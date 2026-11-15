@@ -52,7 +52,7 @@ function overlay(name, body) {
 
 const lines = (out, prefix) => out.split('\n').filter((l) => l.startsWith(prefix));
 
-test('the formula reproduces the numbers UI-SPEC and CANVAS-BRIEF measured (to 2 dp)', () => {
+test('the formula reproduces known contrast ratios (to 2 dp)', () => {
   assert.equal(contrast('#ffffff', '#29abe2').toFixed(2), '2.62'); // white on the stock primary
   assert.equal(contrast('#0f766e', '#ffffff').toFixed(2), '5.47'); // the provisional primary on white
   assert.equal(contrast('#343434', '#ffffff').toFixed(2), '12.45'); // text on white

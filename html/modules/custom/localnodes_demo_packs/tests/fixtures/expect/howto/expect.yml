@@ -1,0 +1,163 @@
+# What the shared how-to pages must hold once loaded, and what they leave out.
+#
+# counts.howto: pages in shared/content/entity/howto.yml, P01 to P10.
+# left_out: titles of the two pages the source holds beyond Part 1's P01 to
+#   P10 (P11 and P12), which stay withheld, and one line from each body.
+counts:
+  howto: 10
+left_out:
+  - id: p11-title
+    text: Respond to a decision
+  - id: p12-title
+    text: See what the fund holds
+  - id: p11-body
+    text: Choose Cast your vote, follow the confirmation shown and check that your response is recorded.
+  - id: p12-body
+    text: Choose Refresh balances to request another reading.
+# Search rows, run by scripts/check_demo_pack.php --pack=howto --search-only:
+# a visitor who searches must not find any of the ten how-to pages, which are
+# for signed-in members, and smoke_two (a member) must find the page the row is
+# about. Every row forbids all ten titles (hidden_titles); the row's own title
+# is the page its control member must find. howto-search-visitor searches by
+# words of the page body; each howto-search-pNN row searches by words of its
+# own page's title.
+search_hidden:
+  - id: howto-search-visitor
+    as: anonymous
+    keys: Request to join
+    title: Join a group
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: &all_titles
+      - Join a group
+      - Write a post
+      - Add a page or file to the library
+      - Ask the assistant and check sources
+      - Find an event and respond
+      - Answer a quick poll
+      - Change which emails you get
+      - Leave a group
+      - Report a problem
+      - Get help
+  - id: howto-search-p01
+    as: anonymous
+    keys: Join a group
+    title: Join a group
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p02
+    as: anonymous
+    keys: Write a post
+    title: Write a post
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p03
+    as: anonymous
+    keys: Add a page or file to the library
+    title: Add a page or file to the library
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p04
+    as: anonymous
+    keys: Ask the assistant and check sources
+    title: Ask the assistant and check sources
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p05
+    as: anonymous
+    keys: Find an event and respond
+    title: Find an event and respond
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p06
+    as: anonymous
+    keys: Answer a quick poll
+    title: Answer a quick poll
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p07
+    as: anonymous
+    keys: Change which emails you get
+    title: Change which emails you get
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p08
+    as: anonymous
+    keys: Leave a group
+    title: Leave a group
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p09
+    as: anonymous
+    keys: Report a problem
+    title: Report a problem
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+  - id: howto-search-p10
+    as: anonymous
+    keys: Get help
+    title: Get help
+    control_as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    hidden_titles: *all_titles
+# indexed: each of the ten guide pages is tracked and indexed by the site's
+# keyword search (social_content) and by the index the assistant reads
+# (social_posts). The row fails "<index> not indexed" while an item waits and
+# "<index> not tracking" when the index does not hold the page at all. It runs
+# in the same --search-only pass as the rows above, so a search that finds
+# nothing is told apart from a page that was never indexed.
+indexed:
+  - id: howto-indexed-p01
+    uuid: 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p02
+    uuid: b8d8e848-e2a3-4caa-bbca-247fa7e07759
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p03
+    uuid: 41177da8-52b7-47f4-83c3-bff8d4fb3433
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p04
+    uuid: f4d742fe-20f6-40ac-b989-6b361efdbf10
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p05
+    uuid: 83737855-1f79-4c2e-965f-7f8f8e7d350c
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p06
+    uuid: ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p07
+    uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p08
+    uuid: 80647fee-c455-45bb-a191-32bfdf55fca2
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p09
+    uuid: 9e55d601-cbef-4c2e-946c-39503b37941b
+    indexes:
+      - social_content
+      - social_posts
+  - id: howto-indexed-p10
+    uuid: f42f8def-e88f-48e5-b194-737527cdeecc
+    indexes:
+      - social_content
+      - social_posts
+# search_found: a member who searches for a guide page's title finds it.
+search_found:
+  - id: howto-found-p07
+    as: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+    keys: Change which emails you get
+    title: Change which emails you get

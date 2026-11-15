@@ -1,0 +1,11 @@
+---
+# Smoke fixture: the second account likes the kettle post.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d50:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d50
+  type: like
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  entity_id: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40
+  entity_type: post
+  value: 1
+  value_type: points
+  vote_source: localhost

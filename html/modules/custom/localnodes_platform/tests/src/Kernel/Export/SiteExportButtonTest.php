@@ -221,6 +221,21 @@ final class SiteExportButtonTest extends KernelTestBase {
     $this->assertContains('site-exports', \Drupal\localnodes_platform\Export\SiteExporter::PRIVATE_SKIP);
   }
 
+  /**
+   * The confirmation screen, built and rendered the way a page is, shows its controls.
+   *
+   * The form builder themes a form with a hook named after its form id, so a
+   * theme hook of the same name would replace the whole form with the overview.
+   */
+  public function testRenderedConfirmationShowsItsControls(): void {
+    $this->container->get('current_user')->setAccount($this->owner());
+    $page = $this->container->get('form_builder')->getForm(\Drupal\localnodes_platform\Form\SiteExportForm::class, 'request');
+    $html = (string) $this->container->get('renderer')->renderInIsolation($page);
+    $this->assertStringContainsString('type="password"', $html);
+    $this->assertStringContainsString('name="acknowledged"', $html);
+    $this->assertStringContainsString('name="form_token"', $html);
+  }
+
   public function testConfirmationFormNeverExposesBytesOnGetAndNeedsPassword(): void {
     $owner = $this->owner();
     $this->container->get('current_user')->setAccount($owner);

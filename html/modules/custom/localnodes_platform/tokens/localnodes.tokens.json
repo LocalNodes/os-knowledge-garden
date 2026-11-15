@@ -1,6 +1,6 @@
 {
   "$schema": "localnodes tokens v1 (DTCG-style: $value leaves, {a.b.c} references)",
-  "$description": "The one LocalNodes token source (22.1-03, DES-01, D-03, D-08). Hand-edited. Run `node scripts/tokens/build_tokens.mjs` after any change; `--check` fails when a generated file differs. Three layers: primitive (raw values), semantic (what a value is for), targets (which product field or custom property takes which semantic value). Colour values come from .planning/brand/BRAND.md section 12 (Tom, 2026-11-06). Names are roles (brand, accent, neutral), never hues: a palette swap changes values only.",
+  "$description": "The one LocalNodes token source. Hand-edited. Run `node scripts/tokens/build_tokens.mjs` after any change; `--check` fails when a generated file differs. Three layers: primitive (raw values), semantic (what a value is for), targets (which product field or custom property takes which semantic value). Names are roles (brand, accent, neutral), never hues: a palette swap changes values only.",
   "primitive": {
     "color": {
       "brand": {
@@ -32,7 +32,7 @@
         "950": { "$value": "#451a03", "$type": "color" }
       },
       "neutral": {
-        "$description": "Shared neutrals (BRAND.md section 12 'Shared tokens'). The 50-950 scale is the grey scale the Nuxt site uses today (BRAND.md: 'Tailwind zinc for now; 22.1-08 replaces it with a token-defined neutral scale'); the named values are the Drupal and Nuxt roles.",
+        "$description": "Shared neutrals. The 50-950 scale is the grey scale the Nuxt site uses today (Tailwind zinc); the named values are the Drupal and Nuxt roles.",
         "50": { "$value": "#fafafa", "$type": "color" },
         "100": { "$value": "#f4f4f5", "$type": "color" },
         "200": { "$value": "#e4e4e7", "$type": "color" },
@@ -177,7 +177,7 @@
     "divider": {
       "$value": "{primitive.color.neutral.divider}",
       "decorative": true,
-      "$description": "Decorative separators only, never a control's only boundary (22-UI-SPEC Part 1; BRAND.md section 5), so it carries no contrast pairing."
+      "$description": "Decorative separators only, never a control's only boundary, so it carries no contrast pairing."
     },
     "surface": { "$value": "{primitive.color.neutral.white}" },
     "canvas": { "$value": "{primitive.color.neutral.canvas}" },
@@ -215,7 +215,7 @@
     "on-primary": { "$value": "{primitive.color.neutral.white}" },
     "on-danger": { "$value": "{primitive.color.neutral.white}" },
     "dark": {
-      "$description": "Nuxt UI's .dark role values. The sign-up site's task pages are all light; these serve the landing page's dark bands only (BRAND.md section 5). Since 22.1-12 the page, text, muted text, button text and primary roles are the approved semantic.band values (Tom, card 7); the answer card (band.answer-card) is drawn with the ln-brand-900 palette utility, because pointing --ui-bg-elevated at it would put the primary and error text roles under 4.5:1 on that fill (P9).",
+      "$description": "Nuxt UI's .dark role values. The sign-up site's task pages are all light; these serve the landing page's dark bands only. The page, text, muted text, button text and primary roles are the semantic.band values; the answer card (band.answer-card) is drawn with the ln-brand-900 palette utility, because pointing --ui-bg-elevated at it would put the primary and error text roles under 4.5:1 on that fill (P9).",
       "primary": { "$value": "{semantic.band.button}" },
       "secondary": { "$value": "{primitive.color.dark.highlight}" },
       "text": { "$value": "{semantic.band.text}" },
@@ -223,7 +223,7 @@
       "text-toned": { "$value": "{primitive.color.neutral.300}" },
       "text-dimmed": {
         "$value": "{primitive.color.dark.muted}",
-        "$description": "Nuxt UI's own dark dimmed text is the 500 neutral (4.12:1 on the page, fails 4.5:1); the 400 neutral passes (CANVAS-BRIEF section 4, P9)."
+        "$description": "Nuxt UI's own dark dimmed text is the 500 neutral (4.12:1 on the page, fails 4.5:1); the 400 neutral passes."
       },
       "text-highlighted": { "$value": "{primitive.color.dark.text}" },
       "text-inverted": { "$value": "{semantic.band.button-text}" },
@@ -238,14 +238,14 @@
       },
       "border-accented": {
         "$value": "{primitive.color.dark.line-strong}",
-        "$description": "main.css set the 700 neutral here (1.91:1 on the zinc page, fails 3:1); CANVAS-BRIEF section 4 P9 proposed the 500 neutral. On the approved band blue (22.1-12) the 500 neutral is 2.87:1 and fails 3:1, so the 400 neutral is used."
+        "$description": "main.css set the 700 neutral here (1.91:1 on the zinc page, fails 3:1). The 500 neutral is 2.87:1 on the band blue and also fails 3:1, so the 400 neutral is used."
       },
       "error": { "$value": "{primitive.color.status.danger-on-dark}" },
       "success": { "$value": "{primitive.color.status.success-on-dark}" },
       "warning": { "$value": "{primitive.color.status.warning-on-dark}" }
     },
     "band": {
-      "$description": "The landing page's dark hero band (Tom, 2026-11-06, card 7): BRAND.md section 5 'Dark mode' roles, every pairing measured in CANVAS-BRIEF section 4 'Option B dark band'.",
+      "$description": "The landing page's dark hero band: the dark-mode roles on the band background, each pairing measured by the contrast gate (PB).",
       "bg": { "$value": "{primitive.color.dark.bg}" },
       "text": { "$value": "{primitive.color.dark.text}" },
       "text-muted": { "$value": "{primitive.color.dark.muted}" },
@@ -398,7 +398,7 @@
       }
     },
     "email": {
-      "$description": "Roles for the one LocalNodes mail template (BRAND.md section 9; 22.1-07 reads them).",
+      "$description": "Roles for the one LocalNodes mail template.",
       "body": "{semantic.canvas}",
       "card": "{semantic.surface}",
       "heading": "{semantic.text}",

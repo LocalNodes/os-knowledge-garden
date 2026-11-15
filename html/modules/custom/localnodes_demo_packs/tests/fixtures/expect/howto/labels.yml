@@ -1,0 +1,408 @@
+# Every control name the how-to pages P01 to P10 tell a member to choose, and
+# where that name is proved to exist.
+#
+# A row is {id, page, label, check, as, where, control, root, path, line,
+# in_copy, why}.
+# - page: P01 to P10, in the order of shared/content/entity/howto.yml.
+# - label: the name exactly as a member sees it.
+# - check: "screen" (the test opens the screen as the account the row names,
+#   and a visible, enabled control of the kind the row names must carry the
+#   name) or "source" (the code that emits the name must hold it as a string,
+#   not in a comment). A name goes in a source row only when the test site
+#   cannot show it on any screen.
+# - as: for a screen row, anonymous (signed out), member (smoke_two),
+#   non_member (smoke_out), organizer (smoke_one) or sitemanager.
+# - where: for a screen row, the screen in words; the test maps it to a route.
+# - control: for a screen row, the kind of element that carries the name:
+#   link, tab (a link among the page's tabs), button (a button that does not
+#   submit), submit (a submit button), field (a field label or legend), option,
+#   heading or placeholder. A heading, a hidden node or a disabled button never
+#   stands in for another kind.
+# - within: for a screen row, optional: a CSS selector for the region of the
+#   screen that holds the control (a block, a form id). A same-named control
+#   outside it, such as a link in a sidebar teaser or the footer, does not
+#   count. A row without it matches anywhere on the screen.
+# - root, path, line: for a source row, the code root (OS is the Open Social
+#   profile, H is this repository, C is html/modules/contrib, Core is
+#   html/core), the file under it and the line the builder read. The line is
+#   a pointer for a reader, not something the test asserts.
+# - in_copy: false only where the page describes a control instead of naming it.
+# - why: for a source row, what a test site lacks to show it on a screen.
+- id: P01-join
+  page: P01
+  label: Join
+  check: screen
+  as: non_member
+  where: group page
+  control: link
+  within: '#block-socialblue-group-statistic-block'
+  in_copy: true
+- id: P01-request-to-join
+  page: P01
+  label: Request to join
+  check: screen
+  as: non_member
+  where: request group page
+  control: link
+  within: '#block-socialblue-group-statistic-block'
+  in_copy: true
+- id: P01-send-request
+  page: P01
+  label: Send request
+  check: screen
+  as: non_member
+  where: request form
+  control: submit
+  within: 'form[id$="-group-request-membership-form"]'
+  in_copy: true
+- id: P01-accept
+  page: P01
+  label: Accept
+  check: screen
+  as: member
+  where: invitations page
+  control: submit
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P02-stream
+  page: P02
+  label: Stream
+  check: screen
+  as: member
+  where: group stream
+  control: tab
+  within: '#block-socialblue-local-tasks'
+  in_copy: true
+- id: P02-post-box
+  page: P02
+  label: Say something to the group
+  check: screen
+  as: member
+  where: group stream
+  control: placeholder
+  within: '#social-post-entity-form'
+  in_copy: true
+- id: P02-post-button
+  page: P02
+  label: Post
+  check: screen
+  as: member
+  where: group stream
+  control: submit
+  within: '#social-post-entity-form'
+  in_copy: true
+- id: P03-new-topic
+  page: P03
+  label: New Topic
+  check: screen
+  as: member
+  where: front page
+  control: link
+  within: '#block-socialblue-accountheaderblock'
+  in_copy: true
+- id: P03-create-topic
+  page: P03
+  label: Create topic
+  check: screen
+  as: member
+  where: topic add form
+  control: submit
+  within: '#node-topic-form'
+  in_copy: true
+- id: P03-import
+  page: P03
+  label: Import
+  check: screen
+  as: organizer
+  where: group page
+  control: tab
+  within: '#block-socialblue-local-tasks'
+  in_copy: true
+- id: P03-upload-files
+  page: P03
+  label: Upload files
+  check: screen
+  as: organizer
+  where: import page
+  control: heading
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P03-choose-files
+  page: P03
+  label: Choose files
+  check: screen
+  as: organizer
+  where: import files form
+  control: field
+  within: '#localnodes-import-upload-files'
+  in_copy: true
+- id: P03-who-can-see
+  page: P03
+  label: 'Who can see these pages?'
+  check: screen
+  as: organizer
+  where: import files form
+  control: field
+  within: '#localnodes-import-upload-files'
+  in_copy: true
+- id: P03-import-count
+  page: P03
+  label: Import 1 file
+  check: source
+  root: H
+  path: html/modules/custom/localnodes_import/src/Form/UploadFilesForm.php
+  line: 114
+  in_copy: true
+  why: The button name comes from a plural pair and shows only once a file is chosen in a browser.
+- id: P03-rights-box
+  page: P03
+  label: 'I have the right to share these here, because they''re openly licensed or I have permission.'
+  check: screen
+  as: organizer
+  where: import files form
+  control: field
+  within: '#localnodes-import-upload-files'
+  in_copy: false
+- id: P04-import
+  page: P04
+  label: Import
+  check: screen
+  as: organizer
+  where: group page
+  control: tab
+  within: '#block-socialblue-local-tasks'
+  in_copy: true
+- id: P04-sources
+  page: P04
+  label: Sources
+  check: source
+  root: H
+  path: html/modules/custom/social_ai_indexing/src/Citation/CitedAnswer.php
+  line: 70
+  in_copy: true
+  why: 'Shown only under an assistant answer, which needs the AI key.'
+- id: P05-events
+  page: P05
+  label: Events
+  check: screen
+  as: member
+  where: group stream
+  control: tab
+  within: '#block-socialblue-local-tasks'
+  in_copy: true
+- id: P05-calendar
+  page: P05
+  label: Calendar
+  check: screen
+  as: member
+  where: group events
+  control: link
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P05-list
+  page: P05
+  label: List
+  check: screen
+  as: member
+  where: group calendar
+  control: link
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P05-enroll
+  page: P05
+  label: Enroll
+  check: screen
+  as: member
+  where: event page
+  control: submit
+  within: '#enroll-action-form'
+  in_copy: true
+- id: P05-request-to-enroll
+  page: P05
+  label: Request to enroll
+  check: screen
+  as: member
+  where: request event page
+  control: link
+  within: '#enroll-action-form'
+  in_copy: true
+- id: P05-enrolled
+  page: P05
+  label: Enrolled
+  check: screen
+  as: member
+  where: enrolled event page
+  control: submit
+  within: '#enroll-action-form'
+  in_copy: true
+- id: P05-cancel-enrollment
+  page: P05
+  label: Cancel enrollment
+  check: screen
+  as: member
+  where: enrolled event page
+  control: submit
+  within: '#enroll-action-form'
+  in_copy: true
+- id: P06-quick-polls
+  page: P06
+  label: Quick polls
+  check: screen
+  as: member
+  where: group stream
+  control: tab
+  within: '#block-socialblue-local-tasks'
+  in_copy: true
+- id: P06-answer
+  page: P06
+  label: Answer
+  check: screen
+  as: member
+  where: group quick polls
+  control: submit
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P06-see-answers
+  page: P06
+  label: See answers so far
+  check: screen
+  as: member
+  where: group quick polls
+  control: submit
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P07-settings
+  page: P07
+  label: Settings
+  check: screen
+  as: member
+  where: front page
+  control: link
+  within: '#block-socialblue-accountheaderblock'
+  in_copy: true
+- id: P07-email-notifications
+  page: P07
+  label: Email notifications
+  check: screen
+  as: member
+  where: account edit form
+  control: field
+  within: '#user-form'
+  in_copy: true
+- id: P07-never
+  page: P07
+  label: Never
+  check: screen
+  as: member
+  where: account edit form
+  control: option
+  within: '#user-form'
+  in_copy: true
+- id: P07-save
+  page: P07
+  label: Save
+  check: screen
+  as: member
+  where: account edit form
+  control: submit
+  within: '#user-form'
+  in_copy: true
+- id: P08-joined
+  page: P08
+  label: Joined
+  check: screen
+  as: member
+  where: group page
+  control: button
+  within: '#block-socialblue-group-statistic-block'
+  in_copy: true
+- id: P08-leave-group
+  page: P08
+  label: Leave group
+  check: screen
+  as: member
+  where: group page
+  control: link
+  within: '#block-socialblue-group-statistic-block'
+  in_copy: true
+- id: P08-leave
+  page: P08
+  label: Leave
+  check: screen
+  as: member
+  where: leave form
+  control: submit
+  within: 'form[id$="-group-leave-form"]'
+  in_copy: true
+- id: P09-report-link
+  page: P09
+  label: Report a problem with this page
+  check: screen
+  as: member
+  where: imported page
+  control: link
+  within: '.localnodes-import-source__report'
+  in_copy: true
+- id: P09-whats-the-problem
+  page: P09
+  label: 'What''s the problem?'
+  check: screen
+  as: member
+  where: report form
+  control: field
+  within: '#localnodes-import-report-problem'
+  in_copy: true
+- id: P09-details
+  page: P09
+  label: Details (optional)
+  check: screen
+  as: member
+  where: report form
+  control: field
+  within: '#localnodes-import-report-problem'
+  in_copy: true
+- id: P09-your-email
+  page: P09
+  label: Your email (optional)
+  check: screen
+  as: member
+  where: report form
+  control: field
+  within: '#localnodes-import-report-problem'
+  in_copy: true
+- id: P09-send-report
+  page: P09
+  label: Send report
+  check: screen
+  as: member
+  where: report form
+  control: submit
+  within: '#localnodes-import-report-problem'
+  in_copy: true
+- id: P09-get-help
+  page: P09
+  label: Get help
+  check: screen
+  as: member
+  where: front page
+  control: link
+  within: '#block-socialblue-localnodes-footer'
+  in_copy: true
+- id: P10-hacked
+  page: P10
+  label: 'Hacked or phished?'
+  check: screen
+  as: anonymous
+  where: help page
+  control: link
+  within: '#block-socialblue-content'
+  in_copy: true
+- id: P10-get-help
+  page: P10
+  label: Get help
+  check: screen
+  as: member
+  where: front page
+  control: link
+  within: '#block-socialblue-localnodes-footer'
+  in_copy: true

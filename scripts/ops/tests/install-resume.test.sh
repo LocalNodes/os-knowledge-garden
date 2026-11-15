@@ -52,7 +52,7 @@
 set -u
 cd "$(dirname "$0")/../../.."
 ROOT="$PWD"
-ENTRYPOINT="$ROOT/docker/entrypoint.sh"
+ENTRYPOINT="${RESUME_TEST_ENTRYPOINT:-$ROOT/docker/entrypoint.sh}"  # a mutation check points this at a scratch copy
 SETTINGS="$ROOT/html/sites/default/settings.php"
 
 PASS=0; FAIL=0
@@ -223,6 +223,14 @@ run_ep() {  # run_ep DIR [VAR=value ...] -> exit code; output in DIR/out
   echo $?
 }
 
+run_ep_unset() {  # run_ep_unset DIR [VAR=value ...]: as run_ep, with DEMO_MODULE not in the environment
+  local t="$1"; shift
+  env -i PATH="$t/bin:/usr/bin:/bin" HOME="$t" SITE="$t" LOCALNODES_DRUSH="$t/bin/drush" \
+    DRUPAL_HASH_SALT=test "$@" \
+    /bin/bash "$ENTRYPOINT" > "$t/out" 2>&1
+  echo $?
+}
+
 # 1. Fresh install, every index step fails (quota): no exit, warnings, marker.
 t="$(new_site)"
 rc="$(run_ep "$t" FAIL_INDEX=1 FAIL_CRON=1 QDRANT_NO_NEWLINE=1)"
@@ -249,6 +257,21 @@ t="$(new_site)"
 rc="$(run_ep "$t" DEMO_MODULE=)"
 check "no DEMO_MODULE: exit 0, no demo module, no demo list, no demo load" "0 0 0 0" "$rc $(grep -c '^drush en localnodes_demo' "$t/seq") $(calls "$t" "localnodes-demo:plugins") $(calls "$t" "social-demo:add")"
 
+# 1d. DEMO_MODULE unset (the variable is not in the environment at all) or none: a blank site
+#     on the fresh-install path. Unset is not the same test as empty: the entrypoint's default
+#     has to handle both, and `none` has to be read as a name that loads nothing.
+demo_calls() {  # demo_calls DIR -> demo-related calls: an enabled demo module, the list, a load
+  echo "$(grep -cE '^drush en .*demo' "$1/seq") $(calls "$1" "localnodes-demo:plugins") $(calls "$1" "social-demo:add")"
+}
+t="$(new_site)"
+rc="$(run_ep_unset "$t")"
+check "fresh, DEMO_MODULE unset: exit 0, no demo module, no demo list, no demo load" "0 0 0 0" "$rc $(demo_calls "$t")"
+check "fresh, DEMO_MODULE unset: the install still completes" yes "$(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+t="$(new_site)"
+rc="$(run_ep "$t" DEMO_MODULE=none)"
+check "fresh, DEMO_MODULE=none: exit 0, no demo module, no demo list, no demo load" "0 0 0 0" "$rc $(demo_calls "$t")"
+check "fresh, DEMO_MODULE=none: the install still completes" yes "$(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+
 # 2. Restart of the 2026-11-06 staging state: installed, content present, no
 #    markers at all. Must resume (updb, index, cron), not reload demo content.
 t="$(new_site)"; touch "$t/installed"; echo 18 > "$t/nodes"
@@ -262,6 +285,18 @@ check "no marker: search-api:index ran" 1 "$(calls "$t" "search-api:index")"
 check "no marker: no install-time cron passes (worker loop indexes)" 0 "$(calls "$t" "cron")"
 check "no marker: FRESH INSTALL COMPLETE" yes "$(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
 check "no marker: completion marker written" yes "$([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+
+# 3b. The redeploy path with DEMO_MODULE unset, empty or none: a running blank site enables no
+#     demo module and loads nothing. (The existing install must have its marker, as in case 3.)
+for DMCASE in unset empty none; do
+  t="$(new_site)"; touch "$t/installed"; echo 18 > "$t/nodes"; echo x > "$t/state/localnodes.install_complete"
+  case "$DMCASE" in
+    unset) rc="$(run_ep_unset "$t")" ;;
+    empty) rc="$(run_ep "$t" DEMO_MODULE=)" ;;
+    none)  rc="$(run_ep "$t" DEMO_MODULE=none)" ;;
+  esac
+  check "redeploy, DEMO_MODULE $DMCASE: ready, no demo module, no demo list, no demo load" "0 yes 0 0 0" "$rc $(has "$t/out" "=== EXISTING INSTALL READY ===") $(demo_calls "$t")"
+done
 
 # 3. Restart with the marker: the plain redeploy path, no indexing.
 t="$(new_site)"; touch "$t/installed"; echo 18 > "$t/nodes"; echo x > "$t/state/localnodes.install_complete"

@@ -133,12 +133,37 @@ load_demo_content() {
     echo "ERROR: no demo content plugins for $DEMO_MODULE; stopping so the container retries."
     exit 1
   fi
+  # A pack's content comes from packs/<DEMO_PACK>/; check_demo_pack has
+  # already vetted the value before the module was enabled.
+  DEMO_PROFILE_OPT=""
+  if [ "$DEMO_MODULE" = "localnodes_demo_packs" ]; then DEMO_PROFILE_OPT="--profile=packs/${DEMO_PACK}/"; fi
   # LOCALNODES_DEFER_INDEXING=1 turns off direct (post-request) indexing for
   # this one command (settings.php), so no embedding call runs inside it.
-  # The list is word-split on purpose: one argument per plugin id.
+  # Both values are word-split on purpose: one argument per plugin id, and
+  # no argument at all when there is no profile option.
   # shellcheck disable=SC2086
-  LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add $DEMO_PLUGINS
+  LOCALNODES_DEFER_INDEXING=1 $DRUSH social-demo:add $DEMO_PLUGINS $DEMO_PROFILE_OPT
   mark_step demo_content
+}
+
+check_demo_pack() {
+  # DEMO_PACK becomes part of a path (packs/<name>/), so it is checked as a
+  # plain name before any path is built, and the pack must ship in the image.
+  local dir="${LOCALNODES_PACKS_DIR:-/var/www/html/html/modules/custom/localnodes_demo_packs/packs}"
+  if [ -z "${DEMO_PACK:-}" ]; then
+    echo "ERROR: DEMO_PACK is not set; set it to a directory name under localnodes_demo_packs/packs."
+    return 1
+  fi
+  if ! [[ "$DEMO_PACK" =~ ^[a-z0-9_]+$ ]]; then
+    echo "ERROR: DEMO_PACK must be lower-case letters, digits and underscores."
+    return 1
+  fi
+  if [ ! -d "$dir/$DEMO_PACK" ]; then
+    echo "ERROR: no pack directory named $DEMO_PACK under $dir."
+    return 1
+  fi
+  echo "Demo pack: $DEMO_PACK"
+  return 0
 }
 
 # --- Sign-up or manual run: the PROVISION pair must agree (23-43, T-23-201) ---
@@ -308,6 +333,7 @@ run_post_install() {
 
   if [ "$DEMO_MODULE" != "none" ]; then
     echo "Enabling demo module: $DEMO_MODULE..."
+    if [ "$DEMO_MODULE" = "localnodes_demo_packs" ]; then check_demo_pack || exit 1; fi
     $DRUSH en "$DEMO_MODULE" -y
 
     # Demo content loads once. demo_content_started is marked before the load
@@ -327,6 +353,12 @@ run_post_install() {
         mark_step demo_content_started
         load_demo_content
       fi
+    fi
+    # social_demo mutes every status message while it is enabled (its
+    # Messenger). Once the pack is in, the loader and social_demo go; the
+    # content stays. A resumed install passes here again after re-enabling.
+    if [ "$DEMO_MODULE" = "localnodes_demo_packs" ]; then
+      $DRUSH pm:uninstall localnodes_demo_packs social_demo -y
     fi
   else
     echo "DEMO_MODULE=none — skipping demo content"
@@ -593,8 +625,10 @@ else
   fi
 
   # Ensure instance-specific demo module is enabled (excluded from config sync)
+  # A pack site keeps its loader uninstalled (see the fresh install): enabling
+  # it again would bring back social_demo, which mutes status messages.
   DEMO_MODULE="${DEMO_MODULE:-none}"
-  if [ "$DEMO_MODULE" != "none" ]; then
+  if [ "$DEMO_MODULE" != "none" ] && [ "$DEMO_MODULE" != "localnodes_demo_packs" ]; then
     echo "Ensuring demo module enabled: $DEMO_MODULE..."
     $DRUSH en "$DEMO_MODULE" -y 2>/dev/null || true
   fi

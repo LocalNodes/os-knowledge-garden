@@ -1,0 +1,21 @@
+---
+# Bad-mail fixture: one account on our own domain, which is never reserved.
+# The load must stop before anyone is created.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d99:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d99
+  created: -3 day|09:00
+  name: badmail_one
+  mail: bad@localnodes.xyz
+  timezone: UTC
+  status: 1
+  image:
+  image_alt:
+  first_name: Bad
+  last_name: Mail
+  organization: ""
+  function: ""
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "A test account that must never load."

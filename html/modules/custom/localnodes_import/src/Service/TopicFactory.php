@@ -18,6 +18,7 @@ use Drupal\localnodes_import\Fetch\FetchResult;
 use Drupal\localnodes_import\Fetch\WebPage;
 use Drupal\localnodes_import\Fetch\WebPageExtractor;
 use Drupal\localnodes_import\ImportOutcome;
+use Drupal\localnodes_platform\SiteGuide;
 use Drupal\node\NodeInterface;
 use Drupal\social_ai_indexing\Service\FileTextStore;
 use Psr\Log\LoggerInterface;
@@ -396,9 +397,7 @@ class TopicFactory {
       'status' => NodeInterface::PUBLISHED,
       'field_content_visibility' => $run->get('visibility')->value ?: 'group',
     ];
-    if ($type_tid = $this->topicTypeId($run)) {
-      $values['field_topic_type'] = ['target_id' => $type_tid];
-    }
+    $values['field_topic_type'] = ['target_id' => $this->topicTypeId($run)];
     /** @var \Drupal\node\NodeInterface $node */
     $node = $node_storage->create($values);
     // D-24: an import posts one summary per run (ImportRunFinalizer), not a
@@ -441,30 +440,65 @@ class TopicFactory {
    * 2. the Reference term, by name (localnodes_import_install() creates it;
    *    terms are content, not config);
    * 3. the first topic_types term by weight.
+   * None of them is ever the Site guide type when the run's owner may not
+   * choose it, as the import form already refuses.
+   *
+   * @throws \RuntimeException
+   *   When no type the owner may use exists, so the page fails instead of
+   *   being saved without one.
    */
-  protected function topicTypeId(ImportRun $run): ?int {
+  protected function topicTypeId(ImportRun $run): int {
     $storage = $this->entityTypeManager->getStorage('taxonomy_term');
+    $withheld = $this->withheldTopicTypeId($run);
     $chosen = $run->get('topic_type')->target_id;
-    if ($chosen !== NULL && ($term = $storage->load($chosen)) && $term->bundle() === 'topic_types') {
+    if ($chosen !== NULL && (int) $chosen !== $withheld && ($term = $storage->load($chosen)) && $term->bundle() === 'topic_types') {
       return (int) $term->id();
     }
-    $ids = $storage->getQuery()
+    $query = $storage->getQuery()
       ->accessCheck(FALSE)
       ->condition('vid', 'topic_types')
       ->condition('name', 'Reference')
       ->sort('tid')
-      ->range(0, 1)
-      ->execute();
+      ->range(0, 1);
+    if ($withheld !== NULL) {
+      $query->condition('tid', $withheld, '<>');
+    }
+    $ids = $query->execute();
     if (!$ids) {
-      $ids = $storage->getQuery()
+      $query = $storage->getQuery()
         ->accessCheck(FALSE)
         ->condition('vid', 'topic_types')
         ->sort('weight')
         ->sort('tid')
-        ->range(0, 1)
-        ->execute();
+        ->range(0, 1);
+      if ($withheld !== NULL) {
+        $query->condition('tid', $withheld, '<>');
+      }
+      $ids = $query->execute();
     }
-    return $ids ? (int) reset($ids) : NULL;
+    if (!$ids) {
+      throw new \RuntimeException('No page type the run owner may use.');
+    }
+    return (int) reset($ids);
+  }
+
+  /**
+   * The Site guide type's id when the run's owner may not choose it.
+   *
+   * Mirrors the import form's rule. The rules live in the platform module,
+   * which cannot be a declared dependency of this one; where its class cannot
+   * be loaded nothing is withheld. A run whose owner is gone is treated as a
+   * non-editor's.
+   */
+  protected function withheldTopicTypeId(ImportRun $run): ?int {
+    if (!class_exists(SiteGuide::class)) {
+      return NULL;
+    }
+    $owner = $run->getOwner();
+    if ($owner !== NULL && SiteGuide::isEditor($owner)) {
+      return NULL;
+    }
+    return SiteGuide::termId();
   }
 
 }

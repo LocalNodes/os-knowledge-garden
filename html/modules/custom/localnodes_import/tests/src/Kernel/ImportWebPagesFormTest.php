@@ -446,6 +446,30 @@ final class ImportWebPagesFormTest extends ImportKernelTestBase {
   }
 
   /**
+   * Site guide is a page type only the site's editor roles may choose.
+   */
+  public function testSiteGuideTypeIsChosenOnlyByEditors(): void {
+    $guide = $this->createSiteGuideTerm();
+
+    $form = $this->buildWith('');
+    $this->assertArrayNotHasKey($guide, $form['topic_type']['#options'], 'An organizer without an editor role is not offered Site guide.');
+    $this->assertNotEmpty($form['topic_type']['#options'], 'The organizer is offered the other types.');
+
+    [, $state] = $this->submit($this->validValues(['topic_type' => $guide]));
+    $this->assertArrayHasKey('topic_type', $state->getErrors(), 'Site guide sent by an organizer without an editor role is refused.');
+    $this->assertNoRun();
+
+    $editor = $this->createSiteEditor('guide_editor', 'sitemanager');
+    $this->addManager($this->group, $editor);
+    $this->setCurrentUser($editor);
+    $form = $this->buildWith('');
+    $this->assertArrayHasKey($guide, $form['topic_type']['#options'], 'A site manager is offered Site guide.');
+    [, $state] = $this->submit($this->validValues(['topic_type' => $guide]));
+    $this->assertSame([], $this->errors($state), 'A site manager may choose Site guide.');
+    $this->assertSame($guide, (int) $this->onlyRun()->get('topic_type')->target_id);
+  }
+
+  /**
    * The rights checkbox: never pre-ticked, required on the server (D-25b).
    */
   public function testRightsCheckbox(): void {

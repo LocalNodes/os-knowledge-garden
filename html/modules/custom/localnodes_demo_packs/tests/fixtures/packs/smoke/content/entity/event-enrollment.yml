@@ -1,0 +1,10 @@
+---
+# Smoke fixture: the second account is going to the event.
+5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d70:
+  uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d70
+  title: smoke_two @ Smoke meetup
+  langcode: en
+  uid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  field_event: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60
+  field_enrollment_status: 1
+  field_account: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02

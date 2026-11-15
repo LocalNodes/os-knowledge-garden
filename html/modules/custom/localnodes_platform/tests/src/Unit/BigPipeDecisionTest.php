@@ -8,25 +8,26 @@ use Drupal\Component\Serialization\Yaml;
 use Drupal\Tests\UnitTestCase;
 
 /**
- * The big_pipe decision (D-25) is shipped where the notes say it is.
+ * localnodes_platform does not turn core's big_pipe module on.
  *
- * Phase 22.2 plan 16 decides whether localnodes_platform turns core's big_pipe
- * module on. The decision is one line in the phase notes ("Decision: on" or
- * "Decision: off" under "## big_pipe (D-25)"). This test reads that line and
- * checks the source agrees:
+ * The decision is pinned in DECISION below:
  * - on: localnodes_platform.info.yml lists drupal:big_pipe, so every fresh
  *   install and every `drush en localnodes_platform` enables it.
  * - off: it is listed nowhere.
  * Either way big_pipe is never enabled from docker/entrypoint.sh or from a
- * custom install or update hook (CLAUDE.md: app configuration lives in module
- * install config, and there are no existing installs to update).
+ * custom install or update hook (app configuration lives in module install
+ * config, and there are no existing installs to update). To change the
+ * decision, change DECISION and the info file together.
  *
  * @group phase222
  * @group localnodes_platform
  */
 final class BigPipeDecisionTest extends UnitTestCase {
 
-  private const NOTES = '.planning/phases/22.2-open-social-13-1-upgrade/22.2-NOTES.md';
+  /**
+   * Whether localnodes_platform enables big_pipe: 'on' or 'off'.
+   */
+  private const DECISION = 'off';
 
   private const INFO = 'html/modules/custom/localnodes_platform/localnodes_platform.info.yml';
 
@@ -35,34 +36,6 @@ final class BigPipeDecisionTest extends UnitTestCase {
    */
   private function repoRoot(): string {
     return dirname($this->root);
-  }
-
-  /**
-   * Reads the one `Decision:` line under the big_pipe heading of the notes.
-   *
-   * The section runs from "## big_pipe (D-25)" to the next "## " heading, so
-   * its "###" subheadings belong to it.
-   *
-   * @return string
-   *   'on' or 'off'.
-   */
-  private function decision(): string {
-    $path = $this->repoRoot() . '/' . self::NOTES;
-    $this->assertFileExists($path, 'The phase notes are missing.');
-    $in_section = FALSE;
-    $found = [];
-    foreach (explode("\n", (string) file_get_contents($path)) as $line) {
-      $line = rtrim($line, "\r");
-      if (str_starts_with($line, '## ')) {
-        $in_section = ($line === '## big_pipe (D-25)');
-        continue;
-      }
-      if ($in_section && preg_match('/^Decision: (on|off)$/', $line, $m)) {
-        $found[] = $m[1];
-      }
-    }
-    $this->assertCount(1, $found, 'The notes need exactly one "Decision: on" or "Decision: off" line under "## big_pipe (D-25)".');
-    return $found[0];
   }
 
   /**
@@ -82,7 +55,7 @@ final class BigPipeDecisionTest extends UnitTestCase {
    * The info file matches the recorded decision.
    */
   public function testInfoFileMatchesDecision(): void {
-    $decision = $this->decision();
+    $decision = self::DECISION;
     $has = in_array('drupal:big_pipe', $this->dependencies(), TRUE);
     if ($decision === 'on') {
       $this->assertTrue($has, 'The decision is on, so localnodes_platform.info.yml must list drupal:big_pipe in its dependencies.');

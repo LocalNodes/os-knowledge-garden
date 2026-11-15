@@ -26,6 +26,8 @@ services:
       # the status report; demo sites (DEMO_MODULE != none) are exempt.
       GEMINI_KEY_TIER: ${GEMINI_KEY_TIER:-}
       DEMO_MODULE: ${DEMO_MODULE:-none}
+      # With DEMO_MODULE=localnodes_demo_packs: the pack to load (lanternrow, maplestreet, mallowbend, thawfest).
+      DEMO_PACK: ${DEMO_PACK:-}
       DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
       DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
       # Empty (the default) = a random admin password that is never shown; first sign-in is

@@ -7,6 +7,8 @@
 #   ./scripts/install.sh --demo=cascadia        # Install with Cascadia demo
 #   ./scripts/install.sh --demo=boulder         # Install with Boulder demo
 #   ./scripts/install.sh --demo=all             # Install with all demo content
+#   ./scripts/install.sh --demo=<pack>          # Install with a demo pack from
+#                                               # localnodes_demo_packs/packs/
 #
 # Prerequisites:
 #   - DDEV running (ddev start)
@@ -23,6 +25,24 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+# A --demo value other than the older names is a demo pack. Check it before
+# any DDEV call: a bad name stops the script with nothing started.
+PACKS_DIR="$(dirname "$0")/../html/modules/custom/localnodes_demo_packs/packs"
+case "$DEMO" in
+  cascadia|boulder|all|"") ;;
+  *)
+    if ! [[ "$DEMO" =~ ^[a-z0-9_]+$ ]] || [ ! -d "$PACKS_DIR/$DEMO" ]; then
+      echo "install.sh: unknown demo pack '$DEMO'" >&2
+      echo "Demo packs:" >&2
+      for d in "$PACKS_DIR"/*/; do
+        [ -d "$d" ] && echo "  $(basename "$d")" >&2
+      done
+      echo "Older demos: cascadia, boulder, all" >&2
+      exit 1
+    fi
+    ;;
+esac
 
 echo "=== LocalNodes Platform Install ==="
 echo ""
@@ -110,12 +130,16 @@ case "$DEMO" in
     ddev drush localnodes-demo:install boulder_demo || echo "    (demo content created; post-request indexing deferred to Step 5)"
     ;;
   "")
-    echo ">>> Skipping demo content (use --demo=cascadia|boulder|all)"
+    echo ">>> Skipping demo content (use --demo=<pack>, or cascadia|boulder|all)"
     ;;
   *)
-    echo "Unknown demo option: $DEMO"
-    echo "Valid options: cascadia, boulder, all"
-    exit 1
+    # A pack that passed the check above. Load it as the entrypoint does, then
+    # uninstall the loader and social_demo: the content stays, and social_demo's
+    # messenger would hide every status message.
+    echo ">>> Installing the $DEMO demo pack..."
+    ddev drush en localnodes_demo_packs -y
+    ddev exec env LOCALNODES_DEFER_INDEXING=1 drush localnodes-demo:install localnodes_demo_packs --pack="$DEMO"
+    ddev drush pm:uninstall localnodes_demo_packs social_demo -y
     ;;
 esac
 

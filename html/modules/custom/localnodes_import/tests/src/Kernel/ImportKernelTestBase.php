@@ -89,6 +89,10 @@ abstract class ImportKernelTestBase extends GroupAccessKernelTestBase {
     // dependencies the stack lacks, so they go first.
     $this->setUpBeforeImporter();
     $this->container->get('module_installer')->install(['link', 'ai_file_to_text', 'localnodes_import'], FALSE);
+    // localnodes_platform is not enabled in this stack, and the importer reads
+    // its SiteGuide rules when the class can be loaded, as it can on a real
+    // site where the platform is always enabled with the importer.
+    $this->classLoader->addPsr4('Drupal\\localnodes_platform\\', DRUPAL_ROOT . '/modules/custom/localnodes_platform/src');
 
     Term::create(['vid' => 'topic_types', 'name' => 'Blog'])->save();
     Term::create(['vid' => 'topic_types', 'name' => 'Content'])->save();
@@ -126,6 +130,32 @@ abstract class ImportKernelTestBase extends GroupAccessKernelTestBase {
    */
   protected function createVerifiedUser(string $name): UserInterface {
     return User::load($this->createPersona($name)->id());
+  }
+
+  /**
+   * Creates the Site guide page type, under its fixed uuid.
+   *
+   * @return int
+   *   The term id.
+   */
+  protected function createSiteGuideTerm(): int {
+    $term = Term::create([
+      'vid' => 'topic_types',
+      'name' => 'Site guide',
+      'uuid' => '06b1bc65-e2c1-4831-bc68-d6ada5c4dd21',
+    ]);
+    $term->save();
+    return (int) $term->id();
+  }
+
+  /**
+   * Gives a verified account one of the site roles that edit guide pages.
+   */
+  protected function createSiteEditor(string $name, string $role): UserInterface {
+    $account = $this->createVerifiedUser($name);
+    $account->addRole($role);
+    $account->save();
+    return $account;
   }
 
   /**

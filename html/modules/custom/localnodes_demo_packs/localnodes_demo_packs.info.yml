@@ -1,0 +1,13 @@
+name: 'LocalNodes demo packs'
+type: module
+description: 'Loads one fictional community pack, chosen by DEMO_PACK, onto a fresh demo site.'
+core_version_requirement: ^9 || ^10
+package: LocalNodes
+dependencies:
+  - social_demo:social_demo
+  # SiteGuide, the rules and the term's fixed uuid, lives in the platform.
+  - localnodes_platform:localnodes_platform
+  # The quick poll and month-anchored event loaders the pack plugins
+  # extend live in these modules.
+  - localnodes_platform:localnodes_events_calendar
+  - localnodes_platform:localnodes_quick_poll

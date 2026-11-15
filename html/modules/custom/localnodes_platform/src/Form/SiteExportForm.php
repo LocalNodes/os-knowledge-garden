@@ -103,7 +103,7 @@ final class SiteExportForm extends FormBase {
     foreach (['records', 'files', 'library'] as $key) $parts[$key] = (in_array($status, ['ready', 'running'], TRUE) && isset($job['parts'][$key])) ? self::size((int) $job['parts'][$key]) : NULL;
     $last = $this->exports->last();
     $form['screen'] = [
-      '#theme' => 'localnodes_site_export', '#status' => $status, '#parts' => $parts,
+      '#theme' => 'localnodes_site_export_screen', '#status' => $status, '#parts' => $parts,
       '#actions' => $actions, '#failure' => $job['failure'] ?? '',
       '#requested_by' => $this->name((int) ($job['uid'] ?? 0)), '#requested_at' => $this->date((int) ($job['requested'] ?? 0)),
       '#last_by' => $this->name((int) ($last['uid'] ?? 0)), '#last_at' => $this->date((int) ($last['time'] ?? 0)),

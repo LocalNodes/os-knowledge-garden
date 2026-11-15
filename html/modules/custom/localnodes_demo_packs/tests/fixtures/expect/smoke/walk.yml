@@ -1,0 +1,95 @@
+# The smoke pack's walk: what one ordinary member checks, step by step.
+#
+# witness: the member who walks. member_of lists every group the witness is
+#   in, and nothing else is allowed; not_member_of lists groups the witness
+#   must stay out of; roles is the witness's full role list. A step that needs
+#   more access than this does not get the witness more access: it is held.
+# (Open Social gives every pack member the verified role; it is the ordinary
+#   member, not a staff role.)
+# owner: the pack's account that owns the site (the export owner).
+# steps: each has an id, a status (checked, held or pending) and, when
+#   checked, checks, each a `kind` plus the fields of that kind, and
+#   `assistant`, the assistant.yml rows (tier 2) the step runs. A held or
+#   pending step names its `owner`; a pending step also names what it
+#   `needs`. PackWalkTest runs the kinds post, poll, calendar, event, page,
+#   shared_page, hidden_page and export.
+witness:
+  user: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d02
+  member_of:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+  not_member_of:
+    - 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11
+  roles:
+    - authenticated
+    - verified
+owner: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d01
+steps:
+  - id: 1
+    status: checked
+    checks:
+      - kind: post
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40
+        phrase: Smoke One tells the common room that the smoke kettle is warm.
+        likes: 1
+      - kind: poll
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d30
+        question: Smoke closed poll
+        totals:
+          "Yes": 1
+          "No": 1
+        answers: 2
+        closed: true
+      - kind: poll
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d31
+        question: Smoke open poll
+        totals:
+          "Yes": 2
+          "No": 0
+        answers: 2
+        closed: false
+  - id: 2
+    status: checked
+    checks:
+      - kind: calendar
+        event: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60
+        group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d10
+      - kind: event
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60
+        phrases:
+          - Smoke hall
+        going: 1
+        start: +9 day|18:00
+  - id: 3
+    status: checked
+    checks:
+      - kind: page
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20
+        passage: smoke-topic-meeting
+  - id: 4
+    status: checked
+    assistant:
+      - smoke-next-meeting
+      - smoke-spare-key
+      - smoke-cross-group
+    checks: []
+  - id: 5
+    status: checked
+    assistant:
+      - smoke-cross-group
+    checks:
+      - kind: shared_page
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d21
+        group: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d11
+      - kind: hidden_page
+        uuid: 5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d22
+  - id: 6
+    status: held
+    owner: the direct messages work (direct messages are off)
+  - id: 7
+    status: pending
+    owner: the Practice Money work
+    needs: the fund rows of the pot
+  - id: 8
+    status: checked
+    checks:
+      - kind: export

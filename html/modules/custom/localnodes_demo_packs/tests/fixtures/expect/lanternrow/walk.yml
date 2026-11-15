@@ -1,0 +1,107 @@
+# The Lantern Row Housing Co-op pack's walk: what one ordinary member checks, step by step.
+#
+# Same format as the smoke pack's walk. In addition:
+# walk_heading: the heading of the walk's section for this site, without its
+#   leading "## ".
+# source_sha256, walk_section_sha256, redactions: how source.md relates to the
+#   working files this pack was written from. PHPUnit never reads those files,
+#   so scripts/check_pack_source.php (run on a development site, given their paths) checks
+#   that the sha256 of the pack source is source_sha256, that the sha256 of the
+#   walk section (its heading up to, not including, the next line that is
+#   exactly "---", lines joined by a newline, one newline at the end) is
+#   walk_section_sha256, and that source.md is the source with each line of
+#   `redactions` (line number: replacement) replaced. A unit test checks the
+#   copy inside the repository: its length, every replacement, and that no
+#   line carries a year, a local path or a planning name.
+walk_heading: "1. Lantern Row Housing Co-op"
+source_lines: 829
+source_sha256: 621de3031c7c18fadf21d115791815833b7554f1f46d923bcd82bb04d532bf13
+walk_section_sha256: f7c63615acc0c5d868b723502831e673e78cc0b318b0f86efeaf31e75043c95b
+witness:
+  user: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  member_of:
+    - cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
+    - 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  not_member_of:
+    - 4995fa17-ec83-4b34-936e-03e0e559815b
+    - fd3a5994-616b-42e9-b06c-d429f7ce6080
+  roles:
+    - authenticated
+    - verified
+owner: 9070d9de-6644-46ae-8c7e-50716e8dfd84
+steps:
+  - id: 1
+    status: checked
+    checks:
+      - kind: post
+        uuid: 2325fa9d-6643-46d3-bba0-db8b5fcc839c
+        phrase: The back steps are getting worse
+        likes: 5
+      - kind: poll
+        uuid: 4f85a61b-04ad-4673-a467-712979d3c818
+        question: The old sofa in the back hall. What do we do with it?
+        totals:
+          'Put it out front with a "free" sign': 7
+          'Book the council bulk pickup ($35)': 3
+          'Keep it in the shed for the garden': 2
+        answers: 12
+  - id: 2
+    status: checked
+    checks:
+      - kind: calendar
+        event: 908f14a7-ad83-4445-a2fc-f213a35acc2d
+        group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+      - kind: event
+        uuid: 908f14a7-ad83-4445-a2fc-f213a35acc2d
+        phrases:
+          - "Work day: clear the back yard"
+          - Back garden
+          - Tea and toast from 8:45
+        going: 6
+        start: next saturday|09:00
+  - id: 3
+    status: checked
+    checks:
+      - kind: page
+        uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+        passage: lr-minutes-0312
+  - id: 4
+    status: checked
+    assistant:
+      - lr-01
+    checks: []
+  - id: 5
+    status: checked
+    checks:
+      - kind: shared_page
+        uuid: e805350e-253e-471a-acf2-d541ad0f5dd6
+        group: 4995fa17-ec83-4b34-936e-03e0e559815b
+      - kind: hidden_page
+        uuid: 18787c43-4408-4e97-90c0-52ceab013b91
+  - id: 6
+    status: held
+    owner: the decisions work
+  - id: 7
+    status: pending
+    owner: the Practice Money work
+    needs: the Practice Money token, the group fund and its history in PRACTICE
+  - id: 8
+    status: checked
+    checks:
+      - kind: export
+redactions:
+  3: '**Version 2.** Willow House is one house in the fictional Lantern Row Housing Co-op. The site now has a co-op common room, a second house and a repairs team drawn from both houses. Shared library pages add examples of finding an answer across groups. Willow''s original people, records and figures stay with Willow; garden activity stays in its stream and events.'
+  14: (note removed)
+  779: (note removed)
+  788: '## Demo-loader additions'
+  780: '- The housing-co-op example is still named **Willow House** at site level. The site is now **Lantern Row Housing Co-op**; keep **Willow House** as the selected house/group. Its six titles, original question and answer still belong to that selected group. The other home-page examples are separate examples.'
+  790: (note removed)
+  798: (imported reference removed)
+  799: (imported reference removed)
+  800: (imported reference removed)
+  801: (imported reference removed)
+  802: (imported reference removed)
+  803: (imported reference removed)
+  804: (imported reference removed)
+  805: (imported reference removed)
+  809: 'Load these **eight** exact titles from Using this site into **Co-op common room**, sharing **community**: **Join a group**; **Write a post**; **Add a page or file to the library**; **Ask the assistant and check sources**; **Find an event and respond**; **Answer a quick poll**; **Change which emails you get**; **Get help**.'
