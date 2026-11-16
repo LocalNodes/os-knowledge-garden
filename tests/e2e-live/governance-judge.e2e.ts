@@ -37,8 +37,8 @@
 // LN_LIVE_RELAYER_ADDRESS (the relayer's GET /status), LN_LIVE_WALLET_ADDRESS (optional; the
 // repository variable, checked against account 1).
 //
-// Steps that aren't voting screens use their own helpers: SIWE sign-in (the
-// #siwe-login-button, copied from live-sepolia.e2e.ts), the group fund set-up
+// Steps that aren't voting screens use their own helpers: SIWE sign-in (the "Use a browser
+// wallet" choice, wallet-choice.ts, shared with live-sepolia.e2e.ts), the group fund set-up
 // (tests/e2e/helpers/treasury.ts) and siwe_login's own "Connect your wallet" button.
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

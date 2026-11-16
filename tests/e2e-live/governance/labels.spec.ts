@@ -32,8 +32,10 @@ import {
   seedGovernance,
   sessionFor,
   setSponsor,
+  SIWE_CDN,
   type Governance,
 } from '../../a11y/helpers/governance-states';
+import { pressWalletChoice, WALLET_UNAVAILABLE } from '../wallet-choice';
 import {
   COPY,
   SHIPPED_NOT_IN_SPEC,
@@ -324,5 +326,58 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
       expect(fill(COPY.youVotedOn, 'For', 'x')).toBe('You voted For on x.');
       done();
     });
+  });
+});
+
+// The live tests' sign-in (wallet-choice.ts, used by governance/judge-wallet.ts and
+// live-sepolia.e2e.ts) on this site's real /user/login, signed out. siwe_login's own button is
+// hidden there; "Use a browser wallet" hands it the click. Runs 43709180949 and 43793452239
+// failed live because the tests waited for the hidden button to be visible; this guard fails
+// here first if the page changes again. Nothing signs: a capture listener counts the click on
+// siwe_login's button and stops it before siwe_login's handler runs.
+test.describe('governance labels: the live tests\' wallet sign-in on /user/login', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  // siwe_login_waap's own SDK files (its sdk_imports), when that module is on: aborted like
+  // SIWE_CDN, listed so only an unexpected host counts as leaving the site.
+  const WAAP_CDN = /^https:\/\/cdn\.jsdelivr\.net\/npm\/(@human\.tech\/waap-sdk@|ethers@|eventemitter3@)/;
+
+  /** Opens /user/login with a stub wallet; `ethers` false leaves the page without ethers. */
+  async function signInPage(page: Page, ethers: boolean): Promise<() => void> {
+    const guard = await guardNetwork(page, BASE_URL, [SIWE_CDN, WAAP_CDN]);
+    if (ethers) {
+      // The CDN request stays aborted (and its script carries an integrity hash, so it can't be
+      // answered here); a stub stands in before the page's scripts run. siwe_login reads ethers
+      // only after the click, which stops.
+      await page.addInitScript(() => { (window as unknown as { ethers: object }).ethers = {}; });
+    }
+    await stubWallet(page, '0x' + '22'.repeat(20), 0);
+    const response = await page.goto('/user/login');
+    expect(response?.status(), '/user/login answers 200').toBe(200);
+    await page.evaluate(() => {
+      (window as unknown as { __lnWallet: number }).__lnWallet = 0;
+      document.getElementById('siwe-login-button')?.addEventListener('click', (e) => {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        (window as unknown as { __lnWallet: number }).__lnWallet++;
+      }, true);
+    });
+    // A count with a fixed label, never assertSiteOnly's list: no outside URL reaches a log.
+    return () => expect(guard.blocked.length, 'requests that left the site (count only)').toBe(0);
+  }
+
+  test('"Use a browser wallet" reaches siwe_login\'s hidden button', async ({ page }) => {
+    const done = await signInPage(page, true);
+    await expect(page.locator('#siwe-login-button'), 'siwe_login\'s own button is hidden').toBeHidden();
+    await pressWalletChoice(page, 10_000);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __lnWallet: number }).__lnWallet), { timeout: 5_000 }).toBe(1);
+    done();
+  });
+
+  test('wallet scripts missing: the sign-in fails with the fixed "not available" message', async ({ page }) => {
+    const done = await signInPage(page, false);
+    await expect(pressWalletChoice(page, 10_000)).rejects.toThrow(WALLET_UNAVAILABLE);
+    expect(await page.evaluate(() => (window as unknown as { __lnWallet: number }).__lnWallet)).toBe(0);
+    done();
   });
 });
