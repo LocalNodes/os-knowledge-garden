@@ -31,8 +31,8 @@ Pick one site, update it, and check it before you update any other. For each sit
 **a. Record what it runs now.** Use the name `docker compose ps` shows for the `opensocial` container:
 
 ```sh
-docker inspect --format '{{.Config.Image}} {{.Image}}' <container name>
-docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' <container name>
+docker inspect --format '{{.Config.Image}} {{.Image}}' "<container name>"
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "<container name>"
 ```
 
 The first line prints the image name and the image id. The name alone does not identify the release: with the default `latest` tag it stays `…:latest` after `latest` has moved on. The second line prints the commit the image was built from. Its first seven characters are the commit tag of the release the site runs now: write that tag down as the way back to this code. The same commit is in the file `/var/www/html/BUILD_COMMIT` inside the container.
@@ -42,7 +42,7 @@ The first line prints the image name and the image id. The name alone does not i
 - On a server that has the nightly backup installed (a host that has run `scripts/backup/install-backup-host.sh` and has a configuration file for the site), run the existing command, with the site's own configuration name:
 
   ```sh
-  localnodes-backup /etc/localnodes-backup/<name>.conf
+  localnodes-backup "/etc/localnodes-backup/<name>.conf"
   ```
 
   The site is closed (members see a maintenance page) while the database and files are copied. The copy is encrypted and a separate record holds the site's secrets. Require a successful exit and an `ok` status line for the right site and capture time. The `ok` line says the copy was stored and read back; it does not show that a restore works. Try a restore on a separate test site before you depend on it, and keep the private decryption key off the site's server.
@@ -50,19 +50,63 @@ The first line prints the image name and the image id. The name alone does not i
 
   ```sh
   uuid="$(docker compose exec -T opensocial /var/www/html/vendor/bin/drush -r /var/www/html/html config:get system.site uuid --format=string)"
+  dest="/tmp/localnodes-preupdate-$(date -u +%Y%m%d-%H%M%S)"
+  echo "backup folder in the container: $dest"
   docker compose exec -T -u www-data -e HOME=/tmp opensocial /var/www/html/vendor/bin/drush -r /var/www/html/html \
-    localnodes:backup --destination=/tmp/localnodes-preupdate --expect-site-uuid="$uuid"
+    localnodes:backup --destination="$dest" --expect-site-uuid="$uuid"
   ```
 
-  The site is closed (members see a maintenance page, and the background worker skips its work) from the start of the copy until it is complete, then opens again. Require a successful exit and a last line that names the site's id, the archive and its `archive_sha256`; if the command fails, it deletes what it wrote and says whether the site is open again. Then copy the folder off the container and delete the container's copy, which is lost whenever the container is recreated:
+  Each run writes to a new folder in the container, named by the time it started, and the command refuses a folder that is not empty. Write down the folder name the second line prints.
+
+  The site is closed (members see a maintenance page, and the background worker skips its work) from the start of the copy until it is complete, then opens again. Require a successful exit and a last line that names the site's id, the archive and its `archive_sha256`; if the command fails, it deletes what it wrote and says whether the site is open again.
+
+  The copy is still inside the container, where it is lost whenever the container is recreated. Copy it to a new folder on the server, check it, and only then delete the container's copy. Put the `archive` and `archive_sha256` values from that last line into the first two lines, and the backup's folder name into the third (it is already set if you are in the same terminal), then run the rest as one command from the site's Compose directory:
 
   ```sh
-  docker compose cp opensocial:/tmp/localnodes-preupdate ./localnodes-preupdate
-  docker compose exec -T -u 0 opensocial rm -rf /tmp/localnodes-preupdate
-  sha256sum ./localnodes-preupdate/*.tar
+  archive='<archive from the last line>'
+  expected='<archive_sha256 from the last line>'
+  dest='<the backup folder in the container>'
+  dir="$(mktemp -d ./localnodes-preupdate-XXXXXX)" &&
+  docker compose cp "opensocial:$dest/." "$dir" &&
+  echo "$expected  $dir/$archive" | sha256sum -c - &&
+  docker compose exec -T -u 0 opensocial rm -rf "$dest" &&
+  echo "copy kept in $dir"
   ```
 
-  The checksum must match the `archive_sha256` the command printed. Keep the site's `.env` file and any Compose override files with the copy, stored where only you can read them: a restore needs the same hash salt and passwords, and `.env` holds them. The archive's own `RESTORE.md` says how to bring the copy up on a new site. Before you update, check that the copy restores: follow that `RESTORE.md` on a separate test machine, not on the site you are about to update.
+  Each run makes a new folder that only you can read, so an earlier copy is never overwritten or mixed in. Each step runs only if the one before it worked. The checksum line must print the archive's name followed by `OK`, and the last line names the folder the copy is in. If the copy fails (for example because the server's disk is full) or the checksum does not match, the command stops before deleting anything, and the container's copy is still there: delete the new folder, fix the cause, and run the block again.
+
+  Keep the site's `.env` file and any Compose override files with the copy, stored where only you can read them: a restore needs the same hash salt and passwords, and `.env` holds them. The archive's own `RESTORE.md` says how to bring the copy up on a new site. Before you update, check that the copy restores: follow that `RESTORE.md` on a separate test machine, not on the site you are about to update.
+
+  **If the backup was interrupted** (the terminal closed, the connection dropped or the command was stopped), you cannot tell from your side how it ended. It may still be running inside the container, it may have stopped and left part of a copy, or it may have finished and left a complete one. First see whether the site is closed:
+
+  ```sh
+  docker compose exec -T -u www-data opensocial localnodes-pause status
+  ```
+
+  It prints `open`, or `paused` with a reason and an end time in UTC.
+
+  - **`paused reason=backup`:** a backup's pause ends by itself at its end time, at most 90 minutes after the backup started, even when the backup was stopped before it could open the site. Wait for that time to pass. Do not lift the pause yourself: the backup may still be running.
+  - **Any other reason** (for example `export` or `restore`): the pause belongs to another operation. Leave it alone. An operation that succeeds lifts its own pause. A restore that failed leaves the site closed with no end time on purpose; see [Recover if the update fails](#5-recover-if-the-update-fails).
+  - **`open`:** go on to the next step.
+
+  Once the status is `open`, check that no backup is still running: `docker compose top opensocial` lists the container's processes, and a running backup shows `localnodes:backup` in its line. When none does, do not delete anything yet: the earlier folder may hold the only complete copy. Run the backup again from the beginning. It writes to a new folder, so the earlier one is kept. Copy and check the new one as above.
+
+  Only after the new copy is on the server and its checksum matched, list the folders the earlier runs left behind and delete them by name:
+
+  ```sh
+  docker compose exec -T -u 0 opensocial sh -c 'ls -d /tmp/localnodes-preupdate-*'
+  ```
+
+  For each folder in the list, put its full path between the quotes and run:
+
+  ```sh
+  earlier='/tmp/localnodes-preupdate-00000000-000000'
+  docker compose exec -T -u 0 opensocial rm -rf "$earlier"
+  ```
+
+  If the list says `No such file or directory`, no earlier folder is left.
+
+  If you saw the earlier run's last line (the site's id, the archive and its `archive_sha256`), its folder holds a complete copy. You may copy and check that one with the block above, using its folder name, instead of running the backup again.
 
 **c. Set the new image and redeploy.** Set `IMAGE_TAG` in the site's `.env` to the commit tag you chose (unset means `latest`). From the site's Compose directory:
 

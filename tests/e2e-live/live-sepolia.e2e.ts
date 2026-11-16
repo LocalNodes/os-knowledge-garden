@@ -34,6 +34,7 @@ import { getExtensionId } from '@synthetixio/synpress/playwright';
 import { LIVE_CACHE_NAME, liveBrowserArgs } from './cache-live';
 import { LIVE_WALLET_PASSWORD } from './wallet-setup/live/live.setup';
 import { confirmPrompts, openHome, type PromptLog } from './metamask-steps';
+import { pressWalletChoice } from './wallet-choice';
 import { toChecksumAddress } from '../e2e/wallet/test-wallet';
 import type { RegistryEntry } from '../e2e/helpers/chain';
 import {
@@ -228,20 +229,18 @@ function metaMaskDriver(context: BrowserContext, extensionId: string, log: Promp
   };
 }
 
-/** SIWE through the site's own button (copied from local-anvil.e2e.ts, without the name check). */
+/**
+ * SIWE through the site's "Use a browser wallet" choice, which hands the click to siwe_login's
+ * hidden button (wallet-choice.ts). Each wait there is limited to 30 s: without a limit a missing
+ * button used the whole 10-minute test budget (run 43212766603).
+ */
 async function signInWithMetaMask(page: Page, context: BrowserContext, extensionId: string, log: PromptLog): Promise<void> {
   await page.goto('/user/login');
-  const button = page.locator('#siwe-login-button');
-  // The button is server-rendered: it is there at load or not at all. Without a limit a missing
-  // button used the whole 10-minute test budget (run 43212766603).
-  await button.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => {
-    throw new Error('sign-in: the browser-wallet button (#siwe-login-button) is not on /user/login within 30 s');
-  });
   let navigated = false;
   const nav = page
     .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 90_000 })
     .then(() => { navigated = true; }, () => undefined);
-  await button.click();
+  await pressWalletChoice(page);
   await confirmPrompts(context, extensionId, 'signIn', log, { done: () => navigated, timeoutMs: 90_000 });
   await nav;
   await page.waitForLoadState('load');

@@ -1,8 +1,9 @@
 // The judge's account steps: which MetaMask account the site sees, and SIWE sign-in through the
-// site's own button. Shared with the local rehearsal of every account switch, so both run the
+// site's "Use a browser wallet" choice. Shared with the local rehearsal of every account switch, so both run the
 // same code. Errors from the site's page carry a fixed category only (failure-dump.ts).
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { categorized } from '../failure-dump';
+import { pressWalletChoice } from '../wallet-choice';
 import { confirmPrompts, openHome, SHARE_PROMPT, switchAccount, SWITCH_PROMPT, within, type ExpectedPrompt, type PromptLog } from '../metamask-steps';
 
 /**
@@ -140,18 +141,16 @@ export async function useAccount(page: Page, w: JudgeWallet, name: string, addre
   expect((await siteAccounts(page))[0]?.toLowerCase(), `MetaMask shares ${name} with the site first`).toBe(address.toLowerCase());
 }
 
-/** SIWE through the site's own button (copied from live-sepolia.e2e.ts). */
+/** SIWE through the site's "Use a browser wallet" choice (wallet-choice.ts, as live-sepolia.e2e.ts). */
 export async function signInWithMetaMask(page: Page, w: JudgeWallet): Promise<void> {
   console.log('[judge] sign in: opening the sign-in page');
   await page.goto('/user/login');
-  const button = page.locator('#siwe-login-button');
-  await button.waitFor({ state: 'visible' });
   let navigated = false;
   const nav = page
     .waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 180_000 })
     .then(() => { navigated = true; }, () => undefined);
-  console.log('[judge] sign in: pressing the sign-in button');
-  await button.click();
+  console.log('[judge] sign in: pressing "Use a browser wallet"');
+  await pressWalletChoice(page);
   await confirmPrompts(w.context, w.extensionId, 'signIn', w.log, { done: () => navigated, timeoutMs: 180_000 });
   await nav;
   console.log('[judge] sign in: the page moved on');
