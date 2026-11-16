@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "14a8bf16bb39f6ab922d186da33ab4e9",
+    "content-hash": "102543d9b8731786917a24939844974e",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -7648,17 +7648,17 @@
         },
         {
             "name": "drupal/safe_governance",
-            "version": "1.0.0-alpha1",
+            "version": "1.0.0-alpha2",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_governance.git",
-                "reference": "1.0.0-alpha1"
+                "reference": "1.0.0-alpha2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_governance-1.0.0-alpha1.zip",
-                "reference": "1.0.0-alpha1",
-                "shasum": "3babf57cc0dc93b35b0194191de491fc7f7dab7c"
+                "url": "https://ftp.drupal.org/files/projects/safe_governance-1.0.0-alpha2.zip",
+                "reference": "1.0.0-alpha2",
+                "shasum": "3cedc28da1d145437f41c3335f32479d513b4957"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7678,8 +7678,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha1",
-                    "datestamp": "1794610767",
+                    "version": "1.0.0-alpha2",
+                    "datestamp": "1794853651",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7709,7 +7709,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_governance"
             },
-            "published-time": "2026-11-13T22:59:07+00:00"
+            "published-time": "2026-11-16T18:26:05+00:00"
         },
         {
             "name": "drupal/safe_smart_accounts",
@@ -24905,7 +24905,7 @@
         "drupal/gas_sponsor": 20,
         "drupal/gemini_provider": 20,
         "drupal/group_treasury": 15,
-        "drupal/safe_governance": 20,
+        "drupal/safe_governance": 15,
         "drupal/safe_smart_accounts": 15
     },
     "prefer-stable": true,

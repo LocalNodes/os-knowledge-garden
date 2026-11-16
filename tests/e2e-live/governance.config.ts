@@ -4,9 +4,11 @@
 // (live-global-setup.ts refuses unless GITHUB_ACTIONS is 'true' and the base URL host is
 // localhost or a .test host), one worker, no retries, and nothing recorded (trace, video and
 // screenshots off: the browser profile holds the imported wallet). Only the spec and the time
-// limits differ: governance-judge.e2e.ts, for up to 60 minutes, since the flow needs about 40
-// (voting 10 minutes, the safety check 600 s and the waiting time 300 s). The job allows 90, so
-// a stuck test ends with its own error and the failure dump while the job still runs. Every
+// limits differ: governance-judge.e2e.ts, for up to 80 minutes. The flow needs about 45: about
+// 15 to an open proposal (a live run reached it at about 14 minutes), then voting 10 minutes,
+// the waiting time 300 s and the safety check 600 s, with three carry-out steps on the 30 s
+// worker. The job allows 110 (up to 20 for the install), so a stuck test ends with its own error
+// and the failure dump while the job still runs. Every
 // action and navigation without a timeout of its own gets one minute, so nothing waits forever.
 //
 // `npm --prefix tests/e2e-live run judge -- --list` loads this file and the spec with no secret
@@ -29,7 +31,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
-  timeout: 60 * 60_000,
+  timeout: 80 * 60_000,
   reporter: [['list']],
   outputDir: join(HERE, '..', '..', 'test-results', 'e2e-live-governance'),
   globalSetup: './live-global-setup.ts',

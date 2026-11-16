@@ -58,7 +58,7 @@ import { bounded, forSite, networkOf, REOPEN, signInAs as signInAsAccount, signI
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup, batchApproveBound, confirmAccountForSignIn } from './governance/live-steps';
 import { assertNotStoppedByNotice, tickPublicNotice } from '../e2e/helpers/public-notice';
-import { publishCaptureValue } from './governance/publish-capture';
+import { printPublishCapture, watchPublish } from './governance/publish-capture';
 import { setupReason } from './setup-reason';
 import { until } from './wait-loop';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -577,35 +577,31 @@ test.describe.serial('live governance judge', () => {
       await v5.amount.fill(PAY_TEXT);
       await v5.payTo.fill(acc1);
       await v5.why.fill('The governance judge pays 0.0001 ETH back to the organizer, carried out by the group\'s vote.');
-      let publishBody = '';
-      page.on('request', (r) => {
-        if (r.method() === 'POST' && /\/votes\/publish(?:\?|$)/.test(new URL(r.url()).pathname)) publishBody = r.postData() ?? '';
-      });
-      // The publish answer, printed as fixed tokens only (publish-capture.ts); the last one counts.
-      const publishAnswer: { value: Promise<string> | null } = { value: null };
-      page.on('response', (r) => {
-        if (r.request().method() !== 'POST' || !/\/votes\/publish$/.test(new URL(r.url()).pathname)) return;
-        publishAnswer.value = r.json().catch(() => null).then((body: unknown) => publishCaptureValue(r.status(), body));
-      });
-      await v5.publish.click();
-      await expect(v5.confirmInYourWallet).toBeVisible({ timeout: 60_000 });
-      // The wallet is asked only from this click.
-      const before = context.pages().filter((p) => p.url().startsWith(`chrome-extension://${extensionId}/notification.html`)).length;
-      out('CAPTURE', 'propose_prompt_before_click', before === 0 ? 'none' : 'open');
-      expect(before, 'no wallet prompt opens before "Confirm in your wallet" is clicked').toBe(0);
-      // Account 3 ticked the public-record notice when it approved the setup, so 'none' is expected.
-      console.log(`[judge] propose: notice ${await tickPublicNotice(page)}`);
-      await v5.confirmInYourWallet.click();
-      await confirmPrompts(context, extensionId, 'propose', log, {
-        done: async () => (await assertNotStoppedByNotice(page), await v5.openUntil.isVisible()) || (await v5.hubFailed.isVisible()) || (await v5.notYet.isVisible()) || (await v5.wentWrong.isVisible()),
-        timeoutMs: 180_000,
-      });
-      const signatures = reportPrompts(info, 'propose', log);
-      out('CAPTURE', 'propose_wallet_prompts', String(signatures));
-      out('CAPTURE', 'propose_domain_chainid', /"chainId"/.test(publishBody) ? 'yes' : 'no');
-      const answered = publishAnswer.value ? await within(publishAnswer.value, 10_000) : 'none';
-      out('CAPTURE', 'propose_publish', typeof answered === 'object' ? answered.value : answered === 'timeout' ? '0 unread' : '0 none');
-      await expect(v5.openUntil, 'the proposal is open for voting').toBeVisible();
+      // Only the answer to this page's publish request is read, printed as fixed tokens (publish-capture.ts).
+      const publish = watchPublish(page, new URL(page.url()).origin, `${votesUrl}/publish`);
+      try {
+        await v5.publish.click();
+        await expect(v5.confirmInYourWallet).toBeVisible({ timeout: 60_000 });
+        // The wallet is asked only from this click.
+        const before = context.pages().filter((p) => p.url().startsWith(`chrome-extension://${extensionId}/notification.html`)).length;
+        out('CAPTURE', 'propose_prompt_before_click', before === 0 ? 'none' : 'open');
+        expect(before, 'no wallet prompt opens before "Confirm in your wallet" is clicked').toBe(0);
+        // Account 3 ticked the public-record notice when it approved the setup, so 'none' is expected.
+        console.log(`[judge] propose: notice ${await tickPublicNotice(page)}`);
+        await v5.confirmInYourWallet.click();
+        await confirmPrompts(context, extensionId, 'propose', log, {
+          done: async () => (await assertNotStoppedByNotice(page), await v5.openUntil.isVisible()) || (await v5.hubFailed.isVisible()) || (await v5.notYet.isVisible()) || (await v5.wentWrong.isVisible()),
+          timeoutMs: 180_000,
+        });
+        const signatures = reportPrompts(info, 'propose', log);
+        out('CAPTURE', 'propose_wallet_prompts', String(signatures));
+        out('CAPTURE', 'propose_domain_chainid', /"chainId"/.test(publish.body()) ? 'yes' : 'no');
+        const pending = publish.answer();
+        printPublishCapture(pending ? await within(pending, 10_000) : null);
+        await expect(v5.openUntil, 'the proposal is open for voting').toBeVisible();
+      } finally {
+        publish.dispose();
+      }
       return page.url();
     });
 

@@ -176,7 +176,13 @@ case "$cmd" in
   search-api:server-clear)
     [ "${FAIL_CLEAR:-0}" = 1 ] && exit 1
     [ "${QDRANT_KEEPS_POINTS:-0}" = 1 ] || printf '%s' '{"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":2,"config":{"params":{"vectors":{"size":3072,"distance":"Cosine"}}}},"status":"ok","time":0.0001}' > "$SITE/qdrant_info" ;;
-  search-api:index) [ "${FAIL_INDEX:-0}" = 1 ] && { echo "AiQuotaException: embed_content per day" >&2; exit 3; } ;;
+  # HANG_INDEX=1: the index command never returns, as the AI Search batch did
+  # on a site with content and no AI key (sleep is stubbed above, so the real one).
+  search-api:index)
+    # The hang runs in a child, as drush's batch does, so the check below
+    # also proves the bound ends the children.
+    if [ "${HANG_INDEX:-0}" = 1 ]; then /bin/sleep 3600 & wait; fi
+    [ "${FAIL_INDEX:-0}" = 1 ] && { echo "AiQuotaException: embed_content per day" >&2; exit 3; } ;;
   cron) [ "${FAIL_CRON:-0}" = 1 ] && exit 4 ;;
   localnodes-web3:check)
     # The readiness check passes while $SITE/w3_ok exists, printing W3_OUT (default a fixed
@@ -803,6 +809,23 @@ check "WEB3_ENABLED=false: no enable, no check" "0 0 0" "$rc $(grep -c '^drush e
 # 11j. A manual run with web3 on (staging, demos) is untouched: enable, but no check, no callback.
 t="$(new_site)"; rc="$(run_ep "$t" $ORG $W3)"
 check "manual run with web3 on: enabled, no check, no callback" "0 1 0 0" "$rc $(grep -c '^drush en localnodes_web3' "$t/seq") $(w3_checks "$t") $(cbs "$t")"
+
+# 12. An index step that never returns does not stop the install: the
+# entrypoint gives search-api:index a time bound (INSTALL_INDEX_TIMEOUT), and
+# the run reaches the completion marker. The outer timeout makes a missing
+# bound fail this check instead of hanging the test.
+t="$(new_site)"
+start=$(date +%s)
+rc="$(t_out="$t/out"; timeout -k 5 90 env -i PATH="$t/bin:/usr/bin:/bin" HOME="$t" SITE="$t" LOCALNODES_DRUSH="$t/bin/drush" \
+  DRUPAL_HASH_SALT=test DEMO_MODULE=none HANG_INDEX=1 INSTALL_INDEX_TIMEOUT=2 \
+  /bin/bash "$ENTRYPOINT" > "$t_out" 2>&1; echo $?)"
+took=$(( $(date +%s) - start ))
+check "hung index: container starts (exit 0)" 0 "$rc"
+check "hung index: within the bound (under 60 s)" yes "$([ "$took" -lt 60 ] && echo yes || echo "no (${took}s)")"
+check "hung index: the bound ended it (exit 124)" yes "$(has "$t/out" "WARNING: search-api:index failed (exit 124)")"
+check "hung index: FRESH INSTALL COMPLETE" yes "$(has "$t/out" "=== FRESH INSTALL COMPLETE ===")"
+check "hung index: completion marker written" yes "$([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
+check "hung index: no index process left" 0 "$(pgrep -f "^/bin/sleep 3600$" | wc -l)"
 
 # 6. settings.php defers exactly the directly-indexed indexes.
 direct="$(grep -l 'index_directly: true' html/modules/custom/*/config/install/search_api.index.*.yml 2>/dev/null \
