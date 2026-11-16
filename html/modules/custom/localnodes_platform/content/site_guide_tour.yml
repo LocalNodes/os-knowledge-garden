@@ -1,0 +1,19 @@
+# The Site guide page about the group tour, created with the pages in
+# site_guide.yml. Written for this site, not taken from the how-to source.
+# Its words are true whether or not the tour link shows on Get help: the link
+# shows only to a signed-in member who may take tours, on a site with one
+# community-wide group that the member may view.
+163f2b37-f1a8-4d7b-b108-5f5ce9ee9d99:
+  uuid: 163f2b37-f1a8-4d7b-b108-5f5ce9ee9d99
+  title: Take the group tour
+  links:
+    - path: /help
+      text: Get help
+    - path: /all-groups
+      text: All groups
+  body: >
+    <p>The group tour shows you round your community's shared group: its stream, its events, its library and the assistant. You can take it again at any time.</p>
+
+    <p>Choose <strong>Get help</strong> in the footer. If <strong>Take the group tour</strong> is there, choose it.</p>
+
+    <p>If that link is not there, this site does not offer you the tour. Open <strong>All groups</strong>, open your community's group and look round its tabs, or ask an organizer to show you.</p>

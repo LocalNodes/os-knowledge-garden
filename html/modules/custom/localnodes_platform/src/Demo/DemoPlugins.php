@@ -56,7 +56,7 @@ final class DemoPlugins {
   public const EXTRAS = [
     'localnodes_demo' => ['quick_poll'],
     'boulder_demo' => ['quick_poll'],
-    'localnodes_demo_packs' => ['quick_poll', 'howto'],
+    'localnodes_demo_packs' => ['quick_poll'],
   ];
 
   /**

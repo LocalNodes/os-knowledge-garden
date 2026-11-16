@@ -58,6 +58,7 @@ import { bounded, forSite, networkOf, REOPEN, signInAs as signInAsAccount, signI
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
 import { approveSetup, batchApproveBound, confirmAccountForSignIn } from './governance/live-steps';
 import { assertNotStoppedByNotice, tickPublicNotice } from '../e2e/helpers/public-notice';
+import { publishCaptureValue } from './governance/publish-capture';
 import { setupReason } from './setup-reason';
 import { until } from './wait-loop';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -580,6 +581,12 @@ test.describe.serial('live governance judge', () => {
       page.on('request', (r) => {
         if (r.method() === 'POST' && /\/votes\/publish(?:\?|$)/.test(new URL(r.url()).pathname)) publishBody = r.postData() ?? '';
       });
+      // The publish answer, printed as fixed tokens only (publish-capture.ts); the last one counts.
+      const publishAnswer: { value: Promise<string> | null } = { value: null };
+      page.on('response', (r) => {
+        if (r.request().method() !== 'POST' || !/\/votes\/publish$/.test(new URL(r.url()).pathname)) return;
+        publishAnswer.value = r.json().catch(() => null).then((body: unknown) => publishCaptureValue(r.status(), body));
+      });
       await v5.publish.click();
       await expect(v5.confirmInYourWallet).toBeVisible({ timeout: 60_000 });
       // The wallet is asked only from this click.
@@ -596,6 +603,8 @@ test.describe.serial('live governance judge', () => {
       const signatures = reportPrompts(info, 'propose', log);
       out('CAPTURE', 'propose_wallet_prompts', String(signatures));
       out('CAPTURE', 'propose_domain_chainid', /"chainId"/.test(publishBody) ? 'yes' : 'no');
+      const answered = publishAnswer.value ? await within(publishAnswer.value, 10_000) : 'none';
+      out('CAPTURE', 'propose_publish', typeof answered === 'object' ? answered.value : answered === 'timeout' ? '0 unread' : '0 none');
       await expect(v5.openUntil, 'the proposal is open for voting').toBeVisible();
       return page.url();
     });

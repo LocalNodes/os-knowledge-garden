@@ -1,6 +1,6 @@
 # What the shared how-to pages must hold once loaded, and what they leave out.
 #
-# counts.howto: pages in shared/content/entity/howto.yml, P01 to P10.
+# counts.howto: pages in the platform's content/site_guide.yml, P01 to P10.
 # left_out: titles of the two pages the source holds beyond Part 1's P01 to
 #   P10 (P11 and P12), which stay withheld, and one line from each body.
 counts:

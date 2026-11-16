@@ -31,7 +31,6 @@ trait PackLoadTrait {
     'pack_comment',
     'pack_like',
     'pack_quick_poll',
-    'pack_howto',
   ];
 
   /**

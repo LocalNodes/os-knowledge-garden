@@ -73,6 +73,9 @@ use Drupal\social_ai_indexing\Citation\CitationInvariants;
 use Drupal\social_ai_indexing\Citation\CitedAnswer;
 use Drupal\social_ai_indexing\Controller\AiOverviewController;
 use Drupal\social_ai_indexing\Eval\RawTextCheck;
+use Drupal\social_ai_indexing\Eval\ForgedScopeCheck;
+use Drupal\social_ai_indexing\Eval\IsolatedChild;
+use Drupal\social_ai_indexing\Eval\RegistryScopeCheck;
 use Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber;
 use Drupal\social_ai_indexing\Service\AiOverviewService;
 use Drupal\user\Entity\User;
@@ -315,6 +318,18 @@ final class CitedAnswersLiveRunner {
   private array $notes = [];
   private bool $modelCalled = FALSE;
 
+  /**
+   * Asks one planned run again; returns its record, or NULL if none came.
+   *
+   * @var \Closure|null
+   */
+  private ?\Closure $rerun = NULL;
+
+  /**
+   * Set when a forged scope got the fallback twice: the run must be redone.
+   */
+  private bool $incomplete = FALSE;
+
   public function __construct(array $options) {
     $this->options = $options;
     $seed = \Drupal::state()->get(self::SEED_STATE);
@@ -379,6 +394,13 @@ final class CitedAnswersLiveRunner {
     $dispatcher->addListener('ai_agents.tool_finished_executed', [$this->capture, 'onToolFinished'], -2000);
     \Drupal::service('logger.factory')->addLogger($this->spy);
 
+    $this->rerun = function (array $run): ?array {
+      sleep((int) ($this->options['space'] ?? 20));
+      $record = $this->runAssistant($run);
+      $this->evaluate($run, $record);
+      $this->append($record);
+      return $record;
+    };
     $by_case = [];
     foreach ($runs as $run) {
       if ($run['case'] === 'RQ-13' && $run['variant'] === 'mutate') {
@@ -413,7 +435,12 @@ final class CitedAnswersLiveRunner {
         break;
       }
     }
-    $this->crossChecks($by_case);
+    // A --run-index child judges its one record only; comparing runs, and
+    // any retry that asks for, is the coordinating process's work, so a
+    // child never appends a second record.
+    if (IsolatedChild::crossChecksHere($this->options)) {
+      $this->crossChecks($by_case);
+    }
     return $this->report();
   }
 
@@ -438,6 +465,16 @@ final class CitedAnswersLiveRunner {
     }
     $by_case = [];
     $model_called = FALSE;
+    $this->rerun = function (array $run) use ($runs, $drush, $pass, $out): ?array {
+      foreach ($runs as $index => $planned) {
+        if ($planned['case'] === $run['case'] && $planned['persona'] === $run['persona'] && $planned['variant'] === $run['variant']) {
+          sleep((int) ($this->options['space'] ?? 20));
+          [$records, , $status] = $this->runChild($drush, $pass, $out, $index, FALSE);
+          return IsolatedChild::problem($records, $status) === NULL ? $records[0] : NULL;
+        }
+      }
+      return NULL;
+    };
     foreach ($runs as $index => $run) {
       $mutate = $run['case'] === 'RQ-13' && $run['variant'] === 'mutate';
       if ($mutate && array_filter($this->records, static fn (array $r): bool => $r['error'] !== NULL)) {
@@ -447,43 +484,23 @@ final class CitedAnswersLiveRunner {
       if (!$mutate && $model_called) {
         sleep((int) ($this->options['space'] ?? 20));
       }
-      $before = is_file($out) ? count(file($out)) : 0;
-      $command = escapeshellarg($drush) . ' --root=' . escapeshellarg(DRUPAL_ROOT) . ' php-script ' . escapeshellarg(__FILE__)
-        . ' -- ' . implode(' ', array_map('escapeshellarg', [...$pass, '--run-index=' . $index]));
-      $output = (string) shell_exec($command . ' 2>&1');
-      foreach (preg_split('/\R/', $output) as $line) {
-        // The child's status line (or RQ-13's change line); not its summary.
-        if (preg_match('/^(\[(PASS|FAIL|CRITICAL|INCOMPLETE)\]|RQ-13 change)/', $line)) {
-          print $line . "\n";
-        }
-      }
-      $new = array_slice(is_file($out) ? file($out, FILE_IGNORE_NEW_LINES) : [], $before);
+      [$new_records, $output, $status] = $this->runChild($drush, $pass, $out, $index, TRUE);
       $records = 0;
-      foreach ($new as $json) {
-        $record = json_decode($json, TRUE);
-        if (!is_array($record)) {
-          continue;
-        }
-        foreach (($record['requests'] ?? []) as $type => $count) {
-          foreach (['sent', 'ok', 'cached_or_blocked'] as $field) {
-            $this->capture->totals[$type][$field] = ($this->capture->totals[$type][$field] ?? 0) + (int) ($count[$field] ?? 0);
-          }
-        }
-        if (isset($record['status'])) {
-          $this->records[] = $record;
-          $by_case[$record['case']][] = $record;
-          $records++;
-        }
+      foreach ($new_records as $record) {
+        $this->records[] = $record;
+        $by_case[$record['case']][] = $record;
+        $records++;
+      }
+      $problem = IsolatedChild::problem($new_records, $status, !$mutate);
+      if ($problem !== NULL) {
+        // The child's raw output can hold exception or provider error text,
+        // so it is withheld; rerunning that one index shows it to the
+        // operator directly.
+        $this->critical[] = sprintf('%s %s: %s; its output (%d lines) is withheld; rerun with --run-index=%d to see it.', $run['case'], $run['persona'], $problem, count(preg_split('/\R/', trim($output))), $index);
+        break;
       }
       if (!$mutate) {
         $model_called = TRUE;
-        if ($records !== 1) {
-          // The child's raw output can hold exception or provider error text,
-          // so it is withheld; rerunning that one index shows it to the
-          // operator directly.
-          $this->critical[] = sprintf('%s %s: the child process wrote %d records (expected 1); its output (%d lines) is withheld; rerun with --run-index=%d to see it.', $run['case'], $run['persona'], $records, count(preg_split('/\R/', trim($output))), $index);
-          break;
-        }
         $last = end($this->records);
         if ($last['error'] !== NULL && str_contains($last['error'], 'daily_quota')) {
           $this->notes[] = 'Stopped after ' . $last['case'] . ' ' . $last['persona'] . ': daily quota spent.';
@@ -494,6 +511,47 @@ final class CitedAnswersLiveRunner {
     $this->notes[] = 'Each run in its own process (' . count($runs) . ' planned).';
     $this->crossChecks($by_case);
     return $this->report();
+  }
+
+  /**
+   * Runs planned run $index in a child process.
+   *
+   * Returns its records, its output and its exit status.
+   *
+   * The child appends its record to the jsonl; request counts go into the
+   * totals. With $show, the child's status line is printed.
+   */
+  private function runChild(string $drush, array $pass, string $out, int $index, bool $show): array {
+    $before = is_file($out) ? count(file($out)) : 0;
+    $command = escapeshellarg($drush) . ' --root=' . escapeshellarg(DRUPAL_ROOT) . ' php-script ' . escapeshellarg(__FILE__)
+      . ' -- ' . implode(' ', array_map('escapeshellarg', [...$pass, '--run-index=' . $index]));
+    $lines = [];
+    $status = -1;
+    exec($command . ' 2>&1', $lines, $status);
+    $output = implode("\n", $lines);
+    foreach ($show ? preg_split('/\R/', $output) : [] as $line) {
+      // The child's status line (or RQ-13's change line); not its summary.
+      if (preg_match('/^(\[(PASS|FAIL|CRITICAL|INCOMPLETE)\]|RQ-13 change)/', $line)) {
+        print $line . "\n";
+      }
+    }
+    $new = array_slice(is_file($out) ? file($out, FILE_IGNORE_NEW_LINES) : [], $before);
+    $records = [];
+    foreach ($new as $json) {
+      $record = json_decode($json, TRUE);
+      if (!is_array($record)) {
+        continue;
+      }
+      foreach (($record['requests'] ?? []) as $type => $count) {
+        foreach (['sent', 'ok', 'cached_or_blocked'] as $field) {
+          $this->capture->totals[$type][$field] = ($this->capture->totals[$type][$field] ?? 0) + (int) ($count[$field] ?? 0);
+        }
+      }
+      if (isset($record['status'])) {
+        $records[] = $record;
+      }
+    }
+    return [$records, $output, (int) $status];
   }
 
   /**
@@ -877,6 +935,7 @@ final class CitedAnswersLiveRunner {
         'url' => $source->url,
         'type' => $source->type,
         'groups' => $entity instanceof ContentEntityInterface ? $this->groupsOf($entity) : [],
+        'hidden_groups' => $entity instanceof ContentEntityInterface ? $this->hiddenGroupsOf($entity, $account) : [],
         'viewable' => $entity instanceof ContentEntityInterface && $entity->access('view', $account),
         'shared' => $entity instanceof ContentEntityInterface && $this->isShared($entity, $account),
         'excerpt' => $excerpts[$source->n] ?? NULL,
@@ -904,6 +963,21 @@ final class CitedAnswersLiveRunner {
     }
     $shared = $account->isAnonymous() ? ['public'] : ['public', 'community'];
     return in_array((string) $page->get('field_content_visibility')->value, $shared, TRUE);
+  }
+
+  /**
+   * The ids of the groups an entity (or a comment's parent) sits in that the
+   * asker cannot view.
+   */
+  private function hiddenGroupsOf(ContentEntityInterface $entity, AccountInterface $account): array {
+    $hidden = [];
+    foreach ($this->groupsOf($entity) as $id) {
+      $group = \Drupal::entityTypeManager()->getStorage('group')->load($id);
+      if ($group === NULL || !$group->access('view', $account)) {
+        $hidden[] = $id;
+      }
+    }
+    return $hidden;
   }
 
   /**
@@ -1069,19 +1143,19 @@ final class CitedAnswersLiveRunner {
       }
     }
     // E1: every registry entry must be viewable by the asker and, when a
-    // group was named, belong to that group or be a page the whole community
-    // shares (D-17); with no group named, be shared (no members-only
-    // page site-wide, SHARED PAGES FIX 1).
+    // group was named, be a page the whole community shares or sit in that
+    // group and in no group hidden from the asker; with no group named, be
+    // shared (RegistryScopeCheck).
     $scope_group = isset($run['scope'], $this->seed['groups'][$run['scope']]) ? (int) $this->seed['groups'][$run['scope']] : NULL;
+    $e1_messages = [
+      'not_viewable' => "which the asker can't view",
+      'other_group' => "another group's page that is not shared",
+      'hidden_group' => 'a page that also sits in a group hidden from the asker',
+      'not_shared' => 'in a site-wide answer, and it is not shared',
+    ];
     foreach ($record['registry'] as $entry) {
-      if (!$entry['viewable']) {
-        $fail("E1: registry holds {$entry['key']}, which the asker can't view", TRUE);
-      }
-      if ($scope_group !== NULL && !in_array($scope_group, $entry['groups'], TRUE) && !$entry['shared']) {
-        $fail("E1: registry holds {$entry['key']}, another group's page that is not shared", TRUE);
-      }
-      if ($scope_group === NULL && !$entry['shared']) {
-        $fail("E1: registry holds {$entry['key']} in a site-wide answer, and it is not shared", TRUE);
+      foreach (RegistryScopeCheck::findings($entry, $scope_group) as $code) {
+        $fail("E1: registry holds {$entry['key']}, " . $e1_messages[$code], TRUE);
       }
     }
 
@@ -1217,10 +1291,7 @@ final class CitedAnswersLiveRunner {
         }
       }
     }
-    $forged = array_filter($by_case['RQ-10'] ?? [], static fn (array $r): bool => $r['error'] === NULL);
-    if (count(array_unique(array_column($forged, 'answer'))) > 1) {
-      $this->critical[] = 'E2: the forged scopes got different replies';
-    }
+    $this->forgedScopes(array_values(array_filter($by_case['RQ-10'] ?? [], static fn (array $r): bool => $r['error'] === NULL)));
     $overview = array_values(array_filter($by_case['RQ-20'] ?? [], static fn (array $r): bool => $r['error'] === NULL && $r['variant'] !== 'service direct'));
     if (count($overview) === 3) {
       if (json_encode($overview[0]['overview']) !== json_encode($overview[2]['overview'])) {
@@ -1230,6 +1301,62 @@ final class CitedAnswersLiveRunner {
         $this->critical[] = "E1 door 5: P-NON got P-MEM's cached overview";
       }
     }
+  }
+
+  /**
+   * E2 sameness across the forged scopes, with one retry of a fallback.
+   */
+  private function forgedScopes(array $forged): void {
+    $reply = static fn (array $r): array => [
+      'answer' => $r['answer'],
+      'sources' => count($r['citations']) + count($r['registry']),
+      'outcome' => $r['outcome'],
+    ];
+    $replies = array_map($reply, $forged);
+    $retried = 0;
+    $retry = function (int|string $key) use ($forged, $reply, &$retried): ?array {
+      $record = $forged[$key];
+      if ($this->rerun === NULL) {
+        return NULL;
+      }
+      $again = ($this->rerun)($this->plannedRun($record));
+      $this->modelCalled = TRUE;
+      $retried++;
+      if ($again === NULL || $again['error'] !== NULL) {
+        $this->notes[] = sprintf('E2: the retry of %s %s (%s) did not complete; rerun.', $record['case'], $record['persona'], $record['variant']);
+        return NULL;
+      }
+      // The retry's own per-run checks count, as the first run's did.
+      foreach ($again['critical'] ?? [] as $message) {
+        $this->critical[] = sprintf('%s %s (%s, retry): %s', $again['case'], $again['persona'], $again['variant'], $message);
+      }
+      return $reply($again);
+    };
+    $result = ForgedScopeCheck::resolve($replies, CitedAnswer::FALLBACK, $retry);
+    if ($result === ForgedScopeCheck::PASS_AFTER_RETRY) {
+      print sprintf("E2: %d forged scope%s answered with the fallback, retried\n", $retried, $retried === 1 ? '' : 's');
+    }
+    elseif ($result === ForgedScopeCheck::INCOMPLETE) {
+      $this->incomplete = TRUE;
+      $this->notes[] = 'E2: a forged scope answered with the fallback and its retry did not settle it; rerun.';
+    }
+    elseif ($result === ForgedScopeCheck::CRITICAL) {
+      $this->critical[] = $retried > 0
+        ? 'E2: the forged scopes got different replies (after a retry of the fallback)'
+        : 'E2: the forged scopes got different replies';
+    }
+  }
+
+  /**
+   * The planned run a record came from.
+   */
+  private function plannedRun(array $record): array {
+    foreach ($this->plan() as $run) {
+      if ($run['case'] === $record['case'] && $run['persona'] === $record['persona'] && $run['variant'] === $record['variant']) {
+        return $run;
+      }
+    }
+    throw new \RuntimeException('No planned run for ' . $record['case'] . ' ' . $record['variant']);
   }
 
   /**
@@ -1347,8 +1474,16 @@ final class CitedAnswersLiveRunner {
     foreach ($critical as $message) {
       print "CRITICAL: $message\n";
     }
-    print $critical ? "Status: CRITICAL FAILURES\n" : "Status: no critical failure\n";
-    return $critical ? 1 : 0;
+    if ($critical) {
+      print "Status: CRITICAL FAILURES\n";
+      return 1;
+    }
+    if ($this->incomplete) {
+      print "Status: INCOMPLETE, rerun\n";
+      return 2;
+    }
+    print "Status: no critical failure\n";
+    return 0;
   }
 
 }

@@ -253,6 +253,32 @@ final class GroupTourTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * No replay link for a member without the tour permission.
+   *
+   * The Site guide's tour page tells a member what to do when the link is
+   * not there, so the help page must leave it out in these cases.
+   */
+  public function testNoReplayLinkWithoutThePermission(): void {
+    $member = $this->createPersona('una');
+    $this->container->get('current_user')->setAccount($member);
+    $this->assertNotNull($this->helpBuild()['#tour_url'], 'The control: the member has the link with the permission.');
+    user_role_revoke_permissions('authenticated', ['access tour']);
+    $this->container->get('current_user')->setAccount(User::load($member->id()));
+    $this->assertNull($this->helpBuild()['#tour_url'], 'No link without the permission.');
+  }
+
+  /**
+   * No replay link on a site with no community-wide group recorded.
+   */
+  public function testNoReplayLinkWithoutARecordedGroup(): void {
+    $member = $this->createPersona('vic');
+    $this->container->get('current_user')->setAccount($member);
+    $this->assertNotNull($this->helpBuild()['#tour_url'], 'The control: the link shows while a group is recorded.');
+    $this->container->get('state')->delete(FirstLanding::TEMPLATE_STATE);
+    $this->assertNull($this->helpBuild()['#tour_url'], 'No link when no group is recorded.');
+  }
+
+  /**
    * No replay link to a group the person cannot open; the access is cached.
    *
    * The community group becomes members-only and a member is removed: the

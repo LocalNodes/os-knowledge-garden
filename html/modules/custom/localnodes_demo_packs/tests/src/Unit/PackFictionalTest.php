@@ -110,15 +110,15 @@ final class PackFictionalTest extends UnitTestCase {
    * The files a scope states its names in.
    *
    * A pack's scope is its content YAML and its expectation files; the how-to
-   * scope is the shared how-to YAML and its expectation files. The inventory
-   * is not scanned, and neither is a file that is not text.
+   * scope is the platform's Site guide YAML and the how-to expectation files.
+   * The inventory is not scanned, and neither is a file that is not text.
    *
    * @return string[]
    */
   private static function scopePaths(string $scope): array {
     $module = self::moduleDir();
     $paths = $scope === 'howto'
-      ? array_merge([$module . '/shared/content/entity/howto.yml'], glob($module . '/tests/fixtures/expect/howto/*') ?: [])
+      ? array_merge(glob(dirname($module) . '/localnodes_platform/content/site_guide*.yml') ?: [], glob($module . '/tests/fixtures/expect/howto/*') ?: [])
       : array_merge(glob($module . '/' . self::packProfile($scope) . 'content/entity/*.yml') ?: [], glob($module . "/tests/fixtures/expect/$scope/*") ?: []);
     $paths = array_filter($paths, static fn (string $path): bool => is_file($path) && basename($path) !== 'invented.yml');
     sort($paths);
@@ -232,7 +232,7 @@ final class PackFictionalTest extends UnitTestCase {
    */
   public function testStructuredNamesAreInventoried(string $pack): void {
     $inventory = array_merge(PackFiction::names(self::inventory($pack)), PackFiction::names(self::inventory('howto')));
-    $names = PackFiction::structuredNames(array_merge(self::packYaml($pack), ['howto.yml' => self::sharedHowto()]));
+    $names = PackFiction::structuredNames(array_merge(self::packYaml($pack), self::siteGuideFiles()));
     $this->assertNotSame([], $names, "Pack $pack states names in its fields.");
     $this->assertSame([], array_values(array_diff($names, $inventory)), "Pack $pack's name fields not in an inventory.");
   }

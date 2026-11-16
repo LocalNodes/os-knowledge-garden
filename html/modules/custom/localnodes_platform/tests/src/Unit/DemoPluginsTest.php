@@ -35,7 +35,7 @@ final class DemoPluginsTest extends UnitTestCase {
     $this->assertSame(array_merge(array_map(fn ($name) => "boulder_$name", $order), ['boulder_quick_poll']), DemoPlugins::ids('boulder_demo'));
     $this->assertSame(array_merge(array_map(fn ($name) => "localnodes_$name", $order), ['localnodes_quick_poll']), DemoPlugins::ids('localnodes_demo'));
     $this->assertSame(array_map(fn ($name) => "portland_$name", $order), DemoPlugins::ids('portland_demo'));
-    $this->assertSame(array_merge(array_map(fn ($name) => "pack_$name", $order), ['pack_quick_poll', 'pack_howto']), DemoPlugins::ids('localnodes_demo_packs'));
+    $this->assertSame(array_merge(array_map(fn ($name) => "pack_$name", $order), ['pack_quick_poll']), DemoPlugins::ids('localnodes_demo_packs'));
     $this->assertSame($order, DemoPlugins::ids('social_demo'));
     foreach (array_keys(DemoPlugins::PREFIXES) as $module) {
       foreach (DemoPlugins::ids($module) as $id) {

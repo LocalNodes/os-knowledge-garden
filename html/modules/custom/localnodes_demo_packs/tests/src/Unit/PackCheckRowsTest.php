@@ -73,6 +73,16 @@ final class PackCheckRowsTest extends UnitTestCase {
   public function testScriptNeverKeepsOrPrintsTheAnswer(): void {
     $source = (string) file_get_contents(dirname(__DIR__, 3) . '/scripts/check_demo_pack.php');
     $this->assertNotSame('', $source);
+    // capture() is the one place an answer is kept. Its one write goes
+    // through PackCaptureFile::append(), which refuses streams and links
+    // (PackCaptureFileTest proves that by behaviour); the method itself
+    // prints and writes nothing else. Everything else is checked without it.
+    $this->assertSame(1, preg_match('/\n  private function capture\(.*?\n  }\n/s', $source, $match), 'One capture method.');
+    $capture = $match[0];
+    $this->assertSame(1, substr_count($capture, 'PackCaptureFile::append($file, '), 'One write, through the capture file rules.');
+    $this->assertDoesNotMatchRegularExpression('/\b(print|printf|echo|fwrite|fputs|file_put_contents|fopen|error_log|var_dump|print_r|var_export)\b/', $capture, 'Capture prints and writes nothing else.');
+    $this->assertStringContainsString('PackCaptureFile::problem($capture)', $source, 'The destination is checked before any row runs.');
+    $source = str_replace($capture, "\n", $source);
     $this->assertDoesNotMatchRegularExpression('/[\'"]answer[\'"]\s*=>/', $source, 'A result must not carry an answer key.');
     $this->assertDoesNotMatchRegularExpression('/\[[\'"]answer[\'"]\]/', $source, 'The script must not read an answer key.');
     $this->assertStringContainsString('PackCheckRows::line(', $source, 'Results print through the one formatter.');

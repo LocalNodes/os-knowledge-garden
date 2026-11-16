@@ -3,7 +3,7 @@
 #
 # A row is {id, page, label, check, as, where, control, root, path, line,
 # in_copy, why}.
-# - page: P01 to P10, in the order of shared/content/entity/howto.yml.
+# - page: P01 to P10, in the order of the platform's content/site_guide.yml.
 # - label: the name exactly as a member sees it.
 # - check: "screen" (the test opens the screen as the account the row names,
 #   and a visible, enabled control of the kind the row names must carry the

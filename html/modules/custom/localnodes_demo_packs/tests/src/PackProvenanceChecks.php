@@ -94,7 +94,11 @@ final class PackProvenanceChecks {
   }
 
   /**
-   * Problems with the must_not_say phrases of assistant rows.
+   * Problems with the must_not_say and must_not_claim phrases of rows.
+   *
+   * A must_not_claim phrase is a claim no page makes, so it need not come
+   * from a forbidden page; like a must_not_say phrase it must not be on a
+   * page the row allows or cites.
    *
    * @param array<int, array> $rows
    *   The rows of assistant.yml.
@@ -135,6 +139,17 @@ final class PackProvenanceChecks {
         }
         if (self::heldByPages($phrase, $allowed, $by_page) || self::heldByPages($phrase, $allowed, $pages)) {
           $problems[] = "Pack $pack, row $id: must_not_say phrase #$n is also on a page the row allows or cites (a passage, or the page's title or body); an allowed answer would trip it.";
+        }
+      }
+      foreach (array_values($row['must_not_claim'] ?? []) as $index => $phrase) {
+        $n = $index + 1;
+        $phrase = self::fold((string) $phrase);
+        if ($phrase === '') {
+          $problems[] = "Pack $pack, row $id: must_not_claim phrase #$n is empty.";
+          continue;
+        }
+        if (self::heldByPages($phrase, $allowed, $by_page) || self::heldByPages($phrase, $allowed, $pages)) {
+          $problems[] = "Pack $pack, row $id: must_not_claim phrase #$n is on a page the row allows or cites (a passage, or the page's title or body); an allowed answer would trip it.";
         }
       }
     }

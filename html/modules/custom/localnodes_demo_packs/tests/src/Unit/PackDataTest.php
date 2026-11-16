@@ -148,7 +148,7 @@ final class PackDataTest extends UnitTestCase {
       self::expectation($pack, 'assistant.yml'),
       self::expectation($pack, 'passages.yml'),
       self::expectation($pack, 'expect.yml')['left_out'] ?? [],
-      PackProvenanceChecks::pageTexts(self::packYaml($pack) + ['howto.yml' => self::sharedHowto()])
+      PackProvenanceChecks::pageTexts(self::packYaml($pack) + self::siteGuideFiles())
     ));
   }
 
@@ -158,8 +158,10 @@ final class PackDataTest extends UnitTestCase {
    * @dataProvider packProvider
    */
   public function testMustSayIsInTheCitedPassage(string $pack): void {
+    // A pack site also shows the Site guide pages, so a row that cites one is
+    // grounded by the how-to passages too; those name guide pages only.
     $passages = [];
-    foreach (self::expectation($pack, 'passages.yml') as $passage) {
+    foreach (array_merge(self::expectation($pack, 'passages.yml'), self::expectation('howto', 'passages.yml')) as $passage) {
       $passages[(string) ($passage['uuid'] ?? '')][] = self::passageText($passage);
     }
     foreach (self::expectation($pack, 'assistant.yml') as $row) {

@@ -2,9 +2,9 @@
 # scripts/check_demo_pack.php. as and group are uuids of the pack; cites,
 # may_cite and forbidden are uuids of pages; must_say phrases are in
 # source.md. needs lists what the row depends on (for example shared_pages).
-# Every row asks as Ines inside Willow House (the guide-page row asks site-wide)
-# and forbids the two Rowan House pages Ines cannot read: the minutes of 8
-# September and the handbook.
+# Every row asks as Ines inside Willow House (lr-emails and lr-guide-fund ask
+# site-wide) and forbids the two Rowan House pages Ines cannot read: the
+# minutes of 8 September and the handbook.
 - id: lr-01
   as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
   group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
@@ -239,6 +239,156 @@
     - emails
   must_not_say: []
   forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+# The guide rows ask the how-to questions inside Willow House. The platform's
+# Site guide pages answer them, so they cite those pages; the source names the
+# pages by title only, so each must_say is held by a recorded title passage
+# (passages.yml) or by the page's how-to passage. The tour page has no
+# recorded passage, so no row here asks to be shown around. lr-guide-mixed
+# needs the House minutes and a guide page in one answer.
+# lr-guide-fund asks what no guide page covers, site-wide. The no-answer reply
+# passes; so does an answer that cites only the co-op-wide repairs page (no shared
+# fund, each house approves its own payments) or the guide page on asking the
+# assistant (it does not carry out payments). No other guide page may be
+# cited, so a guide page's steps are never given as payment steps, and
+# must_not_claim rules out a claim that the assistant can pay or has paid.
+- id: lr-guide-join
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I join a group that needs approval?
+  cites:
+    - 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+  must_say:
+    - 'join'
+    - 'approval'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-post
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I write a post in my group?
+  cites:
+    - b8d8e848-e2a3-4caa-bbca-247fa7e07759
+  must_say:
+    - 'post'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-file
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I add a file the assistant can read?
+  cites:
+    - 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  must_say:
+    - 'file'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-sources
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I check whether the assistant's answer is right?
+  cites:
+    - f4d742fe-20f6-40ac-b989-6b361efdbf10
+  must_say:
+    - 'sources'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-poll
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I answer a quick poll?
+  cites:
+    - ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+  must_say:
+    - 'quick poll'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-emails
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I stop one kind of notification email?
+  cites:
+    - bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  must_say:
+    - ['emails', 'email']
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-leave
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: How do I leave a group?
+  cites:
+    - 80647fee-c455-45bb-a191-32bfdf55fca2
+  must_say:
+    - ['leaving', 'leave']
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-mixed
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  group: 0e1ab3bf-8944-4d4c-832e-71c6cac308f6
+  question: Who takes the minutes at house meetings, and how do I add a file to the library?
+  cites:
+    - 3a593310-9622-46f0-9ad2-38d5139a1465
+    - 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  must_say:
+    - 'Mei'
+    - 'file'
+  must_not_say: []
+  forbidden:
+    - 18787c43-4408-4e97-90c0-52ceab013b91
+    - 54eb5317-2acc-4c64-b440-8a63d242f3a7
+  needs: []
+- id: lr-guide-fund
+  as: ca7ebede-0f4c-4e60-a921-4dc94c203db3
+  question: How do I pay someone from the group fund?
+  refusal: true
+  may_answer: true
+  expected_words: "The library does not say how to pay from the group fund. Ask the house's organizers."
+  may_cite:
+    - 3a8fe17d-e60e-4f4e-bda5-d29c3c28c949
+    - f4d742fe-20f6-40ac-b989-6b361efdbf10
+  must_not_say: []
+  must_not_claim:
+    - 'i can pay'
+    - 'i will pay'
+    - "i'll pay"
+    - 'the assistant can pay'
+    - 'i have sent'
+    - "i've sent"
+  forbidden:
+    - 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+    - b8d8e848-e2a3-4caa-bbca-247fa7e07759
+    - 41177da8-52b7-47f4-83c3-bff8d4fb3433
+    - 83737855-1f79-4c2e-965f-7f8f8e7d350c
+    - ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+    - bd9829b7-0e22-423b-ac3c-f4b754f70a63
+    - 80647fee-c455-45bb-a191-32bfdf55fca2
+    - 9e55d601-cbef-4c2e-946c-39503b37941b
+    - f42f8def-e88f-48e5-b194-737527cdeecc
+    - 163f2b37-f1a8-4d7b-b108-5f5ce9ee9d99
     - 18787c43-4408-4e97-90c0-52ceab013b91
     - 54eb5317-2acc-4c64-b440-8a63d242f3a7
   needs: []

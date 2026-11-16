@@ -156,6 +156,28 @@ final class PackAnswerCheckTest extends UnitTestCase {
   }
 
   /**
+   * A refusal row with may_answer passes a cited answer from may_cite pages.
+   */
+  public function testMayAnswerRowPassesACitedAnswerFromAllowedPages(): void {
+    $row = ['id' => 'refuse', 'refusal' => TRUE, 'may_answer' => TRUE, 'may_cite' => [self::TOPIC]];
+    $this->assertTrue(PackAnswerCheck::judge('The house approves its own payments. [1]', self::sources(self::TOPIC), $row)['pass']);
+    $this->assertTrue(PackAnswerCheck::judge(CitedAnswer::NO_ANSWER_GROUP, [], $row)['pass']);
+  }
+
+  /**
+   * A may_answer row still fails an answer citing another page, or nothing.
+   */
+  public function testMayAnswerRowFailsOtherPagesAndUncitedAnswers(): void {
+    $row = ['id' => 'refuse', 'refusal' => TRUE, 'may_answer' => TRUE, 'may_cite' => [self::TOPIC]];
+    $verdict = PackAnswerCheck::judge('The house approves its own payments. [1]', self::sources(self::OTHER), $row);
+    $this->assertFalse($verdict['pass']);
+    $this->assertContains('cites a page a refusal may not cite: ' . self::OTHER, $verdict['reasons']);
+    $verdict = PackAnswerCheck::judge('The house approves its own payments.', [], $row);
+    $this->assertFalse($verdict['pass']);
+    $this->assertContains('answers without citing a page', $verdict['reasons']);
+  }
+
+  /**
    * A reply that is only the assistant's trouble message is not an answer.
    *
    * It fails any row, a refusal row included, with the reason infrastructure.

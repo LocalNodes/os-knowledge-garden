@@ -62,17 +62,35 @@
  *                           rows instead of the assistant rows.
  *   --rows=<id,id>          Only these rows.
  *   --space=20              Seconds between model-calling rows.
+ *   --capture=<file>        Append one JSON record per assistant row (the
+ *                           answer, its citations and the excerpts the model
+ *                           was shown) for judge_citation_support.php,
+ *                           with the turn's chat calls, searches and input
+ *                           and output tokens. The
+ *                           record holds answer text: write it outside the
+ *                           repo and every log, and delete it once judged.
+ *                           It must be an absolute path to an ordinary file
+ *                           (no stream such as php://stdout, no link); the
+ *                           file is made readable by its owner only, and a
+ *                           failed write stops the run.
+ *   --run=<n>               The run number put in each captured record, so
+ *                           repeated runs of one row stay apart.
  *
- * Exit 0 when no row failed, 1 when a row failed, 2 on bad usage.
+ * Exit 0 when no row failed, 1 when a row failed or a capture write failed,
+ * 2 on bad usage.
  */
 
 use Drupal\ai_assistant_api\Data\UserMessage;
+use Drupal\ai\Event\PostGenerateResponseEvent;
 use Drupal\ai\OperationType\Chat\ChatMessage;
+use Drupal\ai\OperationType\Chat\ChatOutput;
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\localnodes_demo_packs\PackAnswerCheck;
+use Drupal\localnodes_demo_packs\PackCaptureFile;
 use Drupal\localnodes_demo_packs\PackCheckRows;
+use Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber;
 use Drupal\social_ai_indexing\Service\HybridSearchService;
 
 /**
@@ -96,6 +114,21 @@ final class DemoPackCheck {
    * How many rows were listed, run or skipped.
    */
   private int $total = 0;
+
+  /**
+   * The current turn's chat calls, searches and tokens, for --capture.
+   */
+  private array $usage = [];
+
+  /**
+   * Whether the --capture listeners are registered.
+   */
+  private bool $listening = FALSE;
+
+  /**
+   * Why the last capture write failed, or NULL; the run stops when set.
+   */
+  private ?string $captureError = NULL;
 
   /**
    * The module's directory, relative to the site root.
@@ -142,6 +175,23 @@ final class DemoPackCheck {
     $without = isset($this->options['without']) && is_string($this->options['without']) ? explode(',', $this->options['without']) : [];
     $space = isset($this->options['space']) && is_numeric($this->options['space']) ? (int) $this->options['space'] : 20;
     $dry = isset($this->options['dry-run']);
+    if (isset($this->options['capture'])) {
+      $capture = $this->options['capture'];
+      $problem = is_string($capture) ? PackCaptureFile::problem($capture) : 'no file named';
+      if ($problem !== NULL) {
+        print "usage: --capture=<absolute path to an ordinary file>: $problem\n";
+        return 2;
+      }
+      if (!$dry) {
+        try {
+          PackCaptureFile::open($capture);
+        }
+        catch (\RuntimeException $e) {
+          print "usage: --capture: " . $e->getMessage() . "\n";
+          return 2;
+        }
+      }
+    }
 
     $stop = FALSE;
     $asked = 0;
@@ -198,6 +248,11 @@ final class DemoPackCheck {
         $stop = TRUE;
       }
       $this->report($id, $result);
+      if ($this->captureError !== NULL) {
+        printf("stopped: %s\n", $this->captureError);
+        printf("rows: %d pass: %d fail: %d skip: %d\n", $this->total, $this->counts['pass'], $this->counts['fail'], $this->counts['skip']);
+        return 1;
+      }
     }
 
     printf("rows: %d pass: %d fail: %d skip: %d\n", $this->total, $this->counts['pass'], $this->counts['fail'], $this->counts['skip']);
@@ -268,8 +323,11 @@ final class DemoPackCheck {
         $runner->setVerboseMode(FALSE);
         $runner->setThrowException(TRUE);
         $runner->setUserMessage(new UserMessage((string) $row['question']));
+        $this->listen();
+        $this->usage = ['chat_calls' => 0, 'searches' => 0, 'input' => 0, 'output' => 0];
         $message = $runner->process()->getNormalized();
         $answer = $message instanceof ChatMessage ? $message->getText() : '';
+        $this->capture($row, $answer);
         return PackAnswerCheck::judge($answer, $this->citedSources($answer), $row);
       }
       catch (\Throwable $e) {
@@ -458,6 +516,84 @@ final class DemoPackCheck {
     }
     finally {
       $switcher->switchBack();
+    }
+  }
+
+  /**
+   * Counts the turn's chat calls, searches and tokens, once, for --capture.
+   *
+   * Output tokens include reasoning tokens.
+   */
+  private function listen(): void {
+    if ($this->listening || empty($this->options['capture'])) {
+      return;
+    }
+    $this->listening = TRUE;
+    $dispatcher = \Drupal::service('event_dispatcher');
+    $dispatcher->addListener(PostGenerateResponseEvent::EVENT_NAME, function (PostGenerateResponseEvent $event): void {
+      $output = $event->getOutput();
+      if (!$output instanceof ChatOutput || $this->usage === []) {
+        return;
+      }
+      $usage = $output->getTokenUsage();
+      $this->usage['chat_calls']++;
+      $this->usage['input'] += (int) $usage->input;
+      $this->usage['output'] += (int) $usage->output + (int) $usage->reasoning;
+    }, -2000);
+    $dispatcher->addListener('ai_agents.tool_finished_executed', function (object $event): void {
+      if ($this->usage !== [] && method_exists($event, 'getAgentId') && $event->getAgentId() === CitationRewriteSubscriber::AGENT_ID) {
+        $this->usage['searches']++;
+      }
+    }, -2000);
+  }
+
+  /**
+   * Appends a row's answer, citations and excerpts to the --capture file.
+   *
+   * The record has the shape judge_citation_support.php reads: the citation
+   * numbers of the Sources lines, each mapped to its registry key, and every
+   * registered source with the excerpts the model was shown for it. The
+   * registry holds this row's sources only: the runner empties it at the
+   * start of each request.
+   */
+  private function capture(array $row, string $answer): void {
+    $file = $this->options['capture'] ?? NULL;
+    if (!is_string($file) || $file === '' || $this->captureError !== NULL) {
+      return;
+    }
+    $registry = \Drupal::service('social_ai_indexing.source_registry');
+    $key_by_url = [];
+    $sources = [];
+    foreach ($registry->all() as $source) {
+      $key_by_url[$source->url] = $source->key();
+      $sources[] = ['key' => $source->key(), 'excerpt' => implode("\n\n", $registry->excerptsForLabel($source->n))];
+    }
+    $citations = [];
+    if (preg_match_all('/^- \[(\d+)\] \[(.+)\]\((\S+)\)$/m', $answer, $matches, PREG_SET_ORDER)) {
+      foreach ($matches as $match) {
+        $citations[] = ['n' => (int) $match[1], 'key' => $key_by_url[$match[3]] ?? NULL];
+      }
+    }
+    $record = [
+      'case' => (string) ($row['id'] ?? '?'),
+      'persona' => (string) PackCheckRows::persona($row),
+      'variant' => 'run ' . (int) ($this->options['run'] ?? 1),
+      'outcome' => $citations ? 'cited' : 'uncited',
+      'status' => '',
+      'answer' => $answer,
+      'citations' => $citations,
+      'registry' => $sources,
+      'chat_calls' => $this->usage['chat_calls'] ?? 0,
+      'searches' => $this->usage['searches'] ?? 0,
+      'tokens' => ['input' => $this->usage['input'] ?? 0, 'output' => $this->usage['output'] ?? 0],
+    ];
+    // A failed write is kept, not thrown: a throw here would read as a model
+    // error and run the row again. The run stops after this row instead.
+    try {
+      PackCaptureFile::append($file, json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
+    }
+    catch (\Throwable $e) {
+      $this->captureError = $e instanceof \JsonException ? 'capture record could not be encoded' : $e->getMessage();
     }
   }
 

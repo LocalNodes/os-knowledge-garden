@@ -19,9 +19,14 @@ use Drupal\social_ai_indexing\Citation\CitedAnswer;
  *   trouble, unavailable, fallback) fails with the reason "infrastructure",
  *   because nothing was judged;
  * - a reply that says a phrase from `must_not_say` fails;
+ * - a reply that says a phrase from `must_not_claim` fails. These are claims
+ *   no page makes (that the assistant can pay, say), so unlike `must_not_say`
+ *   they are not drawn from a forbidden page;
  * - a reply that cites a page listed in `forbidden` fails.
  * A row with `refusal: true` passes only on one of the fixed no-answer
- * replies, citing nothing outside `may_cite`. Any other row needs every page
+ * replies, citing nothing outside `may_cite`. With `may_answer: true` as
+ * well, it also passes on a reply that cites at least one page and only
+ * pages in `may_cite`. Any other row needs every page
  * in `cites` among the cited pages and every phrase in `must_say` in the
  * reply body. A `must_say` entry may be a list of wordings of one fact: the
  * first is the source's own wording (the one the provenance checks find in
@@ -85,6 +90,11 @@ final class PackAnswerCheck {
         $reasons[] = "must_not_say[$index]";
       }
     }
+    foreach (array_values($row['must_not_claim'] ?? []) as $index => $phrase) {
+      if (self::says($text, (string) $phrase)) {
+        $reasons[] = "must_not_claim[$index]";
+      }
+    }
     foreach ($row['forbidden'] ?? [] as $uuid) {
       if (in_array((string) $uuid, $cited, TRUE)) {
         $reasons[] = "cites a forbidden page: $uuid";
@@ -93,7 +103,12 @@ final class PackAnswerCheck {
 
     if (!empty($row['refusal'])) {
       if (!in_array($text, array_map([self::class, 'fold'], self::NO_ANSWER), TRUE)) {
-        $reasons[] = 'is not a no-answer reply';
+        if (empty($row['may_answer'])) {
+          $reasons[] = 'is not a no-answer reply';
+        }
+        elseif ($cited === []) {
+          $reasons[] = 'answers without citing a page';
+        }
       }
       $allowed = array_map('strval', $row['may_cite'] ?? []);
       foreach ($cited as $uuid) {
