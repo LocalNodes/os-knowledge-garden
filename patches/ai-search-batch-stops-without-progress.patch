@@ -1,0 +1,102 @@
+diff --git a/src/Utility/AiSearchIndexingBatchHelper.php b/src/Utility/AiSearchIndexingBatchHelper.php
+--- a/src/Utility/AiSearchIndexingBatchHelper.php
++++ b/src/Utility/AiSearchIndexingBatchHelper.php
+@@ -91,6 +91,8 @@
+       // Initialize the results with data which is shared among the batch runs.
+       $context['results']['indexed'] = 0.0;
+       $context['results']['not indexed'] = 0;
++      // Items the passes so far reported as indexed.
++      $context['sandbox']['indexed_items'] = 0;
+ 
+       // Get the remaining item count. When no valid tracker is available, then
+       // the value will be set to zero, which will cause the batch process to
+@@ -108,6 +110,9 @@
+ 
+       // Store original count of items to be indexed to show progress properly.
+       $context['sandbox']['original_item_count'] = $actual_limit;
++      // And the items tracked at the start, to count the ones finished: with
++      // a limit, fewer than these are meant to be indexed.
++      $context['sandbox']['start_remaining'] = $remaining_item_count;
+ 
+       if ($actual_limit == 0) {
+         $context['finished'] = 1;
+@@ -157,11 +162,16 @@
+ 
+     // Catch any exception that may occur during indexing.
+     try {
++      // The work this pass does: items indexed, and chunks embedded on items
++      // that take more than one pass.
++      $chunks_before = $this->processedChunks($index);
++      $indexed_now = 0;
+       if ($to_index > 0 || $remaining_item_count > 0) {
+-        // Index items. We don't use the integer return value, as we'll
+-        // calculate fractional progress ourselves.
+-        $index->indexItems($to_index);
++        // Index items. Progress is calculated by chunk below; the count of
++        // items indexed only tells whether this pass did any work.
++        $indexed_now = (int) $index->indexItems($to_index);
+       }
++      $context['sandbox']['indexed_items'] = ($context['sandbox']['indexed_items'] ?? 0) + $indexed_now;
+ 
+       // AI Search: Recalculate total progress based on chunks.
+       $original_count = (float) $context['sandbox']['original_item_count'];
+@@ -172,7 +182,8 @@
+ 
+       // 1. Get progress from *fully completed* items.
+       $current_remaining_item_count = $tracker->getRemainingItemsCount();
+-      $fully_completed_count = $original_count - $current_remaining_item_count;
++      $start_remaining = (float) ($context['sandbox']['start_remaining'] ?? $original_count);
++      $fully_completed_count = max(0.0, min($original_count, $start_remaining - $current_remaining_item_count));
+ 
+       // 2. Get progress from *partially completed* items.
+       // We sum the progress of all items that are started but not finished
+@@ -203,6 +214,28 @@
+         ]
+       );
+ 
++      // A pass that indexed no item and embedded no chunk ends the batch.
++      // Every item it tried failed (a missing key, a rate-limit backoff, a
++      // bad chunk) and stays tracked for a later run. Without this, the
++      // batch repeats the same failing pass for ever, as nothing remains
++      // only once every item is done. The check looks at this pass only, so
++      // a limit, or an edit that resets an item's chunk count between
++      // passes, cannot end a batch that is still working.
++      if ($current_remaining_item_count > 0 && $indexed_now === 0 && $this->processedChunks($index) <= $chunks_before) {
++        $indexed_total = min((int) $context['sandbox']['indexed_items'], (int) $original_count);
++        $context['finished'] = 1;
++        $context['results']['indexed'] = $indexed_total;
++        $context['results']['not indexed'] = $original_count - $indexed_total;
++        $context['message'] = $this->t(
++          'No progress on @index in the last pass; @count items stay tracked for a later run.',
++          [
++            '@index' => $index->label(),
++            '@count' => $current_remaining_item_count,
++          ]
++        );
++        return;
++      }
++
+       // Check for completion.
+       if ($current_remaining_item_count == 0) {
+         $context['finished'] = 1;
+@@ -231,4 +264,20 @@
+     }
+   }
+ 
++  /**
++   * The chunks embedded so far on the index's tracked items, summed.
++   *
++   * @param \Drupal\search_api\IndexInterface $index
++   *   The index.
++   *
++   * @return int
++   *   The sum of processed_chunks.
++   */
++  protected function processedChunks(IndexInterface $index): int {
++    $query = $this->database->select('search_api_item', 'sai')
++      ->condition('index_id', $index->id());
++    $query->addExpression('SUM(sai.processed_chunks)', 'chunks');
++    return (int) $query->execute()->fetchField();
++  }
++
+ }

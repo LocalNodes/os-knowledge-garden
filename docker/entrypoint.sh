@@ -121,6 +121,17 @@ soft() {           # soft LABEL CMD...
   [ "$rc" -eq 0 ] && return 0
   echo "WARNING: $label failed (exit $rc); continuing. Unindexed items stay tracked for cron."
 }
+# Indexes every search index once, under a time bound, so no indexing problem
+# (a missing AI key, a provider limit, a slow Solr) keeps the install from
+# finishing. timeout ends drush and its batch processes at the bound (exit
+# 124); what is not indexed by then stays tracked for the worker loop.
+# INSTALL_INDEX_TIMEOUT is in seconds.
+index_all() {
+  local limit="${INSTALL_INDEX_TIMEOUT:-900}"
+  case "$limit" in ''|*[!0-9]*|0) limit=900 ;; esac
+  # shellcheck disable=SC2086 # $DRUSH is the command and its options.
+  soft "search-api:index" timeout --kill-after=30 "$limit" $DRUSH search-api:index
+}
 
 load_demo_content() {
   # The demo content plugins come from the platform's one list
@@ -364,9 +375,9 @@ run_post_install() {
     echo "DEMO_MODULE=none — skipping demo content"
   fi
 
-  # Index Solr (and the vector indexes). Non-fatal: see soft() above.
+  # Index Solr (and the vector indexes). Non-fatal and time-bound: see index_all().
   echo "Indexing content in Solr..."
-  soft "search-api:index" $DRUSH search-api:index
+  index_all
 
   # Vector indexing is left to the worker loop forked below: the old 3x install-time cron passes mostly indexed nothing (ultimate_cron runs search_api_cron every 15 min).
 
@@ -589,7 +600,7 @@ else
             echo "ERROR: enabling localnodes_openrouter failed after the clear. The site keeps its current AI provider and indexes again with it."
           else
             $DRUSH cr || echo "WARNING: drush cr failed after enabling localnodes_openrouter; continuing."
-            soft "search-api:index" $DRUSH search-api:index
+            index_all
             echo "Switched to OpenRouter. Items not indexed yet stay tracked for the worker loop. Unset AI_PROVIDER_SWITCH."
           fi
         fi

@@ -23,7 +23,7 @@ name: Governance judge (live Sepolia)
 #
 # Concurrency: account 1 is the same wallet nightly-wallet-e2e.yml and governance-smoke.yml pay
 # from, so this workflow joins their group sepolia-test-wallet (two senders could clash on its
-# nonce). fund-practice-relayer.yml signs with the same CI relayer key and is in the group too. The judge needs about 40 minutes; the job's limit is 90.
+# nonce). fund-practice-relayer.yml signs with the same CI relayer key and is in the group too. The judge needs about 45 minutes and may take 80; with up to 20 for the install, the job's limit is 110.
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
     # Main only: a dispatch from another ref would hand the secrets to unreviewed workflow code.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 110
     steps:
       # The relayer repository is fixed, never an input: this job holds the wallet key, so it
       # must never build and run code from a repository a dispatcher names.

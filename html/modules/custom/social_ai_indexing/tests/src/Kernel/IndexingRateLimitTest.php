@@ -557,6 +557,130 @@ final class IndexingRateLimitTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * Runs the indexing batch the way drush does, with a cap on the passes.
+   *
+   * @return array{0: int, 1: array}
+   *   The passes run, and the batch context after the last one.
+   */
+  private function runBatch(int $batch_size, int $max_passes = 10, int $limit = -1): array {
+    $helper = $this->container->get('search_api.indexing_batch_helper');
+    $this->assertInstanceOf('Drupal\ai_search\Utility\AiSearchIndexingBatchHelper', $helper, 'AI Search replaces the batch step.');
+    $context = ['sandbox' => [], 'results' => [], 'finished' => 0, 'message' => ''];
+    $passes = 0;
+    while ($passes < $max_passes && $context['finished'] < 1) {
+      $passes++;
+      $helper->process(Index::load('social_posts'), $batch_size, $limit, -1, $context);
+    }
+    return [$passes, $context];
+  }
+
+  /**
+   * The chunk counters ai_search keeps for an item.
+   *
+   * @return array{0: int, 1: int}
+   *   Processed chunks and total chunks.
+   */
+  private function chunkCounters(string $item_id): array {
+    $row = $this->container->get('database')->select('search_api_item', 'sai')
+      ->fields('sai', ['processed_chunks', 'total_chunks'])
+      ->condition('index_id', 'social_posts')
+      ->condition('item_id', $item_id)
+      ->execute()->fetchAssoc();
+    return [(int) $row['processed_chunks'], (int) $row['total_chunks']];
+  }
+
+  /**
+   * A batch where no item can be indexed ends, and leaves the items tracked.
+   *
+   * With no AI key every embeddings call fails, so no item is ever indexed.
+   * The batch used to try the same items again on every pass and never end,
+   * which hung a fresh install at its index step.
+   */
+  public function testBatchEndsWhenNothingCanBeIndexed(): void {
+    $this->setGeneration(2);
+    $this->failWith = static fn(string $text): ?\Throwable => new \RuntimeException('Fictional: no key');
+    $this->markAllForReindex();
+
+    [$passes, $context] = $this->runBatch(2);
+    $this->assertSame(1, $context['finished'], 'The batch ends.');
+    $this->assertSame(1, $passes, 'It ends after the first pass that indexes nothing.');
+    $this->assertSame($this->ids('A', 'B', 'C', 'D'), $this->remaining(), 'Every item stays tracked.');
+    $this->assertEquals(0, $context['results']['indexed']);
+    $this->assertEquals(4, $context['results']['not indexed']);
+    $this->assertSame($this->baseline, $this->points(), 'No points change.');
+  }
+
+  /**
+   * A batch that makes progress and then hits a backoff ends at the backoff.
+   */
+  public function testBatchEndsAtBackoff(): void {
+    $this->setGeneration(2);
+    $this->failWith = fn(string $text): ?\Throwable => str_contains($text, self::TOKENS['C']) ? new AiRateLimitException('Fictional: too many requests') : NULL;
+    $this->markAllForReindex();
+
+    [$passes, $context] = $this->runBatch(1);
+    $this->assertSame(1, $context['finished'], 'The batch ends.');
+    $this->assertLessThanOrEqual(4, $passes, 'It ends within a pass of the 429.');
+    $this->assertSame($this->ids('C', 'D'), $this->remaining(), 'A and B are indexed; C and D stay tracked.');
+    $this->assertEquals(2, $context['results']['indexed']);
+    $this->assertEquals(2, $context['results']['not indexed']);
+  }
+
+  /**
+   * A batch with a limit indexes up to the limit and is not cut short.
+   */
+  public function testLimitedBatchIndexesToTheLimit(): void {
+    $this->setGeneration(2);
+    $this->markAllForReindex();
+
+    [$passes, $context] = $this->runBatch(1, 10, 2);
+    $this->assertEquals(1, $context['finished'], 'The batch ends.');
+    $this->assertSame(2, $passes, 'Two passes of one item each.');
+    $this->assertCount(2, $this->remaining(), 'Two items are indexed, two stay tracked.');
+    $this->assertEquals(2, $context['results']['indexed']);
+    $this->assertEquals(0, $context['results']['not indexed']);
+  }
+
+  /**
+   * An item that takes several passes keeps the batch going to the end.
+   *
+   * Each pass embeds one slice of its chunks and indexes no item, which is
+   * still progress. An edit between passes resets its chunk count, and the
+   * next pass is progress too.
+   */
+  public function testMultiPassItemIsNotCutShort(): void {
+    $token = 'Fenn5';
+    $body = trim(str_repeat("$token is a fictional note about the rate-limit group's long seed swap rules and its many shelves. ", 110));
+    $node = $this->createGroupTopic($this->group, "Fictional $token note", $body, 'public');
+    $id = 'entity:node/' . $node->id() . ':' . $node->language()->getId();
+    $this->assertSame([$id], $this->remaining(), 'Only the long item is tracked.');
+
+    // One batch. Its first pass embeds a slice, finishes no item, and the
+    // batch goes on.
+    $helper = $this->container->get('search_api.indexing_batch_helper');
+    $context = ['sandbox' => [], 'results' => [], 'finished' => 0, 'message' => ''];
+    $helper->process(Index::load('social_posts'), 1, -1, -1, $context);
+    [$processed, $total] = $this->chunkCounters($id);
+    $this->assertGreaterThan(10, $total, 'The long item needs more than one slice of 10 chunks.');
+    $this->assertGreaterThan(0, $processed, 'The first pass embedded a slice.');
+    $this->assertLessThan(1, $context['finished'], 'A pass that embedded chunks does not end the batch.');
+
+    // An edit in the middle of the batch resets the chunk count. The next
+    // pass embeds the same first slice again, which is still progress.
+    Index::load('social_posts')->trackItemsUpdated('entity:node', [$node->id() . ':' . $node->language()->getId()]);
+    $this->assertSame(0, $this->chunkCounters($id)[0], 'The edit reset the chunk count.');
+    $passes = 1;
+    while ($passes < 20 && $context['finished'] < 1) {
+      $passes++;
+      $helper->process(Index::load('social_posts'), 1, -1, -1, $context);
+    }
+    $this->assertEquals(1, $context['finished'], 'The batch ends.');
+    $this->assertSame([], $this->remaining(), 'The long item is indexed.');
+    $this->assertGreaterThan(2, $passes, 'It took more than two passes.');
+    $this->assertEquals(1, $context['results']['indexed']);
+  }
+
+  /**
    * An edited item is embedded again, not left with its stale vectors.
    *
    * A member's edit marks the item "changed" through the tracker. With the
