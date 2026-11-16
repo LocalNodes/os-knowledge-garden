@@ -43,7 +43,7 @@ final class PackEntrypointTest extends UnitTestCase {
     }
     sort($loaded);
     sort($defined);
-    $this->assertCount(13, $defined);
+    $this->assertCount(12, $defined);
     $this->assertSame($defined, $loaded);
   }
 

@@ -103,6 +103,19 @@ final class PackProvenanceTest extends UnitTestCase {
   }
 
   /**
+   * A claim phrase need not come from a forbidden page, but must not be on an
+   * allowed one, and must not be empty.
+   */
+  public function testClaimPhraseIsCheckedOnlyAgainstAllowedPages(): void {
+    $this->assertSame('', $this->problems([self::row(['must_not_claim' => ['i can pay']])], self::passages()));
+    $message = $this->problems([self::row(['must_not_claim' => ['open at noon']])], self::passages());
+    $this->assertStringContainsString('must_not_claim phrase #1', $message);
+    $this->assertStringContainsString('allowed', $message);
+    $this->assertStringNotContainsString('noon', $message);
+    $this->assertStringContainsString('is empty', $this->problems([self::row(['must_not_claim' => ['']])], self::passages()));
+  }
+
+  /**
    * An allowed or cited uuid that is no page is reported, with its position.
    */
   public function testAnAllowedUuidThatIsNoPageIsReported(): void {
@@ -147,7 +160,7 @@ final class PackProvenanceTest extends UnitTestCase {
     [$files, , $rows, $row_id] = self::appendedCopy();
     $left_out = self::expectation('smoke', 'expect.yml')['left_out'] ?? [];
     $passages = self::expectation('smoke', 'passages.yml');
-    $run = static fn (array $files): array => PackProvenanceChecks::mustNotSayProblems('smoke', $rows, $passages, $left_out, PackProvenanceChecks::pageTexts($files + ['howto.yml' => self::sharedHowto()]));
+    $run = static fn (array $files): array => PackProvenanceChecks::mustNotSayProblems('smoke', $rows, $passages, $left_out, PackProvenanceChecks::pageTexts($files + self::siteGuideFiles()));
     $problems = $run($files);
     $this->assertNotSame([], $problems);
     $this->assertStringContainsString($row_id, implode(' | ', $problems));
@@ -255,7 +268,7 @@ final class PackProvenanceTest extends UnitTestCase {
       self::expectation($pack, 'assistant.yml'),
       self::expectation($pack, 'passages.yml'),
       self::expectation($pack, 'expect.yml')['left_out'] ?? [],
-      PackProvenanceChecks::pageTexts(self::packYaml($pack) + ['howto.yml' => self::sharedHowto()])
+      PackProvenanceChecks::pageTexts(self::packYaml($pack) + self::siteGuideFiles())
     ));
   }
 

@@ -14,9 +14,8 @@ use Drupal\node\NodeInterface;
  * A Site guide page is a topic that carries the "Site guide" topic type. The
  * assistant answers "how do I" questions from these pages, so who may change
  * one, and who may mark a page as one, decides what the assistant tells every
- * member. The rules live here, in the platform, because the demo loader that
- * creates the pages is uninstalled once it has run; a rule kept in the loader
- * would stop applying on the sites that most need it.
+ * member. The rules live here, in the platform, which also creates the pages
+ * on every site (SiteGuidePages).
  */
 final class SiteGuide {
 

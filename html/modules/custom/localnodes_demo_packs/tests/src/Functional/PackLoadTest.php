@@ -7,7 +7,6 @@ namespace Drupal\Tests\localnodes_demo_packs\Functional;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\localnodes_demo_packs\Traits\PackLoadTrait;
 use Drupal\user\Entity\User;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * A pack loads from its own directory through every pack plugin.
@@ -90,22 +89,13 @@ final class PackLoadTest extends BrowserTestBase {
     $listed = self::PLUGINS;
     sort($known);
     sort($listed);
-    $this->assertSame($listed, $known, 'The pack plugins are exactly the listed thirteen.');
+    $this->assertSame($listed, $known, 'The pack plugins are exactly the listed twelve.');
 
     foreach (self::PLUGINS as $id) {
       $definition = $manager->getDefinition($id);
-      $profile = $id === 'pack_howto' ? 'shared' : self::PROFILE;
-      $path = DRUPAL_ROOT . '/' . $parser->getPath($definition['source'], $definition['provider'], $profile);
+      $path = DRUPAL_ROOT . '/' . $parser->getPath($definition['source'], $definition['provider'], self::PROFILE);
       $this->assertFileExists($path, "$id finds its source.");
     }
-
-    // pack_howto reads the shared file whatever profile it is given.
-    $howto = $manager->createInstance('pack_howto');
-    $howto->setProfile(self::PROFILE);
-    $read = new \ReflectionMethod($howto, 'fetchData');
-    $shared = Yaml::parseFile(dirname(__DIR__, 3) . '/shared/content/entity/howto.yml');
-    $this->assertNotEmpty($shared, 'The shared how-to file holds pages.');
-    $this->assertSame(array_keys($shared), array_keys($read->invoke($howto)), 'pack_howto reads the shared file whatever the profile.');
   }
 
   /**

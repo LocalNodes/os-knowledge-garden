@@ -5,3 +5,9 @@ people: []
 organisations: []
 places: []
 streets: []
+# Words that start a screen label the pages name ("All groups", "My groups",
+# "Take the group tour") and are not names.
+ordinary:
+  - All
+  - My
+  - Take

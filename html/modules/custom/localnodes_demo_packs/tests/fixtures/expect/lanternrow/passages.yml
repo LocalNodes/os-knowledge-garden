@@ -79,4 +79,34 @@
   uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
   field: title
   text: "Change which emails you get"
-  source_line: 811
+  source_line: 809
+- id: lr-join-title
+  uuid: 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+  field: title
+  text: "Join a group"
+  source_line: 809
+- id: lr-post-title
+  uuid: b8d8e848-e2a3-4caa-bbca-247fa7e07759
+  field: title
+  text: "Write a post"
+  source_line: 809
+- id: lr-file-title
+  uuid: 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  field: title
+  text: "Add a page or file to the library"
+  source_line: 809
+- id: lr-sources-title
+  uuid: f4d742fe-20f6-40ac-b989-6b361efdbf10
+  field: title
+  text: "Ask the assistant and check sources"
+  source_line: 809
+- id: lr-poll-title
+  uuid: ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+  field: title
+  text: "Answer a quick poll"
+  source_line: 809
+- id: lr-minutes-present
+  uuid: 3a593310-9622-46f0-9ad2-38d5139a1465
+  field: body
+  text: "Present: Sam (chair), Mei (minutes), Ana, Jo, Rosa, Marcus, Grace, Pete, Owen, Dana."
+  source_line: 127

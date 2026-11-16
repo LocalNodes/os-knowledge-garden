@@ -70,7 +70,7 @@ final class PackCopyTest extends UnitTestCase {
    * @dataProvider packProvider
    */
   public function testEntryKeysAreTheirUuids(string $pack): void {
-    $this->assertSame([], PackChecks::entryProblems(self::packYaml($pack) + ['howto.yml' => self::sharedHowto()]));
+    $this->assertSame([], PackChecks::entryProblems(self::packYaml($pack) + self::siteGuideFiles()));
   }
 
   /**
@@ -120,7 +120,7 @@ final class PackCopyTest extends UnitTestCase {
     $rows = self::expectation($pack, 'assistant.yml');
     $this->assertNotEmpty($rows, "Pack $pack states assistant rows.");
     $uuids = [];
-    foreach (self::packYaml($pack) + ['howto.yml' => self::sharedHowto()] as $file => $entries) {
+    foreach (self::packYaml($pack) + self::siteGuideFiles() as $file => $entries) {
       foreach (self::entries($entries) as [$uuid]) {
         $uuids[$file][] = $uuid;
       }

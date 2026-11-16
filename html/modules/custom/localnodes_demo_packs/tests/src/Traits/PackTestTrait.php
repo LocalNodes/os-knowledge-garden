@@ -112,12 +112,38 @@ trait PackTestTrait {
   }
 
   /**
-   * The how-to pages every pack site shows, which live once in shared/.
+   * The ten how-to pages (P01 to P10) the platform creates on every site.
+   *
+   * Read from localnodes_platform/content/site_guide.yml. A missing or empty
+   * file fails here, so no check that walks the pages can pass on nothing.
    */
   protected static function sharedHowto(): array {
-    $path = self::moduleDir() . '/shared/content/entity/howto.yml';
-    $parsed = is_file($path) ? Yaml::parseFile($path) : [];
-    return is_array($parsed) ? $parsed : [];
+    $parsed = self::siteGuideFiles()['site_guide.yml'];
+    if (count($parsed) !== 10) {
+      throw new \RuntimeException('The platform site guide file does not hold the ten how-to pages.');
+    }
+    return $parsed;
+  }
+
+  /**
+   * Every Site guide page file the platform creates pages from, by name.
+   *
+   * The ten how-to pages and the group tour page. Each must exist and hold
+   * at least one page.
+   *
+   * @return array<string, array>
+   */
+  protected static function siteGuideFiles(): array {
+    $files = [];
+    foreach (['site_guide.yml', 'site_guide_tour.yml'] as $name) {
+      $path = dirname(self::moduleDir()) . '/localnodes_platform/content/' . $name;
+      $parsed = is_file($path) ? Yaml::parseFile($path) : NULL;
+      if (!is_array($parsed) || $parsed === []) {
+        throw new \RuntimeException("The platform site guide file $name is missing or empty.");
+      }
+      $files[$name] = $parsed;
+    }
+    return $files;
   }
 
   /**
@@ -156,7 +182,7 @@ trait PackTestTrait {
   /**
    * Every entry a pack site loads, as [file name, uuid] pairs.
    *
-   * The pack's own files, then the how-to pages that live once in shared/.
+   * The pack's own files, then the Site guide pages the platform creates.
    *
    * @return array<int, array{0: string, 1: string}>
    */
@@ -167,8 +193,10 @@ trait PackTestTrait {
         $pairs[] = [$file, $uuid];
       }
     }
-    foreach (self::entries(self::sharedHowto()) as [$uuid]) {
-      $pairs[] = ['howto.yml', $uuid];
+    foreach (self::siteGuideFiles() as $file => $data) {
+      foreach (self::entries($data) as [$uuid]) {
+        $pairs[] = [$file, $uuid];
+      }
     }
     return $pairs;
   }

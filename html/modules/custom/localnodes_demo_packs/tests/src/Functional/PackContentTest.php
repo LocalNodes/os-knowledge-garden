@@ -38,7 +38,8 @@ final class PackContentTest extends BrowserTestBase {
   /**
    * The pack file each count in expect.yml is the number of entries of.
    *
-   * The how-to pages count the shared file's entries (see packEntries()).
+   * The how-to pages count the platform's Site guide file (see packEntries()):
+   * the ten member how-to pages, not the tour page.
    */
   private const COUNT_FILES = [
     'user' => 'user.yml',
@@ -50,7 +51,7 @@ final class PackContentTest extends BrowserTestBase {
     'comment' => 'comment.yml',
     'like' => 'like.yml',
     'poll' => 'quick-poll.yml',
-    'howto' => 'howto.yml',
+    'howto' => 'site_guide.yml',
   ];
 
   protected function setUp(): void {
@@ -185,7 +186,8 @@ final class PackContentTest extends BrowserTestBase {
    *   Entity type by file name.
    */
   private function entityTypesByFile(): array {
-    $types = [];
+    // The platform creates the Site guide pages at install, not a pack plugin.
+    $types = array_fill_keys(array_keys(self::siteGuideFiles()), 'node');
     foreach ($this->container->get('plugin.manager.demo_content')->getDefinitions() as $id => $definition) {
       if (str_starts_with((string) $id, 'pack_')) {
         $types[basename((string) $definition['source'])] = (string) $definition['entity_type'];

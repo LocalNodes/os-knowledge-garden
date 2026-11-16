@@ -1,13 +1,18 @@
-# Member how-to pages, loaded on every pack site by pack_howto.
-# Text: the member how-to source of 12 November 2026, kept byte for byte in
-# tests/fixtures/expect/howto/source.md. Part 1 only, P01 to P10; P11 and P12
-# withheld (README).
-# The loader stamps the owner (the site guide account), the Site guide type and
-# community visibility; this file holds each page's uuid, title, date and body.
+# Member how-to pages, created on every site by localnodes_platform_install()
+# (SiteGuidePages). Text: the member how-to source, kept byte for byte in
+# localnodes_demo_packs/tests/fixtures/expect/howto/source.md.
+# Part 1 only, P01 to P10; P11 and P12 withheld.
+# Each page's body is the source text. Its links are the fixed site paths of
+# the screens it describes; the installer adds them as a closing paragraph, so
+# the body stays the source word for word. No link holds a group, a person or
+# a host name. The installer stamps the owner (the blocked site guide account),
+# the Site guide type, community visibility and the basic_html format.
 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08:
   uuid: 082c2aa7-75a3-4ee1-af7d-2b4fe8e7af08
+  links:
+    - path: /all-groups
+      text: All groups
   title: Join a group
-  created: -14 day|09:00
   body: >
     <p>Open the group's page from its link or your invitation. Check that it is the group you meant to join.</p>
 
@@ -19,8 +24,10 @@
 
 b8d8e848-e2a3-4caa-bbca-247fa7e07759:
   uuid: b8d8e848-e2a3-4caa-bbca-247fa7e07759
+  links:
+    - path: /my-groups
+      text: My groups
   title: Write a post
-  created: -14 day|09:00
   body: >
     <p>Open your group's <strong>Stream</strong>. Find <strong>Say something to the group</strong> and write your post there. Check the group and the audience shown before you choose <strong>Post</strong>.</p>
 
@@ -30,8 +37,12 @@ b8d8e848-e2a3-4caa-bbca-247fa7e07759:
 
 41177da8-52b7-47f4-83c3-bff8d4fb3433:
   uuid: 41177da8-52b7-47f4-83c3-bff8d4fb3433
+  links:
+    - path: /node/add/topic
+      text: New Topic
+    - path: /my-groups
+      text: My groups
   title: Add a page or file to the library
-  created: -14 day|09:00
   body: >
     <p>To write a page, choose <strong>New Topic</strong> in the create menu, if available. Write your page, complete the required fields and check its group and audience. Choose <strong>Create topic</strong>.</p>
 
@@ -41,8 +52,10 @@ b8d8e848-e2a3-4caa-bbca-247fa7e07759:
 
 f4d742fe-20f6-40ac-b989-6b361efdbf10:
   uuid: f4d742fe-20f6-40ac-b989-6b361efdbf10
+  links:
+    - path: /my-groups
+      text: My groups
   title: Ask the assistant and check sources
-  created: -14 day|09:00
   body: >
     <p>On your group's page, open the assistant at the bottom right. It is not shown on the <strong>Import</strong> tab. Ask a question about the library.</p>
 
@@ -54,8 +67,12 @@ f4d742fe-20f6-40ac-b989-6b361efdbf10:
 
 83737855-1f79-4c2e-965f-7f8f8e7d350c:
   uuid: 83737855-1f79-4c2e-965f-7f8f8e7d350c
+  links:
+    - path: /community-events
+      text: Events
+    - path: /my-events
+      text: My events
   title: Find an event and respond
-  created: -14 day|09:00
   body: >
     <p>Open your group's <strong>Events</strong>. Choose an event and read its time, place and instructions. <strong>Calendar</strong> gives you a calendar view; <strong>List</strong> takes you back.</p>
 
@@ -67,8 +84,10 @@ f4d742fe-20f6-40ac-b989-6b361efdbf10:
 
 ef2613d4-33e2-4712-bdf0-e7c58afbb42c:
   uuid: ef2613d4-33e2-4712-bdf0-e7c58afbb42c
+  links:
+    - path: /my-groups
+      text: My groups
   title: Answer a quick poll
-  created: -14 day|09:00
   body: >
     <p>Open <strong>Quick polls</strong> in your group. Choose a question, read the choices, select your answer and choose <strong>Answer</strong>.</p>
 
@@ -78,8 +97,10 @@ ef2613d4-33e2-4712-bdf0-e7c58afbb42c:
 
 bd9829b7-0e22-423b-ac3c-f4b754f70a63:
   uuid: bd9829b7-0e22-423b-ac3c-f4b754f70a63
+  links:
+    - path: /my-settings
+      text: Settings
   title: Change which emails you get
-  created: -14 day|09:00
   body: >
     <p>Open your account menu and choose <strong>Settings</strong>. Find <strong>Email notifications</strong>. For each kind of notification shown, choose the frequency you want, then choose <strong>Save</strong>.</p>
 
@@ -89,8 +110,10 @@ bd9829b7-0e22-423b-ac3c-f4b754f70a63:
 
 80647fee-c455-45bb-a191-32bfdf55fca2:
   uuid: 80647fee-c455-45bb-a191-32bfdf55fca2
+  links:
+    - path: /my-groups
+      text: My groups
   title: Leave a group
-  created: -14 day|09:00
   body: >
     <p>Open the group's page. Open <strong>Joined</strong>, choose <strong>Leave group</strong>, then confirm with <strong>Leave</strong>.</p>
 
@@ -100,8 +123,10 @@ bd9829b7-0e22-423b-ac3c-f4b754f70a63:
 
 9e55d601-cbef-4c2e-946c-39503b37941b:
   uuid: 9e55d601-cbef-4c2e-946c-39503b37941b
+  links:
+    - path: /help
+      text: Get help
   title: Report a problem
-  created: -14 day|09:00
   body: >
     <p>For a problem with an imported library page, open that page and choose <strong>Report a problem with this page</strong>.</p>
 
@@ -113,8 +138,10 @@ bd9829b7-0e22-423b-ac3c-f4b754f70a63:
 
 f42f8def-e88f-48e5-b194-737527cdeecc:
   uuid: f42f8def-e88f-48e5-b194-737527cdeecc
+  links:
+    - path: /help
+      text: Get help
   title: Get help
-  created: -14 day|09:00
   body: >
     <p>Choose <strong>Get help</strong> in the footer. Ask your group's organizers first about group settings, documents or access.</p>
 

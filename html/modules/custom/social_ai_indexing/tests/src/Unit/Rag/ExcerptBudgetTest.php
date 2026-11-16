@@ -8,16 +8,16 @@ use Drupal\Tests\UnitTestCase;
 use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
 
 /**
- * A page's excerpt holds its top chunks, inside the input cap (22.2-15).
+ * A page's excerpt holds its top chunks, inside the input cap.
  *
  * RQ-01 ("What does bioregionalism organize life around?") got no answer on
  * gemini-3.8-flash because the 1,500-character excerpt held only the top
  * chunk of the "Bioregionalism" page. The chunk that answers the question is
  * short (295 or 370 characters) and ranks 2nd or 3rd among the page's chunks
- * when the search uses the question's words. On the lane's index the third
+ * when the search uses the question's words. On a test site's index the third
  * chunk ends at 3,069 characters of excerpt; any two whole chunks fit in
  * 2 x 1,467 + 3 = 2,937 (1,467 is the longest cleaned chunk in the index).
- * The orchestrator's ruling (2026-11-07, option A) raised the cap to 3,200.
+ * The cap was raised to 3,200 to fit them.
  *
  * The cap is bounded from above by the live runner's per-question input cap
  * (verify_cited_answers.php MAX_INPUT_TOKENS, 20,000, which this plan keeps).
@@ -31,7 +31,7 @@ use Drupal\social_ai_indexing\Rag\PermissionAwareRagTool;
 final class ExcerptBudgetTest extends UnitTestCase {
 
   /**
-   * The live runner's per-question input cap (E11), kept at 20,000.
+   * The live runner's per-question input cap, kept at 20,000.
    *
    * @see \CitedAnswersLiveRunner::MAX_INPUT_TOKENS
    */
@@ -40,7 +40,7 @@ final class ExcerptBudgetTest extends UnitTestCase {
   /**
    * Characters per token, on the safe side.
    *
-   * The lane measured about 4.85 (22.2-15 jsonl line 6: about 3,230
+   * A test site measured about 4.85 (about 3,230
    * characters of search results added 666 input tokens).
    */
   private const CHARS_PER_TOKEN = 4;
@@ -49,9 +49,11 @@ final class ExcerptBudgetTest extends UnitTestCase {
    * Input tokens of a call before any search result arrives.
    *
    * System prompt, tool definition and question: 569 tokens measured on
-   * the lane (22.2-15 jsonl lines 4-8, first call), rounded up.
+   * a test site (first call), plus the tour rule (143 characters) and the
+   * search-each-part sentence of rule 1 (153 characters): 644 at 4
+   * characters a token, rounded up.
    */
-  private const BASE_CALL_TOKENS = 600;
+  private const BASE_CALL_TOKENS = 650;
 
   /**
    * Characters around one fenced block: label, a 40-character title,
@@ -65,7 +67,7 @@ final class ExcerptBudgetTest extends UnitTestCase {
   private const RESULT_HEADER_CHARS = 150;
 
   /**
-   * The cap is 3,200 characters (orchestrator ruling, option A).
+   * The cap is 3,200 characters.
    */
   public function testExcerptCapIs3200(): void {
     $this->assertSame(3200, PermissionAwareRagTool::EXCERPT_CHARS);

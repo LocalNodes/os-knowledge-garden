@@ -2,7 +2,7 @@
 # scripts/check_demo_pack.php --pack=howto. The member is smoke_two (as). The
 # group is empty, so the question is asked site-wide, as a member does from
 # the assistant's own page. cites are uuids of the how-to pages, in the order
-# of shared/content/entity/howto.yml; must_say are the control names the
+# of the platform's content/site_guide.yml; must_say are the control names the
 # page's steps use plus one phrase of the page's substance (the approval step,
 # the audience, the permission, the original passage, the frequency, the confirmation),
 # and each row also pins one instruction or limit the page states (the organizer

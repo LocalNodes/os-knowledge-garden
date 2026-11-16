@@ -65,6 +65,14 @@ final class CitationPromptRulesTest extends UnitTestCase {
   private const SEARCH_WITH_QUESTION_WORDS = "Search with the question's own words: use the whole current question as search_string (with names written out in place of 'it' or 'they'), never a shortened keyword.";
 
   /**
+   * A question that asks two things gets one search per part.
+   *
+   * The two agent prompts only: the overview calls no tool. One search with
+   * the whole question ranks the pages for one part and misses the other.
+   */
+  private const SEARCH_EACH_PART = "When the question asks two separate things, search each part on its own instead, in that part's own words, still on social_posts and on social_comments.";
+
+  /**
    * Each prompt holds each rule.
    */
   public function testEveryPromptHoldsEveryRule(): void {
@@ -106,6 +114,21 @@ final class CitationPromptRulesTest extends UnitTestCase {
       }
       $this->assertStringContainsString(self::SEARCH_WITH_QUESTION_WORDS, $prompt, "$name holds the search-with-the-question's-words rule");
     }
+  }
+
+  /**
+   * Both agent prompts hold the one-search-per-part rule.
+   */
+  public function testAgentPromptsHoldTheSearchEachPartRule(): void {
+    $seen = 0;
+    foreach ($this->prompts() as $name => $prompt) {
+      if ($name === 'overview SYSTEM_PROMPT') {
+        continue;
+      }
+      $this->assertStringContainsString(self::SEARCH_EACH_PART, $prompt, "$name holds the search-each-part rule");
+      $seen++;
+    }
+    $this->assertSame(2, $seen, 'Two agent prompts.');
   }
 
   /**

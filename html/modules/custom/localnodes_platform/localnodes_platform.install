@@ -47,6 +47,8 @@ function localnodes_platform_install() {
   _localnodes_platform_configure_hero_copy();
   // The profile's feature hooks have now finished granting their defaults.
   _localnodes_platform_protect_private_groups();
+  // The member how-to pages the assistant answers from, on every site.
+  \Drupal\localnodes_platform\SiteGuidePages::install();
   // The bootstrap account is reserved for deliberate server recovery.
   _localnodes_platform_block_host_account();
 }

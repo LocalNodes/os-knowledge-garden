@@ -108,7 +108,9 @@ out="$(run_check DEMO_PACK=smoke LOCALNODES_PACKS_DIR=html/modules/custom/localn
 if [[ "$out" == *"rc=0"* && "$out" == *"Demo pack: smoke"* ]]; then pass "good"; else fail "good: $out"; fi
 
 cmd="$(run_load localnodes_demo_packs smoke | tr -s ' ' | sed 's/ *$//')"
-if [[ "$cmd" == *"social-demo:add pack_file"* && "$cmd" == *"pack_quick_poll pack_howto --profile=packs/smoke/" ]]; then
+# The how-to pages come from the platform module on every site, so a pack
+# load no longer names a pack_howto plugin.
+if [[ "$cmd" == *"social-demo:add pack_file"* && "$cmd" == *" pack_quick_poll --profile=packs/smoke/" && "$cmd" != *"pack_howto"* ]]; then
   pass "command"
 else
   fail "command: $cmd"

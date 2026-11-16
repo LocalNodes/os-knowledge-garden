@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace Drupal\Tests\localnodes_demo_packs\Unit;
 
 use Drupal\localnodes_demo_packs\Plugin\DemoContent\PackEvent;
-use Drupal\localnodes_demo_packs\Plugin\DemoContent\PackHowto;
 use Drupal\localnodes_demo_packs\Plugin\DemoContent\PackTopic;
 use Drupal\localnodes_demo_packs\StampsChangedTime;
 use Drupal\Tests\UnitTestCase;
 
 /**
- * A loaded page, event or guide page has its changed time set to its created time.
+ * A loaded page or event has its changed time set to its created time.
  *
  * The home stream orders by the changed time of each item. Posts already load
- * with changed equal to created; a page, event or guide page that kept the
+ * with changed equal to created; a page or event that kept the
  * save time would sit above every post, whatever date the pack gave it.
  *
  * @group localnodes_demo_packs
@@ -53,13 +52,12 @@ final class PackStampsChangedTest extends UnitTestCase {
   }
 
   /**
-   * The loaders: pages, events and guide pages.
+   * The loaders: pages and events.
    */
   public static function loaderProvider(): array {
     return [
       'topic' => [PackTopic::class],
       'event' => [PackEvent::class],
-      'guide page' => [PackHowto::class],
     ];
   }
 

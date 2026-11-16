@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\localnodes_demo_packs\Functional;
 
 use Drupal\localnodes_demo_packs\PackText;
-use Drupal\localnodes_demo_packs\Plugin\DemoContent\PackHowto;
+use Drupal\localnodes_platform\SiteGuide;
+use Drupal\localnodes_platform\SiteGuidePages;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\localnodes_demo_packs\Traits\PackLoadTrait;
@@ -13,7 +14,10 @@ use Drupal\Tests\localnodes_demo_packs\Traits\PackTestTrait;
 use Drupal\user\UserInterface;
 
 /**
- * The how-to pages load as Site guide pages owned by the guide account.
+ * The platform's how-to pages sit beside a loaded pack as Site guide pages.
+ *
+ * localnodes_platform creates them at install; these checks run with the
+ * smoke pack loaded, so its members stand for the site's members.
  *
  * @group localnodes_demo_packs
  * @group phase22_functional
@@ -55,12 +59,15 @@ final class PackHowtoTest extends BrowserTestBase {
   public function testHowtoPagesAreGuidePages(): void {
     $this->loadPack('smoke');
 
-    $pages = self::entries(self::sharedHowto());
-    $this->assertNotEmpty($pages, 'The shared how-to file holds pages.');
+    $pages = [];
+    foreach (self::siteGuideFiles() as $data) {
+      $pages = array_merge($pages, self::entries($data));
+    }
+    $this->assertCount(11, $pages, 'The platform holds ten how-to pages and the tour page.');
 
     $manager = $this->container->get('entity_type.manager');
-    $term = $this->container->get('entity.repository')->loadEntityByUuid('taxonomy_term', PackHowto::GUIDE_TERM_UUID);
-    $this->assertNotNull($term, 'The Site guide topic type exists once the module is installed.');
+    $term = $this->container->get('entity.repository')->loadEntityByUuid('taxonomy_term', SiteGuide::TERM_UUID);
+    $this->assertNotNull($term, 'The Site guide topic type exists once the platform is installed.');
     $this->assertSame('Site guide', $term->label());
     $this->assertSame('topic_types', $term->bundle());
 
@@ -71,7 +78,7 @@ final class PackHowtoTest extends BrowserTestBase {
       $this->assertSame((string) $data['title'], $node->label());
 
       $owner = $node->getOwner();
-      $this->assertSame(PackHowto::GUIDE_ACCOUNT_UUID, $owner->uuid(), "{$data['title']} is owned by the guide account.");
+      $this->assertSame(SiteGuidePages::ACCOUNT_UUID, $owner->uuid(), "{$data['title']} is owned by the guide account.");
       $this->assertSame('site_guide', $owner->getAccountName());
       $this->assertNotSame(self::MEMBER_OWNER, $owner->uuid(), 'No member owns a how-to page.');
 
@@ -91,24 +98,31 @@ final class PackHowtoTest extends BrowserTestBase {
     $this->assertNotNull($topic);
     $relationship_type = $manager->hasDefinition('group_relationship') ? 'group_relationship' : 'group_content';
     $this->assertNotEmpty($manager->getStorage($relationship_type)->loadByEntity($topic), 'The smoke topic is in its group.');
+
+    // Removing the pack keeps the platform's pages, its topic type and the
+    // guide account. The control: the pack's own topic is gone.
+    $this->removePack('smoke');
+    $repository = $this->container->get('entity.repository');
+    $this->assertNull($repository->loadEntityByUuid('node', '5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d20'), 'Removing the pack deletes its own topic.');
+    foreach ($pages as [$uuid, $data]) {
+      $this->assertNotNull($repository->loadEntityByUuid('node', $uuid), "{$data['title']} stays after the pack is removed.");
+    }
+    $this->assertNotNull($repository->loadEntityByUuid('taxonomy_term', SiteGuide::TERM_UUID), 'The Site guide topic type stays.');
+    $this->assertNotNull($repository->loadEntityByUuid('user', SiteGuidePages::ACCOUNT_UUID), 'The guide account stays.');
   }
 
   /**
-   * The guide account is an ordinary, safe member account.
+   * The guide account is blocked, has no role and no password.
    */
   public function testGuideAccountIsSafe(): void {
     $this->loadPack('smoke');
-    $account = $this->container->get('entity.repository')->loadEntityByUuid('user', PackHowto::GUIDE_ACCOUNT_UUID);
+    $account = $this->container->get('entity.repository')->loadEntityByUuid('user', SiteGuidePages::ACCOUNT_UUID);
     $this->assertInstanceOf(UserInterface::class, $account, 'The guide account exists.');
     $this->assertSame('site_guide', $account->getAccountName());
-    $this->assertTrue($account->isActive());
-    // Open Social adds verified to every new account; the guide gets no role
-    // that edits or manages anything.
-    $this->assertSame([], array_values(array_diff($account->getRoles(), ['authenticated', 'verified'])), 'The guide account holds no role beyond authenticated and verified.');
+    $this->assertTrue($account->isBlocked(), 'The guide account is blocked.');
+    $this->assertSame([], $account->getRoles(TRUE), 'The guide account holds no role.');
     $this->assertStringEndsWith('.example', (string) $account->getEmail(), 'Its address is on a reserved domain.');
-    $this->assertNotSame('', (string) $account->getPassword(), 'It has a password hash.');
-    $password = $this->container->get('password');
-    $this->assertFalse($password->check('site_guide', (string) $account->getPassword()), 'Its password is not its username.');
+    $this->assertSame('', (string) $account->getPassword(), 'It has no password.');
 
     $profiles = $this->container->get('entity_type.manager')->getStorage('profile')->loadByProperties(['uid' => $account->id(), 'type' => 'profile']);
     $profile = reset($profiles);
@@ -123,8 +137,8 @@ final class PackHowtoTest extends BrowserTestBase {
   public function testOnlyMembersReadHowtoPages(): void {
     $this->loadPack('smoke');
     $pages = self::entries(self::sharedHowto());
-    $this->assertNotEmpty($pages);
     [$uuid, $data] = $pages[0];
+    $this->assertNotEmpty($data['links'] ?? [], 'The first page has links to check.');
     $node = $this->entityByUuid($uuid);
     $this->assertInstanceOf(NodeInterface::class, $node);
 
@@ -139,7 +153,10 @@ final class PackHowtoTest extends BrowserTestBase {
     $this->drupalLogin($member);
     $this->drupalGet($node->toUrl());
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertStringContainsString((string) $data['title'], $this->getSession()->getPage()->getText(), 'A member sees the how-to page.');
+    $this->assertStringContainsString((string) $data['title'], $this->getSession()->getPage()->getText(), 'A member sees the how-to page, though its author is blocked.');
+    foreach ($data['links'] ?? [] as $link) {
+      $this->assertSession()->linkByHrefExists((string) $link['path'], 0, "The page links to {$link['path']}.");
+    }
     $this->drupalLogout();
 
     $this->drupalResetSession();
@@ -172,22 +189,21 @@ final class PackHowtoTest extends BrowserTestBase {
       );
     }
 
-    $term = $this->container->get('entity.repository')->loadEntityByUuid('taxonomy_term', PackHowto::GUIDE_TERM_UUID);
+    $term = $this->container->get('entity.repository')->loadEntityByUuid('taxonomy_term', SiteGuide::TERM_UUID);
     $this->assertNotNull($term);
     $guide_pages = $this->container->get('entity_type.manager')->getStorage('node')->loadByProperties([
       'type' => 'topic',
       'field_topic_type' => $term->id(),
     ]);
     $expected = (int) (self::expectation('howto', 'expect.yml')['counts']['howto'] ?? -1);
-    $this->assertCount($expected, $guide_pages, 'The site holds the expected number of Site guide pages.');
+    // The tour page is a Site guide page too.
+    $this->assertCount($expected + 1, $guide_pages, 'The site holds the how-to pages and the tour page as Site guide pages.');
   }
 
   /**
-   * A second load leaves an organizer's edit alone and logs a warning.
+   * Installing the pages again leaves an organizer's edit alone.
    */
   public function testReloadKeepsAnOrganizersEdit(): void {
-    $this->container->get('module_installer')->install(['dblog']);
-    $this->rebuildAll();
     $this->loadPack('smoke');
     $this->resetEntityCaches();
 
@@ -205,8 +221,8 @@ final class PackHowtoTest extends BrowserTestBase {
     // so the test gives a role of its own the permission to edit any topic and
     // the text format the body uses. The account also holds the site manager
     // role, because only the editor roles may change a Site guide page whatever
-    // other permission an account holds. This test is about what a reload does
-    // to an edit that was made. The password exists only in this test.
+    // other permission an account holds. This test is about what installing again
+    // does to an edit that was made. The password exists only in this test.
     $format = (string) $node->get('body')->format;
     $permissions = ['access content', 'edit any topic content'];
     if ($format !== '') {
@@ -230,37 +246,23 @@ final class PackHowtoTest extends BrowserTestBase {
     ], 'Save');
     $this->drupalLogout();
 
-    // The edit is saved, so the reload below has something to overwrite.
+    // The edit is saved, so installing again has something to overwrite.
     $this->resetEntityCaches();
     $node = $this->entityByUuid($uuid);
     $this->assertSame($edited_title, $node->label(), 'The edit form saved the organizer\'s title.');
     $this->assertStringContainsString('The organizer wrote this sentence', $this->fieldText($node, 'body'));
 
-    $database = $this->container->get('database');
-    $database->delete('watchdog')->condition('type', 'social_demo')->execute();
-
-    // The second load, as the entrypoint would on a site that has the pages.
-    $this->runPlugins(['pack_howto'], 'createContent', self::packProfile('smoke'));
+    // The install step again, as a second enable of the platform would run it.
+    SiteGuidePages::install();
     $this->resetEntityCaches();
-    $this->container->get('state')->resetCache();
 
     $node = $this->entityByUuid($uuid);
     $this->assertInstanceOf(NodeInterface::class, $node);
-    $this->assertSame($edited_title, $node->label(), 'The reload kept the organizer\'s title.');
-    $this->assertStringContainsString('The organizer wrote this sentence', $this->fieldText($node, 'body'), 'The reload kept the organizer\'s body.');
+    $this->assertSame($edited_title, $node->label(), 'Installing again kept the organizer\'s title.');
+    $this->assertStringContainsString('The organizer wrote this sentence', $this->fieldText($node, 'body'), 'Installing again kept the organizer\'s body.');
     $after = (int) $this->container->get('entity_type.manager')->getStorage('node')->getQuery()->accessCheck(FALSE)->count()->execute();
-    $this->assertSame($before, $after, 'The reload created no new node.');
+    $this->assertSame($before, $after, 'Installing again created no new node.');
     $this->assertCount(1, $this->container->get('entity_type.manager')->getStorage('node')->loadByProperties(['uuid' => $uuid]), 'The page exists once.');
-
-    $rows = $database->select('watchdog', 'w')
-      ->fields('w', ['message', 'severity'])
-      ->condition('type', 'social_demo')
-      ->execute()
-      ->fetchAll();
-    $warnings = array_filter($rows, fn($row) => (int) $row->severity === 4 && str_contains((string) $row->message, $uuid) && str_contains((string) $row->message, 'already exists'));
-    $this->assertNotEmpty($warnings, 'The reload logs the already-exists warning for the edited page.');
-    $errors = array_filter($rows, fn($row) => (int) $row->severity <= 3);
-    $this->assertSame([], array_values($errors), 'The reload logs no error.');
   }
 
 }

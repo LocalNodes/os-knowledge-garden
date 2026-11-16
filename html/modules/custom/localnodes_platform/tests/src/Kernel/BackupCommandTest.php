@@ -407,19 +407,26 @@ final class BackupCommandTest extends KernelTestBase {
     // The site's .localnodes folder, as a running site has it.
     fclose($this->pause()->openLock(BackupPause::REQUEST_LOCK));
     $ready = $this->base . '/request-ready';
-    $request = new Process(['php', '-r', '$h = fopen($argv[1], "c"); flock($h, LOCK_SH); touch($argv[2]); usleep(1500000);', $lock, $ready]);
+    $releasing = $this->base . '/request-releasing';
+    // The request marks the moment it lets go, just before it does. The copy
+    // can only start after the lock is free, so by then the mark is there;
+    // a copy that did not wait starts while the request still sleeps, with
+    // no mark yet. Process state is not used: a process that has let go of
+    // its lock can still read as running for a moment.
+    $request = new Process(['php', '-r', '$h = fopen($argv[1], "c"); flock($h, LOCK_SH); touch($argv[2]); usleep(1500000); touch($argv[3]); flock($h, LOCK_UN);', $lock, $ready, $releasing]);
     $request->start();
     $waited = 0;
     while (!file_exists($ready) && $waited++ < 100) {
       usleep(50000);
     }
     $this->assertFileExists($ready, 'The request holds its lock.');
-    $running_at_copy = NULL;
-    [$code] = $this->backup($this->sql(function () use ($request, &$running_at_copy): void {
-      $running_at_copy = $request->isRunning();
+    $released_at_copy = NULL;
+    [$code] = $this->backup($this->sql(function () use ($releasing, &$released_at_copy): void {
+      $released_at_copy = file_exists($releasing);
     }));
+    $request->wait();
     $this->assertSame(0, $code);
-    $this->assertFalse($running_at_copy, 'The copy began only after the running request ended.');
+    $this->assertTrue($released_at_copy, 'The copy began only after the running request let go of its lock.');
   }
 
   /**

@@ -6,7 +6,7 @@ It loads one fictional community pack onto a fresh LocalNodes site. `DEMO_PACK` 
 
 - Everything in the packs is made up: no real person, event, organisation, address or place.
 - Seeded accounts use `.example` addresses, so no mail reaches anyone. The platform's reserved-recipient filter drops any mail to `.example`, `.test`, `.invalid` and `.localhost` addresses.
-- The member how-to pages are the same on every pack site. They live once in `shared/content/entity/howto.yml`.
+- The member how-to pages are not pack content. localnodes_platform creates them on every site at install (`content/site_guide.yml` and `content/site_guide_tour.yml` in that module).
 - Once the pack is loaded, the entrypoint uninstalls this module and social_demo. The content stays. social_demo's messenger hides every status message ("saved", join confirmations) while it is enabled, and a demo site must show them. A redeploy does not enable the module again.
 
 ## Who sets DEMO_MODULE
@@ -96,7 +96,7 @@ Two member how-to pages are held back:
 
 ## How-to pages
 
-Every pack site loads the same ten member how-to pages (P01 to P10), kept once in `shared/content/entity/howto.yml`. Each is a Topic with the "Site guide" topic type. The site guide account owns it (an active account with the authenticated and verified roles only, a random password that is never shown, and an address on a reserved domain). It is visible to signed-in members, in no group. The assistant answers "how do I" questions from these pages.
+Every site, with or without a pack, gets the same ten member how-to pages (P01 to P10) and a page on taking the group tour. localnodes_platform creates them when it is installed, from `content/site_guide.yml` and `content/site_guide_tour.yml` in that module, so removing a pack keeps them. Each is a Topic with the "Site guide" topic type, ending with links to the screens it describes. The site guide account owns them: a blocked account with no role and no password, with an address on a reserved domain, so nobody can sign in as it, reset its password or receive its mail. Each page is visible to signed-in members, in no group. The assistant answers "how do I" questions from these pages.
 
 P11 "Respond to a decision" and P12 "See what the fund holds" are withheld, with the owners named in the table above, so no page describes a feature the site does not have.
 
