@@ -39,7 +39,8 @@
 //
 // Steps that aren't voting screens use their own helpers: SIWE sign-in (the "Use a browser
 // wallet" choice, wallet-choice.ts, shared with live-sepolia.e2e.ts), the group fund set-up
-// (tests/e2e/helpers/treasury.ts) and siwe_login's own "Connect your wallet" button.
+// (tests/e2e/helpers/treasury.ts) and siwe_login's own "Add a sign-in" flow for the member
+// (confirm the account, then "Continue"; governance/live-steps.ts confirmAccountForSignIn).
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -55,7 +56,8 @@ import { ACCOUNT_NAMES, GOVERNANCE_WALLET_PASSWORD } from './wallet-setup/live/g
 import { confirmPrompts, openHome, SWITCH_PROMPT, within, type PromptLog } from './metamask-steps';
 import { bounded, forSite, networkOf, REOPEN, signInAs as signInAsAccount, signInWithMetaMask as signInWithWallet, useAccount as shareAccount, WALLET_READ_MS, type JudgeWallet } from './governance/judge-wallet';
 import { categorized, FailureDump, hexQuantity, receiptOutcome, txHashText } from './failure-dump';
-import { approveSetup } from './governance/live-steps';
+import { approveSetup, batchApproveBound, confirmAccountForSignIn } from './governance/live-steps';
+import { assertNotStoppedByNotice, tickPublicNotice } from '../e2e/helpers/public-notice';
 import { setupReason } from './setup-reason';
 import { until } from './wait-loop';
 import { openFund, accountId, receiptPanel, setUpGroupFund, type WalletDriver } from '../e2e/helpers/treasury';
@@ -520,16 +522,20 @@ test.describe.serial('live governance judge', () => {
     await test.step('account 2 connects its wallet (siwe_login), and is queued already selected', async () => {
       await context.clearCookies();
       await page.goto(memberLogin);
-      await page.goto(`/user/${memberUid}/wallet`);
+      // The wallet first: its waits can outlast the 300 s account confirmation below.
       await useAccount(page, context, extensionId, log, 1, acc2);
-      const connect = page.getByRole('button', { name: 'Connect your wallet', exact: true });
+      // siwe_login beta12: "Add a sign-in" confirms the account first; this confirms it by a
+      // throwaway password and lands on the wallet page's "Continue", which signs once.
+      await confirmAccountForSignIn(page, memberUid, acc2);
+      const connect = page.getByRole('button', { name: 'Continue', exact: true });
       let navigated = false;
       const nav = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 180_000 }).then(() => { navigated = true; }, () => undefined);
       await connect.click();
       await confirmPrompts(context, extensionId, 'connectWallet', log, { done: () => navigated, timeoutMs: 180_000 });
       await nav;
       await page.waitForLoadState('load');
-      await expect(page.getByText(acc2, { exact: true }), 'the Wallet tab shows account 2').toBeVisible({ timeout: 30_000 });
+      // beta12 renders "Connected wallet <address>" as one text block, so match the address in it.
+      await expect(page.getByText(acc2), 'the Wallet tab shows account 2').toBeVisible({ timeout: 30_000 });
       reportPrompts(info, 'member wallet', log);
     });
 
@@ -542,11 +548,13 @@ test.describe.serial('live governance judge', () => {
       await expect(row, 'the member\'s row loads already selected').toBeChecked();
       await expect(v8.selectedBecauseNewMembers).toBeVisible();
       await v8.approveSelected.click();
+      await batchApproveBound(page);
       await v8.approveTheseChanges.click();
       await confirmPrompts(context, extensionId, 'approveMembers', log, { done: () => v8.youApprovedTheseChanges.isVisible(), timeoutMs: 180_000 });
       reportPrompts(info, 'member approval 1', log);
       await signInAs(page, context, extensionId, log, 2, acc3);
       await page.goto(`${votesUrl}/members`);
+      await batchApproveBound(page);
       await v8.approveTheseChanges.click();
       await confirmPrompts(context, extensionId, 'approveMembers', log, {
         done: async () => (await v8.youApprovedTheseChanges.isVisible()) || (await v8.approveTheseChanges.count()) === 0,
@@ -578,9 +586,11 @@ test.describe.serial('live governance judge', () => {
       const before = context.pages().filter((p) => p.url().startsWith(`chrome-extension://${extensionId}/notification.html`)).length;
       out('CAPTURE', 'propose_prompt_before_click', before === 0 ? 'none' : 'open');
       expect(before, 'no wallet prompt opens before "Confirm in your wallet" is clicked').toBe(0);
+      // Account 3 ticked the public-record notice when it approved the setup, so 'none' is expected.
+      console.log(`[judge] propose: notice ${await tickPublicNotice(page)}`);
       await v5.confirmInYourWallet.click();
       await confirmPrompts(context, extensionId, 'propose', log, {
-        done: async () => (await v5.openUntil.isVisible()) || (await v5.hubFailed.isVisible()) || (await v5.notYet.isVisible()) || (await v5.wentWrong.isVisible()),
+        done: async () => (await assertNotStoppedByNotice(page), await v5.openUntil.isVisible()) || (await v5.hubFailed.isVisible()) || (await v5.notYet.isVisible()) || (await v5.wentWrong.isVisible()),
         timeoutMs: 180_000,
       });
       const signatures = reportPrompts(info, 'propose', log);
@@ -613,9 +623,11 @@ test.describe.serial('live governance judge', () => {
         };
         page.on('request', watcher);
         await v3.choice(COPY.voteFor).check();
+        // Account 2 has not ticked the public-record notice in this group; account 1 has.
+        console.log(`[judge] ${who} vote: notice ${await tickPublicNotice(page)}`);
         await v3.castYourVote.click();
         await confirmPrompts(context, extensionId, 'vote', log, {
-          done: async () => (await v3.voteRecorded.isVisible()) || (await v3.noPower.isVisible()) || (await v3.ended.isVisible()) || (await v3.hubFailed.isVisible()) || (await v3.wentWrong.isVisible()),
+          done: async () => (await assertNotStoppedByNotice(page), await v3.voteRecorded.isVisible()) || (await v3.noPower.isVisible()) || (await v3.ended.isVisible()) || (await v3.hubFailed.isVisible()) || (await v3.wentWrong.isVisible()),
           timeoutMs: 180_000,
         });
         page.off('request', watcher);

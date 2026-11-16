@@ -7,6 +7,7 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tickPublicNotice } from './public-notice';
 import { siteScript } from './site';
 import { e2eRun, record, type RegistryEntry } from './chain';
 import { signInWithEthereum } from '../wallet/test-wallet';
@@ -310,6 +311,8 @@ export function paymentPanel(page: Page): Locator {
 export async function approvePayment(page: Page, url: string, driver: WalletDriver): Promise<string> {
   await gotoPage(page, url);
   const button = await paymentButtonReady(page, 'Approve payment');
+  // A group fund's payment page has the public-record notice above its buttons (no-op elsewhere).
+  await tickPublicNotice(page);
   await button.click();
   await driver.confirm('approve');
   const panel = paymentPanel(page);
@@ -321,6 +324,8 @@ export async function approvePayment(page: Page, url: string, driver: WalletDriv
 export async function sendPayment(page: Page, url: string, driver: WalletDriver): Promise<void> {
   await gotoPage(page, url);
   const button = await paymentButtonReady(page, 'Send payment');
+  // A group fund's payment page has the public-record notice above its buttons (no-op elsewhere).
+  await tickPublicNotice(page);
   await button.click();
   await driver.confirm('send');
 }

@@ -16,6 +16,11 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 import { LIVE_BASE_URL } from './playwright.config';
 
+// A failing test writes no page snapshot to error-context.md: the member's throwaway password
+// may still be in a field then (live-steps.ts confirmAccountForSignIn; Playwright 1.63
+// index.js _takePageSnapshot returns early on this variable). Set before any test runs.
+process.env.PLAYWRIGHT_NO_COPY_PROMPT = '1';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({

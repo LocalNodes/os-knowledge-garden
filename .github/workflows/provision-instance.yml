@@ -38,6 +38,9 @@ on:
           - boulder_demo
           - portland_demo
           - pack:lanternrow
+          - pack:maplestreet
+          - pack:mallowbend
+          - pack:thawfest
           - none
         default: none
       gemini_key_tier:
@@ -183,6 +186,36 @@ jobs:
           esac
           echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
           echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
+
+      - name: Check out the demo packs
+        # Only the packs directory of the branch the app deploys, so a pack:<name> choice can be
+        # checked before anything is created. No credentials are kept in the checkout.
+        if: startsWith(inputs.demo_module, 'pack:')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.GIT_BRANCH }}
+          sparse-checkout: html/modules/custom/localnodes_demo_packs/packs
+          persist-credentials: false
+
+      - name: Check the demo pack ships
+        # A pack:<name> whose directory is not shipped would create the app, deploy, and only
+        # fail in the container's install, leaving the app and its subdomain behind. It is
+        # refused here instead, before any Coolify mutation. Validate inputs has already held
+        # the name to [a-z0-9_]+, so it is safe in a path. A missing packs directory (the
+        # checkout did not run or failed) refuses every pack.
+        env:
+          DEMO_MODULE_INPUT: ${{ inputs.demo_module }}
+          PACKS_DIR: ${{ github.workspace }}/html/modules/custom/localnodes_demo_packs/packs
+        run: |
+          case "$DEMO_MODULE_INPUT" in
+            pack:*)
+              if [ ! -d "$PACKS_DIR/${DEMO_MODULE_INPUT#pack:}" ]; then
+                echo "::error::That demo pack is not shipped yet. Choose a pack whose directory is in html/modules/custom/localnodes_demo_packs/packs/."
+                echo "FAIL_REASON=invalid_request" >> "$GITHUB_ENV"
+                exit 1
+              fi
+              ;;
+          esac
 
       - name: Fetch provision manifest
         # The organizer's details never travel as workflow inputs (they would show on this
@@ -627,6 +660,17 @@ jobs:
             pack:*)
               update_env "DEMO_MODULE" "localnodes_demo_packs"
               update_env "DEMO_PACK" "${DEMO_MODULE_INPUT#pack:}"
+              # A manual pack run has no manifest, so the site takes the pack's own name from
+              # this fixed map (the names in localnodes_demo_packs/README.md, "The four sites").
+              # A sign-up run keeps the manifest's name; a pack with no entry keeps the default.
+              if [ -z "$PROVISION_ID_INPUT" ] && [ -z "$SITE_NAME" ]; then
+                case "${DEMO_MODULE_INPUT#pack:}" in
+                  lanternrow)  SITE_NAME="Lantern Row Housing Co-op" ;;
+                  maplestreet) SITE_NAME="Maple Street Neighbors" ;;
+                  mallowbend)  SITE_NAME="Mallow Bend Farmers' Market" ;;
+                  thawfest)    SITE_NAME="Thawfest" ;;
+                esac
+              fi
               ;;
             *)
               update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
@@ -638,8 +682,9 @@ jobs:
           if [ "$DEMO_MODULE_INPUT" != "none" ]; then
             update_env "MAIL_FROM" "noreply@demo.localnodes.xyz"
           fi
-          # SITE_NAME and ORGANIZER_EMAIL come from the provision manifest (GITHUB_ENV); a manual
-          # demo run has neither and keeps the compose defaults.
+          # SITE_NAME and ORGANIZER_EMAIL come from the provision manifest (GITHUB_ENV). A manual
+          # run has neither: a pack run takes its name from the pack map above, and any other
+          # manual run keeps the compose defaults.
           if [ -n "$SITE_NAME" ]; then
             update_env "DRUPAL_SITE_NAME" "$SITE_NAME"
             update_env "SITE_NAME" "$SITE_NAME"
