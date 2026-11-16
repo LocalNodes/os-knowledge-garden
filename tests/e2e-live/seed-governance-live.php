@@ -10,7 +10,8 @@
  * The arguments are public addresses of the CI test-operator wallet (D-02), never a personal wallet:
  * account 1 (the organizer) and account 3 (the second approver). Account 2, the voting member,
  * has no linked address here on purpose: the judge connects it after voting is ready, through
- * siwe_login's "Connect your wallet", so the member's "Let them vote" row is queued by the
+ * siwe_login's "Add a sign-in" (beta12: confirm the account, then "Continue"), so the member's
+ * "Let them vote" row is queued by the
  * module's own wallet hook (MembershipQueue::onWallet) with the D-33 setting, exactly as a new
  * member's would be. A member whose wallet was linked before voting was ready gets no row.
  *
@@ -90,9 +91,9 @@ if (!$handler->moduleExists('safe_governance_group')) {
   \Drupal::service('module_installer')->install(['safe_governance_group']);
 }
 
-// The judge signs in with a browser wallet (the "Sign in with Ethereum" button). When WaaP
-// sign-in is on, siwe_login_waap hides that button unless this setting allows it, so the judge
-// would wait for a button that never comes. WaaP sign-in itself is checked by hand, not here.
+// The judge signs in with a browser wallet: it presses "Use a browser wallet", which forwards
+// the press to siwe_login's own wallet button. When WaaP sign-in is on, siwe_login_waap leaves
+// that button out unless this setting allows it, so the press would have nothing to forward to. WaaP sign-in itself is checked by hand, not here.
 if ($handler->moduleExists('siwe_login_waap')) {
   \Drupal::configFactory()->getEditable('siwe_login_waap.settings')
     ->set('show_siwe_wallet_button', TRUE)

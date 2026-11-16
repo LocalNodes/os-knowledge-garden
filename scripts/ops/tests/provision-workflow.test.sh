@@ -384,12 +384,71 @@ reset_state; run_step "Check Gemini key tier (G8)" ok DEMO_MODULE_INPUT=pack:lan
 check "a pack site skips the paid-key check, as any demo does" '[ $RC -eq 0 ] && grep -q "paid-key check skipped" <<<"$OUT"'
 reset_state; run_step "Summary" ok DEMO_MODULE_INPUT=pack:lanternrow GEMINI_KEY_TIER_INPUT=paid
 check "the Summary shows the pack value as chosen" '[ $RC -eq 0 ] && grep -qF "pack:lanternrow" "$WORK/summary.md"'
-# One pack:<name> option per shipped pack: a pack that ships without its option fails here, and
-# an option for a pack that is not shipped fails here too.
+# One pack:<name> option per site in the packs README ("The four sites"), and every shipped pack
+# has its option. An option may come before its pack directory: "Check the demo pack ships"
+# refuses it before any Coolify mutation (cases below), so no half-made app is left behind.
 PACKS_DIR="$REPO/html/modules/custom/localnodes_demo_packs/packs"
+PACKS_README="$REPO/html/modules/custom/localnodes_demo_packs/README.md"
+# The README table rows as "<pack>|<site name>", read from the section, never typed here.
+README_SITES="$(awk '/^## The four sites/ { s = 1; next } /^## / { s = 0 } s && /^\| [^-|]/ && /`[a-z0-9_]+`/' "$PACKS_README" \
+  | awk -F'|' '{ n = $2; p = $3; gsub(/^ +| +$/, "", n); gsub(/^ +`|` +$/, "", p); print p "|" n }')"
+README_PACKS="$(cut -d'|' -f1 <<<"$README_SITES" | LC_ALL=C sort | tr '\n' ' ')"
 SHIPPED_PACKS="$(find "$PACKS_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort | tr '\n' ' ')"
 OPTION_PACKS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module.options | map(select(startswith("pack:")) | sub("^pack:"; "")) | sort | join(" ")' "$WORK/wf.json" | tr -d '\n'; echo -n ' ')"
-check "the pack:<name> options are the shipped packs (shipped: ${SHIPPED_PACKS% })" '[ -n "$SHIPPED_PACKS" ] && [ "$OPTION_PACKS" = "$SHIPPED_PACKS" ]'
+check "the README names four sites (${README_PACKS% })" '[ "$(wc -l <<<"$README_SITES")" -eq 4 ]'
+check "the pack:<name> options are the README's packs" '[ -n "$README_PACKS" ] && [ "$OPTION_PACKS" = "$README_PACKS" ]'
+check "every shipped pack has its option (shipped: ${SHIPPED_PACKS% })" \
+  '[ -n "$SHIPPED_PACKS" ] && [ -z "$(for p in $SHIPPED_PACKS; do grep -qw "$p" <<<"$OPTION_PACKS" || echo "$p"; done)" ]'
+# Every offered pack either ships or is refused early: each option runs through the real check
+# against this checkout's packs directory. A shipped one passes; one with no directory is
+# refused with the fixed message, as invalid_request, with nothing sent anywhere.
+SHIPPED_N=0; REFUSED_N=0
+for P in $OPTION_PACKS; do
+  reset_state; run_step "Check the demo pack ships" ok DEMO_MODULE_INPUT="pack:$P" PACKS_DIR="$PACKS_DIR"
+  if [ -d "$PACKS_DIR/$P" ]; then
+    SHIPPED_N=$((SHIPPED_N + 1))
+    check "offered pack:$P ships and passes the check" '[ $RC -eq 0 ] && [ -z "$(genv FAIL_REASON)" ]'
+  else
+    REFUSED_N=$((REFUSED_N + 1))
+    check "offered pack:$P is not shipped and is refused before any request" \
+      '[ $RC -ne 0 ] && grep -qF "That demo pack is not shipped yet." <<<"$OUT" && [ "$(genv FAIL_REASON)" = invalid_request ] && [ ! -s "$WORK/state/requests.log" ]'
+  fi
+done
+check "the pack options were all checked ($SHIPPED_N shipped, $REFUSED_N refused)" \
+  '[ "$SHIPPED_N" -ge 1 ] && [ $((SHIPPED_N + REFUSED_N)) -eq "$(wc -w <<<"$OPTION_PACKS")" ]'
+reset_state; run_step "Check the demo pack ships" ok DEMO_MODULE_INPUT=pack:lanternrow PACKS_DIR="$WORK/no-such-dir"
+check "with no packs directory (no checkout) even a shipped pack is refused" \
+  '[ $RC -ne 0 ] && grep -qF "That demo pack is not shipped yet." <<<"$OUT" && [ "$(genv FAIL_REASON)" = invalid_request ]'
+for DM in none localnodes_demo; do
+  reset_state; run_step "Check the demo pack ships" ok DEMO_MODULE_INPUT="$DM" PACKS_DIR="$WORK/no-such-dir"
+  check "demo_module=$DM needs no pack directory" '[ $RC -eq 0 ] && [ -z "$(genv FAIL_REASON)" ]'
+done
+# The check runs on the deployed branch's packs, after Validate inputs and before anything that
+# talks to Coolify or the sign-up app.
+STEP_NAMES="$(jq -r '.jobs.provision.steps[].name' "$WORK/wf.json")"
+step_at() { grep -nxF "$1" <<<"$STEP_NAMES" | head -1 | cut -d: -f1; }
+check "the pack checkout and check come after Validate inputs and before the manifest, the availability check and the app's creation" \
+  '[ "$(step_at "Validate inputs")" -lt "$(step_at "Check out the demo packs")" ] && [ "$(step_at "Check out the demo packs")" -lt "$(step_at "Check the demo pack ships")" ] && [ "$(step_at "Check the demo pack ships")" -lt "$(step_at "Fetch provision manifest")" ] && [ "$(step_at "Check the demo pack ships")" -lt "$(step_at "Check subdomain availability")" ] && [ "$(step_at "Check the demo pack ships")" -lt "$(step_at "Create Coolify application")" ]'
+CO="$(jq -c '.jobs.provision.steps[] | select(.name == "Check out the demo packs")' "$WORK/wf.json")"
+check "the checkout is pinned, of the branch the app deploys, only the packs directory, no credentials kept" \
+  'jq -e '"'"'(.uses | test("^actions/checkout@[0-9a-f]{40}$")) and .with.ref == "${{ env.GIT_BRANCH }}" and .with["sparse-checkout"] == "html/modules/custom/localnodes_demo_packs/packs" and .with["persist-credentials"] == false'"'"' <<<"$CO" >/dev/null'
+check "the check reads the packs directory the checkout writes" \
+  '[ "$(jq -r '"'"'.jobs.provision.steps[] | select(.name == "Check the demo pack ships") | .env.PACKS_DIR'"'"' "$WORK/wf.json")" = "\${{ github.workspace }}/html/modules/custom/localnodes_demo_packs/packs" ]'
+# A manual pack run (no manifest, no provision id) names the site from the pack map; the name is
+# the README's, for every option.
+while IFS='|' read -r P NAME; do
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT="pack:$P"
+  check "a manual pack:$P run names the site '$NAME' (DRUPAL_SITE_NAME and SITE_NAME)" \
+    '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = "$NAME" ] && [ "$(stored SITE_NAME)" = "$NAME" ] && [ "$(stored DEMO_PACK)" = "$P" ]'
+done <<<"$README_SITES"
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT=pack:a_1
+check "a manual run of a pack with no map entry keeps the compose default name" \
+  '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT=localnodes_demo
+check "a manual non-pack demo run keeps the compose default name" \
+  '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME="$MANIFEST_SITE" DEMO_MODULE_INPUT=pack:lanternrow
+check "a manifest name wins over the pack map" '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ]'
 OTHER_OPTIONS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module | [.options[] | select(startswith("pack:") | not)] | join(" ")' "$WORK/wf.json")"
 check "the other demo_module options are unchanged, and the default is none" \
   '[ "$OTHER_OPTIONS" = "localnodes_demo boulder_demo portland_demo none" ] && [ "$(jq -r "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.default" "$WORK/wf.json")" = none ]'
@@ -546,6 +605,10 @@ SIGNUP=(DEMO_MODULE_INPUT=none CALLBACK_URL_INPUT=https://cb.test IMAGE_TAG_INPU
   PROVISION_ID_INPUT="$PID" ATTEMPT_INPUT=1 PROVISION_TOKEN="$TOKEN"
   SITE_NAME="$MANIFEST_SITE" ORGANIZER_EMAIL="$MANIFEST_EMAIL" TOPIC_TYPES_B64="$TOPICS_B64" COMMUNITY_SEED_B64="$SEED_B64"
   AI_PROVIDER=gemini AI_KEY_SOURCE=platform PROVISION_CALLBACK_SECRET_VALUE="$SECRET" HOST_REPORT_EMAIL="$MANIFEST_HOST")
+# A sign-up run with a pack value and no manifest name still takes no name from the pack map.
+reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" SITE_NAME= DEMO_MODULE_INPUT=pack:lanternrow
+check "a sign-up run never takes a name from the pack map" \
+  '[ $RC -eq 0 ] && [ "$(stored DEMO_PACK)" = lanternrow ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
 flagged() {  # flagged KEY -> true when every body sent for KEY carried is_shown_once and is_literal true
   jq -s -e --arg k "$1" '[.[] | select(.key == $k)] | length > 0 and all(.is_shown_once == true and .is_literal == true)' "$WORK/state/bodies.log" >/dev/null
 }

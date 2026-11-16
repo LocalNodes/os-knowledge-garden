@@ -10,7 +10,11 @@
 //      spec (labels.fixture.ts), except the few shipped strings that the contract didn't hold
 //      when pages.ts was written, each listed with its source;
 //   3. on the lane's fixture site, every locator resolves exactly once in each state the judge
-//      passes through.
+//      passes through;
+//   4. with the public-record notice on (group_treasury 1.0.0-alpha8, as a fresh install has it),
+//      "Approve the setup", "Confirm in your wallet" and "Cast your vote" are stopped while the
+//      box is unticked and go through after tickPublicNotice (the helper the judge uses).
+//      A live run stopped at "Approve the setup" this way.
 //
 // States come from 25-26's fixture seed (tests/a11y/seed-governance.php) and personas
 // (steward = organizer and approver, voter = member with a wallet). Nothing signs: where the
@@ -22,7 +26,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page, type Response } from '@playwright/test';
 import {
   PERSONA_USERS,
   assertSiteOnly,
@@ -36,6 +40,7 @@ import {
   type Governance,
 } from '../../a11y/helpers/governance-states';
 import { pressWalletChoice, WALLET_UNAVAILABLE } from '../wallet-choice';
+import { noticeError, tickPublicNotice, unreadNotice } from '../../e2e/helpers/public-notice';
 import {
   COPY,
   SHIPPED_NOT_IN_SPEC,
@@ -50,6 +55,8 @@ import {
   votesTab,
 } from './pages';
 import { COPYWRITING_CONTRACT } from './labels.fixture';
+import { confirmAccountForSignIn, SIGN_IN_PASSWORD_NOT_SAVED } from './live-steps';
+import { GUARD_SECRET } from './guard-secret';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGES_FILE = join(HERE, 'pages.ts');
@@ -81,6 +88,7 @@ async function stubWallet(page: Page, account: string, signs: number): Promise<v
         if (method === 'eth_chainId') return Promise.resolve(chain);
         if (method === 'eth_signTypedData_v4') {
           asked += 1;
+          (window as unknown as { __lnSignAsks: number }).__lnSignAsks = asked;
           if (asked <= signs) return new Promise((resolve) => setTimeout(() => resolve('0x' + '11'.repeat(64) + '1b'), 400));
           return new Promise(() => undefined);
         }
@@ -90,6 +98,22 @@ async function stubWallet(page: Page, account: string, signs: number): Promise<v
       removeListener: () => undefined,
     };
   }, { account, chain: SEPOLIA_HEX, signs });
+}
+
+/**
+ * Removes every seeded user's public-record tick in every seeded group (group_treasury's own
+ * PublicNotice::withdraw), so the notice is unread again on a rerun. Does nothing where the notice
+ * service is absent (group_treasury before 1.0.0-alpha8).
+ */
+function forgetNoticeTicks(gov: Governance): void {
+  const users = Object.values(gov.users).join(',');
+  const groups = Object.values(gov.groups).filter((id) => id > 0).join(',');
+  drush(['php:eval', [
+    "if (!\\Drupal::hasService('group_treasury.public_notice')) return;",
+    "$n = \\Drupal::service('group_treasury.public_notice');",
+    `foreach (\\Drupal\\group\\Entity\\Group::loadMultiple([${groups}]) as $g)`,
+    `  foreach (\\Drupal\\user\\Entity\\User::loadMultiple([${users}]) as $u) $n->withdraw($u, $g);`,
+  ].join(' ')]);
 }
 
 test.describe('governance labels: the page object itself', () => {
@@ -142,10 +166,46 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
   test.beforeAll(async () => {
     gov = seedGovernance();
     setSponsor('configured');
+    forgetNoticeTicks(gov);
     await sessionFor(PERSONA_USERS.voter, 'voter', BASE_URL);
   });
 
   const votes = (key: string, tail = '') => `/group/${gov.groups[key]}/votes${tail}`;
+
+  /** How many typed-data requests the stub wallet has been asked (0 before any). */
+  const signAsks = (page: Page) => page.evaluate(() => (window as unknown as { __lnSignAsks?: number }).__lnSignAsks ?? 0);
+
+  /**
+   * Presses `button` with the notice unticked and checks the notice stopped it in the page (its
+   * own error shows; no wallet request and no fetch to the site), then ticks it with
+   * the judge's helper and presses again: the error goes, and the step goes on (the wallet is
+   * asked, or the step's route is called), with no answer refusing it for the notice
+   * (422 code "public_notice").
+   */
+  async function stoppedUntilTicked(page: Page, button: Locator, what: string): Promise<void> {
+    const steps: { status: number; notice: boolean }[] = [];
+    const onResponse = async (r: Response) => {
+      if (!['fetch', 'xhr'].includes(r.request().resourceType()) || !r.url().startsWith(BASE_URL) || /\/public-notice(?:\?|$)/.test(new URL(r.url()).pathname)) return;
+      const body = (await r.json().catch(() => ({}))) as { code?: unknown };
+      steps.push({ status: r.status(), notice: body.code === 'public_notice' });
+    };
+    page.on('response', onResponse);
+    try {
+      await once(unreadNotice(page), `the public-record notice above ${what}`);
+      await button.click();
+      await expect(noticeError(page), `${what} is stopped while the box is unticked`).toHaveCount(1, { timeout: 5_000 });
+      await page.waitForTimeout(1_000);
+      expect(await signAsks(page), `the wallet is not asked while the box is unticked (${what})`).toBe(0);
+      expect(steps.length, `no step request is sent while the box is unticked (${what})`).toBe(0);
+      expect(await tickPublicNotice(page), `the judge's helper ticks the notice above ${what}`).toBe('ticked');
+      await button.click();
+      await expect(noticeError(page), `${what} is not stopped once ticked`).toHaveCount(0, { timeout: 5_000 });
+      await expect.poll(async () => (await signAsks(page)) + steps.length, { message: `${what} goes on once ticked`, timeout: 15_000 }).toBeGreaterThan(0);
+      expect(steps.filter((x) => x.notice).length, `no step request is refused for the notice (${what})`).toBe(0);
+    } finally {
+      page.off('response', onResponse);
+    }
+  }
 
   async function open(page: Page, path: string): Promise<() => void> {
     const guard = await guardNetwork(page, BASE_URL);
@@ -203,6 +263,21 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
       });
     });
 
+    test('V7 the public-record notice stops Approve the setup until the box is ticked', async ({ page }) => {
+      await stubWallet(page, gov.wallets.steward, 0);
+      const done = await open(page, votes('progress', '/setup'));
+      const v7 = setupProgress(page);
+      await once(v7.approveTheSetup, 'Approve the setup');
+      await stoppedUntilTicked(page, v7.approveTheSetup, 'Approve the setup');
+      await expect(v7.confirmation(1, 3)).toBeVisible({ timeout: 15_000 });
+      // The tick is kept for this account in this group: the notice renders read after a reload.
+      await page.reload();
+      await once(v7.approveTheSetup, 'Approve the setup, after the reload');
+      await expect(unreadNotice(page), 'no unread notice once this account has ticked it').toHaveCount(0);
+      expect(await tickPublicNotice(page)).toBe('none');
+      done();
+    });
+
     for (const n of [1, 2, 3]) {
       test(`V7 approve the setup: Confirmation ${n} of 3`, async ({ page }) => {
         await stubWallet(page, gov.wallets.steward, n - 1);
@@ -211,6 +286,8 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
         await once(v7.region, 'the Setting up group voting panel');
         await once(v7.approvals(0, 2, 2), 'the approvals line');
         await once(v7.approveTheSetup, 'Approve the setup');
+        // Ticks the notice when this test runs alone; returns 'none' after the test above.
+        await tickPublicNotice(page);
         await v7.approveTheSetup.click();
         await expect(v7.confirmation(n, 3)).toBeVisible({ timeout: 15_000 });
         await once(v7.confirmation(n, 3), `Confirmation ${n} of 3`);
@@ -286,6 +363,8 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
       await v5.publish.click();
       await expect(v5.confirmInYourWallet).toBeVisible({ timeout: 30_000 });
       await once(v5.confirmInYourWallet, 'Confirm in your wallet');
+      // The steward has not ticked in this group (only in the progress group above).
+      await stoppedUntilTicked(page, v5.confirmInYourWallet, 'Confirm in your wallet');
       done();
     });
   });
@@ -294,6 +373,8 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
     test.use({ storageState: authFile('voter') });
 
     test('V2 and V3 open payment: the vote form', async ({ page }) => {
+      // The stub never signs, so nothing is recorded and the seeded proposal stays open.
+      await stubWallet(page, gov.wallets.voter, 0);
       const done = await open(page, votes('ready', `/${gov.proposals.open_payment}`));
       const v3 = proposalPage(page);
       await once(v3.voteChoices, 'How do you vote?');
@@ -301,6 +382,8 @@ test.describe('governance labels: the judge\'s states on the lane site', () => {
       await once(v3.castYourVote, 'Cast your vote');
       await once(v3.payTo, 'Pay to');
       await once(v3.publicRecord, 'See this vote\'s public record');
+      await v3.choice(COPY.voteFor).check();
+      await stoppedUntilTicked(page, v3.castYourVote, 'Cast your vote');
       done();
     });
 
@@ -379,5 +462,93 @@ test.describe('governance labels: the live tests\' wallet sign-in on /user/login
     await expect(pressWalletChoice(page, 10_000)).rejects.toThrow(WALLET_UNAVAILABLE);
     expect(await page.evaluate(() => (window as unknown as { __lnWallet: number }).__lnWallet)).toBe(0);
     done();
+  });
+});
+
+test.describe('governance labels: the member adds a wallet sign-in (siwe_login beta12)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  const NAME = 'ln-attach-guard';
+  const ADDRESS = '0x' + '3c'.repeat(20);
+
+  /** A member with no wallet sign-in and an unknown password, like the judge's ci-member. */
+  function freshMember(): string {
+    return drush(['php:eval', [
+      `$s = \\Drupal::entityTypeManager()->getStorage('user');`,
+      `foreach ($s->loadByProperties(['name' => '${NAME}']) as $old) { $old->delete(); }`,
+      `$u = \\Drupal\\user\\Entity\\User::create(['name' => '${NAME}', 'mail' => '${NAME}@example.com', 'status' => 1, 'pass' => \\Drupal::service('password_generator')->generate(32)]);`,
+      `$u->save(); echo $u->id();`,
+    ].join(' ')]).trim();
+  }
+
+  test.afterAll(() => {
+    drush(['php:eval', `foreach (\\Drupal::entityTypeManager()->getStorage('user')->loadByProperties(['name' => '${NAME}']) as $u) { $u->delete(); }`]);
+  });
+
+  test('the judge\'s confirmAccountForSignIn reaches "Continue" from a one-time login link', async ({ page }) => {
+    const uid = freshMember();
+    expect(uid, 'the guard member was created').toMatch(/^\d+$/);
+    // The same link shape the judge gets (seed-governance-live.php: user_pass_reset_url + /login).
+    const link = drush(['uli', `--name=${NAME}`, '--no-browser', `--uri=${BASE_URL}`]).trim().split('\n').pop() ?? '';
+    await page.goto(link);
+    await confirmAccountForSignIn(page, uid, ADDRESS);
+    // The judge presses this button next; the old "Connect your wallet" label is gone at beta12.
+    await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect your wallet', exact: true })).toHaveCount(0);
+  });
+
+  // The three guards below use the known GUARD_SECRET. secret-scan-reporter.ts (labels.config.ts)
+  // fails the whole run if it reaches any step title, step or test error, output or attachment.
+
+  /** Opens a one-time login link and makes the second password field unfillable. */
+  async function failingFormFor(page: Page): Promise<string> {
+    const uid = freshMember();
+    const link = drush(['uli', `--name=${NAME}`, '--no-browser', `--uri=${BASE_URL}`]).trim().split('\n').pop() ?? '';
+    await page.goto(link);
+    // The second field can't be filled, after the first one already holds the password.
+    await page.locator('input[name="pass[pass2]"]').evaluate((el) => { (el as HTMLInputElement).type = 'checkbox'; });
+    return uid;
+  }
+
+  /** True when the first password field still holds the guard password (checked as a boolean only). */
+  async function passwordStillOnPage(page: Page): Promise<boolean> {
+    return page.locator('input[name="pass[pass1]"]').evaluate((el, v) => (el as HTMLInputElement).value === v, GUARD_SECRET);
+  }
+
+  test('a failing password fill throws only the fixed message, and the fields are emptied', async ({ page }) => {
+    const uid = await failingFormFor(page);
+    const failure = await confirmAccountForSignIn(page, uid, ADDRESS, { makePassword: () => GUARD_SECRET }).then(() => null, (e: unknown) => e);
+    expect(failure, 'the helper failed').toBeInstanceOf(Error);
+    const error = failure as Error;
+    expect(error.message).toBe(SIGN_IN_PASSWORD_NOT_SAVED);
+    expect(error.cause, 'no original error is attached').toBeUndefined();
+    expect(`${error.message}\n${error.stack ?? ''}`.includes(GUARD_SECRET), 'what the reporter prints holds no password').toBe(false);
+    const snapshot = await page.locator('body').ariaSnapshot();
+    expect(snapshot.includes(GUARD_SECRET), 'the page snapshot holds no password').toBe(false);
+  });
+
+  // These two must fail, with the password still on the page, so Playwright writes
+  // error-context.md; PLAYWRIGHT_NO_COPY_PROMPT keeps the page snapshot out of it.
+  for (const [name, emptyFields] of [
+    ['rejects', () => Promise.reject(new Error('cleanup refused'))],
+    ['times out', () => new Promise<void>(() => undefined)],
+  ] as const) {
+    test(`the field cleanup ${name}: the failure writes no password to error-context.md`, async ({ page }) => {
+      test.fail(true, 'the helper must fail here, so that the failure output is written');
+      const uid = await failingFormFor(page);
+      const failure = await confirmAccountForSignIn(page, uid, ADDRESS, { makePassword: () => GUARD_SECRET, emptyFields }).then(() => null, (e: unknown) => e);
+      expect(failure instanceof Error && failure.message === SIGN_IN_PASSWORD_NOT_SAVED, 'the helper failed with the fixed message').toBe(true);
+      expect(await passwordStillOnPage(page), 'the injected cleanup failure left the password on the page').toBe(true);
+      throw failure;
+    });
+  }
+
+  test('without the confirmation the wallet page offers only "Add a sign-in"', async ({ page }) => {
+    const uid = freshMember();
+    const link = drush(['uli', `--name=${NAME}`, '--no-browser', `--uri=${BASE_URL}`]).trim().split('\n').pop() ?? '';
+    await page.goto(link);
+    await page.goto(`/user/${uid}/wallet`);
+    await expect(page.getByRole('button', { name: 'Add a sign-in', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Connect your wallet', exact: true })).toHaveCount(0);
   });
 });

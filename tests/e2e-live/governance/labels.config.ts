@@ -15,6 +15,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
+// A failing test writes no page snapshot to error-context.md: the member's throwaway password
+// may still be in a field then (live-steps.ts confirmAccountForSignIn; Playwright 1.63
+// index.js _takePageSnapshot returns early on this variable). Set before any test runs.
+process.env.PLAYWRIGHT_NO_COPY_PROMPT = '1';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const A11Y = join(HERE, '..', '..', 'a11y');
 
@@ -29,7 +34,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   timeout: 90_000,
-  reporter: [['list']],
+  // secret-scan fails the run if the guard's known password reaches any reporter event.
+  reporter: [['list'], [join(HERE, 'secret-scan-reporter.ts')]],
   outputDir: join(HERE, '..', '..', '..', 'test-results', 'governance-labels'),
   globalSetup: join(A11Y, 'global-setup.ts'),
   globalTeardown: join(A11Y, 'global-teardown.ts'),
