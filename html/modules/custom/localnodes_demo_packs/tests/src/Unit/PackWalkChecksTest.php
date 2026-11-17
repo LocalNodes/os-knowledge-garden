@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_demo_packs\Unit;
 
+use Drupal\Tests\localnodes_demo_packs\PackChecks;
 use Drupal\Tests\localnodes_demo_packs\PackWalkChecks;
 use Drupal\Tests\localnodes_demo_packs\Traits\PackTestTrait;
 use Drupal\Tests\UnitTestCase;
@@ -203,6 +204,61 @@ final class PackWalkChecksTest extends UnitTestCase {
   public function testPartsOutsideTheConfirmationDoNotCount(): void {
     $page = str_replace('class="ln-export-confirm"', 'class="other"', self::confirmPage());
     $this->assertNotSame('', $this->confirm($page));
+  }
+
+  /**
+   * A like or an enrolment on a record in no group must be by the pack's people.
+   *
+   * The same record in a group keeps the group rule. The outsider here is a
+   * made-up uuid that no pack file holds.
+   */
+  public function testNoGroupRecordsTakeOnlyThePacksPeople(): void {
+    $outsider = '5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4dff';
+    $post = '5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40';
+    $event = '5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d60';
+    $likes = self::expectation('smoke', 'expect.yml')['likes'] ?? [];
+    $files = self::files();
+    $this->assertSame([], PackChecks::likeProblems('smoke', $files, $likes));
+
+    // In no group, the pack's own people may still like and enrol.
+    unset($files['post.yml'][$post]['group'], $files['event.yml'][$event]['group']);
+    $this->assertSame([], PackChecks::likeProblems('smoke', $files, $likes));
+    $this->assertSame('', $this->enrolments($files));
+
+    // Someone who is not one of the pack's people may not.
+    foreach ($files['like.yml'] as $key => $row) {
+      $files['like.yml'][$key]['uid'] = $outsider;
+    }
+    foreach ($files['event-enrollment.yml'] as $key => $row) {
+      $files['event-enrollment.yml'][$key]['uid'] = $outsider;
+    }
+    $this->assertStringContainsString("the liker is not one of the pack's people", implode(' | ', PackChecks::likeProblems('smoke', $files, $likes)));
+    $this->assertStringContainsString("the member is not one of the pack's people", $this->enrolments($files));
+
+    // Back in a group, the outsider fails the group rule instead.
+    $grouped = self::files();
+    foreach ($grouped['like.yml'] as $key => $row) {
+      $grouped['like.yml'][$key]['uid'] = $outsider;
+    }
+    foreach ($grouped['event-enrollment.yml'] as $key => $row) {
+      $grouped['event-enrollment.yml'][$key]['uid'] = $outsider;
+    }
+    $this->assertStringContainsString("the liker is not a member of the post's group", implode(' | ', PackChecks::likeProblems('smoke', $grouped, $likes)));
+    $this->assertStringContainsString("the member is not in the event's group", $this->enrolments($grouped));
+  }
+
+  /**
+   * A like counts against the stated number, and never by the post's author.
+   */
+  public function testLikeCountsAndAuthors(): void {
+    $post = '5b0c1f3e-0d6a-4c51-9a5e-1f0a2b3c4d40';
+    $files = self::files();
+    $this->assertStringContainsString('not the stated count', implode(' | ', PackChecks::likeProblems('smoke', $files, [$post => 2])));
+    foreach ($files['like.yml'] as $key => $row) {
+      $files['like.yml'][$key]['uid'] = $files['post.yml'][$post]['uid'];
+    }
+    $likes = self::expectation('smoke', 'expect.yml')['likes'] ?? [];
+    $this->assertStringContainsString('likes their own post', implode(' | ', PackChecks::likeProblems('smoke', $files, $likes)));
   }
 
 }

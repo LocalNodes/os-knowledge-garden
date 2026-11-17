@@ -69,6 +69,34 @@ final class DemoDateTest extends UnitTestCase {
   }
 
   /**
+   * Install days around the 20th and the turn of a year.
+   */
+  public static function nextDayCases(): array {
+    return [
+      'the day before' => ['2026-11-19 23:30', '2026-11-20', '2026-12-20'],
+      'the day itself' => ['2026-11-20 08:00', '2026-12-20', '2027-01-20'],
+      'the day after' => ['2026-11-21 00:30', '2026-12-20', '2027-01-20'],
+      'the 31st' => ['2026-01-31 12:00', '2026-02-20', '2026-03-20'],
+      'New Year\'s Eve' => ['2026-12-31 23:59', '2027-01-20', '2027-02-20'],
+    ];
+  }
+
+  /**
+   * "next day N" is always after install day, and "+1 month" a month on.
+   *
+   * @covers ::day
+   * @covers ::dateTime
+   * @dataProvider nextDayCases
+   */
+  public function testNextDayIsAlwaysAhead(string $now, string $first, string $second): void {
+    $time = strtotime($now);
+    $this->assertSame($first, DemoDate::day('next day 20', $time));
+    $this->assertSame($second, DemoDate::day('next day 20 +1 month', $time));
+    $this->assertSame("{$second}T19:00:00", DemoDate::dateTime('next day 20 +1 month|19:00', $time));
+    $this->assertGreaterThan(date('Y-m-d', $time), DemoDate::day('next day 20', $time));
+  }
+
+  /**
    * A day that some months lack is refused rather than rolled over.
    *
    * @covers ::day
@@ -76,6 +104,16 @@ final class DemoDateTest extends UnitTestCase {
   public function testDayAfterTwentyEightIsRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     DemoDate::day('next month day 30', strtotime('2026-01-31'));
+  }
+
+  /**
+   * The "next day N" form refuses the same days.
+   *
+   * @covers ::day
+   */
+  public function testNextDayAfterTwentyEightIsRefused(): void {
+    $this->expectException(\InvalidArgumentException::class);
+    DemoDate::day('next day 29', strtotime('2026-01-31'));
   }
 
   /**

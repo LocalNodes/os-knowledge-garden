@@ -87,3 +87,27 @@ c15250c8-ec70-4d1d-8d68-50592ddbf718:
   entity_type: post
   field_name: field_post_comments
   created: -12 day|10:00
+
+# Open to visitors (source section 14): public, in no group, so a signed-out visitor sees them on the
+# front page and the public lists. Created before install day, so the pinned welcome post still leads.
+17799672-3cfd-4c12-9906-12a1e875c7a2:
+  uuid: 17799672-3cfd-4c12-9906-12a1e875c7a2
+  uid: 53c559cd-7844-46da-80eb-ce802cd3e34b
+  type: post_comment
+  langcode: en
+  body: '<p>The new shelf labels made unpacking quick. Thank you, Ari.</p>'
+  entity_id: 2a84851e-c8df-495b-8c69-a4af5ea2d799
+  entity_type: post
+  field_name: field_post_comments
+  created: -3 day|12:00
+
+2c92f68e-7d9c-49d9-ab93-20ab568062b1:
+  uuid: 2c92f68e-7d9c-49d9-ab93-20ab568062b1
+  uid: 0f4efd66-e78f-45f1-8dfe-f020182d1f55
+  type: post_comment
+  langcode: en
+  body: '<p>Happy to. I''ve left spare labels in the tool cupboard.</p>'
+  entity_id: 2a84851e-c8df-495b-8c69-a4af5ea2d799
+  entity_type: post
+  field_name: field_post_comments
+  created: -2 day|08:00

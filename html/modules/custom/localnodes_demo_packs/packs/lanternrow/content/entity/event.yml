@@ -121,3 +121,85 @@ c6ea4f1e-172e-4b94-aa83-36230471140c:
   field_content_visibility: community
   group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
   created: -14 day|09:00
+
+# Open to visitors (source section 14): public, in no group, so a signed-out visitor sees them on the
+# front page and the public lists. Created before install day, so the pinned welcome post still leads.
+1f704e01-aa5a-4483-a7f3-0758cd18a69e:
+  uuid: 1f704e01-aa5a-4483-a7f3-0758cd18a69e
+  title: 'Open evening'
+  type: event
+  langcode: en
+  uid: 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  body: '<p>Come and see how a housing co-op works. Tea in the common room, a walk round the courtyard and time for questions. No need to book.</p>'
+  field_event_address: {}
+  field_event_date: next day 20|19:00
+  field_event_date_end: next day 20|19:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op common room
+  field_content_visibility: public
+  created: -12 day|09:00
+
+4cad8695-1c92-4a59-83f3-7fa433948b0f:
+  uuid: 4cad8695-1c92-4a59-83f3-7fa433948b0f
+  title: 'Open evening'
+  type: event
+  langcode: en
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  body: '<p>Come and see how a housing co-op works. Tea in the common room, a walk round the courtyard and time for questions. No need to book.</p>'
+  field_event_address: {}
+  field_event_date: next day 20 +1 month|19:00
+  field_event_date_end: next day 20 +1 month|19:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op common room
+  field_content_visibility: public
+  created: -11 day|09:00
+
+f06b4cae-58c9-41c8-9a46-ac0a81cdf1d3:
+  uuid: f06b4cae-58c9-41c8-9a46-ac0a81cdf1d3
+  title: 'Courtyard planting morning'
+  type: event
+  langcode: en
+  uid: 8c6e17aa-5bb6-4f5c-8d23-a33e9d9c635f
+  body: '<p>We''re planting bulbs and two new apple trees in the courtyard beds. Gloves and tools are in the tool cupboard. Anyone is welcome, children too.</p>'
+  field_event_address: {}
+  field_event_date: +12 day|10:00
+  field_event_date_end: +12 day|10:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op courtyard
+  field_content_visibility: public
+  created: -8 day|09:00
+
+06fd2a06-7fe6-4ffa-8e9b-19e08579c9c3:
+  uuid: 06fd2a06-7fe6-4ffa-8e9b-19e08579c9c3
+  title: 'Repair café'
+  type: event
+  langcode: en
+  uid: d8a836bc-0d1a-41ab-a42e-110fbbb5ee5c
+  body: '<p>Bring something broken: a lamp, a chair, a bike with a flat tyre. Members who like fixing things will help you mend it and show you how. Free, with tea.</p>'
+  field_event_address: {}
+  field_event_date: +40 day|14:00
+  field_event_date_end: +40 day|14:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op common room
+  field_content_visibility: public
+  created: -7 day|09:00
+
+8b2d2a43-b46b-4cb0-8554-7e1d622ed97e:
+  uuid: 8b2d2a43-b46b-4cb0-8554-7e1d622ed97e
+  title: 'Autumn bulk-buy pickup'
+  type: event
+  langcode: en
+  uid: f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  body: '<p>The order arrives at 9 am. We need people to carry sacks from the van to the courtyard and split them between the two houses.</p>'
+  field_event_address: {}
+  field_event_date: -10 day|09:00
+  field_event_date_end: -10 day|09:00
+  image: null
+  image_alt: ''
+  field_event_location: Co-op courtyard
+  field_content_visibility: public
+  created: -13 day|09:00

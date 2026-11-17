@@ -89,3 +89,32 @@ f81903bf-b9a9-4698-bcac-a22a68e130c1:
   created: -1 day|09:00
   group: cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d
   field_post: <p>Hello from Rowan House. The common room library now has our tool-borrowing notes and people the houses have hired. Rowan has also shared what we learned when we replaced our boiler. You can read that page without joining our house group. Tool-share day is in the courtyard on day +7 at 11 am. Our quarterly co-op meeting is on day +21 at 6:30 pm in the common room. Both events are open to members of either house; add your name if you are coming.</p>
+
+# Open to visitors (source section 14): public, in no group, so a signed-out visitor sees them on the
+# front page and the public lists. Created before install day, so the pinned welcome post still leads.
+bccfecb5-aa1f-4863-a75d-31c56aa74ae5:
+  uuid: bccfecb5-aa1f-4863-a75d-31c56aa74ae5
+  langcode: en
+  type: post
+  uid: 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  field_visibility: 1
+  created: -1 day|09:00
+  field_post: '<p>Open evenings are on the 20th of each month in the common room, 7 to 9 pm. If you are thinking about living in a housing co-op, come and ask us anything. There is tea, and someone will show you round the courtyard and the tool cupboard.</p>'
+
+2a84851e-c8df-495b-8c69-a4af5ea2d799:
+  uuid: 2a84851e-c8df-495b-8c69-a4af5ea2d799
+  langcode: en
+  type: post
+  uid: f4a6c4b7-3c26-43d9-bd6c-f609f95d73d8
+  field_visibility: 1
+  created: -3 day|09:00
+  field_post: '<p>Thank you to everyone who helped with the autumn bulk-buy pickup. Forty sacks of oats, flour and rice are now in the pantry cupboards of both houses. The next order goes in after the open evening.</p>'
+
+919e36dc-d546-4101-b12f-e09e974d1f83:
+  uuid: 919e36dc-d546-4101-b12f-e09e974d1f83
+  langcode: en
+  type: post
+  uid: 60094548-e91e-4fa8-8bb9-933fab340b3c
+  field_visibility: 1
+  created: -6 day|09:00
+  field_post: '<p>Found by the shared tools shelf: one blue work glove, left hand. If it is yours, it is on the hook by the courtyard door.</p>'

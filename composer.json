@@ -29,7 +29,7 @@
         "fivefilters/readability.php": "^3.3",
         "drupal/ai_provider_openrouter": "1.1.9",
         "drupal/ai_search": "^1.3@alpha",
-        "drupal/safe_governance": "^1.0.0-alpha2@alpha",
+        "drupal/safe_governance": "^1.0.0-alpha3@alpha",
         "drupal/gas_sponsor": "^1.0@dev",
         "league/html-to-markdown": "^5.2.3",
         "drupal/calendar_view": "^2.1.10",

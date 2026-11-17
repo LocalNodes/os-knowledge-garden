@@ -8,12 +8,12 @@
 counts:
   user: 19
   group: 4
-  topic: 14
-  event: 7
-  event_enrollment: 46
-  post: 9
-  comment: 8
-  like: 45
+  topic: 16
+  event: 12
+  event_enrollment: 65
+  post: 12
+  comment: 10
+  like: 54
   poll: 1
   howto: 10
 visibility:
@@ -37,6 +37,30 @@ visibility:
     persona: anonymous
     uuid: 407fbedc-377e-487f-ba04-a3bb6bf74bb8
     sees: true
+  - id: visitor-sees-open-evenings-post
+    persona: anonymous
+    uuid: bccfecb5-aa1f-4863-a75d-31c56aa74ae5
+    sees: true
+  - id: visitor-sees-how-to-visit
+    persona: anonymous
+    uuid: e77ea611-a8a5-443d-87f4-6d1960a1e0dd
+    sees: true
+  - id: visitor-sees-repair-cafe
+    persona: anonymous
+    uuid: 06fd2a06-7fe6-4ffa-8e9b-19e08579c9c3
+    sees: true
+  - id: visitor-sees-bulk-buy-pickup
+    persona: anonymous
+    uuid: 8b2d2a43-b46b-4cb0-8554-7e1d622ed97e
+    sees: true
+  - id: visitor-misses-welcome-post
+    persona: anonymous
+    uuid: b94df212-2c8a-48d7-9817-372243e76969
+    sees: false
+  - id: visitor-misses-common-room-post
+    persona: anonymous
+    uuid: 85bb39aa-cd18-4e24-ac7e-c5b9dca55c86
+    sees: false
   - id: visitor-misses-tradespeople
     persona: anonymous
     uuid: 1b6f5527-e38e-459f-894b-51f824af0212
@@ -198,6 +222,9 @@ likes:
   f81903bf-b9a9-4698-bcac-a22a68e130c1: 6
   587ddf38-b50e-4abd-9468-0906358a21ba: 9
   85bb39aa-cd18-4e24-ac7e-c5b9dca55c86: 4
+  bccfecb5-aa1f-4863-a75d-31c56aa74ae5: 3
+  2a84851e-c8df-495b-8c69-a4af5ea2d799: 4
+  919e36dc-d546-4101-b12f-e09e974d1f83: 2
 going:
   9a05ab58-f40f-4c36-abd2-8e4de2aff28f: 3
   3bc52bc4-71ca-4f6a-84da-df563ff23a59: 8
@@ -206,6 +233,11 @@ going:
   56a719b2-6336-4c7b-be7a-e76a5b03e1fb: 4
   1d56eb09-66d0-45ac-8b70-1fbbc304a603: 6
   c6ea4f1e-172e-4b94-aa83-36230471140c: 10
+  1f704e01-aa5a-4483-a7f3-0758cd18a69e: 3
+  4cad8695-1c92-4a59-83f3-7fa433948b0f: 3
+  f06b4cae-58c9-41c8-9a46-ac0a81cdf1d3: 4
+  06fd2a06-7fe6-4ffa-8e9b-19e08579c9c3: 5
+  8b2d2a43-b46b-4cb0-8554-7e1d622ed97e: 4
 poll_votes:
   4f85a61b-04ad-4673-a467-712979d3c818: [7, 3, 2]
 sections:
@@ -228,3 +260,4 @@ sections:
     left_out: the home page work
   Demo-loader additions:
     pending: the decisions work and the Practice Money work; the imported reference is left out because no real organisation's text belongs in a demo site; the how-to pages are the shared how-to pages, loaded with every pack
+  14. Open to visitors: loaded

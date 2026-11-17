@@ -14,8 +14,8 @@
 #   copy inside the repository: its length, every replacement, and that no
 #   line carries a year, a local path or a planning name.
 walk_heading: "1. Lantern Row Housing Co-op"
-source_lines: 829
-source_sha256: 621de3031c7c18fadf21d115791815833b7554f1f46d923bcd82bb04d532bf13
+source_lines: 901
+source_sha256: cfc7010ad3d10350157f086711f1d372e2abf1f251a77ac09fc484a555a85359
 walk_section_sha256: f7c63615acc0c5d868b723502831e673e78cc0b318b0f86efeaf31e75043c95b
 witness:
   user: ca7ebede-0f4c-4e60-a921-4dc94c203db3

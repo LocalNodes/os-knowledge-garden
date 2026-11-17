@@ -54,8 +54,10 @@ final class PackAccessTest extends BrowserTestBase {
         $id = (string) ($row['id'] ?? '?');
         $entity = $this->entityByUuid((string) $row['uuid']);
         $this->assertNotNull($entity, "Pack $pack, row $id: {$row['uuid']} loaded.");
-        $title = (string) $entity->label();
-        $this->assertNotSame('', $title, "Pack $pack, row $id: the page has a title to look for.");
+        $title = $entity->getEntityTypeId() === 'post'
+          ? self::firstSentence((string) $entity->get('field_post')->value)
+          : (string) $entity->label();
+        $this->assertNotSame('', $title, "Pack $pack, row $id: the page has a title, or a post its first sentence, to look for.");
         $this->asPersona((string) $row['persona'], function () use ($pack, $id, $entity, $title, $row): void {
           $this->drupalGet($entity->toUrl());
           $status = $this->getSession()->getStatusCode();
@@ -76,6 +78,18 @@ final class PackAccessTest extends BrowserTestBase {
       }
       $this->removePack($pack);
     }
+  }
+
+  /**
+   * A post has no title; its first sentence, as plain text, stands for one.
+   *
+   * @param string $html
+   *   The post's text as stored.
+   */
+  private static function firstSentence(string $html): string {
+    $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES));
+    $end = strpos($text, '. ');
+    return $end === FALSE ? $text : substr($text, 0, $end + 1);
   }
 
   /**
