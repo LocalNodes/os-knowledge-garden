@@ -14,6 +14,10 @@ namespace Drupal\localnodes_events_calendar\DemoContent;
  * month a visitor opens and the next, whatever day the site was installed.
  * strtotime() cannot say this itself: "first day of next month +9 day" drops
  * the "+9 day".
+ *
+ * "next day N" is the first day N after install day, and "next day N +1
+ * month" the one a month later: dates for something held on a fixed day of
+ * each month that must stay upcoming whatever day the site was installed.
  */
 final class DemoDate {
 
@@ -21,8 +25,9 @@ final class DemoDate {
    * Returns the date part ("Y-m-d") of a demo date string.
    *
    * @param string $spec
-   *   The part before "|": "this month day N", "next month day N", or any
-   *   strtotime() string such as "+14 day" or "now".
+   *   The part before "|": "this month day N", "next month day N", "next day
+   *   N", "next day N +M month", or any strtotime() string such as "+14 day"
+   *   or "now".
    * @param int|null $now
    *   The time to count from; the current time when NULL.
    */
@@ -35,6 +40,17 @@ final class DemoDate {
         throw new \InvalidArgumentException("A month-anchored demo date needs a day from 1 to 28, not $day.");
       }
       $first = strtotime('first day of ' . $m[1] . ' month', $now);
+      return date('Y-m', $first) . sprintf('-%02d', $day);
+    }
+    if (preg_match('/^next day (\d{1,2})(?: \+(\d{1,2}) month)?$/', $spec, $m)) {
+      $day = (int) $m[1];
+      if ($day < 1 || $day > 28) {
+        throw new \InvalidArgumentException("A month-anchored demo date needs a day from 1 to 28, not $day.");
+      }
+      // Strictly after install day, so the date is never today and already
+      // over by the time a visitor looks.
+      $months = (int) ($m[2] ?? 0) + ((int) date('j', $now) < $day ? 0 : 1);
+      $first = strtotime("first day of +$months month", strtotime(date('Y-m-01 12:00', $now)));
       return date('Y-m', $first) . sprintf('-%02d', $day);
     }
     $time = strtotime($spec, $now);

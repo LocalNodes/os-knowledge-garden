@@ -172,6 +172,75 @@ final class PackChecks {
   }
 
   /**
+   * What is wrong with a pack's post likes.
+   *
+   * Each like is of a pack post, not by the post's author, and by a member of
+   * the post's group, or, for a post in no group, by one of the pack's own
+   * people. Each post's like count is the stated one.
+   *
+   * @param string $pack
+   *   The pack name, for the messages.
+   * @param array<string, array> $files
+   *   The pack's parsed files by file name.
+   * @param array $stated
+   *   The like counts of expect.yml by post uuid.
+   *
+   * @return string[]
+   *   One message for each fault.
+   */
+  public static function likeProblems(string $pack, array $files, array $stated): array {
+    $people = [];
+    foreach (self::entries($files['user.yml'] ?? []) as [$uuid]) {
+      $people[] = (string) $uuid;
+    }
+    $members = [];
+    foreach (self::entries($files['group.yml'] ?? []) as [$uuid, $group]) {
+      $members[$uuid] = array_map('strval', $group['members'] ?? []);
+    }
+    $posts = [];
+    foreach (self::entries($files['post.yml'] ?? []) as [$uuid, $post]) {
+      $posts[$uuid] = $post;
+    }
+    $problems = [];
+    $counts = [];
+    foreach (self::entries($files['like.yml'] ?? []) as [$uuid, $like]) {
+      if (($like['entity_type'] ?? '') !== 'post') {
+        continue;
+      }
+      $target = (string) ($like['entity_id'] ?? '');
+      if (!isset($posts[$target])) {
+        $problems[] = "Pack $pack, like $uuid: its post is not a pack post.";
+        continue;
+      }
+      $liker = (string) ($like['uid'] ?? '');
+      if ($liker === (string) ($posts[$target]['uid'] ?? '')) {
+        $problems[] = "Pack $pack, like $uuid: a member likes their own post.";
+      }
+      $group = (string) ($posts[$target]['group'] ?? '');
+      if ($group === '') {
+        if (!in_array($liker, $people, TRUE)) {
+          $problems[] = "Pack $pack, like $uuid: the post is in no group and the liker is not one of the pack's people.";
+        }
+      }
+      elseif (!in_array($liker, $members[$group] ?? [], TRUE)) {
+        $problems[] = "Pack $pack, like $uuid: the liker is not a member of the post's group.";
+      }
+      $counts[$target] = ($counts[$target] ?? 0) + 1;
+    }
+    foreach (array_keys($posts) as $uuid) {
+      if ((int) ($stated[$uuid] ?? 0) !== ($counts[$uuid] ?? 0)) {
+        $problems[] = "Pack $pack, post $uuid: its likes are not the stated count.";
+      }
+    }
+    foreach (array_keys($stated) as $uuid) {
+      if (!isset($posts[(string) $uuid])) {
+        $problems[] = "Pack $pack: expect.yml likes names a post the pack does not hold.";
+      }
+    }
+    return $problems;
+  }
+
+  /**
    * Entries whose key is not their uuid, and uuids used twice.
    *
    * @param array<string, array> $files

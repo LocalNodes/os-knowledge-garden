@@ -256,9 +256,15 @@ trait PackTestTrait {
 
   /**
    * Loads a pack as the entrypoint does, with the anchor fixed first.
+   *
+   * @param string $pack
+   *   The pack name.
+   * @param int|null $anchor
+   *   The day the pack's dates count from, as a timestamp; the fixed test
+   *   anchor when not given.
    */
-  protected function loadPack(string $pack): void {
-    $this->container->get('state')->set('localnodes_demo_packs.anchor', self::packAnchor());
+  protected function loadPack(string $pack, ?int $anchor = NULL): void {
+    $this->container->get('state')->set('localnodes_demo_packs.anchor', $anchor ?? self::packAnchor());
     $this->runPlugins(self::PLUGINS, 'createContent', self::packProfile($pack));
     $this->resetEntityCaches();
   }

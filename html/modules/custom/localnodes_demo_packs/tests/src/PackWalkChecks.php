@@ -133,8 +133,9 @@ final class PackWalkChecks {
   /**
    * What is wrong with a pack's enrolments against the stated counts.
    *
-   * Every enrolment is of a pack event and of a member of the event's group;
-   * only the confirmed going count, and each event's count is the stated one.
+   * Every enrolment is of a pack event and of a member of the event's group,
+   * or, for an event in no group, of one of the pack's own people; only the
+   * confirmed going count, and each event's count is the stated one.
    *
    * @param string $pack
    *   The pack name, for the messages.
@@ -152,6 +153,10 @@ final class PackWalkChecks {
     foreach (PackChecks::entries($files['group.yml'] ?? []) as [$uuid, $group]) {
       $groups[$uuid] = array_map('strval', $group['members'] ?? []);
     }
+    $people = [];
+    foreach (PackChecks::entries($files['user.yml'] ?? []) as [$uuid]) {
+      $people[] = (string) $uuid;
+    }
     $events = [];
     foreach (PackChecks::entries($files['event.yml'] ?? []) as [$uuid, $event]) {
       $events[$uuid] = (string) ($event['group'] ?? '');
@@ -163,7 +168,13 @@ final class PackWalkChecks {
         $problems[] = "Pack $pack, enrolment $uuid: its event is not a pack event.";
         continue;
       }
-      if (!in_array((string) ($enrolment['uid'] ?? ''), $groups[$events[$event]] ?? [], TRUE)) {
+      $member = (string) ($enrolment['uid'] ?? '');
+      if ($events[$event] === '') {
+        if (!in_array($member, $people, TRUE)) {
+          $problems[] = "Pack $pack, enrolment $uuid: the event is in no group and the member is not one of the pack's people.";
+        }
+      }
+      elseif (!in_array($member, $groups[$events[$event]] ?? [], TRUE)) {
         $problems[] = "Pack $pack, enrolment $uuid: the member is not in the event's group.";
       }
       if (self::isGoing($enrolment)) {

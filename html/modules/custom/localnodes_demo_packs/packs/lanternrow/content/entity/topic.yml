@@ -560,3 +560,38 @@ e805350e-253e-471a-acf2-d541ad0f5dd6:
   image_alt: ''
   group: 4995fa17-ec83-4b34-936e-03e0e559815b
   field_content_visibility: community
+
+# Open to visitors (source section 14): public, in no group, so a signed-out visitor sees them on the
+# front page and the public lists. Created before install day, so the pinned welcome post still leads.
+e77ea611-a8a5-443d-87f4-6d1960a1e0dd:
+  uuid: e77ea611-a8a5-443d-87f4-6d1960a1e0dd
+  title: 'How to visit or join Lantern Row'
+  type: topic
+  langcode: en
+  uid: bfc9de5e-e309-4307-a207-9caa5a826eaa
+  created: -9 day|09:00
+  body: |-
+    <p>Lantern Row Housing Co-op is two shared houses, Willow House and Rowan House, with a common room and a courtyard between them. Nineteen members live here. We share the housework, the repairs and the decisions.</p>
+    <p>To visit, come to an open evening in the common room. They are on the 20th of each month, 7 to 9 pm, and you do not need to book.</p>
+    <p>To join, ask at an open evening to be added to the waiting list. When a room comes up, the house with the room invites people on the list to a shared dinner, and the house decides together who to offer it to.</p>
+    <p>Members sign in to read the house pages, the library and the events that are only for members.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  field_content_visibility: public
+
+1ad37f04-bb49-401e-b48c-797a14c0339f:
+  uuid: 1ad37f04-bb49-401e-b48c-797a14c0339f
+  title: 'Open evenings: what happens'
+  type: topic
+  langcode: en
+  uid: 13ba1c40-5647-4f5a-9c03-80a8f697e790
+  created: -4 day|09:00
+  body: |-
+    <p>Each open evening starts with tea in the common room. One member from each house says a few words about how the house runs: the chore rota, the house meeting and the shared tools.</p>
+    <p>Then there is a walk round the courtyard, the tool cupboard and the shared garden beds. Visitors do not go into the houses; those are people's homes.</p>
+    <p>Most questions are about the waiting list and what living in a shared house is like. Bring yours.</p>
+  field_topic_type: Reference
+  image: null
+  image_alt: ''
+  field_content_visibility: public

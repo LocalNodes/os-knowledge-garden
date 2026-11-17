@@ -71,8 +71,10 @@ streets: []
 #   repair log; and the capitalised word that opens a sentence, a heading or a
 #   topic title in the library pages, posts, comments and events ("Quarterly",
 #   "Tomatoes", "Getting", "Landing", "Bikes", "Gas", "Internet", "Tradespeople",
-#   "Joining", "Sharing", "Where", "You" and the like). None of them is a person, an
-#   organisation or a place.
+#   "Joining", "Sharing", "Where", "You", and in the open-to-visitors records
+#   "Come", "Free", "There", "Forty", "Found", "Nineteen", "Autumn" and
+#   "Courtyard" and the like). None of them is a person, an organisation or a
+#   place.
 ordinary:
   - January
   - March
@@ -109,3 +111,11 @@ ordinary:
   - Sharing
   - Where
   - You
+  - Come
+  - Free
+  - There
+  - Forty
+  - Found
+  - Nineteen
+  - Autumn
+  - Courtyard

@@ -58,6 +58,12 @@ Qdrant and Solr hosts are fixed to the compose services.
 
 All names are fictional.
 
+## What a visitor sees, and the monthly reinstall
+
+A pack holds a few public records in no group: posts, topics and events, so a visitor who is not signed in sees a living front page, event list and topic list. Everything else keeps the audience a real community would give it, and a visitor does not see it.
+
+A pack's dates are counted from the day it loads. Its events are a few days to about six weeks ahead, so after a month or so the event list starts to empty. Reinstall a site that is shown to people once a month (a fresh install, which loads the pack again with new dates).
+
 ## Walk status
 
 | Site | Walk steps checked by the tests and scripts/check_demo_pack.php | Held back |

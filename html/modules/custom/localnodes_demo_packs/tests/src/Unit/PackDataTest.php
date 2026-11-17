@@ -182,36 +182,14 @@ final class PackDataTest extends UnitTestCase {
   /**
    * Likes are counted as stated; nobody likes their own post; likers belong.
    *
+   * The rule itself is PackChecks::likeProblems, shown each fault in
+   * PackWalkChecksTest.
+   *
    * @dataProvider packProvider
    */
   public function testLikesFollowTheRules(string $pack): void {
-    $files = self::packYaml($pack);
-    $posts = [];
-    foreach (PackChecks::entries($files['post.yml'] ?? []) as [$uuid, $post]) {
-      $posts[$uuid] = $post;
-    }
-    $members = [];
-    foreach (PackChecks::entries($files['group.yml'] ?? []) as [$uuid, $group]) {
-      $members[$uuid] = array_map('strval', $group['members'] ?? []);
-    }
-    $counts = [];
-    foreach (PackChecks::entries($files['like.yml'] ?? []) as [$uuid, $like]) {
-      if (($like['entity_type'] ?? '') !== 'post') {
-        continue;
-      }
-      $target = (string) ($like['entity_id'] ?? '');
-      $this->assertArrayHasKey($target, $posts, "Pack $pack, like $uuid: its post is a pack post.");
-      $this->assertNotSame((string) $posts[$target]['uid'], (string) $like['uid'], "Pack $pack, like $uuid: a member likes their own post.");
-      $this->assertContains((string) $like['uid'], $members[(string) $posts[$target]['group']] ?? [], "Pack $pack, like $uuid: the liker is not a member of the post's group.");
-      $counts[$target] = ($counts[$target] ?? 0) + 1;
-    }
     $stated = self::expectation($pack, 'expect.yml')['likes'] ?? [];
-    foreach (array_keys($posts) as $uuid) {
-      $this->assertSame((int) ($stated[$uuid] ?? 0), $counts[$uuid] ?? 0, "Pack $pack, post $uuid: its likes are not the stated count.");
-    }
-    foreach (array_keys($stated) as $uuid) {
-      $this->assertArrayHasKey((string) $uuid, $posts, "Pack $pack: expect.yml likes names a post the pack does not hold.");
-    }
+    $this->assertSame([], PackChecks::likeProblems($pack, self::packYaml($pack), $stated));
   }
 
   /**

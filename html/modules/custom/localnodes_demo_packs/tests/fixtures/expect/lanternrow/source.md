@@ -827,3 +827,75 @@ Fund: **Willow House repair fund**; group **Willow House**; audience **members-o
 | Day -1 | Plumber, new kitchen tap | -140, pending only | None — the existing House rules, Repairs entry permits this under 300 without a separate house decision | Pending; not paid | 400 | Rosa Martins only; still waiting for a second approval |
 
 The current balance is **400 PRACTICE**. Only if the pending tap is later paid would it become **260 PRACTICE**; do not deduct it now. The tap retains its no-decision exception under 300, not a newly invented passed decision. The paid 600 PRACTICE back-steps entry remains the decision-linked example for the recording. Other decision responses/results stay unchanged; no monthly deposits or extra funds are added.
+
+---
+
+## 14. Open to visitors
+
+These records are public: anyone can read them without signing in, the way a real co-op shares its open events and a note for newcomers. They belong to no group, so they show on the site's front page and in the public event and topic lists. Every other record keeps its audience. Days are offsets from install day; created days are before install, so Sam's welcome post still leads a member's stream.
+
+### Public posts
+
+Audience: public. No group.
+
+**Public post 1. Tessa Moreno, day -1, 3 likes**
+
+> Open evenings are on the 20th of each month in the common room, 7 to 9 pm. If you are thinking about living in a housing co-op, come and ask us anything. There is tea, and someone will show you round the courtyard and the tool cupboard.
+
+No comments.
+
+**Public post 2. Ben Ivers, day -3, 4 likes**
+
+> Thank you to everyone who helped with the autumn bulk-buy pickup. Forty sacks of oats, flour and rice are now in the pantry cupboards of both houses. The next order goes in after the open evening.
+
+Comments:
+- **Leah Tan:** The new shelf labels made unpacking quick. Thank you, Ari.
+- **Ari Mensah:** Happy to. I've left spare labels in the tool cupboard.
+
+**Public post 3. Kit Novak, day -6, 2 likes**
+
+> Found by the shared tools shelf: one blue work glove, left hand. If it is yours, it is on the hook by the courtyard door.
+
+No comments.
+
+### Public topics
+
+Audience: public. No group.
+
+**How to visit or join Lantern Row** (Nell Patel, day -9)
+
+> Lantern Row Housing Co-op is two shared houses, Willow House and Rowan House, with a common room and a courtyard between them. Nineteen members live here. We share the housework, the repairs and the decisions.
+>
+> To visit, come to an open evening in the common room. They are on the 20th of each month, 7 to 9 pm, and you do not need to book.
+>
+> To join, ask at an open evening to be added to the waiting list. When a room comes up, the house with the room invites people on the list to a shared dinner, and the house decides together who to offer it to.
+>
+> Members sign in to read the house pages, the library and the events that are only for members.
+
+**Open evenings: what happens** (Tessa Moreno, day -4)
+
+> Each open evening starts with tea in the common room. One member from each house says a few words about how the house runs: the chore rota, the house meeting and the shared tools.
+>
+> Then there is a walk round the courtyard, the tool cupboard and the shared garden beds. Visitors do not go into the houses; those are people's homes.
+>
+> Most questions are about the waiting list and what living in a shared house is like. Bring yours.
+
+### Public events
+
+Audience: public. No group. "This month, day 20" is the 20th of the install month and "next month, day 20" the 20th of the month after; both are set when the pack is loaded. The bulk-buy pickup is already past, so the past events list is not empty.
+
+| Event | When | Time | Where | Going |
+|---|---|---|---|---|
+| Open evening | This month, day 20 | 7 pm | Co-op common room | Tessa, Nell, Sam (3) |
+| Open evening | Next month, day 20 | 7 pm | Co-op common room | Tessa, Nell, Ana (3) |
+| Courtyard planting morning | Day +12 | 10 am | Co-op courtyard | Grace, Rosa, Leah, Omar (4) |
+| Repair café | Day +40 | 2 pm | Co-op common room | Jo, Ari, Marcus, Ben, Kit (5) |
+| Autumn bulk-buy pickup | Day -10 | 9 am | Co-op courtyard | Ben, Ari, Leah, Mei (4) |
+
+Open evening description: "Come and see how a housing co-op works. Tea in the common room, a walk round the courtyard and time for questions. No need to book."
+
+Courtyard planting morning description: "We're planting bulbs and two new apple trees in the courtyard beds. Gloves and tools are in the tool cupboard. Anyone is welcome, children too."
+
+Repair café description: "Bring something broken: a lamp, a chair, a bike with a flat tyre. Members who like fixing things will help you mend it and show you how. Free, with tea."
+
+Autumn bulk-buy pickup description: "The order arrives at 9 am. We need people to carry sacks from the van to the courtyard and split them between the two houses."
