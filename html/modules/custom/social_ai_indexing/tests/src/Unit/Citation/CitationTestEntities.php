@@ -7,6 +7,7 @@ namespace Drupal\Tests\social_ai_indexing\Unit\Citation;
 use Drupal\comment\CommentInterface;
 use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
+use Drupal\user\UserInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 
 /**
@@ -19,9 +20,15 @@ trait CitationTestEntities {
 
   /**
    * Builds a mocked node whose canonical URL is /node/{id}.
+   *
+   * Without $owner, getOwner() returns PHPUnit's default stub, an inactive
+   * account, so the source has no author.
    */
-  protected function mockNode(int $id, string $title): NodeInterface&MockObject {
+  protected function mockNode(int $id, string $title, ?UserInterface $owner = NULL): NodeInterface&MockObject {
     $node = $this->createMock(NodeInterface::class);
+    if ($owner !== NULL) {
+      $node->method('getOwner')->willReturn($owner);
+    }
     $node->method('getEntityTypeId')->willReturn('node');
     $node->method('id')->willReturn((string) $id);
     $node->method('label')->willReturn($title);
@@ -39,8 +46,11 @@ trait CitationTestEntities {
   /**
    * Builds a mocked comment on $parent (or an orphan when $parent is NULL).
    */
-  protected function mockComment(int $id, ?NodeInterface $parent): CommentInterface&MockObject {
+  protected function mockComment(int $id, ?NodeInterface $parent, ?UserInterface $owner = NULL): CommentInterface&MockObject {
     $comment = $this->createMock(CommentInterface::class);
+    if ($owner !== NULL) {
+      $comment->method('getOwner')->willReturn($owner);
+    }
     $comment->method('getEntityTypeId')->willReturn('comment');
     $comment->method('id')->willReturn((string) $id);
     $comment->method('label')->willReturn('Comment subject ' . $id);
@@ -48,6 +58,27 @@ trait CitationTestEntities {
     // A comment's own canonical URL (/comment/N) must never be cited.
     $comment->method('toUrl')->willReturn($this->mockUrl('/comment/' . $id));
     return $comment;
+  }
+
+  /**
+   * Builds a mocked account whose display name is $name.
+   *
+   * @param string $name
+   *   The display name.
+   * @param bool $active
+   *   FALSE for a blocked account.
+   * @param bool $anonymous
+   *   TRUE for the anonymous user (uid 0).
+   * @param bool $label_access
+   *   Whether the asker may see the account's name.
+   */
+  protected function mockOwner(string $name, bool $active = TRUE, bool $anonymous = FALSE, bool $label_access = TRUE): UserInterface&MockObject {
+    $owner = $this->createMock(UserInterface::class);
+    $owner->method('getDisplayName')->willReturn($name);
+    $owner->method('isActive')->willReturn($active);
+    $owner->method('isAnonymous')->willReturn($anonymous);
+    $owner->method('access')->willReturnCallback(fn (string $operation): bool => $operation === 'view label' && $label_access);
+    return $owner;
   }
 
   /**

@@ -130,14 +130,19 @@ final readonly class CitedAnswer {
 
   /**
    * Renders body, blank line, "**Sources**", then "- [i] [Title](url)" lines.
+   *
+   * When the page has an author the asker may see, the link text is
+   * "Title, by Name". The name sits inside the link so the chat script and
+   * the answer checks, which read the line up to the link's end, keep
+   * working unchanged.
    */
   public function toMarkdown(): string {
     if ($this->noAnswer) {
       return $this->body;
     }
     $lines = [];
-    foreach (self::linkTexts($this->citations) as $i => $text) {
-      $lines[] = sprintf('- [%d] [%s](%s)', $i + 1, $text, $this->citations[$i]->url);
+    foreach (self::linkTexts($this->citations, TRUE) as $i => $text) {
+      $lines[] = sprintf('- [%d] [%s](%s)', $i + 1, self::markdownText($text), $this->citations[$i]->url);
     }
     return $this->body . "\n\n" . self::SOURCES_HEADING . "\n" . implode("\n", $lines);
   }
@@ -151,17 +156,25 @@ final readonly class CitedAnswer {
    *
    * @param list<\Drupal\social_ai_indexing\Citation\RetrievedSource> $citations
    *   Citations in display order.
+   * @param bool $with_author
+   *   Add ", by Name" when the source has an author. Only for the
+   *   assistant's answer, which is built for one asker; the search page's
+   *   overview is shared between people, so it never names authors.
    *
    * @return list<string>
    *   Link texts in the same order.
    */
-  public static function linkTexts(array $citations): array {
+  public static function linkTexts(array $citations, bool $with_author = FALSE): array {
     $texts = [];
     $used = [];
     foreach (array_values($citations) as $citation) {
-      $base = trim((string) preg_replace('/\s+/u', ' ', str_replace(['[', ']'], ['(', ')'], $citation->title)));
+      $base = self::lineText($citation->title);
       if ($base === '') {
         $base = 'Untitled';
+      }
+      $author = $with_author ? self::lineText($citation->author) : '';
+      if ($author !== '') {
+        $base .= ', by ' . $author;
       }
       $text = $base;
       for ($i = 2; isset($used[$text]); $i++) {
@@ -171,6 +184,49 @@ final readonly class CitedAnswer {
       $texts[] = $text;
     }
     return $texts;
+  }
+
+  /**
+   * Link text encoded for markdown, so it shows exactly as written.
+   *
+   * Characters markdown or HTML would read (a trailing backslash would
+   * escape the link's closing bracket; asterisks, underscores, backticks
+   * and tildes would format; & and < would start an entity or a tag)
+   * become numeric or named entities, which the converter turns back into
+   * the same characters as plain text. Only the answer's markdown is
+   * encoded; linkTexts() stays plain for the overview's structured data.
+   */
+  private static function markdownText(string $text): string {
+    return strtr($text, [
+      '&' => '&amp;',
+      '<' => '&lt;',
+      '>' => '&gt;',
+      '\\' => '&#92;',
+      '`' => '&#96;',
+      '*' => '&#42;',
+      '_' => '&#95;',
+      '~' => '&#126;',
+    ]);
+  }
+
+  /**
+   * An answer's text as a reader sees it, with markdownText()'s encoding undone.
+   *
+   * The raw markdown holds "fictional&#95;name" where the page shows
+   * "fictional_name". Any check for words that must not be shown has to read
+   * this text as well as the raw answer, or a shown name would pass it.
+   */
+  public static function displayText(string $markdown): string {
+    return html_entity_decode($markdown, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+  }
+
+  /**
+   * Text safe inside a Sources link.
+   *
+   * Brackets become parentheses and whitespace collapses to single spaces.
+   */
+  private static function lineText(string $text): string {
+    return trim((string) preg_replace('/\s+/u', ' ', str_replace(['[', ']'], ['(', ')'], $text)));
   }
 
 }

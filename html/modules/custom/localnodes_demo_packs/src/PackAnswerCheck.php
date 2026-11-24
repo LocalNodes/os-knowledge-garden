@@ -84,14 +84,17 @@ final class PackAnswerCheck {
     }
     $reasons = [];
     $cited = array_map(static fn (array $source): string => (string) $source['uuid'], $sources);
+    // The Sources link text is encoded for markdown ("_" is "&#95;"), so a
+    // phrase that must not be shown is looked for in the shown text too.
+    $shown = self::fold(CitedAnswer::displayText($answer));
 
     foreach (array_values($row['must_not_say'] ?? []) as $index => $phrase) {
-      if (self::says($text, (string) $phrase)) {
+      if (self::says($text, (string) $phrase) || self::says($shown, (string) $phrase)) {
         $reasons[] = "must_not_say[$index]";
       }
     }
     foreach (array_values($row['must_not_claim'] ?? []) as $index => $phrase) {
-      if (self::says($text, (string) $phrase)) {
+      if (self::says($text, (string) $phrase) || self::says($shown, (string) $phrase)) {
         $reasons[] = "must_not_claim[$index]";
       }
     }

@@ -862,6 +862,15 @@ function localnodes_platform_views_plugins_filter_alter(array &$plugins): void {
   }
 }
 
+/**
+ * Implements hook_ENTITY_TYPE_access() for activity.
+ *
+ * A personal notification's own page opens only for its recipients.
+ */
+function localnodes_platform_activity_access(EntityInterface $activity, $operation, AccountInterface $account) {
+  return \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::personalNotificationAccess($activity, (string) $operation, $account);
+}
+
 /** Implements hook_views_pre_view(). */
 function localnodes_platform_views_pre_view(\Drupal\views\ViewExecutable $view, $display_id, array &$args): void {
   \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::refuseOtherMembersPage($view, (string) $display_id, $args);

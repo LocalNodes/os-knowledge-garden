@@ -48,3 +48,22 @@ function social_ai_indexing_test_ai_provider_info_alter(array &$definitions): vo
     $definitions['echoai']['class'] = 'Drupal\social_ai_indexing_test\Plugin\AiProvider\FailingEchoProvider';
   }
 }
+
+/**
+ * Implements hook_social_user_name_display_suggestions().
+ *
+ * A viewer-dependent name, as Open Social's profile privacy gives: the
+ * account in state 'social_ai_indexing_test.private_name' (uid => name) is
+ * shown by that name only to the viewer uids listed in state
+ * 'social_ai_indexing_test.private_name_viewers'; everyone else gets the
+ * username. social_user memoizes the result by account, so this tests that
+ * a citation never reuses a name worked out for another viewer.
+ */
+function social_ai_indexing_test_social_user_name_display_suggestions($account): array {
+  $names = \Drupal::state()->get('social_ai_indexing_test.private_name', []);
+  $viewers = \Drupal::state()->get('social_ai_indexing_test.private_name_viewers', []);
+  if (isset($names[$account->id()]) && in_array((int) \Drupal::currentUser()->id(), $viewers, TRUE)) {
+    return ['private_name' => ['name' => $names[$account->id()], 'weight' => -100]];
+  }
+  return [];
+}

@@ -84,6 +84,32 @@ final class CitedAnswerTest extends UnitTestCase {
   }
 
   /**
+   * The Sources line names the author inside the link: "Title, by Name".
+   *
+   * Brackets in a name become parentheses so it can't break the line. A
+   * source without an author keeps the plain title. The overview's link
+   * texts (no author argument) never carry a name.
+   */
+  public function testSourcesLineNamesTheAuthor(): void {
+    $registry = new SourceRegistry();
+    $a = $registry->register($this->mockNode(36, 'The Marigold Badge Printer', $this->mockOwner('Ana Ruiz')), 'Blog');
+    $b = $registry->register($this->mockNode(37, 'Projector notes', $this->mockOwner('Bo [admin]')), 'Blog');
+    $c = $registry->register($this->mockNode(38, 'Kettle notes', $this->mockOwner('Cy', FALSE)), 'Blog');
+    $answer = CitedAnswer::cited('One [1]. Two [2]. Three [3].', [$a, $b, $c]);
+
+    $markdown = $answer->toMarkdown();
+    $this->assertStringEndsWith(
+      "**Sources**\n"
+      . "- [1] [The Marigold Badge Printer, by Ana Ruiz](/node/36)\n"
+      . "- [2] [Projector notes, by Bo (admin)](/node/37)\n"
+      . "- [3] [Kettle notes](/node/38)",
+      $markdown
+    );
+    $this->assertSame([], CitationInvariants::check($markdown, $registry));
+    $this->assertSame(['The Marigold Badge Printer', 'Projector notes', 'Kettle notes'], CitedAnswer::linkTexts([$a, $b, $c]));
+  }
+
+  /**
    * Two different pages with the same title get distinct link texts.
    */
   public function testDuplicateTitlesGetDistinctLinkTexts(): void {
