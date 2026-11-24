@@ -75,6 +75,7 @@ use Drupal\social_ai_indexing\Controller\AiOverviewController;
 use Drupal\social_ai_indexing\Eval\RawTextCheck;
 use Drupal\social_ai_indexing\Eval\ForgedScopeCheck;
 use Drupal\social_ai_indexing\Eval\IsolatedChild;
+use Drupal\social_ai_indexing\Eval\LeakDoors;
 use Drupal\social_ai_indexing\Eval\RegistryScopeCheck;
 use Drupal\social_ai_indexing\EventSubscriber\CitationRewriteSubscriber;
 use Drupal\social_ai_indexing\Service\AiOverviewService;
@@ -932,6 +933,7 @@ final class CitedAnswersLiveRunner {
         'label' => $source->label(),
         'key' => $source->key(),
         'title' => $source->title,
+        'author' => $source->author,
         'url' => $source->url,
         'type' => $source->type,
         'groups' => $entity instanceof ContentEntityInterface ? $this->groupsOf($entity) : [],
@@ -1126,10 +1128,7 @@ final class CitedAnswersLiveRunner {
     }
 
     // E1/E10: forbidden strings at every door for this persona.
-    $doors = [
-      'answer' => $record['answer'] . "\n" . json_encode($record['citations']),
-      'registry' => json_encode(array_map(static fn (array $r): array => ['key' => $r['key'], 'title' => $r['title'], 'url' => $r['url']], $record['registry'])),
-    ];
+    $doors = LeakDoors::build($record['answer'], $record['citations'], $record['registry']);
     if ($run['case'] !== 'RQ-17') {
       $doors['llm_input'] = implode("\n", $record['llm_input'] ?? []);
       $doors['logs'] = implode("\n", $record['log_lines'] ?? []);

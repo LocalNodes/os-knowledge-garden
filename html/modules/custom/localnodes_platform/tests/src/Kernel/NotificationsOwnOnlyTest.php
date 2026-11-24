@@ -30,12 +30,12 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   protected static $modules = [
     'block', 'dropdown', 'profile', 'social_user', 'role_delegation', 'social_post',
     'message', 'dynamic_entity_reference', 'activity_creator', 'activity_logger',
-    'activity_basics', 'activity_viewer', 'localnodes_platform',
+    'activity_basics', 'activity_viewer', 'mentions', 'votingapi', 'localnodes_platform',
   ];
 
   protected function setUp(): void {
     parent::setUp();
-    foreach (['post', 'profile', 'message', 'activity'] as $type) $this->installEntitySchema($type);
+    foreach (['post', 'profile', 'message', 'activity', 'mentions', 'vote'] as $type) $this->installEntitySchema($type);
     $this->installSchema('activity_creator', ['activity_notification_status']);
     $this->installShippedConfig('social_post', ['social_post.post_type.post', 'comment.type.post_comment']);
     foreach (['visibility', 'recipient_group', 'recipient_user', 'post', 'post_comments'] as $suffix) {
@@ -116,11 +116,12 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
     return ['ana' => $ana, 'carl' => $carl, 'ben' => $ben, 'carls' => $ids, 'bens' => $own];
   }
 
-  private function notification(AccountInterface $author, AccountInterface $recipient, ContentEntityInterface $entity, $gid, string $text): int {
+  private function notification(AccountInterface $author, AccountInterface|array $recipient, ContentEntityInterface $entity, $gid, string $text): int {
+    $recipients = array_map(static fn (AccountInterface $a): array => ['target_type' => 'user', 'target_id' => $a->id()], is_array($recipient) ? $recipient : [$recipient]);
     $activity = Activity::create([
       'user_id' => $author->id(), 'status' => 1,
       'field_activity_entity' => [['target_type' => $entity->getEntityTypeId(), 'target_id' => $entity->id()]],
-      'field_activity_recipient_user' => $recipient->id(),
+      'field_activity_recipient_user' => $recipients,
       'field_activity_recipient_group' => $gid,
       'field_activity_destinations' => [['value' => 'notifications']],
       'field_activity_status' => 1,
@@ -133,13 +134,14 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   /**
    * The notifications list for one recipient number, as one viewer.
    */
-  private function notifications(AccountInterface $viewer, string $display, ?AccountInterface $recipient): array {
+  private function notifications(AccountInterface $viewer, string $display, ?AccountInterface $recipient, ?string $without = NULL): array {
     $this->container->get('current_user')->setAccount($viewer);
     drupal_static_reset('getAllGroupsForUser');
     $view = Views::getView('activity_stream_notifications');
     $this->assertTrue($view->setDisplay($display));
     $view->setItemsPerPage(0);
     if ($recipient) $view->setArguments([(string) $recipient->id()]);
+    if ($without) $view->removeHandler($display, 'filter', $without);
     // Below the page's own refusal: the list itself.
     $view->build();
     $view->execute();
@@ -163,12 +165,97 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   }
 
   public function testSignedOutVisitorGetsNoNotifications(): void {
-    $this->fixture();
+    $f = $this->fixture();
+    // A notice addressed to the anonymous account.
+    $comment = Comment::load(Activity::load($f['carls']['comment on your content'])->get('field_activity_entity')->target_id);
+    $this->notification($f['ana'], $this->anonymous(), $comment, NULL, 'Ana_Author commented on your topic Carl hidden plan in Mendwell Stewards Circle');
     $view = Views::getView('activity_stream_notifications');
-    // The list's own query is never run for a visitor: the page and the
-    // notification centre are for signed-in members only.
     $this->assertFalse($view->access('page_1', $this->anonymous()));
     $this->assertFalse($view->access('block_1', $this->anonymous()));
+    $wrong = [];
+    // The notification centre's own address is for signed-in members only.
+    if ($this->container->get('access_manager')->checkNamedRoute('activity_creator.stream.notifications', [], $this->anonymous())) $wrong[] = 'the notification centre is for signed-in members';
+    // The recipient filter lists nothing for a signed-out visitor. Only this
+    // filter is tested here.
+    foreach (['page_1', 'block_1'] as $display) {
+      [$ids, $html] = $this->notifications($this->anonymous(), $display, NULL, 'activity_notification_visibility_access_filter');
+      if ($ids !== []) $wrong[] = "$display: a signed-out visitor has no notifications";
+      if (str_contains($html, 'Carl hidden plan')) $wrong[] = "$display: a notice's text is for its recipients only";
+    }
+    $this->assertSame([], $wrong);
+  }
+
+  /**
+   * A notice's own page (its number) opens for its recipients only.
+   */
+  public function testNotificationPageOpensForItsRecipientOnly(): void {
+    $f = $this->fixture();
+    $carl = $f['carl'];
+    // A mention of Carl in the hidden group, as Open Social writes it: two
+    // destinations, the notice list and email.
+    $topic = Comment::load(Activity::load($f['carls']['comment on your content'])->get('field_activity_entity')->target_id)->getCommentedEntity();
+    $mention = \Drupal\mentions\Entity\Mentions::create([
+      'entity_type' => 'node', 'entity_id' => $topic->id(), 'uid' => $carl->id(), 'auid' => $f['ana']->id(),
+    ]);
+    $mention->save();
+    $ids = $f['carls'];
+    $ids['mention in a hidden topic'] = $this->notification($f['ana'], $carl, $mention, NULL, 'Ana_Author mentioned you in Carl hidden plan');
+    // A like of Carl's hidden topic: the notice's related item is the vote.
+    \Drupal\votingapi\Entity\VoteType::create(['id' => 'like', 'label' => 'Like', 'value_type' => 'points'])->save();
+    $like = \Drupal\votingapi\Entity\Vote::create([
+      'type' => 'like', 'entity_type' => 'node', 'entity_id' => $topic->id(), 'value' => 1, 'value_type' => 'points', 'user_id' => $f['ana']->id(),
+    ]);
+    $like->save();
+    $ids['like of a hidden topic'] = $this->notification($f['ana'], $carl, $like, NULL, 'Ana_Author liked your topic Carl hidden plan');
+    // A notice for several members, Carl not first.
+    $ids['several members'] = $this->notification($f['ana'], [$f['ana'], $carl], $mention, NULL, 'Ana_Author mentioned you in Carl hidden plan');
+    $access = $this->container->get('access_manager');
+    $wrong = [];
+    foreach ($ids as $kind => $id) {
+      Activity::load($id)->set('field_activity_destinations', [['value' => 'notifications'], ['value' => 'email']])->save();
+      $this->container->get('entity_type.manager')->getAccessControlHandler('activity')->resetCache();
+      foreach (['another member' => $f['ben'], 'a signed-out visitor' => $this->anonymous()] as $who => $viewer) {
+        if ($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $viewer)) $wrong[] = "'$kind' ($who): a notice opens only for its recipients";
+      }
+      $this->assertTrue($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $carl), "Carl opens his own '$kind' notice.");
+    }
+    $this->assertSame([], $wrong);
+  }
+
+  /**
+   * Streams are left as they were; activity administrators keep notices.
+   */
+  public function testStreamActivitiesAndAdministratorsKeepTheirAccess(): void {
+    $f = $this->fixture();
+    $handler = $this->container->get('entity_type.manager')->getAccessControlHandler('activity');
+    $admin = $this->createUser(['administer activity entities', 'access content']);
+    $mention = $f['carls']['mention'];
+    Activity::load($mention)->set('field_activity_destinations', [['value' => 'notifications'], ['value' => 'email']])->save();
+    $handler->resetCache();
+    // The new rule refuses others, never an activity administrator; what
+    // Open Social itself grants them is left as it was.
+    $rule = [\Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::class, 'personalNotificationAccess'];
+    $this->assertFalse($rule(Activity::load($mention), 'view', $admin)->isForbidden(), 'An activity administrator is not refused a notice.');
+    $this->assertTrue($rule(Activity::load($mention), 'view', $f['ben'])->isForbidden(), 'Another member is refused it.');
+    // A public post on Carl's profile, as it appears on his profile stream:
+    // addressed to him, but not a notification.
+    $post = Post::create([
+      'type' => 'post', 'user_id' => $f['ana']->id(), 'status' => 1, 'field_visibility' => '1',
+      'field_recipient_user' => $f['carl']->id(),
+      'field_post' => ['value' => 'Hello Carl.', 'format' => 'plain_text'],
+    ]);
+    $post->save();
+    $stream = Activity::load($this->notification($f['ana'], $f['carl'], $post, NULL, 'Ana_Author posted on the profile of Carl_Member'));
+    $stream->set('field_activity_destinations', [['value' => 'stream_profile']])->save();
+    $group = Activity::load($f['carls']['group topic']);
+    $group->set('field_activity_recipient_user', [])->set('field_activity_destinations', [['value' => 'stream_group']])->save();
+    foreach (['profile stream' => $stream, 'group stream' => $group] as $kind => $activity) {
+      foreach ([$f['ben'], $this->anonymous(), $admin] as $viewer) {
+        $this->assertTrue($rule($activity, 'view', $viewer)->isNeutral(), "No new rule on a $kind activity.");
+      }
+    }
+    $handler->resetCache();
+    $this->assertTrue($stream->access('view', $f['ben']), 'Another member still opens a public profile-stream post.');
   }
 
   public function testOwnNotificationsAreListed(): void {

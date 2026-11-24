@@ -198,7 +198,9 @@ final class AgentLeakMatrixTest extends GroupAccessKernelTestBase {
         if (!in_array($topic_url, $urls, TRUE)) {
           $missing[] = "MISSING $tag: Sources should cite G-MO ($topic_url).";
         }
-        if (!in_array($comment_url, $urls, TRUE) || !str_contains($run['answer'], '[Comment on ' . $this->fixtures['G-MO']->label() . "]($comment_url)")) {
+        // The link text may end with the reply's author (", by <name>").
+        $comment_line = '/\[Comment on ' . preg_quote((string) $this->fixtures['G-MO']->label(), '/') . '(, by [^\]]+)?\]\(' . preg_quote($comment_url, '/') . '\)/';
+        if (!in_array($comment_url, $urls, TRUE) || preg_match($comment_line, $run['answer']) !== 1) {
           $missing[] = "MISSING $tag: Sources should cite the comment on G-MO as 'Comment on …' linking to $comment_url.";
         }
       }

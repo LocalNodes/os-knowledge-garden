@@ -6,6 +6,7 @@ namespace Drupal\Tests\localnodes_demo_packs\Unit;
 
 use Drupal\localnodes_demo_packs\PackAnswerCheck;
 use Drupal\social_ai_indexing\Citation\CitedAnswer;
+use Drupal\social_ai_indexing\Citation\RetrievedSource;
 use Drupal\Tests\UnitTestCase;
 
 /**
@@ -110,6 +111,24 @@ final class PackAnswerCheckTest extends UnitTestCase {
     $verdict = PackAnswerCheck::judge('We meet again. The pot holds 480 practice. [1]', self::sources(self::TOPIC), $row);
     $this->assertFalse($verdict['pass']);
     $this->assertContains('must_not_say[0]', $verdict['reasons']);
+  }
+
+  /**
+   * A forbidden name in the shown Sources line fails, though it is encoded.
+   *
+   * The Sources link text is encoded for markdown ("_" is "&#95;"), so the
+   * raw answer never holds the name the page shows. A negative control: the
+   * page is cited correctly, only its author is forbidden.
+   */
+  public function testMustNotSayFindsAnEncodedAuthor(): void {
+    $source = new RetrievedSource(1, 'node', 36, 'Visible page', 'Blog', '/node/36', 'fictional_hidden_kq4');
+    $answer = CitedAnswer::cited('A point [1].', [$source])->toMarkdown();
+    $this->assertStringNotContainsString('fictional_hidden_kq4', $answer, 'Precondition: the raw markdown encodes the name.');
+
+    $row = self::row(['must_say' => ['A point'], 'must_not_say' => ['fictional_hidden_kq4']]);
+    $verdict = PackAnswerCheck::judge($answer, self::sources(self::TOPIC), $row);
+    $this->assertFalse($verdict['pass']);
+    $this->assertSame(['must_not_say[0]'], $verdict['reasons']);
   }
 
   /**

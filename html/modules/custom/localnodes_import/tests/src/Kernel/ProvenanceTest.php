@@ -10,6 +10,7 @@ use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_import\Entity\ImportItem;
 use Drupal\localnodes_import\Entity\ImportRun;
 use Drupal\node\NodeInterface;
+use Drupal\social_ai_indexing\Citation\RetrievedSource;
 use Drupal\search_api\IndexInterface;
 use Drupal\Tests\social_ai_indexing\Traits\IndexFixtureTrait;
 
@@ -180,6 +181,25 @@ class ProvenanceTest extends ImportKernelTestBase {
     $this->assertSame(0, $xpath->query('.//a', $licence)->length, 'The typed licence is never linked');
     $this->assertStringNotContainsString('Formatting was converted', $box->textContent, 'No change note on a file');
     $this->assertSame('Imported 4 November 2026', $this->text($xpath, ".//*[contains(concat(' ', @class, ' '), ' localnodes-import-source__meta ')]", $box));
+  }
+
+  /**
+   * An imported page's citation names no author, even with a blank credit.
+   *
+   * The importer owns the Topic but didn't write it. Credit is optional on
+   * the upload form, so the import record decides, not the credit text. A
+   * member's own page with an empty credit field keeps its author.
+   */
+  public function testImportedTopicCitationNamesNoAuthor(): void {
+    $file = $this->createFile('minutes.docx');
+    $imported = $this->createFileTopic($file, NULL, NULL);
+    $this->recordImport($imported, ImportRun::KIND_FILES, ImportItem::OUTCOME_IMPORTED, '2026-11-04', (int) $file->id());
+    $this->assertSame('', RetrievedSource::fromEntity(1, $imported, 'Topic')->author);
+
+    $own = $this->createGroupTopic($this->group, 'Our own minutes', 'Written here.', 'group');
+    $this->assertTrue($own->get('field_source_attribution')->isEmpty());
+    $this->assertSame($this->siteOwner->getDisplayName(), RetrievedSource::fromEntity(2, $own, 'Topic')->author);
+    $this->assertNotSame('', $this->siteOwner->getDisplayName());
   }
 
   /**

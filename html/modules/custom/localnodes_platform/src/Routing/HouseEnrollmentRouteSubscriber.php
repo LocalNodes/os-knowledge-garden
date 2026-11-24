@@ -5,7 +5,7 @@ namespace Drupal\localnodes_platform\Routing;
 use Drupal\Core\Routing\RouteSubscriberBase;
 use Symfony\Component\Routing\RouteCollection;
 
-/** Adds membership gates alongside the installed route requirements. */
+/** Adds membership and sign-in gates alongside the installed route requirements. */
 final class HouseEnrollmentRouteSubscriber extends RouteSubscriberBase {
 
   protected function alterRoutes(RouteCollection $collection) {
@@ -26,6 +26,9 @@ final class HouseEnrollmentRouteSubscriber extends RouteSubscriberBase {
     ] as $name) {
       if ($route = $collection->get($name)) $route->setRequirement('_localnodes_house_enrollment', 'TRUE');
     }
+    // The notification centre lists the viewer's own notifications: for
+    // signed-in members only.
+    if ($route = $collection->get('activity_creator.stream.notifications')) $route->setRequirement('_user_is_logged_in', 'TRUE');
   }
 
   public static function getSubscribedEvents(): array {

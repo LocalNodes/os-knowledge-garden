@@ -103,7 +103,55 @@ final class RetrievedSourceTest extends UnitTestCase {
       'title' => 'Comment on X',
       'type' => 'comment',
       'url' => '/node/1#comment-8',
+      'author' => '',
     ], $source->toArray());
+  }
+
+  /**
+   * A page's source carries its author's display name; a reply, its own.
+   */
+  public function testAuthorIsTheOwnersDisplayName(): void {
+    $page = $this->mockNode(12, 'Watershed boundaries', $this->mockOwner("Ana  Ruiz\n"));
+    $this->assertSame('Ana Ruiz', RetrievedSource::fromEntity(1, $page, 'Topic')->author);
+
+    $reply = $this->mockComment(7, $page, $this->mockOwner('Bo Lindqvist'));
+    $this->assertSame('Bo Lindqvist', RetrievedSource::fromEntity(2, $reply, 'comment')->author);
+  }
+
+  /**
+   * No name for an author the site would not name to the asker.
+   *
+   * @dataProvider hiddenOwners
+   */
+  public function testHiddenOwnerGivesNoAuthor(bool $active, bool $anonymous, bool $label_access): void {
+    $node = $this->mockNode(12, 'Watershed boundaries', $this->mockOwner('Ana Ruiz', $active, $anonymous, $label_access));
+    $source = RetrievedSource::fromEntity(1, $node, 'Topic');
+    $this->assertSame('', $source->author);
+    $this->assertSame('/node/12', $source->url, 'The page is still cited.');
+  }
+
+  /**
+   * Owners whose name stays out: blocked, removed (uid 0), name not visible.
+   */
+  public static function hiddenOwners(): array {
+    return [
+      'blocked' => [FALSE, FALSE, TRUE],
+      'removed (anonymous)' => [TRUE, TRUE, TRUE],
+      'name not visible to the asker' => [TRUE, FALSE, FALSE],
+    ];
+  }
+
+  /**
+   * An owner that can't be loaded gives no author, not an error.
+   */
+  public function testOwnerErrorGivesNoAuthor(): void {
+    $node = $this->createMock(\Drupal\node\NodeInterface::class);
+    $node->method('getEntityTypeId')->willReturn('node');
+    $node->method('id')->willReturn('3');
+    $node->method('label')->willReturn('Page');
+    $node->method('toUrl')->willReturn($this->mockUrl('/node/3'));
+    $node->method('getOwner')->willThrowException(new \RuntimeException('gone'));
+    $this->assertSame('', RetrievedSource::fromEntity(1, $node, 'Topic')->author);
   }
 
 }
