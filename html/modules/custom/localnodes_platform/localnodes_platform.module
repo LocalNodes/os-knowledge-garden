@@ -857,6 +857,14 @@ function localnodes_platform_views_plugins_filter_alter(array &$plugins): void {
   if (isset($plugins['activity_filter_personalised_homepage'])) {
     $plugins['activity_filter_personalised_homepage']['class'] = \Drupal\localnodes_platform\Plugin\views\filter\HouseActivityHomepageFilter::class;
   }
+  if (isset($plugins['activity_visibility_access'])) {
+    $plugins['activity_visibility_access']['class'] = \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::class;
+  }
+}
+
+/** Implements hook_views_pre_view(). */
+function localnodes_platform_views_pre_view(\Drupal\views\ViewExecutable $view, $display_id, array &$args): void {
+  \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::refuseOtherMembersPage($view, (string) $display_id, $args);
 }
 
 /**

@@ -1,225 +1,222 @@
 ---
-# 8 events for Boulder regen community
-# AI Coverage: Events in Governance Circle group exercise permission-filtered retrieval
+# 14 events for the Boulder demo, dated from install day.
+# "+N day" / "-N day" are offsets from install day; "this month day N" and
+# "next month day N" keep the month calendar full (DemoDate). Month-anchored
+# events can fall either side of install day, so their text names no time.
+# No event names a season, month or weekday, so it reads right on any
+# install day.
+# AI Coverage: The Evening Hosts event (group visibility) exercises permission-filtered retrieval
 # AI Coverage: Public events exercise community-wide search
 # AI Coverage: Past events exercise historical content retrieval
 
-# Event 1: Front Range Bioregional Assembly (future +30 day, community, Watershed Hub)
+# Event 1: wallet evening (future +30 day, public, Boulder Creek Neighbors)
 e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1:
   uuid: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
-  title: Front Range Bioregional Assembly
+  title: Your first digital wallet, explained over tea
   type: event
   langcode: en
   uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
   body: >
-    <p>Join us for the first Front Range Bioregional Assembly, bringing together stewards, builders, and organizers from across Boulder County and the greater South Platte watershed. This is where delegates from every working group come together to share reports, make collective decisions, and strengthen the bonds that hold our bioregional network together.</p>
+    <p>A relaxed hour for complete beginners. Our group keeps a small shared fund for things like the hall and the cake, and some of us use a digital wallet to look after it. We'll show what a digital wallet is and why the group uses one, slowly and with plenty of time for questions.</p>
 
-    <p>This year's assembly will focus on three themes: Front Range watershed health indicators from our community science monitoring, the proposal for a quadratic funding round for local public goods, and polycentric governance in practice -- bridging DAO tools with consensus-based facilitation. Each group will present their seasonal stewardship report.</p>
-
-    <p>Whether you have been building beaver dam analogs on Thistlewood Ranch, running mutual credit experiments, growing food forests in Longmont, or hacking at Mesa Hearth, the Assembly is your chance to see how all these threads weave together into a coherent bioregional practice. Come learn, contribute, and celebrate the living systems of the Front Range.</p>
+    <p>You can just watch: nobody will ask you to sign up for anything or spend any money. Tea and biscuits are on the table. Free.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
     address_line1: 1750 Gooseberry Street
-  field_event_date: +30 day|09:00
-  field_event_date_end: +30 day|18:00
-  image: d1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c
-  image_alt: Front Range mountain landscape
-  field_event_location: Kingbird Event Center
-  field_content_visibility: community
-  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
+  field_event_date: +30 day|18:30
+  field_event_date_end: +30 day|19:30
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: aabb1122-3344-4556-6778-899001122334
 
-# Event 2: Beaver Dam Analog Build Day at Thistlewood Ranch (future +14 day, public, no group)
+# Event 2: creek path litter pick (future +14 day, public, no group)
 e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2:
   uuid: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
-  title: Beaver Dam Analog Build Day at Thistlewood Ranch
+  title: Creek path litter pick
   type: event
   langcode: en
   uid: 11223344-5566-4778-8990-aabbccddeef0
   body: >
-    <p>Come get your hands muddy! Join us at Thistlewood Ranch Preserve for a hands-on beaver dam analog (BDA) build day. BDAs are simple, low-tech structures -- posts driven into the streambed with woven willow branches -- that mimic the function of natural beaver dams. They slow water, raise water tables, and help degraded streams rebuild their braided channels and floodplain connectivity.</p>
+    <p>Two hours picking up litter along the Boulder Creek path, from Kingbird Park down to the footbridge. We work in pairs, so it's a nice way to meet someone new.</p>
 
-    <p>This is low-tech process-based restoration (LTPBR) in action. No engineering degree required -- just a willingness to stand in a cold stream and weave branches. Rowan will lead the installation, explaining the science behind beaver mimicry structures and how they transform stream complexity over time. We will build 3-5 structures on a tributary that has been incised from decades of channel straightening.</p>
-
-    <p>Bring waterproof boots, warm layers, work gloves, and lunch. Tools and materials provided. All skill levels welcome -- this is how we learn to restore the Front Range one stream reach at a time.</p>
-  field_event_address:
-    country_code: US
-    locality: Nederland
-    postal_code: 80466
-    address_line1: 4400 Thistlewood Ranch Road
-  field_event_date: +14 day|09:00
-  field_event_date_end: +14 day|15:00
-  image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
-  image_alt: Stream restoration site
-  field_event_location: Thistlewood Ranch Preserve
-  field_content_visibility: public
-  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
-
-# Event 3: Mesa Hearth Open House & Community Potluck (future +21 day, public, Mesa Hearth)
-e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3:
-  uuid: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
-  title: "Mesa Hearth Open House & Community Potluck"
-  type: event
-  langcode: en
-  uid: 22334455-6677-4889-90aa-bbccddeeff01
-  body: >
-    <p>Come see what Mesa Hearth Boulder is all about! This open house is your chance to tour our co-working space, meet the people building tools and tending land in our community, and share a meal together. Mesa Hearth is where the regen tech builders meet the watershed stewards -- where hackathons happen down the hall from seed-sorting sessions.</p>
-
-    <p>We will have short lightning talks from community members about their current projects, plus a potluck dinner featuring food from Front Range farms and gardens. Bring a dish to share if you can. This is the social glue that holds our community together -- come for the food, stay for the connections.</p>
+    <p>Gloves, bags and litter grabbers provided. Children are welcome with an adult, and there's a smaller job for anyone who'd rather not bend. Free. We finish with hot drinks by the park benches.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 1310 Pinyon Avenue
-  field_event_date: +21 day|17:00
-  field_event_date_end: +21 day|21:00
-  image: a4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f
-  image_alt: Community gathering space
-  field_event_location: Mesa Hearth Boulder
+    address_line1: 101 Willowbend Path
+  field_event_date: +14 day|09:30
+  field_event_date_end: +14 day|11:30
+  image:
+  image_alt:
+  field_event_location: Kingbird Park, by the playground
+  field_content_visibility: public
+  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+
+# Event 3: potluck (future +21 day, public, Boulder Creek Neighbors)
+e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3:
+  uuid: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
+  title: Neighbors' potluck supper
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>Bring a dish to share if you can, and come anyway if you can't: there is always more than enough. Long tables, name stickers, and someone at the door to say hello so nobody walks into a room of strangers.</p>
+
+    <p>Children are very welcome; there's a drawing table in the corner. Free.</p>
+  field_event_address:
+    country_code: US
+    locality: Boulder
+    postal_code: 80302
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +21 day|17:30
+  field_event_date_end: +21 day|20:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
   field_content_visibility: public
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
-  group: ddee4455-6677-4889-90aa-122334455667
+  group: aabb1122-3344-4556-6778-899001122334
 
-# Event 4: Monthly Governance Circle (past -14 day, community, Governance Circle)
-# AI Coverage: Past event in closed group exercises permission filtering for historical content
+# Event 4: hosts' planning (past -14 day, group, Evening Hosts - members-only)
+# AI Coverage: Past event in a members-only group exercises permission filtering for historical content
 e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4:
   uuid: e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4
-  title: Monthly Governance Circle
+  title: Hosts' planning chat
   type: event
   langcode: en
   uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
   body: >
-    <p>Our regular monthly governance circle where council members discuss current proposals, review stewardship reports, and practice hybrid consensus-DAO decision making. This month's agenda includes the Q2 treasury allocation, the proposal for a Front Range quadratic funding round, and a discussion about expanding the governance circle to include youth representatives from Next Gen Front Range.</p>
+    <p>Half an hour to sort out the next few evenings: who books the hall, who brings the cake, and whether the fund can cover a speaker's bus fare. We'll also check the receipts from last month.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
     address_line1: 900 Prairie Smoke Road
   field_event_date: -14 day|18:00
-  field_event_date_end: -14 day|21:00
+  field_event_date_end: -14 day|18:30
   image:
   image_alt:
-  field_event_location: Online via video call
-  field_content_visibility: community
+  field_event_location: Online video call
+  field_content_visibility: group
   field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
   group: eeff5566-7788-4990-0aa1-233445566778
 
-# Event 5: Seed Swap & High-Altitude Growing Workshop (future +7 day, community, Food Commons)
+# Event 5: seed swap (future +7 day, community, Garden Swap and Share)
 e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5:
   uuid: e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5
-  title: "Seed Swap & High-Altitude Growing Workshop"
+  title: Seed and cutting swap
   type: event
   langcode: en
   uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
   body: >
-    <p>Bring your saved seeds, plant starts, and growing tips to share with fellow Front Range growers. This is our spring seed swap where we strengthen the genetic diversity of our regional food systems by exchanging locally adapted varieties that thrive at 5,400 feet in our semi-arid climate.</p>
+    <p>Bring seeds you saved, a cutting from a houseplant, or spare seedlings, and take home something new. Nothing to bring? Come anyway and take something: that's how most of us started.</p>
 
-    <p>Lucia will lead a workshop on high-altitude permaculture techniques -- including water harvesting, wind protection, and season extension strategies for the Front Range's short growing season. We will have tables organized by plant family and a special section for heirloom Colorado varieties. Even if you do not have seeds to bring, come learn and take home something to grow. Food sovereignty starts in the seed.</p>
+    <p>Lucia will be at the tomato table answering questions about growing in Boulder's dry air. Free.</p>
   field_event_address:
     country_code: US
-    locality: Longmont
-    postal_code: 80501
-    address_line1: 640 Bluestem Street
+    locality: Boulder
+    postal_code: 80304
+    address_line1: 1630 Sweetgrass Avenue
   field_event_date: +7 day|10:00
-  field_event_date_end: +7 day|13:00
-  image: f3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e
-  image_alt: Seed swap and garden plants
-  field_event_location: Bluestem Farmstead
+  field_event_date_end: +7 day|12:00
+  image:
+  image_alt:
+  field_event_location: The shared garden behind Cottonwood Community Hall
   field_content_visibility: community
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
   group: ccdd3344-5566-4778-8990-011223344556
 
-# Event 6: Quadratic Funding Workshop (future +45 day, community, Regen Tech)
+# Event 6: repair afternoon (future +45 day, community, Fix-It Table)
 e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6:
   uuid: e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6
-  title: "Quadratic Funding Workshop: How to Run a Local QF Round"
+  title: "Bring it, we'll try to fix it"
   type: event
   langcode: en
-  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
   body: >
-    <p>Learn how quadratic funding works and how to run a local QF round for Front Range public goods. QF is a democratic funding mechanism where many small contributions are amplified by a matching pool -- meaning projects that matter to the most people get the most funding, regardless of how wealthy individual donors are. Think of it as a matching-fund round, but for your bioregion.</p>
+    <p>Bring one thing that's broken and sit with a neighbor who likes fixing things. Lamps, toasters, zips, bike lights, chairs, torn bags. You stay with your item and learn what went wrong.</p>
 
-    <p>Devon will walk through the mechanics of QF, share case studies from successful rounds in other communities, and lead a hands-on exercise designing a pilot round for Boulder. We will discuss what kinds of projects to include (watershed restoration, food commons, community infrastructure, mutual aid), how to structure the matching pool, and how to run an online vote that everyone can check.</p>
-
-    <p>This workshop is for anyone curious about Ethereum localism in practice -- no crypto background needed. We will focus on the coordination mechanism, not the technology stack. Public goods funding is about community priorities, not protocol complexity.</p>
+    <p>We can't promise every fix, but about two in three things go home working. Free; there's a jar for spare parts if you want to chip in.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 1125 Kinnikinnick Street
+    address_line1: 1750 Gooseberry Street
   field_event_date: +45 day|13:00
-  field_event_date_end: +45 day|17:00
-  image: e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d
-  image_alt: Workshop space
-  field_event_location: Cinquefoil College Maker Lab
+  field_event_date_end: +45 day|16:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall, back room
   field_content_visibility: community
   field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: bbcc2233-4455-4667-7889-900112233445
 
-# Event 7: Summer Solstice Gathering at Boulder Creek (future +60 day, public, no group)
+# Event 7: soup and stories (future +60 day, public, no group)
 e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7:
   uuid: e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7
-  title: Summer Solstice Gathering at Boulder Creek
+  title: Soup and stories night
   type: event
   langcode: en
   uid: 44556677-8899-400a-abb0-cddeeff01223
   body: >
-    <p>Gather with your community to celebrate the summer solstice and honor the waters that sustain the Front Range. This is a time for storytelling, song, shared food, and renewing our commitment to the land and water of this bioregion.</p>
+    <p>Soup is on us. Bring a bowl and, if you like, a short story about your street, your family or the first place you lived in Boulder. Two minutes is plenty, and listening is just as good.</p>
 
-    <p>Talia Redhawk will open the gathering with an acknowledgment of the Indigenous peoples of the land we gather on, whose relationship to these waters stretches back thousands of years. We will hold community sharing circles along Boulder Creek, followed by a potluck feast featuring food grown within our bioregion. Bring something to share -- food, a story, a song, or simply your presence.</p>
-
-    <p>This gathering is open to everyone. Come celebrate the longest day of the year where the mountains meet the plains, where the Continental Divide sends water on its long journey to the Gulf.</p>
+    <p>Children and first-timers are very welcome. Free, bring a bowl.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
-    address_line1: 300 Willowbend Path
-  field_event_date: +60 day|16:00
-  field_event_date_end: +60 day|21:00
-  image: b5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90
-  image_alt: Boulder Creek landscape
-  field_event_location: Kingbird Park
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +60 day|18:00
+  field_event_date_end: +60 day|20:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
   field_content_visibility: public
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
 
-# Event 8: Community Science Data Jam (past -30 day, community, Watershed Hub)
+# Event 8: knife sharpening evening (past -30 day, public, Boulder Creek Neighbors)
 e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
   uuid: e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8
-  title: Community Science Data Jam
+  title: "Neighbors' evening: sharpening kitchen knives"
   type: event
   langcode: en
   uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
   body: >
-    <p>Watershed monitors, data scientists, and community members gathered for a full-day data jam to analyze the latest water quality data from our monitoring stations along Boulder Creek and South Platte tributaries. Zara Okafor led this session, combining Cinquefoil College research methods with community science data collected by volunteer monitors throughout the season.</p>
+    <p>Our monthly evening: tea, cake, and one thing to learn together. Zara showed us how to sharpen a kitchen knife safely with a simple stone, and everyone had a go with their own knife.</p>
 
-    <p>Key findings: dissolved oxygen levels have improved significantly in reaches where beaver dam analogs were installed two years ago. Turbidity data shows that BDA sites are capturing sediment and rebuilding floodplain soils. The community science dashboard has been updated with all new data -- check the Watershed Hub group files for access.</p>
+    <p>Fourteen people came, including three who were new. The fund paid for the hall and two sharpening stones the group now keeps.</p>
   field_event_address:
     country_code: US
     locality: Boulder
-    postal_code: 80303
-    address_line1: 4001 Lichen Drive
-  field_event_date: -30 day|09:00
-  field_event_date_end: -30 day|17:00
+    postal_code: 80302
+    address_line1: 1750 Gooseberry Street
+  field_event_date: -30 day|18:30
+  field_event_date_end: -30 day|20:00
   image:
   image_alt:
-  field_event_location: Cinquefoil College Field Station
-  field_content_visibility: community
-  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: aabb1122-3344-4556-6778-899001122334
 
-# Watershed Hub Potluck (this month day 4, community, group; month-anchored so the calendar is never empty)
+# Board games evening (this month day 4, community, Boulder Creek Neighbors; month-anchored so the calendar is never empty)
 2275752d-29f6-4738-a12d-a12cbb45c83d:
   uuid: 2275752d-29f6-4738-a12d-a12cbb45c83d
-  title: Watershed Hub Potluck
+  title: Board games evening
   type: event
   langcode: en
   uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
   body: >
-    <p>Bring a dish and a short update from your corner of the watershed. We go round the circle, then eat.</p>
+    <p>A shelf of games, a pot of tea and a few tables. Bring a favorite game or learn one of ours.</p>
 
-    <p>New members welcome; this is the easiest way to meet everyone.</p>
+    <p>New faces always welcome; someone will teach you the rules.</p>
   field_event_address:
     country_code: US
     locality: Boulder
@@ -232,40 +229,40 @@ e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
   group: aabb1122-3344-4556-6778-899001122334
 
-# Boulder Creek Cleanup Morning (this month day 13, public, group; month-anchored so the calendar is never empty)
+# Creek path walk (this month day 13, public, Creek Path Walkers; month-anchored so the calendar is never empty)
 6fba96bb-8bd5-4259-a8e0-74da36dec443:
   uuid: 6fba96bb-8bd5-4259-a8e0-74da36dec443
-  title: Boulder Creek Cleanup Morning
+  title: Slow walk along the creek path
   type: event
   langcode: en
-  uid: 11223344-5566-4778-8990-aabbccddeef0
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
   body: >
-    <p>We clear trash and invasive tamarisk along the creek path from Kingbird Park downstream. Gloves, bags and grabbers provided.</p>
+    <p>About an hour along the flat creek path at an easy pace, then coffee.</p>
 
-    <p>All ages welcome; kids with an adult.</p>
+    <p>All ages welcome: pushchairs, dogs and walking sticks too. Free.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80302
     address_line1: 101 Willowbend Path
   field_event_date: this month day 13|09:00
-  field_event_date_end: this month day 13|12:00
-  field_event_location: Kingbird Park
+  field_event_date_end: this month day 13|10:30
+  field_event_location: Kingbird Park, by the footbridge
   field_content_visibility: public
-  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
-  group: aabb1122-3344-4556-6778-899001122334
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ddee4455-6677-4889-90aa-122334455667
 
-# Community Currency Office Hours (this month day 22, community, group; month-anchored so the calendar is never empty)
+# Fix-It drop-in (this month day 22, community, Fix-It Table; month-anchored so the calendar is never empty)
 9cf102d8-17e3-4e94-a115-6e717844b214:
   uuid: 9cf102d8-17e3-4e94-a115-6e717844b214
-  title: Community Currency Office Hours
+  title: Fix-It drop-in
   type: event
   langcode: en
   uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
   body: >
-    <p>Drop in with questions about the local mutual-credit pilot: how to open a line, how merchants settle, what happens at the end of a season.</p>
+    <p>A shorter session for small jobs: a loose button, a squeaky door hinge, a phone screen protector.</p>
 
-    <p>No wallet needed to come and ask.</p>
+    <p>Drop in any time in the two hours. Free.</p>
   field_event_address:
     country_code: US
     locality: Boulder
@@ -273,76 +270,76 @@ e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
     address_line1: 1600 Kestrel Street
   field_event_date: this month day 22|16:00
   field_event_date_end: this month day 22|18:00
-  field_event_location: Mesa Hearth
+  field_event_location: Kestrel Street Library, meeting room
   field_content_visibility: community
   field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: bbcc2233-4455-4667-7889-900112233445
 
-# Food Commons Harvest Kitchen (next month day 6, community, group; month-anchored so the calendar is never empty)
+# Jam-making morning (next month day 6, community, Garden Swap and Share; month-anchored so the calendar is never empty)
 c1bc8f88-386a-47cc-8736-1699558d919e:
   uuid: c1bc8f88-386a-47cc-8736-1699558d919e
-  title: Food Commons Harvest Kitchen
+  title: Making jam together
   type: event
   langcode: en
   uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
   body: >
-    <p>We put up the season's tomatoes and peppers together and split the jars among everyone who comes.</p>
+    <p>We cook up whatever fruit people have spare and split the jars among everyone who comes.</p>
 
-    <p>Bring clean jars if you have them.</p>
+    <p>Bring clean jars if you have them. Children welcome with an adult.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80304
     address_line1: 1630 Sweetgrass Avenue
   field_event_date: next month day 6|10:00
-  field_event_date_end: next month day 6|14:00
-  field_event_location: Sweetgrass Garden Kitchen
+  field_event_date_end: next month day 6|13:00
+  field_event_location: Sweetgrass Church kitchen
   field_content_visibility: community
   field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
   group: ccdd3344-5566-4778-8990-011223344556
 
-# Mesa Hearth Open Studio Night (next month day 15, public, group; month-anchored so the calendar is never empty)
+# Walk and coffee (next month day 15, public, Creek Path Walkers; month-anchored so the calendar is never empty)
 53b055e9-91cb-4a5a-88c6-70bfa9f0688e:
   uuid: 53b055e9-91cb-4a5a-88c6-70bfa9f0688e
-  title: Mesa Hearth Open Studio Night
+  title: Walk and coffee
   type: event
   langcode: en
   uid: 22334455-6677-4889-90aa-bbccddeeff01
   body: >
-    <p>Members show what they are building: tools, maps, art and experiments. Open to anyone curious.</p>
+    <p>The same easy walk along the creek, ending at the café on Kestrel Street.</p>
 
-    <p>Light food and drink.</p>
+    <p>Everyone welcome. Free; buy your own coffee if you'd like one.</p>
   field_event_address:
     country_code: US
     locality: Boulder
     postal_code: 80301
     address_line1: 1600 Kestrel Street
-  field_event_date: next month day 15|18:00
-  field_event_date_end: next month day 15|21:00
-  field_event_location: Mesa Hearth
+  field_event_date: next month day 15|09:00
+  field_event_date_end: next month day 15|10:30
+  field_event_location: Kingbird Park, by the footbridge
   field_content_visibility: public
   field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
   group: ddee4455-6677-4889-90aa-122334455667
 
-# Watershed Hub Monthly Check-In (next month day 24, community, group; month-anchored so the calendar is never empty)
+# How we decide (next month day 24, community, Boulder Creek Neighbors; month-anchored so the calendar is never empty)
 2752f2ec-8b08-4754-a30b-0489a6e6df67:
   uuid: 2752f2ec-8b08-4754-a30b-0489a6e6df67
-  title: Watershed Hub Monthly Check-In
+  title: How we decide what to spend our money on
   type: event
   langcode: en
   uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
   body: >
-    <p>Our monthly check-in: what moved, what is stuck, and where people could use a hand.</p>
+    <p>Anyone in the group can suggest how to spend our small shared fund, and everyone gets a say. Come and see how it works, using the vote on the hall and the cake as the example.</p>
 
-    <p>Join in person or online; the link is posted in the group the day before.</p>
+    <p>Bring your questions and your ideas. Join in person or online; the link is posted in the group the day before.</p>
   field_event_address:
     country_code: US
     locality: Boulder
-    postal_code: 80302
-    address_line1: 1001 Coyote Willow Avenue
+    postal_code: 80301
+    address_line1: 1600 Kestrel Street
   field_event_date: next month day 24|18:30
-  field_event_date_end: next month day 24|20:00
-  field_event_location: Online and at the Mesa Commons Library
+  field_event_date_end: next month day 24|19:30
+  field_event_location: Kestrel Street Library, meeting room
   field_content_visibility: community
-  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
   group: aabb1122-3344-4556-6778-899001122334
