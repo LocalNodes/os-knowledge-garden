@@ -113,6 +113,12 @@ services:
     arguments: ['@entity_type.manager']
     tags:
       - { name: access_check, applies_to: _localnodes_house_enrollment, method: routeAccess }
+  # The export switch (ExportSwitch): no export routes while it is off.
+  localnodes_platform.export_routes:
+    class: Drupal\localnodes_platform\Routing\ExportRouteSubscriber
+    arguments: ['@config.factory', '@router.builder']
+    tags:
+      - { name: event_subscriber }
   localnodes_platform.house_enrollment_routes:
     class: Drupal\localnodes_platform\Routing\HouseEnrollmentRouteSubscriber
     tags:

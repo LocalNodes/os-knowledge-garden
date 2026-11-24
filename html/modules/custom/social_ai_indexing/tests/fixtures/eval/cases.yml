@@ -60,7 +60,7 @@
 # in state (localnodes_import.live_check_seed). P2P facts are drafted from
 # the saved fixture page texts only, never from model output. The plain-
 # language case sheet with the source passages is
-# .planning/phases/22-document-importer-cited-group-answers/22-26-CASE-SHEET.md.
+# .planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-26-CASE-SHEET.md.
 
 - id: RQ-01
   door: answer

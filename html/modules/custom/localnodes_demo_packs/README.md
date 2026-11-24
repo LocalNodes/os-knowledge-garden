@@ -2,7 +2,7 @@
 
 ## What this module does
 
-It loads one fictional community pack onto a fresh LocalNodes site. `DEMO_PACK` chooses the pack. Each pack is a directory under `packs/` holding the same YAML files social_demo reads (users, groups, pages, events, posts, polls). The module's plugins are empty subclasses of social_demo's loaders, so a pack is data only.
+It loads one fictional community pack onto a fresh LocalNodes site. `DEMO_PACK` chooses the pack. Each pack is a directory under `packs/` holding the same YAML files social_demo reads (users, groups, pages, events, posts, polls). The module's plugins are subclasses of social_demo's loaders, so a pack is data only. The group loader does one thing more: it records the pack's community-wide group (below).
 
 - Everything in the packs is made up: no real person, event, organisation, address or place.
 - Seeded accounts use `.example` addresses, so no mail reaches anyone. The platform's reserved-recipient filter drops any mail to `.example`, `.test`, `.invalid` and `.localhost` addresses.
@@ -69,6 +69,14 @@ A pack's dates are counted from the day it loads. Its events are a few days to a
 | Site | Walk steps checked by the tests and scripts/check_demo_pack.php | Held back |
 |------|------------------------------------------------------------------|-----------|
 | Lantern Row Housing Co-op | Steps 1, 2, 3, 5 (the screen) and 8 are checked by the tests, as Ines Duarte. | The assistant rows run only on a site with an AI key, through scripts/check_demo_pack.php. Step 5's assistant row (lr-12) passes there. Step 4's row (lr-01) does not pass yet: the live answer differs from what the row requires. Step 6 waits for the decisions work. Step 7 waits for the practice-money work. |
+
+## The community-wide group and the group tour
+
+A pack names the group everyone in the community belongs to with `community_template: <template id>` on that one entry in `group.yml` (Lantern Row: the co-op common room, `housing_coop`). After the groups load, the group loader records it in state the way the organizer step records a community template's groups. That record is what the first sign-in reads: a new member is joined to that group, lands on it and sees the group tour's five tips, once.
+
+The record is written only when no template is recorded yet, exactly one entry is marked, the template exists, and the group is public or community-wide and open to anyone to join. A members-only or secret group is never recorded. The record stays after this module is uninstalled.
+
+Seeded members are already in the common room, but their first sign-in by password lands there with the tour too. A presenter's one-time sign-in link opens the account page first, as before; saving a password there lands on the group with the tour.
 
 ## Presenter sign-in
 

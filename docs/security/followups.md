@@ -379,7 +379,7 @@ TM-24 flood control therefore keys on real client IPs in production.
 
 Date: 2026-11-05.
 
-This fixes the siwe_login findings from `.planning/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW.md` (WR-01 to WR-06 and IN-01 to IN-06). CR-01 was fixed earlier in fresh3 PR #40.
+This fixes the siwe_login findings from `.planning/workstreams/v4/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW.md` (WR-01 to WR-06 and IN-01 to IN-06). CR-01 was fixed earlier in fresh3 PR #40.
 
 The work is on local branches only: `repos/siwe_login` branch `beta8`, cut from 1.0.x at 004eeb9 (beta7). The WaaP connector part is one commit on `waap-connector`. Nothing is pushed or tagged. THREAT-MODEL.md is unchanged. The clone is left on `beta8`.
 

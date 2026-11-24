@@ -39,7 +39,7 @@ use Drupal\user\RoleInterface;
  * Role::getPermissions() on 2026-11-04), so the access policy the tests see
  * is the shipped one.
  *
- * @see .planning/phases/22-document-importer-cited-group-answers/22-TEST-HARNESS.md
+ * @see .planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-TEST-HARNESS.md
  */
 abstract class GroupAccessKernelTestBase extends KernelTestBase {
 

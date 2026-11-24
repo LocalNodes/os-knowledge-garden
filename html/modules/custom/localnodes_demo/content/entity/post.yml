@@ -282,3 +282,16 @@ c3132ba2-9a86-4390-9fb9-8614dc8f6f7d:
   group: 1e96acbd-da9b-41e0-b823-01b5407917cf
   field_post: >
     Welcome to the Cascadia Governance Council! A few things to try: ask the AI assistant (the chat button) what this group has been working on; open Events, then Calendar, to see the month. Members can also send each other private messages from a profile page ("Write a message").
+
+# Welcome post for the secret group. Group visibility (3), not community:
+# a signed-in person outside the group must not read the group's name.
+a36fe8a3-98e9-4357-a9af-3850443ad7af:
+  uuid: a36fe8a3-98e9-4357-a9af-3850443ad7af
+  langcode: en
+  type: post
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  field_visibility: 3
+  created: now
+  group: 674f3732-5334-46ac-b0ca-52d0f4118881
+  field_post: >
+    Welcome to the Mendwell Stewards Circle! A few things to try: ask the AI assistant (the chat button) what this group has been working on; open Events, then Calendar, to see the month.

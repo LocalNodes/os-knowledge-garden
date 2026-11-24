@@ -11,7 +11,7 @@
 // with test.use({ storageState }), so the steward block's hooks (the
 // no-networks block deletes and restores the registry) never run twice.
 //
-// Run from the lane site's dir with --output <fresh3-work>/.planning/phases/
+// Run from the lane site's dir with --output <fresh3-work>/.planning/workstreams/v4/phases/
 // 21-real-safe-reads-balances/e2e-evidence/runs/<RID>/walkthrough, which is
 // gitignored.
 import { dirname, join } from 'node:path';

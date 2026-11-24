@@ -33,6 +33,8 @@ final class ExportSignatureConfirmationTest extends KernelTestBase {
     $this->installSchema('localnodes_platform', ['localnodes_site_export']);
     $this->installConfig(['system', 'siwe_login']);
     $this->config('system.site')->set('uuid', 'proof-site')->set('name', 'Our House')->save();
+    // These tests cover the export itself, so its switch is on.
+    $this->config('localnodes_platform.settings')->set('export_enabled', TRUE)->save();
     $this->config('siwe_login.settings')->set('expected_domain', 'site.test')->set('expected_uri', 'https://site.test')->set('enable_ens_validation', FALSE)->save();
     FieldStorageConfig::create(['field_name' => 'field_ethereum_address', 'entity_type' => 'user', 'type' => 'string', 'settings' => ['max_length' => 42]])->save();
     FieldConfig::create(['field_name' => 'field_ethereum_address', 'entity_type' => 'user', 'bundle' => 'user', 'label' => 'Address'])->save();

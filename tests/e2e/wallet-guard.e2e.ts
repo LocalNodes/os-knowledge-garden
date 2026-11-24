@@ -2,7 +2,7 @@
 //
 // Each case is one guard of the safety rule in wallet/test-wallet.ts. Eight planted
 // mutations, one per guard, each turned a named case red and were reverted; the log is in
-// .planning/phases/21-real-safe-reads-balances/gates/e2e-wallet-guard-proof.txt.
+// .planning/workstreams/v4/phases/21-real-safe-reads-balances/gates/e2e-wallet-guard-proof.txt.
 // Case (11) is the control: a signature by the selected account works, so the refusals
 // aren't a broken wallet.
 import { expect, test, type Frame, type Page } from '@playwright/test';

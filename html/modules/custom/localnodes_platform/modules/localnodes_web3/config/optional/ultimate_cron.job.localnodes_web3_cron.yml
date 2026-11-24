@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - localnodes_web3
+    - ultimate_cron
+title: 'Network fee account status'
+id: localnodes_web3_cron
+weight: 0
+module: localnodes_web3
+callback: localnodes_web3_cron
+scheduler:
+  id: simple
+  configuration:
+    rules:
+      - '* * * * *'
+launcher:
+  id: serial
+logger:
+  id: database

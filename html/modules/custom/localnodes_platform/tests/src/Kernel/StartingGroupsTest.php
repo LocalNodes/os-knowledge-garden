@@ -216,6 +216,74 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * The other shipped templates: each file is what it says it is.
+   *
+   * The house kind names house_v1; market and neighborhood kinds suggest no
+   * group template. Suggestions are recorded, not applied.
+   *
+   * @dataProvider shippedRecipeProvider
+   */
+  public function testShippedRecipe(string $id, string $label, array $groups, array $repeatable): void {
+    $this->installShippedTemplate($id);
+    $template = $this->config('localnodes_platform.community_template.' . $id)->get();
+
+    $this->assertSame($id, $template['id']);
+    $this->assertSame(1, $template['version']);
+    $this->assertSame($label, $template['label']);
+    $this->assertNotEmpty($template['description']);
+    $this->assertSame($groups, $template['groups']);
+    $this->assertSame($repeatable, $template['repeatable']);
+  }
+
+  /**
+   * Running each other shipped template makes today's group and records the template.
+   *
+   * @dataProvider shippedRecipeProvider
+   */
+  public function testRecipeMakesTheCommunityGroup(string $id, string $label, array $groups, array $repeatable): void {
+    $this->installShippedTemplate($id);
+    putenv('COMMUNITY_TEMPLATE=' . $id);
+    [$code, $printed] = $this->runSetup();
+
+    $this->assertSame(0, $code);
+    $this->assertSame("Starting groups created from the community template.\n" . self::READY, $printed);
+    $this->assertSame([self::SITE_NAME], $this->labels());
+    $group = $this->groupNamed(self::SITE_NAME);
+    $this->assertTodaysGroup($group);
+    $this->assertSame($group->id(), $this->findFirstGroup()?->id(), 'The seed step finds this group.');
+    $this->assertSame([
+      'id' => $id,
+      'version' => 1,
+      'groups' => [
+        ['group' => (int) $group->id(), 'everyone' => TRUE, 'group_template' => $groups[0]['group_template']],
+      ],
+      'repeatable' => $repeatable,
+    ], $this->state(self::TEMPLATE_STATE));
+
+    // A second run changes nothing.
+    $this->runSetup();
+    $this->assertSame([self::SITE_NAME], $this->labels());
+  }
+
+  /**
+   * The three other shipped templates.
+   */
+  public static function shippedRecipeProvider(): array {
+    $community = fn (?string $template) => [
+      ['name' => '{site}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => $template],
+    ];
+    return [
+      'single house' => ['single_house', 'A single house', $community('house_v1'), []],
+      'market' => ['market', 'Market or local business group', $community(NULL), [
+        ['kind' => 'vendor', 'label' => 'Add a vendor', 'group_template' => NULL],
+      ]],
+      'neighborhood association' => ['neighbourhood_association', 'Neighborhood association', $community(NULL), [
+        ['kind' => 'block', 'label' => 'Add a block', 'group_template' => NULL],
+      ]],
+    ];
+  }
+
+  /**
    * The housing co-op template: the community's group, with the house kind recorded.
    *
    * The group everyone is in is the group today's step makes, so the seed step
@@ -431,13 +499,13 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * Installs the shipped housing co-op file, checked against the schema on save.
+   * Installs the selected shipped template, checked against the schema on save.
    */
-  private function installShippedTemplate(): void {
-    $name = 'localnodes_platform.community_template.housing_coop';
+  private function installShippedTemplate(string $id = 'housing_coop'): void {
+    $name = 'localnodes_platform.community_template.' . $id;
     $path = $this->container->get('extension.list.module')->getPath('localnodes_platform') . '/config/install';
     $data = (new FileStorage($path))->read($name);
-    $this->assertIsArray($data, 'The housing co-op template ships in config/install.');
+    $this->assertIsArray($data, "The $id template ships in config/install.");
     $this->config($name)->setData($data)->save();
   }
 

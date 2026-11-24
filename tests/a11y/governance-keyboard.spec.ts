@@ -6,7 +6,7 @@
 // Enter, Space, Escape), records what a screen reader is told (the live
 // regions and focus moves, helpers/live-regions.ts) and the accessibility
 // tree of the panel (locator.ariaSnapshot()), saves both to
-// .planning/phases/25-group-governance-snapshot-zodiac-hats/a11y/keyboard-*.txt,
+// .planning/workstreams/v4/phases/25-group-governance-snapshot-zodiac-hats/a11y/keyboard-*.txt,
 // and fails on a focus or announcement mismatch. Wallet prompts come from a
 // stub wallet in the page, never a real one; the network guard fails any
 // request to another host.

@@ -30,7 +30,7 @@ cd "$ROOT" || exit 2
 STATE_DIR="$ROOT/tests/e2e/.state"
 LOCK="$STATE_DIR/fresh3-e2e.lock"
 IDENTITY="$STATE_DIR/site-identity-fresh3-e2e.json"
-PHASE_DIR="$ROOT/.planning/phases/21-real-safe-reads-balances"
+PHASE_DIR="$ROOT/.planning/workstreams/v4/phases/21-real-safe-reads-balances"
 INDEX="$PHASE_DIR/e2e-evidence/INDEX.md"
 FORK="$ROOT/tests/e2e/fork/fork.sh"
 SITE="$ROOT/tests/e2e/site/site.sh"

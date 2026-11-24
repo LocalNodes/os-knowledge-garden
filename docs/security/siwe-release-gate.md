@@ -108,7 +108,7 @@ The other allowed-to-fail jobs (cspell, eslint, phpcs, stylelint) are still to t
 
 ## beta8 (2026-11-06)
 
-- Tom: "go" (relayed by the orchestrator, about 02:50 UTC). beta8 carries the Phase 19 code-review fixes: WR-01 to WR-06 and IN-01 to IN-06 (see `.planning/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW-DISPOSITION.md`).
+- Tom: "go" (relayed by the orchestrator, about 02:50 UTC). beta8 carries the Phase 19 code-review fixes: WR-01 to WR-06 and IN-01 to IN-06 (see `.planning/workstreams/v4/phases/19-siwe-hardening-waap-login-threat-model/19-REVIEW-DISPOSITION.md`).
 - Local suite on the beta8 branch: 271 tests, 1 skipped (257 plus 14 new). siwe_login_waap: 36 tests passed. phpstan was clean.
 - The orchestrator dated the changelog (`a461e5d`), fast-forwarded `1.0.x` and pushed it, then created and pushed the annotated tag with plain `git push` from this Mac. Nothing was refused this time. `git ls-remote --tags origin` shows `refs/tags/1.0.0-beta8` = `5f21667` (annotated), peeling to `a461e5d`.
 - Release node, created by the orchestrator: https://www.drupal.org/project/siwe_login/releases/1.0.0-beta8. Release type: Bug fixes, not Security update, because no security advisory is involved.

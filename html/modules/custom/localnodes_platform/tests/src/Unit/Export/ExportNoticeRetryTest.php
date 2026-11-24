@@ -65,7 +65,9 @@ final class ExportNoticeRetryTest extends UnitTestCase {
       $logger = $this->createMock(LoggerChannelFactoryInterface::class);
       $logger->method('get')->willReturn($channel);
       $job = ['id' => str_repeat('a', 32), 'status' => 'queued', 'notices' => ['requested' => []]];
-      $manager = $this->getMockBuilder(ExportManager::class)->disableOriginalConstructor()->onlyMethods(['current', 'save'])->getMock();
+      $manager = $this->getMockBuilder(ExportManager::class)->disableOriginalConstructor()->onlyMethods(['current', 'save', 'live'])->getMock();
+      // Notices are sent only while the export switch is on.
+      $manager->method('live')->willReturn(TRUE);
       $manager->method('current')->willReturnCallback(function () use (&$job) { return $job; });
       $manager->method('save')->willReturnCallback(function ($key, array $value) use (&$job): void { $job = $value; });
       foreach (['entities' => $entities, 'access' => new ExportAccess($this->createMock(StateInterface::class), $entities), 'emailFactory' => $mail, 'logger' => $logger] as $name => $value) {

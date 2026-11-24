@@ -1,0 +1,35 @@
+--- a/core/tests/bootstrap.php
++++ b/core/tests/bootstrap.php
+@@ -20,17 +20,29 @@
+  *   directory, keyed by extension name.
+  */
+ function drupal_phpunit_find_extension_directories($scan_directory) {
+-  $extensions = [];
++  $found = [];
+   $dirs = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($scan_directory, \RecursiveDirectoryIterator::FOLLOW_SYMLINKS));
+   foreach ($dirs as $dir) {
+     if (str_contains($dir->getPathname(), '.info.yml')) {
+       // Cut off ".info.yml" from the filename for use as the extension name. We
+       // use getRealPath() so that we can scan extensions represented by
+       // directory aliases.
+-      $extensions[substr($dir->getFilename(), 0, -9)] = $dir->getPathInfo()
+-        ->getRealPath();
++      $found[$dir->getPathname()] = [
++        substr($dir->getFilename(), 0, -9),
++        $dir->getPathInfo()->getRealPath(),
++      ];
+     }
+   }
++  // The directory iterator returns entries in file system order, which
++  // differs between machines. Sort paths before keeping the last per name,
++  // so duplicate names resolve consistently. This matches ExtensionDiscovery
++  // when the candidates have the same type and origin. Its type filters and
++  // precedence across origins are not reproduced by this test helper.
++  ksort($found, SORT_STRING);
++  $extensions = [];
++  foreach ($found as [$name, $path]) {
++    $extensions[$name] = $path;
++  }
+   return $extensions;
+ }
+ 

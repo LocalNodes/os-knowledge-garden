@@ -10,7 +10,7 @@
 
 **Context Files (read these first):**
 - `docs/plans/2026-02-26-gemini-provider-deepchat-fix-design.md` — design rationale
-- `.planning/phases/04-q-a-search/.continue-here.md` — full debug history
+- `.planning/workstreams/v4/phases/04-q-a-search/.continue-here.md` — full debug history
 - `.planning/debug/rag-pipeline-not-connected.md` — root cause analysis
 - `html/modules/contrib/ai_provider_deepseek/src/Plugin/AiProvider/DeepseekProvider.php` — reference for how tool calling was implemented for DeepSeek (lines 270-290)
 

@@ -1,0 +1,109 @@
+name: Fund a practice site's relayer (Sepolia test ETH)
+
+# Sends 0.1 Sepolia test ETH, once, from the practice wallet to one practice
+# site's gas-sponsor relayer, so the site's members never pay gas. The practice wallet is the one
+# behind SPONSOR_RELAYER_PRIVATE_KEY_CI (a throwaway test wallet, never a personal one).
+#
+# Manual dispatch only, from main only: no schedule, no PR or push trigger, so a forked PR can
+# never reach the secrets. The one input is the sign-up's opaque provision id. The destination
+# is never an input: scripts/ops/relayer-funding/fund.mjs reads the relayer address the sign-up
+# app stored from the site's ready, from https://localnodes.xyz only (SIGNUP_ORIGIN, pinned in
+# fund.mjs, never an input), with a bearer derived from
+# PROVISION_CALLBACK_SECRET for this one id ("relayer-funding:" + id, not the site's own
+# callback token). The amount is a constant in fund.mjs, and the sign-up app refuses a record
+# for any other amount.
+#
+# Double sends: the sign-up app keeps one funding record per site. Each run reconciles a pending
+# record before anything else and rebroadcasts the same signed transaction, never a new one; a
+# sent record means no send again. Floor checks before any send: the chain is Ethereum Sepolia,
+# the relayer holds under 0.02, the practice wallet has nothing in flight and can pay the amount,
+# the fee and a 0.05 reserve ("the practice wallet is low"), and the fee is under a ceiling.
+#
+# Reads (each in the funding step's env only, never at job level, never inline in a script):
+#   secrets.SPONSOR_RELAYER_PRIVATE_KEY_CI (the practice wallet's key), removed from the process
+#     env by fund.mjs once read and never printed;
+#   secrets.PROVISION_CALLBACK_SECRET (to derive the bearer; never sent);
+#   secrets.SEPOLIA_RPC_URL (optional; else the registry's public Ethereum Sepolia RPC).
+# Output: fixed FUNDING lines, transaction hashes and nothing else; no response body, RPC URL,
+# key or bearer. scripts/ops/tests/fund-relayer-workflow.test.sh holds this file to that.
+#
+# Concurrency: the same key also pays governance-judge.yml's CI relayer, so this workflow joins
+# that wallet's group, sepolia-test-wallet, never cancelled: no funding send overlaps another or a
+# judge run. GitHub keeps one pending run per group: a new dispatch while one runs and one waits
+# cancels the waiting one (a funding run or a judge run), which has done nothing yet; dispatch it
+# again. fund.mjs also refuses to sign while the wallet has a transaction in flight, and when a
+# send's nonce is used but its receipt never shows, the site's record stays pending (nothing new
+# is signed for it) for a person to decide.
+
+on:
+  workflow_dispatch:
+    inputs:
+      provision_id:
+        description: 'Opaque sign-up id of the practice site (22 url-safe characters). No personal data'
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: sepolia-test-wallet
+  cancel-in-progress: false
+
+jobs:
+  fund:
+    # Main only: a dispatch from another ref would hand the secrets to unreviewed workflow code.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check the input
+        env:
+          PROVISION_ID_INPUT: ${{ inputs.provision_id }}
+        run: |
+          set -euo pipefail
+          # Bash =~ tests the whole string, so a multi-line value cannot pass.
+          [[ "$PROVISION_ID_INPUT" =~ ^[A-Za-z0-9_-]{22}$ ]] || { echo "::error::provision_id must be 22 letters, digits, - or _"; exit 1; }
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the Ethereum Sepolia registry entry
+        id: registry
+        run: |
+          set -euo pipefail
+          f=html/modules/custom/localnodes_platform/modules/localnodes_web3/config/install/safe_smart_accounts.network.ethereum_sepolia.yml
+          rpc=$(awk '/^rpc_urls:/ {r=1; next} r && /^[[:space:]]*-/ {gsub(/[\047" ]/, "", $2); print $2; exit}' "$f")
+          case "$rpc" in https://*) ;; *) echo "registry rpc url not found" >&2; exit 1 ;; esac
+          echo "rpc_url=$rpc" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install the funding package (lockfile only, no install scripts)
+        run: npm ci --prefix scripts/ops/relayer-funding --ignore-scripts
+
+      - name: Fund the relayer
+        env:
+          PROVISION_ID: ${{ inputs.provision_id }}
+          CALLBACK_SECRET: ${{ secrets.PROVISION_CALLBACK_SECRET }}
+          RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || steps.registry.outputs.rpc_url }}
+          FUNDER_KEY: ${{ secrets.SPONSOR_RELAYER_PRIVATE_KEY_CI }}
+        run: |
+          set -uo pipefail
+          [ -n "$CALLBACK_SECRET" ] || { echo "::error::PROVISION_CALLBACK_SECRET is not set for this repository."; exit 1; }
+          [ -n "$FUNDER_KEY" ] || { echo "::error::SPONSOR_RELAYER_PRIVATE_KEY_CI is not set for this repository."; exit 1; }
+          # GitHub runs this with bash -e: the status is caught, so the summary is written on a stop too.
+          status=0
+          node scripts/ops/relayer-funding/fund.mjs | tee "$RUNNER_TEMP/fund-output.txt" || status=$?
+          {
+            echo "## Fund a practice relayer"
+            echo
+            echo '```'
+            LC_ALL=C grep -E '^FUNDING(_DONE|_STOP)? [ -~]{1,200}$' "$RUNNER_TEMP/fund-output.txt" || echo "(no lines)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

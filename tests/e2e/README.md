@@ -77,7 +77,7 @@ No session signs anything on Sepolia or any real network. `wallet/test-wallet.ts
 - only the selected dev account signs; chain-control methods are refused.
 
 `wallet-guard.e2e.ts` tests each refusal. Each guard was seen to go red on a planted
-mutation: `.planning/phases/21-real-safe-reads-balances/gates/e2e-wallet-guard-proof.txt`
+mutation: `.planning/workstreams/v4/phases/21-real-safe-reads-balances/gates/e2e-wallet-guard-proof.txt`
 (caught 10 of 10). `playwright.config.ts` refuses any base URL outside .test and loopback.
 
 The site sends .test requests to the local chains through `$settings['safe_rpc_urls']` in
@@ -89,7 +89,7 @@ fixed in this lane.
 
 ## Evidence
 
-- Traces and videos: `.planning/phases/21-real-safe-reads-balances/e2e-evidence/runs/<runId>/<network>/`.
+- Traces and videos: `.planning/workstreams/v4/phases/21-real-safe-reads-balances/e2e-evidence/runs/<runId>/<network>/`.
   They are big and gitignored. Open one with `npx --no-install playwright show-trace <trace.zip>`.
 - `e2e-evidence/INDEX.md` (committed): one block per run and network, one row per test with
   its trace, video and result, and a line naming the site's four commit SHAs.

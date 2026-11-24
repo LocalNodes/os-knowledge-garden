@@ -6,7 +6,7 @@
 // the bodies below, and helpers/ai-guard.ts fails any test where a request to
 // those endpoints was not fulfilled by the route handler.
 //
-// Source of the text: .planning/phases/22-document-importer-cited-group-answers/22-live-run.jsonl
+// Source of the text: .planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-live-run.jsonl
 //   - RQ-01 (P-ANON, PASS, 2026-11-06T05:04:21Z): the `answer` field, i.e. the
 //     server-rewritten CitedAnswer::toMarkdown() output, with its one citation
 //     [1] Bioregionalism -> /node/29.

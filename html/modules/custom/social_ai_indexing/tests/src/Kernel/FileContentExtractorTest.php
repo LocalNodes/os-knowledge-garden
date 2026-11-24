@@ -26,7 +26,7 @@ use Drupal\Tests\social_ai_indexing\Traits\IndexFixtureTrait;
  * @group phase22
  * @group social_ai_indexing
  *
- * @see .planning/phases/22-document-importer-cited-group-answers/22-10-PLAN.md
+ * @see .planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-10-PLAN.md
  */
 final class FileContentExtractorTest extends GroupAccessKernelTestBase {
 

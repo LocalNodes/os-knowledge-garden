@@ -692,6 +692,16 @@ final class DemoPackCheck {
 
 }
 
+// A pack install ends by uninstalling localnodes_demo_packs (its install hook
+// changes the site, so it is not enabled again for a check), which leaves its
+// classes off the site's autoloader. Register them from the module's own
+// directory for this run.
+if (!\Drupal::moduleHandler()->moduleExists('localnodes_demo_packs')) {
+  $pack_module_dir = \Drupal::service('extension.list.module')->getPath('localnodes_demo_packs');
+  \Drupal::service('class_loader')->addPsr4('Drupal\\localnodes_demo_packs\\', DRUPAL_ROOT . '/' . $pack_module_dir . '/src');
+  unset($pack_module_dir);
+}
+
 // Options from "drush php:script ... -- --pack=smoke --dry-run".
 $options = [];
 foreach (($extra ?? []) as $arg) {

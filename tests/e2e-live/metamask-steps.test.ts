@@ -2,9 +2,9 @@
 // prompt window after a confirm, sometimes while confirmPrompts is still waiting on that page.
 // The loop must treat a closed prompt as done, look for the next one, and never call a method
 // on a closed page. These fakes model only what confirmPrompts touches.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { BrowserContext } from '@playwright/test';
-import { confirmPrompts, promptRefusal, SETUP_SIGN_PROMPT, SHARE_PROMPT, SIGN_PROMPT, SWITCH_PROMPT, type ExpectedPrompt, type PromptLog } from './metamask-steps';
+import { confirmPrompts, promptLabel, promptRefusal, SETTLE_MS, SETUP_SIGN_PROMPT, SHARE_PROMPT, SIGN_PROMPT, SWITCH_PROMPT, type ExpectedPrompt, type PromptLog } from './metamask-steps';
 import { forSite } from './governance/judge-wallet';
 
 const EXT = 'fakeextensionid';
@@ -13,6 +13,9 @@ const SCROLL = 'confirm-scroll-to-bottom__button';
 
 interface FakePage {
   closed: boolean;
+  /** Set by a test to move the window to another address, or show other text. */
+  url?: string;
+  text?: string;
   confirms: number;
   /** Calls made after the page closed; each one throws, and the test requires none. */
   callsAfterClose: string[];
@@ -28,9 +31,12 @@ interface FakePage {
  */
 function fakePrompt(
   button: string | null,
-  opts: { clickError?: string; scrollStays?: boolean; closeOnClick?: boolean; closeBeforeClick?: boolean; stays?: boolean; nextTexts?: string[]; drift?: boolean; hang?: string; route?: string; text?: string; urlTail?: string } = {},
+  opts: { clickError?: string; scrollStays?: boolean; closeOnClick?: boolean; closeBeforeClick?: boolean; stays?: boolean; nextTexts?: string[]; drift?: boolean; hang?: string; route?: string; text?: string; urlTail?: string; tailAfterMs?: number; onCall?: (name: string, n: number, state: FakePage) => number | void } = {},
 ): { page: unknown; state: FakePage } {
   const state: FakePage = { closed: false, confirms: 0, callsAfterClose: [], calls: [] };
+  // `tailAfterMs`: the address shows `urlTail` only after this long, as a window still moving
+  // to its next request shows the bare route first.
+  const born = Date.now();
   // `stays`: the window stays open on the same screen after the confirm. `nextTexts`: the
   // window stays open and shows each of these requests in turn, one per confirm. `drift`: the
   // screen's incidental text (a fee estimate) changes on every read; the request stays the same.
@@ -53,8 +59,15 @@ function fakePrompt(
       throw new Error(CLOSED);
     }
   };
+  // `onCall`: a test hook on every call, by name and how many times it ran; it may move the
+  // window (state.url) or return a delay in ms, as a slow window.
+  const counts = new Map<string, number>();
   const call = async <T>(name: string, value: T): Promise<T> => {
     guard(name);
+    const n = (counts.get(name) ?? 0) + 1;
+    counts.set(name, n);
+    const delay = opts.onCall?.(name, n, state);
+    if (delay) await new Promise((r) => setTimeout(r, delay));
     if (name === opts.hang) return never;
     return value;
   };
@@ -70,7 +83,9 @@ function fakePrompt(
       return enabled;
     },
     check: () => call(`check(${id})`, undefined),
-    click: async (_o?: unknown) => {
+    click: async (o?: { trial?: boolean }) => {
+      // A trial click only waits for the button; it presses nothing.
+      if (o?.trial) return call(`trial(${id})`, undefined);
       guard(`click(${id})`);
       if (`click(${id})` === opts.hang) return never;
       if (id === SCROLL) return;
@@ -85,12 +100,12 @@ function fakePrompt(
       if (opts.nextTexts && state.confirms < texts.length) return;
       closing = true;
     },
-    innerText: () => call('innerText', `${texts[current()]}${opts.drift ? `\nNetwork fee 0.000${++reads}` : ''}`),
+    innerText: () => call('innerText', `${state.text ?? texts[current()]}${opts.drift ? `\nNetwork fee 0.000${++reads}` : ''}`),
   });
   const page = {
     isClosed: () => state.closed,
     // MetaMask routes each request by its id; each request here has its own.
-    url: () => `chrome-extension://${EXT}/notification.html#/${opts.route ?? 'confirm-transaction'}/request-${current()}${opts.urlTail ?? ''}`,
+    url: () => state.url ?? `chrome-extension://${EXT}/notification.html#/${opts.route ?? 'confirm-transaction'}/request-${current()}${opts.tailAfterMs !== undefined && Date.now() - born < opts.tailAfterMs ? '' : (opts.urlTail ?? '')}`,
     // Opened by the rescue: it is already on the prompt page.
     goto: async () => undefined,
     close: async () => {
@@ -184,7 +199,7 @@ describe('confirmPrompts', () => {
         reopenBeforeClick: true,
         expect: SWITCH_PROMPT,
       }),
-    ).rejects.toThrow('switchNetwork: the open wallet prompt is a confirm-transaction request, not the expected confirmation request; it was not confirmed');
+    ).rejects.toThrow(/^switchNetwork: the open wallet prompt is a confirm-transaction request, not the expected confirmation request; it shows send; wallet windows open 1; it was not confirmed$/);
     expect(opened).toBe(true);
     expect(tx.state.confirms).toBe(0);
     expect(tx.state.calls.filter((c) => c.startsWith('click(') || c.startsWith('check('))).toEqual([]);
@@ -198,7 +213,7 @@ describe('confirmPrompts', () => {
     const log: PromptLog = { clicks: [], warnings: [] };
     await expect(
       confirmPrompts(fakeContext(() => [sig.page]), EXT, 'shareAccount', log, { done: () => false, timeoutMs: 10_000, reopenIdleMs: 300, reopenBeforeClick: true, expect: SHARE_PROMPT }),
-    ).rejects.toThrow('shareAccount: the open wallet prompt is a confirm-transaction request, not the expected connect request');
+    ).rejects.toThrow(/^shareAccount: the open wallet prompt is a confirm-transaction request, not the expected connect request; it shows send; wallet windows open 1; it was not confirmed$/);
     expect(sig.state.confirms).toBe(0);
   }, 30_000);
 
@@ -503,7 +518,7 @@ describe('confirmPrompts: same-route requests that are not the expected one', ()
     const other = fakePrompt('confirm-btn', { route: 'connect', text: REC.share.replace('fresh3.test', 'evil.example') });
     const log: PromptLog = { clicks: [], warnings: [] };
     await expect(confirmPrompts(fakeContext(() => [other.page]), EXT, 'shareAccount', log, { ...reopen, expect: { ...SHARE_PROMPT, origin: SITE } }))
-      .rejects.toThrow(/^shareAccount: the open wallet prompt is not the expected request \(it does not name the site fresh3\.test\); it was not confirmed$/);
+      .rejects.toThrow(/^shareAccount: the open wallet prompt is not the expected request \(it does not name the site fresh3\.test\); it shows connect after \d+ ms; wallet windows open 1; it was not confirmed$/);
     // The prompt's own text (here the other site's name) stays out of the error and the CI log.
     await expect(confirmPrompts(fakeContext(() => [other.page]), EXT, 'shareAccount', log, { ...reopen, expect: { ...SHARE_PROMPT, origin: SITE } }))
       .rejects.toThrow(expect.objectContaining({ message: expect.not.stringContaining('evil.example') }));
@@ -513,14 +528,34 @@ describe('confirmPrompts: same-route requests that are not the expected one', ()
     const add = fakePrompt('confirmation-submit-button', { route: 'confirmation', text: REC.addNetwork });
     const log: PromptLog = { clicks: [], warnings: [] };
     await expect(confirmPrompts(fakeContext(() => [add.page]), EXT, 'switchNetwork', log, { ...reopen, expect: SWITCH_TO_SEPOLIA }))
-      .rejects.toThrow('(it adds a network instead of switching); it was not confirmed');
+      .rejects.toThrow('(it adds a network instead of switching); it shows network_add; wallet windows open 1; it was not confirmed');
     expect(add.state.confirms).toBe(0);
   }, 30_000);
   it('a send during setup signing is refused, unconfirmed', async () => {
     const send = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
     const log: PromptLog = { clicks: [], warnings: [] };
-    await expect(confirmPrompts(fakeContext(() => [send.page]), EXT, 'approveSetup', log, { ...reopen, expect: SETUP_SIGN }))
-      .rejects.toThrow('(it is not a signature request (a send or a network request)); it was not confirmed');
+    const began = Date.now();
+    await expect(confirmPrompts(fakeContext(() => [send.page]), EXT, 'approveSetup', log, { ...reopen, timeoutMs: 15_000, expect: SETUP_SIGN }))
+      .rejects.toThrow(/^approveSetup: the open wallet prompt is not the expected request \(it is not a signature request \(a send or a network request\)\); it shows send after \d+ ms; wallet windows open 1; it was not confirmed$/);
+    // Refused only after the window had SETTLE_MS to move on, and never pressed.
+    expect(Date.now() - began).toBeGreaterThanOrEqual(SETTLE_MS);
+    expect(send.state.confirms).toBe(0);
+    expect(send.state.calls.some((c) => c.startsWith('click('))).toBe(false);
+    expect(log.clicks).toEqual([]);
+  }, 30_000);
+  it('a window still moving to the signature is read again, then the signature is confirmed', async () => {
+    const moving = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request', tailAfterMs: 2_500 });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await confirmPrompts(fakeContext(() => [moving.page]), EXT, 'approveSetup', log, { done: () => moving.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN });
+    expect(moving.state.confirms).toBe(1);
+    // Nothing was pressed while the address had no /signature-request.
+    expect(log.clicks.map((c) => c.button)).toEqual(['confirm-footer-button']);
+  }, 30_000);
+  it('a prompt that is still not a signature at the deadline is refused, not left as a timeout', async () => {
+    const send = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [send.page]), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 3_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(/^approveSetup: the open wallet prompt is not the expected request \(it is not a signature request \(a send or a network request\)\); it shows send after \d+ ms; wallet windows open 1; it was not confirmed$/);
     expect(send.state.confirms).toBe(0);
   }, 30_000);
   it('the setup signature itself is confirmed', async () => {
@@ -535,5 +570,268 @@ describe('confirmPrompts: same-route requests that are not the expected one', ()
     await confirmPrompts(fakeContext(() => [sw.page]), EXT, 'switchNetwork', log, { done: () => sw.state.confirms > 0, timeoutMs: 10_000, reopenIdleMs: 300, expect: SWITCH_TO_SEPOLIA });
     expect(sw.state.confirms).toBe(1);
     expect(log.clicks.map((c) => c.button)).toEqual(['page-container-footer-next']);
+  }, 30_000);
+});
+
+describe('promptLabel: a fixed label for the log, never the prompt text or address', () => {
+  const base = `chrome-extension://${EXT}/notification.html#`;
+  it('labels each recorded request', () => {
+    expect(promptLabel(`${base}/confirm-transaction/x/signature-request`, REC.typedSign)).toBe('signature_request');
+    expect(promptLabel(`${base}/confirm-transaction/x`, REC.send)).toBe('send');
+    expect(promptLabel(`${base}/confirm-transaction/x`, REC.addNetwork)).toBe('network_add');
+    expect(promptLabel(`${base}/confirmation/x`, REC.addNetwork)).toBe('network_add');
+    expect(promptLabel(`${base}/confirmation/x`, 'Allow this site to switch the network?')).toBe('network_switch');
+    expect(promptLabel(`${base}/connect/x/confirm-permissions`, REC.switchNew)).toBe('network_switch');
+    expect(promptLabel(`${base}/connect/x`, REC.share)).toBe('connect');
+    expect(promptLabel(`${base}/unlock`, 'Welcome back')).toBe('unlock');
+    expect(promptLabel(`${base}/`, '')).toBe('other');
+    expect(promptLabel('about:blank', 'anything')).toBe('other');
+  });
+  it('only ever returns one of the fixed labels', () => {
+    const fixed = ['signature_request', 'send', 'network_switch', 'network_add', 'connect', 'unlock', 'other'];
+    for (const url of [`${base}/confirm-transaction/0xabc?x=evil.example`, `${base}/evil.example`, 'https://evil.example/#/connect/1']) {
+      expect(fixed).toContain(promptLabel(url, 'evil.example Connect this website'));
+    }
+  });
+});
+
+describe('confirmPrompts: a settling or changing prompt is never pressed', () => {
+  const SEND_URL = (id: string) => `chrome-extension://${EXT}/notification.html#/confirm-transaction/${id}`;
+  const REFUSED = /^approveSetup: the open wallet prompt is not the expected request \(it is not a signature request \(a send or a network request\)\); it shows send after \d+ ms; wallet windows open \d+; it was not confirmed$/;
+  it('a signature that turns into another request before the click is not pressed', async () => {
+    const sig = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request',
+      onCall: (name, _n, st) => { if (name === 'isEnabled(confirm-footer-button)') st.url = SEND_URL('request-9'); },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [sig.page]), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(sig.state.confirms).toBe(0);
+    expect(sig.state.calls.some((c) => c.startsWith('click('))).toBe(false);
+  }, 30_000);
+  it('a new request in a new window gets its own settle time', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const b = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const began = Date.now();
+    const pages = () => (Date.now() - began < 4_000 ? [a.page] : [b.page]);
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 25_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    // B was first read after 4 s, so it was refused no sooner than SETTLE_MS after that.
+    expect(Date.now() - began).toBeGreaterThanOrEqual(4_000 + SETTLE_MS);
+    expect(a.state.confirms + b.state.confirms).toBe(0);
+  }, 40_000);
+  it('a refused window that closed is not reported as still open at the deadline', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const began = Date.now();
+    const pages = () => {
+      if (Date.now() - began >= 3_000) a.state.closed = true;
+      return a.state.closed ? [] : [a.page];
+    };
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 8_000, expect: SETUP_SIGN }))
+      .rejects.toThrow(/^approveSetup: not done within 8000 ms/);
+  }, 30_000);
+  it('a slow window does not stretch the settle time', async () => {
+    const slow = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send, onCall: (name, n) => (name === 'innerText' && n > 1 ? 8_000 : undefined) });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const began = Date.now();
+    await expect(confirmPrompts(fakeContext(() => [slow.page]), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 30_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    // First read at about 1.5 s; refused within SETTLE_MS of it, plus the 2 s a hung call is
+    // given past its own timeout and one pass (an uncapped read ended about 12 s in).
+    expect(Date.now() - began).toBeLessThan(1_500 + SETTLE_MS + 2_000 + 1_500);
+    expect(slow.state.confirms).toBe(0);
+  }, 40_000);
+  it('a request that only becomes a signature after the settle time is refused, not pressed', async () => {
+    const late = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request', tailAfterMs: 1_500 + SETTLE_MS + 500,
+      // The third read is slow: it ends after the settle time, when the address has become a signature.
+      onCall: (name, n) => (name === 'innerText' && n === 3 ? 2_000 : undefined) });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [late.page]), EXT, 'approveSetup', log, { done: () => late.state.confirms > 0, timeoutMs: 20_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(late.state.confirms).toBe(0);
+  }, 40_000);
+  it('a page the rescue opened is not closed while its request settles', async () => {
+    const opened: ReturnType<typeof fakePrompt>[] = [];
+    const newPage = async () => {
+      const p = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send, onCall: (name, n) => (name === 'waitForLoadState' && n === 1 ? 7_000 : undefined) });
+      opened.push(p);
+      return p.page;
+    };
+    const pages = () => opened.filter((p) => !p.state.closed).map((p) => p.page);
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(pages, newPage), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 30_000, reopenIdleMs: 300, reopenBeforeClick: true, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(opened.length).toBe(1);
+    expect(opened[0].state.confirms).toBe(0);
+    // Closed on the way out.
+    expect(opened[0].state.closed).toBe(true);
+  }, 40_000);
+  it('an error from the done check is reported as a fixed category, never its text', async () => {
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const done = () => Promise.reject(new Error('boom https://evil.example/secret-words'));
+    await expect(confirmPrompts(fakeContext(() => []), EXT, 'approveSetup', log, { done, timeoutMs: 3_000 }))
+      .rejects.toThrow(/^other \(Error\)$/);
+  }, 30_000);
+});
+
+describe('confirmPrompts: a press is bound to the request that was read', () => {
+  const NOTE = `chrome-extension://${EXT}/notification.html#`;
+  const REFUSED = /^approveSetup: the open wallet prompt is not the expected request \(it is not a signature request \(a send or a network request\)\); it shows send after \d+ ms; wallet windows open \d+; it was not confirmed$/;
+  it('text read from one request is never checked against the next request\'s address', async () => {
+    const sig = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request',
+      onCall: (name, n, st) => {
+        // While its text is read, the window moves to another site's signature.
+        if (name === 'innerText' && n === 1) {
+          st.url = `${NOTE}/confirm-transaction/request-7/signature-request`;
+          st.text = REC.typedSign.replaceAll(SITE, 'evil.example');
+        }
+      },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [sig.page]), EXT, 'approveSetup', log, { done: () => sig.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(/it does not name the site fresh3\.test/);
+    expect(sig.state.confirms).toBe(0);
+  }, 30_000);
+  it('text read while the window moves is read again, not judged against either address', async () => {
+    // The text is another site's; while it is read the window moves to the expected signature.
+    const sig = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: REC.typedSign.replaceAll(SITE, 'evil.example'), urlTail: '/signature-request',
+      onCall: (name, n, st) => {
+        if (name === 'innerText' && n === 1) {
+          st.url = `${NOTE}/confirm-transaction/request-7/signature-request`;
+          st.text = REC.typedSign;
+        }
+      },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await confirmPrompts(fakeContext(() => [sig.page]), EXT, 'approveSetup', log, { done: () => sig.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN });
+    expect(sig.state.confirms).toBe(1);
+  }, 30_000);
+  it('a request that passes in another window does not restart the settle time of the first', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const b = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request' });
+    const began = Date.now();
+    const pages = () => (Date.now() - began < 2_500 ? [a.page] : [b.page, a.page]);
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => false, timeoutMs: 30_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(b.state.confirms).toBe(1);
+    expect(a.state.confirms).toBe(0);
+    expect(Date.now() - began).toBeLessThan(1_500 + SETTLE_MS + 2_000);
+  }, 40_000);
+  it('a window that moves while the button is awaited is not pressed', async () => {
+    const sig = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request',
+      onCall: (name, _n, st) => { if (name === 'trial(confirm-footer-button)') st.url = `${NOTE}/confirm-transaction/request-9`; },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [sig.page]), EXT, 'approveSetup', log, { done: () => sig.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(sig.state.confirms).toBe(0);
+  }, 30_000);
+  it('a slow done check does not stretch the settle time', async () => {
+    const send = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    let n = 0;
+    const done = () => (++n >= 3 ? new Promise<boolean>((r) => setTimeout(() => r(false), 9_000)) : false);
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const began = Date.now();
+    await expect(confirmPrompts(fakeContext(() => [send.page]), EXT, 'approveSetup', log, { done, timeoutMs: 30_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(Date.now() - began).toBeLessThan(1_500 + SETTLE_MS + 2_500);
+  }, 40_000);
+  it('an address that loses its request id for a moment keeps the settle time running', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign });
+    const began = Date.now();
+    const pages = () => {
+      const t = Date.now() - began;
+      a.state.url = t < 4_500 ? `${NOTE}/confirm-transaction/request-0` : t < 7_000 ? `${NOTE}/confirm-transaction/` : `${NOTE}/confirm-transaction/request-0/signature-request`;
+      return [a.page];
+    };
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => a.state.confirms > 0, timeoutMs: 20_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(REFUSED);
+    expect(a.state.confirms).toBe(0);
+  }, 40_000);
+  it('the settle limit of one window does not cut short the calls on another', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const b = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request',
+      onCall: (name, n) => (name === 'waitForLoadState' && n === 1 ? 5_000 : undefined),
+    });
+    const began = Date.now();
+    const pages = () => (Date.now() - began < 4_000 ? [a.page] : [b.page, a.page]);
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => b.state.confirms > 0, timeoutMs: 20_000, reopenIdleMs: 300, expect: SETUP_SIGN });
+    expect(b.state.confirms).toBe(1);
+    expect(a.state.confirms).toBe(0);
+  }, 40_000);
+});
+
+describe('confirmPrompts: a share that does not name the site yet is read again', () => {
+  const SHARE = { ...SHARE_PROMPT, origin: SITE };
+  it('a share window that names the site on a later read is confirmed', async () => {
+    // Read once between two screens (no site name yet), then the share proper.
+    const share = fakePrompt('confirm-btn', {
+      route: 'connect', text: 'Connecting',
+      onCall: (name, n, st) => { if (name === 'innerText' && n === 1) st.text = REC.share; },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await confirmPrompts(fakeContext(() => [share.page]), EXT, 'shareAccount', log, { done: () => share.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SHARE });
+    expect(share.state.confirms).toBe(1);
+  }, 30_000);
+  it('a share that still does not name the site after the settle time is refused, never pressed', async () => {
+    const other = fakePrompt('confirm-btn', { route: 'connect', text: REC.share.replace('fresh3.test', 'evil.example') });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    const began = Date.now();
+    await expect(confirmPrompts(fakeContext(() => [other.page]), EXT, 'shareAccount', log, { done: () => false, timeoutMs: 30_000, reopenIdleMs: 300, expect: SHARE }))
+      .rejects.toThrow(/^shareAccount: the open wallet prompt is not the expected request \(it does not name the site fresh3\.test\); it shows connect after \d+ ms; wallet windows open 1; it was not confirmed$/);
+    expect(other.state.confirms).toBe(0);
+    expect(Date.now() - began).toBeLessThan(1_500 + SETTLE_MS + 2_000);
+  }, 40_000);
+});
+
+describe('confirmPrompts: a step that passes says when wallet windows are still open', () => {
+  it('prints a fixed line with the count and the label of the window still waiting', async () => {
+    const a = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.send });
+    const b = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request' });
+    const began = Date.now();
+    const pages = () => (Date.now() - began < 2_500 ? [a.page] : [b.page, a.page]);
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((...m: unknown[]) => { lines.push(m.join(' ')); });
+    try {
+      const log: PromptLog = { clicks: [], warnings: [] };
+      // Done once B has closed, as MetaMask closes a window on its confirm.
+      await confirmPrompts(fakeContext(pages), EXT, 'approveSetup', log, { done: () => b.state.confirms > 0 && b.state.closed, timeoutMs: 20_000, reopenIdleMs: 300, expect: SETUP_SIGN });
+    } finally { spy.mockRestore(); }
+    expect(a.state.confirms).toBe(0);
+    expect(lines, JSON.stringify(lines)).toContain('[metamask] approveSetup: done; wallet windows still open 1; one shows send');
+  }, 30_000);
+  it('prints nothing extra when no wallet window is left', async () => {
+    const b = fakePrompt('confirm-footer-button', { route: 'confirm-transaction', text: REC.typedSign, urlTail: '/signature-request' });
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((...m: unknown[]) => { lines.push(m.join(' ')); });
+    try {
+      const log: PromptLog = { clicks: [], warnings: [] };
+      await confirmPrompts(fakeContext(() => [b.page]), EXT, 'approveSetup', log, { done: () => b.state.confirms > 0 && b.state.closed, timeoutMs: 20_000, reopenIdleMs: 300, expect: SETUP_SIGN });
+    } finally { spy.mockRestore(); }
+    expect(lines.filter((l) => l.includes('still open'))).toEqual([]);
+  }, 30_000);
+});
+
+describe('confirmPrompts: only a share is read again for not naming the site', () => {
+  it('another site\'s signature whose message later names the site is refused at once, never pressed', async () => {
+    const evil = REC.typedSign.replaceAll(SITE, 'evil.example');
+    const sig = fakePrompt('confirm-footer-button', {
+      route: 'confirm-transaction', text: evil, urlTail: '/signature-request',
+      // Same request; the message the other site asks to sign now carries the site's name.
+      onCall: (name, n, st) => { if (name === 'innerText' && n === 1) st.text = `${evil}\nMessage: welcome to ${SITE}`; },
+    });
+    const log: PromptLog = { clicks: [], warnings: [] };
+    await expect(confirmPrompts(fakeContext(() => [sig.page]), EXT, 'approveSetup', log, { done: () => sig.state.confirms > 0, timeoutMs: 15_000, reopenIdleMs: 300, expect: SETUP_SIGN }))
+      .rejects.toThrow(/^approveSetup: the open wallet prompt is not the expected request \(it does not name the site fresh3\.test\); it shows signature_request; wallet windows open 1; it was not confirmed$/);
+    expect(sig.state.confirms).toBe(0);
   }, 30_000);
 });

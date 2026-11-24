@@ -67,8 +67,33 @@ class ExportManager {
     finally { flock($lock, LOCK_UN); fclose($lock); }
   }
 
+  /** The export switch; see ExportSwitch. Off means nothing is prepared. */
+  public function enabled(): bool { return ExportSwitch::enabled($this->config); }
+
+  /**
+   * The switch as stored now.
+   *
+   * The worker asks before each step, and a request or download just before
+   * it acts.
+   */
+  protected function live(): bool { return ExportSwitch::live($this->config); }
+
+  /** The switch went off during a run: the job ends and nothing is kept. */
+  private function discard(string $id): void {
+    $this->locked(function () use ($id): void {
+      $latest = $this->current();
+      if (($latest['id'] ?? '') === $id && in_array($latest['status'] ?? '', ['queued', 'running'], TRUE)) {
+        $latest['status'] = 'expired';
+        $this->save('current', $latest);
+      }
+      $this->files()->remove($id);
+    });
+  }
+
   public function request(int $uid): array {
-    if (!$this->access->allows($uid)) throw new \RuntimeException('Export is unavailable.');
+    // The stored switch, not this request's copy: it may have gone off
+    // while the owner confirmed.
+    if (!$this->live() || !$this->access->allows($uid)) throw new \RuntimeException('Export is unavailable.');
     // Before the slot's lock file or any job record is written.
     if ($why = $this->refusal()) throw new \RuntimeException($why);
     return $this->locked(function () use ($uid): array {
@@ -97,7 +122,9 @@ class ExportManager {
 
   public function download(int $uid, string $id): ?StreamedResponse {
     $job = $this->current();
-    if (!$this->access->allows($uid) || ($job['id'] ?? '') !== $id || !$this->available($job)) return NULL;
+    // The stored switch, read just before the archive is opened: it may have
+    // gone off in another process while the owner confirmed.
+    if (!$this->live() || !$this->access->allows($uid) || ($job['id'] ?? '') !== $id || !$this->available($job)) return NULL;
     $file = $this->files()->archive($job);
     if (!$file) return NULL;
     return ExportStream::response($file);
@@ -132,6 +159,8 @@ class ExportManager {
 
   /** CLI only; no Drupal queue plugin or web cron can invoke a capture. */
   public function work(): void {
+    // With the export switch off, nothing: no folder, no lock, no query.
+    if (!$this->live()) return;
     // An install older than the export has no table: nothing to do, nothing
     // to log, and no query against it.
     if (!$this->access->installed()) return;
@@ -148,6 +177,8 @@ class ExportManager {
         $this->space();
         if (!$this->versionKnown()) throw new \RuntimeException('The software version is unavailable.');
         $result = $this->capture->run($pause, 'export', 5400, 20, 60, function (float $deadline) use ($job): ?array {
+          // The switch may have gone off while the capture waited.
+          if (!$this->live()) throw new ExportSwitchedOffException();
           $current = $this->current();
           if (($current['id'] ?? '') !== $job['id'] || !$this->access->allows((int) $job['uid'])) return NULL;
           // The exclusive consumer lock proves a running record is orphaned.
@@ -156,6 +187,8 @@ class ExportManager {
           $this->save('current', $current);
           $dir = $this->files()->directory($job['id'], TRUE);
           $result = $this->produce($dir, $deadline, function (string $part, int $bytes) use ($job): void {
+            // Between parts: the switch off stops the run before the next one.
+            if (!$this->live()) throw new ExportSwitchedOffException();
             $this->locked(function () use ($job, $part, $bytes): void {
               $latest = $this->current();
               if (($latest['id'] ?? '') === $job['id'] && $latest['status'] === 'running') {
@@ -170,7 +203,7 @@ class ExportManager {
         if ($result !== NULL) {
           $this->locked(function () use ($job, $result): void {
             $latest = $this->current();
-            if (($latest['id'] ?? '') !== $job['id'] || $latest['status'] !== 'running' || !$this->access->allows((int) $job['uid']) || $job['site'] !== $this->site() || microtime(TRUE) >= $result['deadline']) {
+            if (!$this->live() || ($latest['id'] ?? '') !== $job['id'] || $latest['status'] !== 'running' || !$this->access->allows((int) $job['uid']) || $job['site'] !== $this->site() || microtime(TRUE) >= $result['deadline']) {
               if (($latest['id'] ?? '') === $job['id']) { $latest['status'] = 'expired'; $this->save('current', $latest); }
               $this->files()->remove($job['id']);
               return;
@@ -186,6 +219,9 @@ class ExportManager {
             $this->save('last', ['uid' => $job['uid'], 'time' => $latest['ready']]);
           });
         }
+      }
+      catch (ExportSwitchedOffException) {
+        $this->discard($job['id']);
       }
       catch (\Throwable $e) {
         if ($e->getCode() !== 409) {
@@ -209,6 +245,7 @@ class ExportManager {
 
   protected function produce(string $directory, float $deadline, callable $progress): array {
     $dumper = function (string $file, array $structure) use ($deadline): void {
+      if (!$this->live()) throw new ExportSwitchedOffException();
       $process = \Drush\Drush::drush(\Drush\Drush::aliasManager()->getSelf(), 'sql:dump', [], ['result-file' => $file, 'structure-tables-list' => implode(',', $structure)]);
       $process->setTimeout(max(1, $deadline - microtime(TRUE)));
       $process->mustRun();
@@ -261,7 +298,8 @@ class ExportManager {
   /** Fixed text, page-only links; retry unsent recipients without losing ready. */
   protected function notify(): void {
     $job = $this->current();
-    if (!$job || !$this->emailFactory) return;
+    // No notice of any kind once the switch is off.
+    if (!$job || !$this->emailFactory || !$this->live()) return;
     $ids = $this->entities->getStorage('user')->getQuery()->accessCheck(FALSE)->condition('status', 1)->condition('roles', 'sitemanager')->execute();
     foreach ($job['notices'] as $event => $sent) {
       if ($event === 'ready' && !$this->available($job)) continue;

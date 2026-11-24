@@ -11,10 +11,25 @@ use Drupal\taxonomy\Entity\Term;
  * Implements hook_install().
  *
  * On fresh installs, update topic type taxonomy terms:
- * remove "Content", add "Question" and "Research".
+ * remove "Content", add "Question" and "Research". Then give the demo
+ * community its slogan.
  */
 function localnodes_demo_install() {
   _localnodes_demo_update_topic_types();
+  _localnodes_demo_set_slogan();
+}
+
+/**
+ * Gives the demo community a slogan, unless the site already has one.
+ *
+ * The front page's browser title reads "Site name | slogan". The slogan
+ * names only what the site already has: groups, events and shared pages.
+ */
+function _localnodes_demo_set_slogan(): void {
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if (trim((string) $site->get('slogan')) === '') {
+    $site->set('slogan', 'Groups, events and shared notes for our bioregional network')->save();
+  }
 }
 
 /**

@@ -45,12 +45,64 @@ function localnodes_platform_install() {
   // The anonymous front-page hero speaks for the community, not
   // for Open Social.
   _localnodes_platform_configure_hero_copy();
+  // The home page: "Newest groups" lists the groups the viewer may see and
+  // is left out when there are none; the browser title is the site's name,
+  // with its slogan when it has one.
+  _localnodes_platform_hide_empty_newest_groups();
+  _localnodes_platform_configure_front_title();
   // The profile's feature hooks have now finished granting their defaults.
   _localnodes_platform_protect_private_groups();
   // The member how-to pages the assistant answers from, on every site.
   \Drupal\localnodes_platform\SiteGuidePages::install();
   // The bootstrap account is reserved for deliberate server recovery.
   _localnodes_platform_block_host_account();
+}
+
+/**
+ * Leaves Open Social's "Newest groups" block out when it has nothing to list.
+ *
+ * The view already lists only the groups the viewer may see: a visitor gets
+ * public groups, a member also gets the groups they belong to. When that list
+ * is empty, Open Social still shows the block's heading over an empty box.
+ * Views' "hide block if the view output is empty" setting leaves the block out
+ * instead.
+ *
+ * The view exists before this module is enabled (social_group's
+ * config/install), so config/install cannot change it. Safe to repeat; a site
+ * without the view or its block display is left alone.
+ */
+function _localnodes_platform_hide_empty_newest_groups(): void {
+  $view = \Drupal::configFactory()->getEditable('views.view.newest_groups');
+  $key = 'display.block_newest_groups.display_options.block_hide_empty';
+  if ($view->isNew() || $view->get('display.block_newest_groups') === NULL || $view->get($key) === TRUE) {
+    return;
+  }
+  $view->set($key, TRUE)->save();
+}
+
+/**
+ * Makes the front page's browser title "Site name | slogan".
+ *
+ * Metatag's front page defaults carry no title, so the global pattern
+ * "[current-page:title] | [site:name]" applies. The front page has no page
+ * title, which leaves the browser title as "| Site name".
+ *
+ * "[site:name] | [site:slogan]" would leave a trailing "|" on a site with no
+ * slogan: an empty token is removed but the separator stays, and metatag
+ * trims end characters only from a title over a set length. The
+ * [site:name-and-slogan] token (localnodes_platform_tokens()) adds the
+ * separator only when there is a slogan.
+ *
+ * Metatag ships the front defaults before this module is enabled, so
+ * config/install cannot hold the change. A site without metatag is left
+ * alone.
+ */
+function _localnodes_platform_configure_front_title(): void {
+  $front = \Drupal::configFactory()->getEditable('metatag.metatag_defaults.front');
+  if ($front->isNew() || $front->get('tags.title') === '[site:name-and-slogan]') {
+    return;
+  }
+  $front->set('tags.title', '[site:name-and-slogan]')->save();
 }
 
 /** Disables the bootstrap account's browser sign-in after fresh site setup. */

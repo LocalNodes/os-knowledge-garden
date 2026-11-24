@@ -1,6 +1,6 @@
 # The a11y browser suite: how to run it, and why it makes no AI calls
 
-Playwright specs for every Phase 22 screen state (S1 to S8): axe, keyboard, reflow, screen-reader proxy, page titles and the recorded import run. Results go to `.planning/phases/22-document-importer-cited-group-answers/a11y/`; its `README.md` indexes the axe files.
+Playwright specs for every Phase 22 screen state (S1 to S8): axe, keyboard, reflow, screen-reader proxy, page titles and the recorded import run. Results go to `.planning/workstreams/v4/phases/22-document-importer-cited-group-answers/a11y/`; its `README.md` indexes the axe files.
 
 ## Where it runs
 

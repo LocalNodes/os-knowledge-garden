@@ -11,6 +11,7 @@ use Drupal\Core\Url;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\localnodes_demo_packs\PackText;
 use Drupal\localnodes_events_calendar\DemoContent\DemoDate;
+use Drupal\localnodes_platform\Export\ExportSwitch;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\localnodes_demo_packs\PackChecks;
 use Drupal\Tests\localnodes_demo_packs\PackWalkChecks;
@@ -478,10 +479,13 @@ final class PackWalkTest extends BrowserTestBase {
   }
 
   /**
-   * The owner reaches Export this site and its confirm page; the witness not.
+   * The export pages follow the export switch; no export job is made.
    *
-   * No export job is made. The owner signs in for the check and the witness
-   * signs in again after it, so keep this the last check of a walk.
+   * With the switch off, as on a fresh site, the owner and the witness both
+   * get 404 on the export page and its confirm page. With it on, the owner
+   * reaches both pages and the witness gets 403. The owner signs in for the
+   * check and the witness signs in again after it, so keep this the last
+   * check of a walk.
    */
   private function checkExport(): array {
     $owner = $this->entityByUuid((string) ($this->walkData['owner'] ?? ''));
@@ -489,6 +493,13 @@ final class PackWalkTest extends BrowserTestBase {
     if ($owner === NULL || $witness === FALSE) {
       return ['the owner of the walk did not load.'];
     }
+    $on = ExportSwitch::enabled($this->container->get('config.factory'));
+    // The routes are gone while the switch is off, so there are no URLs to
+    // build from them: the paths are written out.
+    $offPaths = [
+      '/admin/config/system/site-export',
+      '/admin/config/system/site-export/confirm/request',
+    ];
     $routes = [
       'localnodes_platform.site_export' => [],
       'localnodes_platform.site_export_confirm' => ['operation' => 'request'],
@@ -501,7 +512,14 @@ final class PackWalkTest extends BrowserTestBase {
     $owner->passRaw = $password;
     $this->drupalLogout();
     $this->drupalLogin($owner);
-    foreach ($routes as $route => $parameters) {
+    foreach ($on ? [] : $offPaths as $path) {
+      $this->drupalGet($path);
+      $status = $this->getSession()->getStatusCode();
+      if ($status !== 404) {
+        $misses[] = "the owner gets $status on $path with the export off, not 404.";
+      }
+    }
+    foreach ($on ? $routes : [] as $route => $parameters) {
       $this->drupalGet(Url::fromRoute($route, $parameters));
       $status = $this->getSession()->getStatusCode();
       if ($status !== 200) {
@@ -518,7 +536,14 @@ final class PackWalkTest extends BrowserTestBase {
     }
     $this->drupalLogout();
     $this->drupalLogin($witness);
-    foreach ($routes as $route => $parameters) {
+    foreach ($on ? [] : $offPaths as $path) {
+      $this->drupalGet($path);
+      $status = $this->getSession()->getStatusCode();
+      if ($status !== 404) {
+        $misses[] = "the witness gets $status on $path with the export off, not 404.";
+      }
+    }
+    foreach ($on ? $routes : [] as $route => $parameters) {
       $this->drupalGet(Url::fromRoute($route, $parameters));
       $status = $this->getSession()->getStatusCode();
       if ($status !== 403) {
