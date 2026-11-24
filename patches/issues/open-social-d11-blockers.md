@@ -4,7 +4,7 @@ Status: draft, not posted; waits for Tom (D-09)
 
 ## Where to post
 
-Comment on drupal.org issue #3570907, "Drupal 11 compatible Open Social" (project Open Social, goalgorilla/open_social). Nothing here has been posted. Phase 22.2 produced it from `.planning/phases/22.2-open-social-13-1-upgrade/D11-BLOCKERS.md`, which has the full evidence and our own items. Only the items that Open Social or a contrib maintainer owns are below.
+Comment on drupal.org issue #3570907, "Drupal 11 compatible Open Social" (project Open Social, goalgorilla/open_social). Nothing here has been posted. Phase 22.2 produced it from `.planning/workstreams/v4/phases/22.2-open-social-13-1-upgrade/D11-BLOCKERS.md`, which has the full evidence and our own items. Only the items that Open Social or a contrib maintainer owns are below.
 
 ## Comment text
 

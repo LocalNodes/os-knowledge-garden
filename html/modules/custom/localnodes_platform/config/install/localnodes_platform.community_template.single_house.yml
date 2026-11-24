@@ -1,0 +1,16 @@
+# A single house on its own: the site is the house, so its one group is the
+# house itself, everyone in it. house_v1 is recorded as the suggested group
+# template; it is not applied. No repeatable kind is recorded: a house that
+# grows into several becomes a housing co-op.
+# Raise the version whenever the groups or kinds change.
+id: single_house
+version: 1
+label: 'A single house'
+description: 'One group for the house and everyone in it.'
+groups:
+  -
+    name: '{site}'
+    visibility: community
+    everyone: true
+    group_template: house_v1
+repeatable: {  }

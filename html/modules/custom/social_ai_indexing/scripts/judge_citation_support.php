@@ -72,7 +72,7 @@ PROMPT;
   private ?string $jsonl;
 
   public function __construct(private readonly array $options, ?string $jsonl) {
-    $this->phaseDir = DRUPAL_ROOT . '/../.planning/phases/22-document-importer-cited-group-answers';
+    $this->phaseDir = DRUPAL_ROOT . '/../.planning/workstreams/v4/phases/22-document-importer-cited-group-answers';
     $this->jsonl = $jsonl === NULL ? NULL : self::resolve($jsonl);
   }
 

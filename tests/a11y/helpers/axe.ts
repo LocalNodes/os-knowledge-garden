@@ -5,7 +5,7 @@
 //     screen's own region (options.include) so pre-existing theme and
 //     DeepChat violations outside it don't mask the screen's result,
 //   - saves the full results JSON to
-//     .planning/phases/22-document-importer-cited-group-answers/a11y/axe-<screen>-<state>.json
+//     .planning/workstreams/v4/phases/22-document-importer-cited-group-answers/a11y/axe-<screen>-<state>.json
 //     (or, with options.resultsDir, to that folder: Phase 23 specs pass
 //     PHASE23_RESULTS_DIR),
 //   - fails the test on any serious or critical violation.

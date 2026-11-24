@@ -78,3 +78,11 @@ localnodes_platform.community_template.*:
             type: string
             label: 'Suggested group template for each one added'
             nullable: true
+
+localnodes_platform.settings:
+  type: config_object
+  label: 'LocalNodes platform settings'
+  mapping:
+    export_enabled:
+      type: boolean
+      label: 'Offer the whole-site export (Export this site) to the recorded owner'

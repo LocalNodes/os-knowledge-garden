@@ -247,7 +247,8 @@ fail_callback() {       # fail_callback REASON: status failed and a fixed code, 
 # On a non-zero exit the trap sends ONE failed callback with the current code, only for
 # fresh and resume runs, and only while "ready" has not gone out (READY_SENT; a stop after
 # ready, such as the closing cache clear, must not mark a finished site as failed). A
-# redeploy sends none: its site is already live. A stop before the path is decided (a state
+# redeploy's trap sends none: its site is already live (its one explicit failed is the
+# practice-site case in the ready re-send below). A stop before the path is decided (a state
 # read failing right at start-up) sends none either. The exit status is kept. The sign-up
 # app treats a failed from the site as provisional; a later ready for the same attempt wins.
 # Codes: install_failed (any other step), db_not_empty, platform_enable_failed,
@@ -258,6 +259,7 @@ FAIL_REASON=install_failed
 RUN_KIND=""
 READY_SENT=false
 RELAYER_ADDRESS=""
+REDEPLOY_W3_EN_FAILED=false
 on_exit() {
   local rc=$?
   trap - EXIT
@@ -545,9 +547,12 @@ else
   if [ "${WEB3_ENABLED:-false}" = "true" ]; then
     echo "Ensuring localnodes_web3 enabled..."
     # A redeploy never stops on this (its site is live), but a failure is logged, not hidden.
-    # A sign-up site not yet handed over also has its ready held back below.
-    $DRUSH en localnodes_web3 -y \
-      || echo "Warning: localnodes_web3 could not be enabled on this redeploy; group funds and decisions are off."
+    # A sign-up site not yet handed over also has its ready held back below, and says
+    # why with web3_enable_failed (REDEPLOY_W3_EN_FAILED).
+    if ! $DRUSH en localnodes_web3 -y; then
+      echo "Warning: localnodes_web3 could not be enabled on this redeploy; group funds and decisions are off."
+      REDEPLOY_W3_EN_FAILED=true
+    fi
   fi
 
   # Ensure the OpenRouter submodule matches AI_PROVIDER on redeploy, with the provider flip
@@ -562,7 +567,7 @@ else
   #   answers would go wrong with no error. Refused unless AI_PROVIDER_SWITCH is exactly
   #   "reindex". A refusal logs one REFUSED line and skips: exit 0 and no FAIL_REASON code.
   #   The codes are the sign-up callback contract (a closed list, sent only on fresh and
-  #   resume runs), a redeploy sends no callback, and a non-zero exit would crash-loop a
+  #   resume runs), the guard sends no callback on a redeploy, and a non-zero exit would crash-loop a
   #   working live site over an env mismatch. The site keeps its current provider.
   # - The switch clears the vector server BEFORE enabling the module. If the clear fails, the
   #   site stays on its current provider with that provider's vectors, which is consistent;
@@ -617,17 +622,26 @@ else
   # again; the sign-up app ignores a repeated ready once billing has started (23-32). It sits
   # after the provider flip guard, so a guard read that stops the start-up sends nothing, and
   # read_state stops the start-up too if the read itself fails (never taken as "not
-  # activated"). A redeploy sends no failed callback (the trap reports fresh and resume runs
-  # only), and a manual site, without the callback variables, sends nothing.
+  # activated"). The trap sends no failed callback on a redeploy (it reports fresh and resume
+  # runs only); the one failed a redeploy can send is the practice-site case below. A manual
+  # site, without the callback variables, sends nothing.
   if [ -n "$ORGANIZER_EMAIL" ] && [ -n "${PROVISION_ID:-}" ] && [ -n "${PROVISION_CALLBACK_TOKEN:-}" ]; then
     read_state localnodes.organizer_activated
     if [ -z "$STATE_VALUE" ]; then
       # A practice site resends ready only once its group funds and decisions work. The
-      # check sits in an if, so a failure never ends the redeploy; no ready goes out, and a
-      # later redeploy that passes sends it (the sign-up app's stuck-provision timeout reports
-      # a site that never does).
-      if [ "${WEB3_ENABLED:-false}" = "true" ] && ! web3_ready_check; then
+      # check sits in an if, so a failure never ends the redeploy; no ready goes out. Instead
+      # one failed callback says why (web3_enable_failed when the enable above failed, and the
+      # check is then skipped; web3_check_failed otherwise), so the sign-up does not wait for
+      # the stuck-provision timeout. The sign-up app holds a site's failed as provisional for
+      # its window, so a later redeploy that passes still sends a ready that wins, and it
+      # ignores any callback once a sign-up is ready or past it.
+      if [ "${WEB3_ENABLED:-false}" = "true" ] && { [ "${REDEPLOY_W3_EN_FAILED:-false}" = "true" ] || ! web3_ready_check; }; then
         echo "Organizer not activated yet, but group funds and decisions are not working; ready not sent."
+        if [ "${REDEPLOY_W3_EN_FAILED:-false}" = "true" ]; then
+          fail_callback "web3_enable_failed"
+        else
+          fail_callback "web3_check_failed"
+        fi
       else
         echo "Organizer not activated yet; telling the sign-up app this site is ready."
         provision_callback "ready"

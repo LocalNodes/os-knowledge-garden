@@ -313,6 +313,17 @@ html:has(.ai-deepchat.chat-container) {
 body:has(.ai-deepchat.chat-container) .main-container {
   padding-bottom: var(--ln-chat-clearance);
 }
+/* The footer comes after the content, so it needs the same room: at the end of
+   the page its links sat under the toggle. socialblue pads it 25px below, and
+   45px from 900px up. */
+body:has(.ai-deepchat.chat-container) .site-footer {
+  padding-bottom: calc(25px + var(--ln-chat-clearance));
+}
+@media (min-width: 900px) {
+  body:has(.ai-deepchat.chat-container) .site-footer {
+    padding-bottom: calc(45px + var(--ln-chat-clearance));
+  }
+}
 
 /* Placeholder text and the small meta lines (published date, post date) are 2.8:1 and 4.48:1 on white in
    stock socialbase (a light grey and a mid grey); the muted text token is 7.46:1

@@ -1,0 +1,3 @@
+# The whole-site export (Export this site) is off until the scoped export
+# passes its review. Set to true, then rebuild caches, to turn it back on.
+export_enabled: false

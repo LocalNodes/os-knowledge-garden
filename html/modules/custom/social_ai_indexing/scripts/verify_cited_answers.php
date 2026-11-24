@@ -455,7 +455,7 @@ final class CitedAnswersLiveRunner {
    * back for the cross-checks and the summary.
    */
   private function runIsolated(array $runs): int {
-    $out = $this->options['out'] ?? (dirname(DRUPAL_ROOT) . '/.planning/phases/22-document-importer-cited-group-answers/22-live-run.jsonl');
+    $out = $this->options['out'] ?? (dirname(DRUPAL_ROOT) . '/.planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-live-run.jsonl');
     $drush = dirname(DRUPAL_ROOT) . '/vendor/bin/drush';
     $pass = [];
     foreach ($this->options as $key => $value) {
@@ -1428,7 +1428,7 @@ final class CitedAnswersLiveRunner {
    * Appends one record to the jsonl.
    */
   private function append(array $record): void {
-    $out = $this->options['out'] ?? (dirname(DRUPAL_ROOT) . '/.planning/phases/22-document-importer-cited-group-answers/22-live-run.jsonl');
+    $out = $this->options['out'] ?? (dirname(DRUPAL_ROOT) . '/.planning/workstreams/v4/phases/22-document-importer-cited-group-answers/22-live-run.jsonl');
     unset($record['log_lines']);
     file_put_contents($out, json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
   }

@@ -125,6 +125,9 @@
             },
             "drupal/calendar_view": {
                 "Read stored date and time values as UTC, so events land on the right day": "patches/calendar-view-datetime-utc.patch"
+            },
+            "drupal/core": {
+                "Test bootstrap: scan extension directories in sorted order, so a duplicated extension name resolves the same on every machine": "patches/core-tests-bootstrap-sorted-extension-scan.patch"
             }
         },
         "patches-ignore": {

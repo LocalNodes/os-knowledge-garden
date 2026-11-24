@@ -39,7 +39,7 @@ jobs:
   live-sepolia:
     # Main only: a dispatch from another ref would hand the seed to unreviewed workflow code.
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 45
     steps:
       - name: Checkout

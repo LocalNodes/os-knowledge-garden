@@ -788,14 +788,25 @@ check "practice, malformed address: failed web3_check_failed, no ready, nothing 
 t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
 # The enable runs before the organizer step, so the failed callback is the only one.
 check "practice, enable fails: only a failed callback, web3_enable_failed, no check" "yes failed \"web3_enable_failed\" 0" "$(nonzero "$rc") $(cb_statuses "$t") $(cb_get "$t" 1 reason) $(w3_checks "$t")"
-# 11f. Redeploy, organizer not activated, check failing: no ready, exit 0, a fixed line.
+# 11f. Redeploy, organizer not activated, check failing: no ready, exit 0, a fixed line, and
+#     one explicit failed with web3_check_failed, so the sign-up does not wait for the
+#     stuck-provision timeout.
 t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=2)"
-check "practice redeploy, check fails: exit 0, no callback, fixed line, EXISTING INSTALL READY" "0 0 yes yes" "$rc $(cbs "$t") $(has "$t/out" "group funds and decisions are not working; ready not sent") $(has "$t/out" "=== EXISTING INSTALL READY ===")"
+check "practice redeploy, check fails: exit 0, one failed callback, fixed line, EXISTING INSTALL READY" "0 failed yes yes" "$rc $(cb_statuses "$t") $(has "$t/out" "group funds and decisions are not working; ready not sent") $(has "$t/out" "=== EXISTING INSTALL READY ===")"
+check "practice redeploy, check fails: reason web3_check_failed, the contract keys only" "\"web3_check_failed\" $FAILED_KEYS" "$(cb_get "$t" 1 reason) $(cb_keys "$t" 1)"
 touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
-check "practice redeploy, check passes: ready with the address" "0 ready \"$W3ADDR\"" "$rc $(cb_statuses "$t") $(cb_get "$t" 1 relayer_address)"
-# 11g. Redeploy whose enable fails: a warning, not silence, and the start-up goes on.
+check "practice redeploy, check passes: ready with the address" "0 failed,ready \"$W3ADDR\"" "$rc $(cb_statuses "$t") $(cb_get "$t" 2 relayer_address)"
+# 11g. Redeploy whose enable fails: a warning, not silence, and the start-up goes on. A site
+#     not yet handed over says so with web3_enable_failed; the check does not run.
 t="$(rsite)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
 check "practice redeploy, enable fails: exit 0, warning logged, drush error not hidden" "0 yes yes" "$rc $(has "$t/out" "Warning: localnodes_web3 could not be enabled on this redeploy") $(has "$t/out" "Unable to install modules")"
+check "practice redeploy, enable fails: one failed web3_enable_failed, no check, no ready" "failed \"web3_enable_failed\" 0" "$(cb_statuses "$t") $(cb_get "$t" 1 reason) $(w3_checks "$t")"
+# An activated site whose redeploy enable fails sends nothing (nothing to hand over).
+t="$(rsite)"; printf now > "$t/state/localnodes.organizer_activated"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
+check "practice redeploy, enable fails, organizer activated: exit 0, no callback" "0 0" "$rc $(cbs "$t")"
+# A manual site (no callback variables) whose redeploy enable fails sends nothing either.
+t="$(rsite)"; rc="$(run_ep "$t" $ORG $W3 FAIL_EN_W3=1)"
+check "manual redeploy with web3 on, enable fails: exit 0, no callback" "0 0" "$rc $(cbs "$t")"
 # 11h. An activated site's redeploy runs no check (nothing to hand over).
 t="$(rsite)"; printf now > "$t/state/localnodes.organizer_activated"; rc="$(run_ep "$t" $ORG $CB $W3)"
 check "practice redeploy, organizer activated: no check, no callback" "0 0 0" "$rc $(w3_checks "$t") $(cbs "$t")"

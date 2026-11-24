@@ -45,7 +45,7 @@ final class GroupTour {
   public const NOUNS = [
     'housing_coop' => ['kind' => 'co-op', 'units' => 'houses', 'unit' => 'house'],
     'market' => ['kind' => 'market', 'units' => 'vendors', 'unit' => 'vendor'],
-    'neighbourhood' => ['kind' => 'neighbourhood', 'units' => 'blocks', 'unit' => 'block'],
+    'neighbourhood_association' => ['kind' => 'neighbourhood', 'units' => 'blocks', 'unit' => 'block'],
   ];
 
   /**

@@ -69,7 +69,7 @@ tests/e2e/.env.fork
 tests/e2e/.auth/
 tests/e2e-live/node_modules/
 tests/e2e-live/.cache-synpress/
-/.planning/phases/21-real-safe-reads-balances/e2e-evidence/runs/
+/.planning/workstreams/v4/phases/21-real-safe-reads-balances/e2e-evidence/runs/
 # The chains' vendored contract bytes are tracked (the root vendor/ rule is for Composer)
 !/tests/e2e/fork/vendor/
 # So are the governance vectors' pinned inputs (tests/governance/vendor/SOURCES.md lists each file's source and sha256).
@@ -151,3 +151,6 @@ html/sites/default/settings.local.php
 
 # Site export archives (drush localnodes:export); they hold private content.
 /exports/
+
+# GSD: which workstream a checkout is on is local to that checkout
+/.planning/active-workstream

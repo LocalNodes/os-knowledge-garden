@@ -208,7 +208,8 @@ final class DemoFeaturesTest extends BrowserTestBase {
     }
 
     // Welcome posts hold nothing private: community visibility, so a
-    // signed-in visitor who has not joined reads them.
+    // signed-in visitor who has not joined reads them. A secret group's
+    // welcome post names the group, so only its members read it.
     $storage = $this->container->get('entity_type.manager')->getStorage('post');
     $ids = $storage->getQuery()->accessCheck(FALSE)->condition('field_post', 'Welcome to ', 'STARTS_WITH')->exists('field_recipient_group')->execute();
     $this->assertCount(count($content['group']), $ids, 'One welcome post per demo group.');
@@ -216,6 +217,12 @@ final class DemoFeaturesTest extends BrowserTestBase {
     $visitor->addRole('verified');
     $visitor->save();
     foreach ($storage->loadMultiple($ids) as $post) {
+      $group = $post->get('field_recipient_group')->entity;
+      if ($group->hasField('field_flexible_group_visibility') && $group->get('field_flexible_group_visibility')->value === 'members') {
+        $this->assertSame('3', (string) $post->get('field_visibility')->value, 'Welcome post ' . $post->id() . ' in a secret group is group visibility.');
+        $this->assertFalse($post->access('view', $visitor), 'A signed-in non-member does not read welcome post ' . $post->id() . '.');
+        continue;
+      }
       $this->assertSame('2', (string) $post->get('field_visibility')->value, 'Welcome post ' . $post->id() . ' is community visibility.');
       $this->assertTrue($post->access('view', $visitor), 'A signed-in non-member reads welcome post ' . $post->id() . '.');
     }

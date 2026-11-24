@@ -18,6 +18,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\localnodes_web3\EmailLink;
 use Drupal\localnodes_web3\SignIn;
 use Drupal\localnodes_web3\SignInEmail;
+use Drupal\localnodes_web3\Sponsor\FeeStatusRefresh;
 use Drupal\localnodes_web3\SiweHelpLink;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
 use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
@@ -327,4 +328,15 @@ function localnodes_web3_module_implements_alter(array &$implementations, string
   $group = $implementations['localnodes_web3'];
   unset($implementations['localnodes_web3']);
   $implementations['localnodes_web3'] = $group;
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Stores the network fee account's status, so a group payment page on a
+ * fresh site can tell who pays the fee without a site manager first opening
+ * the Network Fee Account page (FeeStatusRefresh).
+ */
+function localnodes_web3_cron(): void {
+  FeeStatusRefresh::fromContainer(\Drupal::getContainer())->run();
 }

@@ -11,6 +11,10 @@ use Drupal\user\Entity\User;
 final class SiteExportMailTest extends LocalNodesEmailKernelTestBase {
 
   public function testNoticesContainOnlyPageLinks(): void {
+    // The notices link to the export page, which exists only with the
+    // export switch on.
+    $this->config('localnodes_platform.settings')->set('export_enabled', TRUE)->save();
+    $this->container->get('router.builder')->rebuild();
     $user = User::create(['name' => 'Export owner', 'mail' => 'export-owner@mail.localnodes.xyz', 'status' => 1]);
     $user->save();
     $job = ['uid' => (int) $user->id(), 'expires' => time() + 86400, 'archive' => 'DO-NOT-MAIL-ARCHIVE-PATH.tar'];

@@ -23,6 +23,8 @@ final class SiteExportButtonTest extends KernelTestBase {
     $this->installSchema('localnodes_platform', ['localnodes_site_export']);
     $this->installConfig(['system']);
     $this->config('system.site')->set('uuid', 'export-site-a')->save();
+    // These tests cover the export itself, so its switch is on.
+    $this->config('localnodes_platform.settings')->set('export_enabled', TRUE)->save();
     $this->base = sys_get_temp_dir() . '/export-button-' . bin2hex(random_bytes(8));
     mkdir($this->base . '/private', 0700, TRUE);
     $settings = Settings::getAll();
@@ -107,8 +109,11 @@ final class SiteExportButtonTest extends KernelTestBase {
     $time->method('getCurrentTime')->willReturnCallback(function () use (&$now) { return $now; });
     $capture = new class extends \Drupal\localnodes_platform\Backup\BackupCapture {
       public bool $busy = FALSE;
+      public mixed $before = NULL;
       public function run(\Drupal\localnodes_platform\Backup\BackupPause $pause, string $reason, int $maxPause, int $drain, int $margin, callable $copy): mixed {
         if ($this->busy) throw new \RuntimeException('another backup or restore is running', 409);
+        // The wait for the capture boundary, where the real capture drains.
+        if ($this->before) ($this->before)();
         return $copy(microtime(TRUE) + 60);
       }
     };
@@ -116,7 +121,10 @@ final class SiteExportButtonTest extends KernelTestBase {
       public int $calls = 0;
       public mixed $during = NULL;
       public bool $fail = FALSE;
+      public mixed $midway = NULL;
+      public array $parts = [];
       public function busy(bool $value): void { $this->capture->busy = $value; }
+      public function beforeCapture(?callable $hook): void { $this->capture->before = $hook; }
       protected function space(): void {}
       protected function versionKnown(): bool { return TRUE; }
       protected function produce(string $directory, float $deadline, callable $progress): array {
@@ -124,7 +132,11 @@ final class SiteExportButtonTest extends KernelTestBase {
         if ($this->fail) throw new \RuntimeException('PRIVATE TITLE filename.pdf person@example.org secret-value');
         file_put_contents($directory . '/copy.tar', 'private archive bytes');
         chmod($directory . '/copy.tar', 0600);
-        foreach (['records', 'files', 'library'] as $key) $progress($key, 10);
+        foreach (['records', 'files', 'library'] as $key) {
+          $this->parts[] = $key;
+          $progress($key, 10);
+          if ($key === 'records' && $this->midway) ($this->midway)();
+        }
         if ($this->during) ($this->during)();
         return ['path' => $directory . '/copy.tar'];
       }
@@ -210,6 +222,116 @@ final class SiteExportButtonTest extends KernelTestBase {
     $this->assertStringNotContainsString('PRIVATE', serialize($manager->current()));
     $this->assertStringNotContainsString('person@example.org', serialize($manager->current()));
     $this->assertSame($last, $manager->last());
+  }
+
+  /**
+   * Turns the export switch off the way another process does.
+   *
+   * The host's drush cset (or a cache rebuild) runs in its own process. It
+   * writes the stored setting, but this worker's already-loaded copy of
+   * the setting is not told about it.
+   */
+  private function switchOffElsewhere(): void {
+    $this->container->get('config.storage')->write('localnodes_platform.settings', ['export_enabled' => FALSE]);
+    $this->container->get('cache.config')->deleteAll();
+  }
+
+  /**
+   * A mail stand-in that records every notice it is asked to send.
+   */
+  private function mailRecorder(): object {
+    return new class {
+      public array $sent = [];
+      public function newTypedEmail(string $type, string $event, $user, array $job): object {
+        $this->sent[] = $event;
+        return new class {
+          public function send(): bool { return TRUE; }
+        };
+      }
+    };
+  }
+
+  /**
+   * Turned off while the worker waits for its capture: nothing is prepared.
+   */
+  public function testSwitchedOffBeforeCaptureStartsNothing(): void {
+    $owner = $this->owner(); $now = time();
+    $mail = $this->mailRecorder();
+    $manager = $this->manager($now, $mail);
+    $job = $manager->request((int) $owner->id());
+    $sent = NULL;
+    $manager->beforeCapture(function () use (&$sent, $mail): void { $this->switchOffElsewhere(); $sent = count($mail->sent); });
+    $manager->work();
+    $this->assertSame(0, $manager->calls, 'No archive is prepared once the switch is off.');
+    $this->assertDirectoryDoesNotExist($manager->files()->directory($job['id']));
+    $this->assertNotContains($manager->current()['status'] ?? '', ['queued', 'running', 'ready'], 'The request does not wait to run when the switch comes back on.');
+    $this->assertNull($manager->download((int) $owner->id(), $job['id']));
+    $this->assertSame([], $manager->last());
+    $this->assertCount($sent, $mail->sent, 'No notice is sent after the switch is off.');
+  }
+
+  /**
+   * Turned off between parts: the next part is not made and nothing is kept.
+   */
+  public function testSwitchedOffDuringPreparationStopsAndDiscards(): void {
+    $owner = $this->owner(); $now = time();
+    $mail = $this->mailRecorder();
+    $manager = $this->manager($now, $mail);
+    $job = $manager->request((int) $owner->id());
+    $sent = NULL;
+    $manager->midway = function () use (&$sent, $mail): void { $this->switchOffElsewhere(); $sent = count($mail->sent); };
+    $manager->work();
+    $this->assertSame(['records', 'files'], $manager->parts, 'The part after the switch went off is refused before it is made.');
+    $this->assertNotContains($manager->current()['status'] ?? '', ['queued', 'running', 'ready', 'failed']);
+    $this->assertDirectoryDoesNotExist($manager->files()->directory($job['id']));
+    $this->assertNull($manager->download((int) $owner->id(), $job['id']));
+    $this->assertSame([], $manager->last());
+    $this->assertCount($sent, $mail->sent, 'No ready or failed notice after the switch is off.');
+  }
+
+  /**
+   * Turned off as the archive is finished: it is never published.
+   */
+  public function testSwitchedOffBeforePublishingNeverPublishes(): void {
+    $owner = $this->owner(); $now = time();
+    $mail = $this->mailRecorder();
+    $manager = $this->manager($now, $mail);
+    $job = $manager->request((int) $owner->id());
+    $sent = NULL;
+    $manager->during = function () use (&$sent, $mail): void { $this->switchOffElsewhere(); $sent = count($mail->sent); };
+    $manager->work();
+    $this->assertNotSame('ready', $manager->current()['status'] ?? '');
+    $this->assertDirectoryDoesNotExist($manager->files()->directory($job['id']));
+    $this->assertSame([], $manager->last());
+    $this->assertCount($sent, $mail->sent, 'No notice after the switch is off.');
+  }
+
+  /**
+   * A download request already under way when the switch goes off gets nothing.
+   *
+   * The request loaded the switch as on (as the early "not found" check
+   * does); the host then turns it off in another process while the owner's
+   * confirmation runs. No worker runs in between.
+   */
+  public function testInFlightDownloadRefusedAfterSwitchedOffElsewhere(): void {
+    $owner = $this->owner(); $now = time();
+    $manager = $this->manager($now);
+    $job = $manager->request((int) $owner->id());
+    $manager->work();
+    $this->assertSame('ready', $manager->current()['status']);
+    // The request's own copy of the switch, loaded when it began.
+    $this->assertTrue($manager->enabled());
+    $this->switchOffElsewhere();
+    $this->assertTrue($manager->enabled(), 'This request still holds the switch as it was when it began.');
+    $this->assertFileExists($manager->files()->archive($manager->current()), 'The archive is still on disk; only the switch protects it.');
+    $this->assertNull($manager->download((int) $owner->id(), $job['id']), 'No archive is released once the switch is off.');
+    try {
+      $manager->request((int) $owner->id());
+      $this->fail('A new export was requested after the switch went off.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertSame('Export is unavailable.', $e->getMessage());
+    }
   }
 
   public function testOrdinaryPrivateFileRouteAlwaysRefuses(): void {

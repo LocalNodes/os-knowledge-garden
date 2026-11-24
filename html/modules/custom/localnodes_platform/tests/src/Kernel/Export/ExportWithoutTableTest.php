@@ -32,6 +32,8 @@ final class ExportWithoutTableTest extends KernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installConfig(['system']);
+    // The switch is on, so these tests reach the missing-table checks.
+    $this->config('localnodes_platform.settings')->set('export_enabled', TRUE)->save();
     // The table is never installed: as on an older site after updatedb.
     $this->assertFalse($this->container->get('database')->schema()->tableExists('localnodes_site_export'));
     $this->base = sys_get_temp_dir() . '/export-no-table-' . bin2hex(random_bytes(8));

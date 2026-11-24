@@ -10,6 +10,9 @@ cc5c4e0d-6bf1-4930-b736-96fd7d2eab2d:
   created: now|00:00
   label: Co-op common room
   type: flexible_group
+  # The group everyone in the co-op belongs to: a new member joins it at their
+  # first sign-in and lands on it with the group tour (PackCommunityGroup).
+  community_template: housing_coop
   field_flexible_group_visibility: public
   field_group_allowed_join_method: direct
   field_group_allowed_visibility:

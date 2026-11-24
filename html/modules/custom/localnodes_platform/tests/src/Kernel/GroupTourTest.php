@@ -142,8 +142,8 @@ final class GroupTourTest extends GroupAccessKernelTestBase {
   public static function recipes(): array {
     return [
       'market' => ['market', "Willow &amp; Elm Co-op is the market's shared group.", 'Find vendors in'],
-      'neighbourhood' => [
-        'neighbourhood',
+      'neighbourhood association' => [
+        'neighbourhood_association',
         "Willow &amp; Elm Co-op is the neighbourhood's shared group.",
         'Find blocks in',
       ],

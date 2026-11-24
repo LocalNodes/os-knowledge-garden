@@ -10,6 +10,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupInterface;
@@ -815,6 +816,18 @@ function localnodes_platform_queue_info_alter(array &$definitions): void {
 }
 
 /**
+ * Implements hook_menu_links_discovered_alter().
+ *
+ * No "Export this site" entry while the export switch is off (ExportSwitch).
+ */
+function localnodes_platform_menu_links_discovered_alter(array &$links): void {
+  if (\Drupal\localnodes_platform\Export\ExportSwitch::enabled(\Drupal::configFactory())) return;
+  foreach ($links as $id => $link) {
+    if (in_array($link['route_name'] ?? '', \Drupal\localnodes_platform\Export\ExportSwitch::ROUTES, TRUE)) unset($links[$id]);
+  }
+}
+
+/**
  * Implements hook_group_content_insert().
  */
 function localnodes_platform_group_content_insert(\Drupal\group\Entity\GroupRelationshipInterface $relationship): void {
@@ -900,4 +913,43 @@ function localnodes_platform_theme_suggestions_node_alter(array &$suggestions, a
     return;
   }
   $suggestions[] = 'node__event__teaser__localnodes';
+}
+
+/**
+ * Implements hook_token_info().
+ */
+function localnodes_platform_token_info(): array {
+  return [
+    'tokens' => [
+      'site' => [
+        'name-and-slogan' => [
+          'name' => t('Name and slogan'),
+          'description' => t('The site name, then " | " and the slogan when the site has one.'),
+        ],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_tokens().
+ *
+ * [site:name-and-slogan] is the front page's browser title: "Site name |
+ * slogan", or the site name alone when no slogan is set, so the title never
+ * ends in a separator.
+ */
+function localnodes_platform_tokens(string $type, array $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata): array {
+  $replacements = [];
+  if ($type !== 'site' || !isset($tokens['name-and-slogan'])) {
+    return $replacements;
+  }
+  $site = \Drupal::config('system.site');
+  $bubbleable_metadata->addCacheableDependency($site);
+  $parts = [trim((string) $site->get('name'))];
+  $slogan = trim(strip_tags((string) $site->get('slogan')));
+  if ($slogan !== '') {
+    $parts[] = $slogan;
+  }
+  $replacements[$tokens['name-and-slogan']] = implode(' | ', array_filter($parts, 'strlen'));
+  return $replacements;
 }

@@ -132,6 +132,8 @@ final class ProofRoutesTest extends KernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
+    // The export challenge route is listed, so the export switch is on.
+    $this->config('localnodes_platform.settings')->set('export_enabled', TRUE)->save();
     $this->container->get('router.builder')->rebuild();
   }
 

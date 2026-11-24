@@ -5,7 +5,7 @@
 //
 // Reads the Playwright JSON report (tests/e2e/.state/report-<network>.json) and appends one
 // "## Run <runId> · <network> · <mode>" block (once per run and network) and one row per
-// test to .planning/phases/21-real-safe-reads-balances/e2e-evidence/INDEX.md:
+// test to .planning/workstreams/v4/phases/21-real-safe-reads-balances/e2e-evidence/INDEX.md:
 //   | network | flow | spec › test | trace .zip | video .webm | result |
 // Trace and video paths are written relative to the phase folder (e2e-evidence/runs/…).
 // The big files stay under the gitignored e2e-evidence/runs/; only INDEX.md is committed.

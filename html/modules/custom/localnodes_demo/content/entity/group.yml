@@ -1,5 +1,9 @@
 ---
-# 5 groups for LocalNodes.xyz bioregionalism community
+# 6 groups for LocalNodes.xyz bioregionalism community
+# Two are public, so a visitor who is not signed in sees live groups on the
+# home page: Watershed Guardians Collective and Regenerative Economics Working
+# Group. Three are for signed-in members, and Mendwell Stewards Circle is
+# secret.
 # AI Coverage: Users in multiple groups exercise cross-group retrieval
 # AI Coverage: Governance Council with 'added' join method exercises group-only permission filtering
 # AI Coverage: Varied group sizes exercise different retrieval scopes
@@ -43,13 +47,13 @@ fdcc1818-ced4-4af6-b4b3-527b757da1f0:
   created: -85 day|14:00
   label: Watershed Guardians Collective
   type: flexible_group
-  field_flexible_group_visibility: community
+  field_flexible_group_visibility: public
   field_group_allowed_join_method: direct
   field_group_allowed_visibility:
     - community
     - group
   description: >
-    <p>The Watershed Guardians Collective coordinates citizen science monitoring, salmon habitat restoration, and riparian zone stewardship across the rivers and streams of Cascadia. We share water quality data, organize volunteer monitoring days, and advocate for the health of our shared watersheds. Every stream connects to the whole bioregion.</p>
+    <p>The Watershed Guardians Collective coordinates citizen science monitoring, salmon habitat restoration, and riparian zone stewardship across the rivers and streams of our bioregion. We share water quality data, organize volunteer monitoring days, and advocate for the health of our shared watersheds. Every stream connects to the whole bioregion.</p>
 
     <p>Things to try here: ask the AI assistant what this group has been working on; open Events, then Calendar, to see the month.</p>
   members:
@@ -96,7 +100,7 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
   created: -75 day|11:30
   label: Regenerative Economics Working Group
   type: flexible_group
-  field_flexible_group_visibility: community
+  field_flexible_group_visibility: public
   field_group_allowed_join_method: direct
   field_group_allowed_visibility:
     - community
@@ -135,4 +139,27 @@ cfb62c3f-6d94-4137-96b8-26cd70baadf4:
     - bcead200-a74f-4e24-93c4-2746436a5207
     - 9e4768e4-32fa-4191-8f58-6e519988c3d8
     - 508fefc5-3a18-471e-afc7-f0bd6686f850
+    - 7cde7276-0de6-43b9-b52c-642ef8f710b0
+
+# Mendwell Stewards Circle - a secret group ("Group members only (secret)")
+# Its name is seen only by its members: not by visitors, and not by signed-in
+# people outside it. Its welcome post is group-only for the same reason.
+674f3732-5334-46ac-b0ca-52d0f4118881:
+  uuid: 674f3732-5334-46ac-b0ca-52d0f4118881
+  langcode: en
+  image: null
+  image_alt: ''
+  uid: 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+  created: -60 day|09:00
+  label: Mendwell Stewards Circle
+  type: flexible_group
+  field_flexible_group_visibility: members
+  field_group_allowed_join_method: added
+  field_group_allowed_visibility:
+    - group
+  description: >
+    <p>A small circle that plans the network's volunteer rota and looks after the shared calendar. Members are added by invitation.</p>
+  members:
+    - 063ea337-4bcf-421b-b30c-1e75f3c5ef78
+    - 3fe46397-9193-4d85-9848-f8972eba32f2
     - 7cde7276-0de6-43b9-b52c-642ef8f710b0

@@ -132,15 +132,59 @@ const SHARE_TEXT = /connect this website/i;
  * - a switch names the network; add-network says "suggesting additional network details";
  *   sharing an account says "Connect this website".
  */
+/** A refusal that can be a passing state: a window caught between two signatures. */
+const NOT_A_SIGNATURE = 'it is not a signature request (a send or a network request)';
+const NOT_THE_SITE = 'it does not name the site ';
+/**
+ * Refusals that are read again for up to SETTLE_MS before they stand: a window caught between
+ * two signatures, or a share window caught between two screens before it names the site. Only
+ * a share: its page carries nothing the requesting site wrote. A signature or a send shows the
+ * site's own message, which can carry any host name, so there the missing name stands at once.
+ * Every other refusal stands at once.
+ */
+const settles = (why: string, url: string) =>
+  why === NOT_A_SIGNATURE || (why.startsWith(NOT_THE_SITE) && /#\/?connect\//.test(url));
+
 export function promptRefusal(expected: ExpectedPrompt, url: string, text: string): string | undefined {
-  if (expected.origin && !text.includes(expected.origin)) return `it does not name the site ${expected.origin}`;
-  if (expected.signatureOnly && !/\/signature-request(?:[/?#]|$)/.test(url)) return 'it is not a signature request (a send or a network request)';
+  if (expected.origin && !text.includes(expected.origin)) return `${NOT_THE_SITE}${expected.origin}`;
+  if (expected.signatureOnly && !/\/signature-request(?:[/?#]|$)/.test(url)) return NOT_A_SIGNATURE;
   if (expected.network !== undefined) {
     if (ADD_NETWORK_TEXT.test(text)) return 'it adds a network instead of switching';
     if (SHARE_TEXT.test(text)) return 'it shares an account instead of switching';
     if (!text.includes(expected.network)) return `it does not name the network ${expected.network}`;
   }
   return undefined;
+}
+
+/**
+ * How long a signature-only prompt on the expected route may show an address without the
+ * /signature-request ending before it is refused. MetaMask moves the same window from one signature to the next (or
+ * closes it) a moment after a confirm; read in that moment, its address can lack the
+ * /signature-request ending. Nothing is pressed while it waits, and after the wait anything that
+ * is still not the expected request is refused, unconfirmed, as before.
+ */
+export const SETTLE_MS = 5_000;
+
+/** The fixed labels a prompt is reported by; the CI log is public, so never its text or address. */
+export type PromptLabel = 'signature_request' | 'send' | 'network_switch' | 'network_add' | 'connect' | 'unlock' | 'other';
+
+/**
+ * What kind of request a prompt window shows, as one fixed label, from its address and (only to
+ * choose between labels) its text. Uses the markers promptRefusal documents. A confirm-transaction
+ * address without the /signature-request ending reads as `send`: a send, or a window caught
+ * between two signatures.
+ */
+export function promptLabel(url: string, text: string): PromptLabel {
+  const hash = url.slice(url.indexOf('#') + 1 || url.length);
+  if (/^\/?unlock(?:[/?]|$)/.test(hash)) return 'unlock';
+  const route = /^\/?(confirm-transaction|confirmation|connect)\//.exec(hash)?.[1];
+  if (route === 'confirm-transaction') {
+    if (/\/signature-request(?:[/?#]|$)/.test(hash)) return 'signature_request';
+    return ADD_NETWORK_TEXT.test(text) ? 'network_add' : 'send';
+  }
+  if (route === 'confirmation') return ADD_NETWORK_TEXT.test(text) ? 'network_add' : 'network_switch';
+  if (route === 'connect') return SHARE_TEXT.test(text) ? 'connect' : 'network_switch';
+  return 'other';
 }
 
 const WARNING_WORDS = /warning|suspicious|deceptive|doesn.t match|mismatch|not the same|risk|unknown address|alert/i;
@@ -150,6 +194,12 @@ export interface PromptLog {
   clicks: Array<{ kind: string; button: string; text: string }>;
   /** Lines that look like MetaMask warnings (domain, chain), kept as findings. */
   warnings: string[];
+}
+
+/** How many wallet prompt windows are open: a count for the log. */
+function walletWindows(context: BrowserContext, extensionId: string): number {
+  const url = `chrome-extension://${extensionId}/notification.html`;
+  return context.pages().filter((p) => !p.isClosed() && p.url().startsWith(url)).length;
 }
 
 function notificationPage(context: BrowserContext, extensionId: string): Page | undefined {
@@ -198,6 +248,12 @@ const STATE_MS = 1_000;
 /** The route of the request a prompt shows, or undefined while its address has none yet. */
 function routeOf(page: Page): string | undefined {
   return /#\/?(confirm-transaction|confirmation|connect)\//.exec(page.url())?.[1];
+}
+
+/** The route and request id in a prompt address, or undefined when it names no request. */
+function requestIdOf(url: string): string | undefined {
+  const match = /#\/?(confirm-transaction|confirmation|connect)\/([^/?#]+)/.exec(url);
+  return match ? `${match[1]}/${match[2]}` : undefined;
 }
 
 function requestOf(page: Page): string {
@@ -294,8 +350,40 @@ export async function confirmPrompts(
     if (index >= 0) owned.splice(index, 1);
     return true;
   };
-  const notClosed = () => new Error(`${kind}: a wallet page opened here could not be closed within ${CLOSE_MS} ms`);
+  // Errors written here carry fixed text only. Anything else (a page call, the done check) leaves
+  // as a fixed category, never its message: the CI log is public.
+  const own = new WeakSet<Error>();
+  const mine = (e: Error): Error => {
+    own.add(e);
+    return e;
+  };
+  const notClosed = () => mine(new Error(`${kind}: a wallet page opened here could not be closed within ${CLOSE_MS} ms`));
   let failed = false;
+  // A prompt on the expected route that is not yet the expected request: since when, why, and
+  // what it showed (a fixed label). Refused, unconfirmed, once SETTLE_MS has passed.
+  // Kept per window and request: a new request, or a closed window, starts over.
+  const promptPage = `chrome-extension://${extensionId}/notification.html`;
+  let refused: { page: Page; request: string; since: number; why: string; label: PromptLabel } | undefined;
+  /**
+   * The refusal that still applies: its window is open on the prompt page and shows no other
+   * request. An address with no request id (a window between two screens) is not another
+   * request, so the clock keeps running.
+   */
+  const settling = () => {
+    const r = refused;
+    if (!r || r.page.isClosed() || !r.page.url().startsWith(promptPage)) return undefined;
+    const id = requestIdOf(r.page.url());
+    return id === undefined || id === r.request ? r : undefined;
+  };
+  /** Time left before a settling request is refused, for that window only (or any, if omitted). */
+  const settleLeft = (page?: Page) => {
+    const r = settling();
+    return r && (!page || r.page === page) ? r.since + SETTLE_MS - Date.now() : Infinity;
+  };
+  // What a refused prompt showed, for the error and the public log: a fixed label and a count.
+  const seen = (p: Page, text: string) => `it shows ${promptLabel(p.url(), text)}; wallet windows open ${walletWindows(context, extensionId)}`;
+  const refusal = () =>
+    mine(new Error(`${kind}: the open wallet prompt is not the expected request (${refused!.why}); it shows ${refused!.label} after ${Date.now() - refused!.since} ms; wallet windows open ${walletWindows(context, extensionId)}; it was not confirmed`));
   // Calls on the prompt window that neither returned nor failed in time, and `done()` checks
   // that didn't answer in time.
   let stalls = 0;
@@ -304,7 +392,8 @@ export async function confirmPrompts(
   const isDone = async (): Promise<boolean> => {
     if (!opts.done) return false;
     const check = opts.done;
-    const answer = await within(Promise.resolve().then(() => check()), DONE_MS);
+    // Never past the settle time of a request being read again.
+    const answer = await within(Promise.resolve().then(() => check()), Math.max(1, Math.min(DONE_MS, settleLeft())));
     if (answer !== 'timeout') return answer.value;
     doneStalls++;
     return false;
@@ -313,12 +402,23 @@ export async function confirmPrompts(
     (stalls ? `; the prompt window stopped answering ${stalls} time(s)` : '') + (doneStalls ? `; the done check didn't answer ${doneStalls} time(s)` : '');
   try {
     for (;;) {
-      if (await isDone()) return;
+      if (await isDone()) {
+        // Passed, but another wallet window may still be open, unpressed: say so with fixed
+        // fields only (the count, and the label of a window still being read again).
+        const still = walletWindows(context, extensionId);
+        const shows = settling()?.label;
+        if (still > 0) console.log(`[metamask] ${kind}: done; wallet windows still open ${still}${shows ? `; one shows ${shows}` : ''}`);
+        return;
+      }
+      if (!settling()) refused = undefined;
+      // The settle time is absolute: once it has passed, the request is refused before any read.
+      if (settleLeft() <= 0) throw refusal();
       const open = notificationPage(context, extensionId);
       if (pastDeadline()) {
-        if (opts.done) throw new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s); ${await promptState(open)}${stallNote()})`);
-        if (open) throw new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms${stallNote()}`);
-        if (clicks === 0) throw new Error(`no MetaMask prompt to confirm for ${kind} within ${timeoutMs} ms`);
+        if (settling()) throw refusal();
+        if (opts.done) throw mine(new Error(`${kind}: not done within ${timeoutMs} ms (${clicks} MetaMask click(s); ${await promptState(open)}${stallNote()})`));
+        if (open) throw mine(new Error(`${kind}: a MetaMask prompt is still open and unconfirmed after ${timeoutMs} ms${stallNote()}`));
+        if (clicks === 0) throw mine(new Error(`no MetaMask prompt to confirm for ${kind} within ${timeoutMs} ms`));
         return;
       }
       const prompt = open;
@@ -352,51 +452,86 @@ export async function confirmPrompts(
               return fallback;
             }
             // A fixed category and the error's name only: never the message.
-            throw categorized(e);
+            throw mine(categorized(e));
           }
         };
         // A Playwright call with its own timeout is raced a little longer, so its own timeout
         // normally ends it first; a check with no timeout of its own gets PROBE_MS.
         const timed = (ms: number) => {
-          const timeout = left(ms);
+          // Never past the settle time of a request being read again.
+          const timeout = left(Math.min(ms, Math.max(1, settleLeft(prompt))));
           return { timeout, capMs: timeout + SLACK_MS };
         };
         const load = timed(30_000);
         await on(undefined, () => prompt.waitForLoadState('domcontentloaded', { timeout: load.timeout }), load.capMs);
         // A plain timer, not prompt.waitForTimeout: the window may close during this wait.
-        if (!gone && !hung) await sleep(1_500);
+        if (!gone && !hung) await sleep(Math.max(0, Math.min(1_500, settleLeft(prompt))));
+        // The address this pass checks, taken before the text is read and checked again after it:
+        // text and address must come from the same request. Every press below first checks the
+        // window still shows it: a window that moved to another request is read again, never
+        // pressed.
+        const seenUrl = prompt.url();
+        let moved = false;
         const read = timed(10_000);
         const text = (await on('', () => prompt.locator('body').innerText({ timeout: read.timeout }), read.capMs)).replace(/[ \t]+/g, ' ');
-        const request = requestOf(prompt);
+        if (!prompt.isClosed() && prompt.url() !== seenUrl) moved = true;
+        const request = requestIdOf(seenUrl) ?? seenUrl;
+        const act = async (step: () => Promise<unknown>, capMs: number): Promise<unknown> => {
+          if (!prompt.isClosed() && prompt.url() !== seenUrl) {
+            moved = true;
+            return undefined;
+          }
+          return on(undefined, step, capMs);
+        };
         const pressed = confirmed?.page === prompt && confirmed.request === request ? confirmed.buttons : new Set<string>();
         let clicked = '';
         // With an expected request, nothing is pressed until the prompt's address shows its
         // route, and a prompt for any other request is refused, unconfirmed, with an error.
         let allowed = true;
-        if (expected && !gone && !hung) {
+        if (expected && !gone && !hung && !moved) {
           const route = routeOf(prompt);
           if (route === undefined || !text.trim()) allowed = false;
-          else if (route !== expected.route && !expected.alsoRoutes?.includes(route as ExpectedPrompt['route'])) throw new Error(`${kind}: the open wallet prompt is a ${route} request, not the expected ${expected.route} request; it was not confirmed`);
+          else if (route !== expected.route && !expected.alsoRoutes?.includes(route as ExpectedPrompt['route'])) throw mine(new Error(`${kind}: the open wallet prompt is a ${route} request, not the expected ${expected.route} request; ${seen(prompt, text)}; it was not confirmed`));
           else {
-            const why = promptRefusal(expected, prompt.url(), text);
-            if (why) throw new Error(`${kind}: the open wallet prompt is not the expected request (${why}); it was not confirmed`);
+            const why = promptRefusal(expected, seenUrl, text);
+            const prior = settling();
+            const id = requestIdOf(seenUrl);
+            const same = prior !== undefined && prior.page === prompt && (id === undefined || id === prior.request);
+            // After the wait the request is refused, whatever it shows by now.
+            if (same && Date.now() - prior.since >= SETTLE_MS) throw refusal();
+            // A request that passes ends its own wait only, never another window's.
+            if (!why) {
+              if (same) refused = undefined;
+            }
+            // Another network, an add-network or a share in place of a switch is no passing state:
+            // refused at once.
+            else if (!settles(why, seenUrl)) throw mine(new Error(`${kind}: the open wallet prompt is not the expected request (${why}); ${seen(prompt, text)}; it was not confirmed`));
+            else {
+              const label = promptLabel(seenUrl, text);
+              if (!same) {
+                refused = { page: prompt, request: id ?? seenUrl, since: Date.now(), why, label };
+                console.log(`[metamask] ${kind}: the open prompt shows ${label}, not the expected request; reading it again within ${SETTLE_MS} ms`);
+              }
+              else prior.label = label;
+              allowed = false;
+            }
           }
         }
-        if (!gone && !hung && allowed) {
+        if (!gone && !hung && !moved && allowed) {
           const scroll = prompt.getByTestId('confirm-scroll-to-bottom__button');
           if (await on(false, () => scroll.isVisible(), PROBE_MS)) {
             const press = timed(10_000);
-            await on(undefined, () => scroll.click({ timeout: press.timeout }), press.capMs);
+            await act(() => scroll.click({ timeout: press.timeout }), press.capMs);
             await sleep(1_000);
             continue; // the deadline check at the top bounds a scroll button that stays visible
           }
           const ack = prompt.getByTestId('alert-modal-acknowledge-checkbox');
           if (await on(false, () => ack.isVisible(), PROBE_MS)) {
             const tick = timed(10_000);
-            await on(undefined, () => ack.check({ timeout: tick.timeout }), tick.capMs);
+            await act(() => ack.check({ timeout: tick.timeout }), tick.capMs);
           }
           for (const id of CONFIRM_BUTTONS) {
-            if (gone || hung) break;
+            if (gone || hung || moved) break;
             if (expected && !ALERT_BUTTONS.includes(id) && !expected.buttons.includes(id)) continue;
             const button = prompt.getByTestId(id);
             const enabled = timed(5_000);
@@ -410,6 +545,15 @@ export async function confirmPrompts(
               // is latched for this request and never pressed again.
               let ran = false;
               const press = timed(30_000);
+              // Wait for the button without pressing it, then check the address once more and
+              // press at once: the press goes to the request that was read.
+              const trial = timed(10_000);
+              await on(undefined, () => button.click({ trial: true, timeout: trial.timeout }), trial.capMs);
+              if (gone || hung) break;
+              if (!prompt.isClosed() && prompt.url() !== seenUrl) {
+                moved = true;
+                break;
+              }
               const resolved = await on(
                 false,
                 () => {
@@ -427,13 +571,15 @@ export async function confirmPrompts(
             }
           }
         }
+        if (moved) console.log(`[metamask] ${kind}: the prompt moved to another request before the press; reading it again`);
         if (hung) console.log(`[metamask] ${kind}: the prompt window stopped answering (${stalls} time(s) so far)`);
         if (gone && !clicked) {
           // The prompt closed under us (MetaMask closes it after a confirm): it's done. Restart
           // the idle clock so the next prompt in a chain has `idleMs` to open.
           last = Date.now();
         }
-        if (!clicked && !gone && owned.includes(prompt) && Date.now() - openedAt > 8_000) {
+        // A page whose request is settling stays open until it is confirmed or refused.
+        if (!clicked && !gone && owned.includes(prompt) && Date.now() - openedAt > 8_000 && settling()?.page !== prompt) {
           if (!(await closeOwned(prompt))) throw notClosed();
           last = Date.now();
         }
@@ -460,7 +606,7 @@ export async function confirmPrompts(
         if (made === 'timeout') {
           // A page that opens after this gave up is closed as soon as it appears.
           void opening.then((late) => within(late.close(), CLOSE_MS)).catch(() => undefined);
-          throw new Error(`${kind}: the wallet's prompt page did not open within ${openMs} ms`);
+          throw mine(new Error(`${kind}: the wallet's prompt page did not open within ${openMs} ms`));
         }
         const page = made.value;
         owned.push(page);
@@ -477,7 +623,7 @@ export async function confirmPrompts(
     }
   } catch (e) {
     failed = true;
-    throw e;
+    throw e instanceof Error && own.has(e) ? e : categorized(e);
   } finally {
     // MetaMask doesn't close a tab it didn't open, so every page opened here is closed. One that
     // stays open turns a success into an error; after a failure, the first error is kept.
