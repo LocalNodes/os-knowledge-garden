@@ -1,0 +1,75 @@
+<?php
+
+/**
+ * @file
+ * Install functions for the boulder_demo module.
+ */
+
+/**
+ * Site names an install leaves when nobody named the site.
+ *
+ * "Drush Site-Install" is drush's own default; "LocalNodes" is the one
+ * docker/entrypoint.sh passes when DRUPAL_SITE_NAME is unset.
+ */
+const BOULDER_DEMO_DEFAULT_SITE_NAMES = ['', 'Drush Site-Install', 'LocalNodes'];
+
+/**
+ * Implements hook_install().
+ *
+ * The Boulder name and clock are applied only when the entrypoint was asked
+ * for a fresh Boulder demo (DEMO_MODULE=boulder_demo). It enables this
+ * module right after site:install, so the name and timezone are still the
+ * install's own and nobody can have chosen them yet. Enabled any other way
+ * (by hand, on a site someone set up), nothing is changed: a site set to UTC
+ * or named "LocalNodes" may have been set that way on purpose.
+ */
+function boulder_demo_install() {
+  if (getenv('DEMO_MODULE') !== 'boulder_demo') {
+    return;
+  }
+  _boulder_demo_set_site_name();
+  _boulder_demo_set_timezone();
+}
+
+/**
+ * Names the demo site and gives it a slogan, unless someone already did.
+ *
+ * The front page's browser title and welcome box read the site name, so a
+ * demo left with the install default greets visitors with "Drush
+ * Site-Install". A site someone named keeps its name and slogan, and an
+ * existing slogan is always kept.
+ */
+function _boulder_demo_set_site_name(): void {
+  // A name the operator passed is a choice, even "LocalNodes".
+  if (trim((string) getenv('DRUPAL_SITE_NAME')) !== '') {
+    return;
+  }
+  $site = \Drupal::configFactory()->getEditable('system.site');
+  if (!in_array(trim((string) $site->get('name')), BOULDER_DEMO_DEFAULT_SITE_NAMES, TRUE)) {
+    return;
+  }
+  $site->set('name', 'Boulder Creek Neighbors');
+  if (trim((string) $site->get('slogan')) === '') {
+    $site->set('slogan', 'Events, notes and a shared fund for our neighborhood');
+  }
+  $site->save();
+}
+
+/**
+ * Puts the demo site on Boulder's clock, unless someone chose a timezone.
+ *
+ * Demo event times are written as Boulder clock times and every demo
+ * account's profile is in America/Denver. DemoDate stores those times from
+ * the site's own timezone, so the site has to be on Denver time too, or a
+ * 09:30 event shows as 02:30 to the members. A fresh install in the
+ * production container is UTC, and that is the only zone replaced; the
+ * caller runs this only for a fresh Boulder demo.
+ *
+ * Runs on module install, before the demo content loads.
+ */
+function _boulder_demo_set_timezone(): void {
+  $date = \Drupal::configFactory()->getEditable('system.date');
+  if (in_array((string) $date->get('timezone.default'), ['', 'UTC'], TRUE)) {
+    $date->set('timezone.default', 'America/Denver')->save();
+  }
+}
