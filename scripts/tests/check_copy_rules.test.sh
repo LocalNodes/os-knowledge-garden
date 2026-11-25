@@ -20,7 +20,7 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 FAILED=0
 N=0
-TOTAL=12
+TOTAL=19
 
 echo "TAP version 13"
 echo "1..$TOTAL"
@@ -119,7 +119,44 @@ printf '<?php\n$a = $this->t("The site didn'"'"'t respond in time. Try again lat
 run_extra "$TMP/retry"
 check 'lone "Try again" flagged, sentence with "Try again later." not' bash -c "grep -qE '^FLAG .*Retry\.php:3' '$TMP/out.txt' && ! grep -qE 'Retry\.php:2' '$TMP/out.txt'"
 
-# 9: the real Phase 22 sources are clean.
+# 9: "search index" is allowed on the site's terms page only (legal wording kept by the owner). The check runs
+# from a copy in a planted tree, so the terms page sits at its real path relative to that tree's root.
+TREE="$TMP/tree"
+TERMS_DIR="$TREE/html/modules/custom/localnodes_platform/templates"
+mkdir -p "$TREE/scripts" "$TERMS_DIR"
+cp "$CHECK" "$TREE/scripts/check_copy_rules.mjs"
+run_tree() {
+  node "$TREE/scripts/check_copy_rules.mjs" --only-extra --extra "$1" >"$TMP/out.txt" 2>&1
+  echo $? >"$TMP/status.txt"
+}
+printf '<li>{%% trans %%}The search index itself is kept with this site'"'"'s other data.{%% endtrans %%}</li>\n' >"$TERMS_DIR/localnodes-site-terms.html.twig"
+run_tree "$TERMS_DIR/localnodes-site-terms.html.twig"
+check 'terms page: "search index" is allowed (exit 0)' [ "$(status)" = "0" ]
+printf '<p>The search index itself is kept.</p>\n<p>The index is rebuilt each night.</p>\n<p>Pages go to Solr.</p>\n' >"$TERMS_DIR/localnodes-site-terms.html.twig"
+run_tree "$TERMS_DIR/localnodes-site-terms.html.twig"
+check 'terms page: any other system word is still flagged, the allowed phrase is not' bash -c "grep -qE '^FLAG .*localnodes-site-terms\.html\.twig:2 .*index' '$TMP/out.txt' && grep -qE '^FLAG .*localnodes-site-terms\.html\.twig:3 .*Solr' '$TMP/out.txt' && ! grep -qE 'localnodes-site-terms\.html\.twig:1 ' '$TMP/out.txt'"
+printf '<p>The search index itself is kept.</p>\n' >"$TERMS_DIR/localnodes-guide.html.twig"
+run_tree "$TERMS_DIR/localnodes-guide.html.twig"
+check '"search index" on any other page is still flagged' out_has '^FLAG .*localnodes-guide\.html\.twig:1 .*index'
+
+# The allowance's limits: one string with the phrase and another system word is still flagged; the phrase's
+# boundaries hold; the page is matched by its full path, not its file name; a lower-case "llm" never hides a later
+# system word.
+printf '<p>The search index and Solr are kept.</p>\n<p>The search indexing runs.</p>\n<p>The search indexes are kept.</p>\n' >"$TERMS_DIR/localnodes-site-terms.html.twig"
+run_tree "$TERMS_DIR/localnodes-site-terms.html.twig"
+check 'terms page: "search index and Solr" in one string, "search indexing" and "search indexes" are flagged' bash -c "grep -qE '^FLAG .*localnodes-site-terms\.html\.twig:1 .*Solr' '$TMP/out.txt' && grep -qE '^FLAG .*localnodes-site-terms\.html\.twig:2 .*indexing' '$TMP/out.txt' && grep -qE '^FLAG .*localnodes-site-terms\.html\.twig:3 .*indexes' '$TMP/out.txt'"
+mkdir -p "$TREE/html/modules/custom/other_module/templates"
+printf '<p>The search index itself is kept.</p>\n' >"$TREE/html/modules/custom/other_module/templates/localnodes-site-terms.html.twig"
+run_tree "$TREE/html/modules/custom/other_module/templates/localnodes-site-terms.html.twig"
+check 'a page with the terms file name at another path is still flagged' out_has '^FLAG .*other_module/templates/localnodes-site-terms\.html\.twig:1 .*index'
+printf '<p>The search index uses llm tokens.</p>\n' >"$TERMS_DIR/localnodes-site-terms.html.twig"
+run_tree "$TERMS_DIR/localnodes-site-terms.html.twig"
+check 'terms page: a lower-case "llm" does not hide "tokens"' out_has '^FLAG .*localnodes-site-terms\.html\.twig:1 .*tokens'
+printf '<p>Answers use llm tokens.</p>\n' >"$TERMS_DIR/localnodes-guide.html.twig"
+run_tree "$TERMS_DIR/localnodes-guide.html.twig"
+check 'any page: a lower-case "llm" does not hide "tokens"' out_has '^FLAG .*localnodes-guide\.html\.twig:1 .*tokens'
+
+# 10: the real Phase 22 sources are clean.
 node "$CHECK" >"$TMP/real.txt" 2>&1
 REAL=$?
 if [ "$REAL" != "0" ]; then sed 's/^/# /' "$TMP/real.txt"; fi

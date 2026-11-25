@@ -64,7 +64,11 @@ final class SignatureProofController extends ControllerBase {
     catch (\Throwable) {
       $proven = $canProve = FALSE;
     }
-    return $this->answer(['proven' => $proven, 'canProve' => $canProve, 'addUrl' => $canProve ? NULL : self::walletUrl($this->routes, $account)], 200);
+    return $this->answer([
+      'proven' => $proven,
+      'canProve' => $canProve,
+      'addUrl' => $canProve ? NULL : self::walletUrl($this->routes, $account),
+    ], 200);
   }
 
   /**

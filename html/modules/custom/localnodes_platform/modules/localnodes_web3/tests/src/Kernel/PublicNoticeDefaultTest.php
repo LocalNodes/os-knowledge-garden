@@ -9,7 +9,7 @@ use Drupal\KernelTests\KernelTestBase;
 /**
  * The distribution puts in its public-record notice.
  *
- * group_treasury ships group_treasury.public_notice empty, which shows no
+ * Group_treasury ships group_treasury.public_notice empty, which shows no
  * notice and asks for no tick. localnodes_web3_install() sets the LocalNodes
  * wording at install. As in GovernancePlatformNameTest, the .install file is
  * loaded and its helper is called directly.

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_web3\Kernel;
 
+use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Access\CsrfRequestHeaderAccessCheck;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\localnodes_platform\SignInMethod;
 use Drupal\localnodes_web3\Controller\SignatureProofController;
-use Drupal\localnodes_web3\EventSubscriber\SignatureGuard;
 use Drupal\localnodes_web3\SignatureSession;
 use Drupal\siwe_login\Controller\SiweAuthController;
 use Drupal\siwe_login\Service\SiweMessageValidator;
@@ -132,7 +132,13 @@ final class SignatureSessionTest extends KernelTestBase {
     $member = $this->member('ana', $this->testAddress());
     $this->assertFalse($this->proven($member), 'Not signed in: not proven.');
 
-    foreach (['user.login', 'user.reset.login', 'localnodes_web3.email_link_sign_in', 'siwe_login.email_verification_confirm', NULL] as $route) {
+    foreach ([
+      'user.login',
+      'user.reset.login',
+      'localnodes_web3.email_link_sign_in',
+      'siwe_login.email_verification_confirm',
+      NULL,
+    ] as $route) {
       $this->signIn($member, $route);
       $this->assertFalse($this->proven($member), 'Not proven after a sign-in on ' . ($route ?? 'no route'));
     }
@@ -439,22 +445,34 @@ final class SignatureSessionTest extends KernelTestBase {
     $this->assertSame($this->testAddress(), $body['expectedAddress']);
     $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
 
-    $response = $controller()->prove($this->post(['message' => $body['message'], 'signature' => $this->signMessage($body['message'], self::OTHER_KEY)]));
+    $response = $controller()->prove($this->post([
+      'message' => $body['message'],
+      'signature' => $this->signMessage($body['message'], self::OTHER_KEY),
+    ]));
     $this->assertAnswer(403, ['error' => 'not_proven'], $response);
     $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
 
     $body = json_decode($controller()->challenge($this->post([]))->getContent(), TRUE);
-    $response = $controller()->prove($this->post(['message' => $body['message'], 'signature' => $this->signMessage($body['message'])]));
+    $response = $controller()->prove($this->post([
+      'message' => $body['message'],
+      'signature' => $this->signMessage($body['message']),
+    ]));
     $this->assertAnswer(200, ['proven' => TRUE], $response);
     $this->assertAnswer(200, ['proven' => TRUE], $controller()->challenge($this->post([])), 'Already proven.');
 
     // Five failures an hour, then a fixed answer even for a good signature.
     $this->signIn($member, 'user.login');
     for ($i = 0; $i < 4; $i++) {
-      $this->assertAnswer(403, ['error' => 'not_proven'], $controller()->prove($this->post(['message' => 'x', 'signature' => 'y'])));
+      $this->assertAnswer(403, ['error' => 'not_proven'], $controller()->prove($this->post([
+        'message' => 'x',
+        'signature' => 'y',
+      ])));
     }
     $body = json_decode($controller()->challenge($this->post([]))->getContent(), TRUE);
-    $response = $controller()->prove($this->post(['message' => $body['message'], 'signature' => $this->signMessage($body['message'])]));
+    $response = $controller()->prove($this->post([
+      'message' => $body['message'],
+      'signature' => $this->signMessage($body['message']),
+    ]));
     $this->assertAnswer(429, ['error' => 'too_many_attempts'], $response);
   }
 
@@ -474,7 +492,11 @@ final class SignatureSessionTest extends KernelTestBase {
 
     $this->signIn($noWallet, 'user.login');
     $response = $controller()->status();
-    $this->assertAnswer(200, ['proven' => FALSE, 'canProve' => FALSE, 'addUrl' => '/user/' . $noWallet->id() . '/wallet'], $response, "No wallet; the link goes to this member's own wallet page.");
+    $this->assertAnswer(200, [
+      'proven' => FALSE,
+      'canProve' => FALSE,
+      'addUrl' => '/user/' . $noWallet->id() . '/wallet',
+    ], $response, "No wallet; the link goes to this member's own wallet page.");
     $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
 
     $this->signIn($member, 'user.login');
@@ -520,7 +542,10 @@ final class SignatureSessionTest extends KernelTestBase {
     }
 
     // A route whose reads change something needs the proof for reads too.
-    $reads = new Route('/prepare', [], [], [SignatureSession::ROUTE_OPTION => TRUE, SignatureSession::READ_OPTION => TRUE]);
+    $reads = new Route('/prepare', [], [], [
+      SignatureSession::ROUTE_OPTION => TRUE,
+      SignatureSession::READ_OPTION => TRUE,
+    ]);
     foreach (['GET', 'HEAD', 'POST'] as $method) {
       $response = $this->guard($reads, $method);
       $this->assertNotNull($response, $method . ' on a route marked for reads.');
@@ -576,7 +601,11 @@ final class SignatureSessionTest extends KernelTestBase {
       'fetch default' => ['HTTP_ACCEPT' => '*/*', 'CONTENT_TYPE' => $form],
       'asks for JSON' => ['HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => $form],
       'JSON before HTML' => ['HTTP_ACCEPT' => 'application/json, text/html;q=0.9', 'CONTENT_TYPE' => $form],
-      'XHR asking for HTML' => ['HTTP_ACCEPT' => $html, 'CONTENT_TYPE' => $form, 'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+      'XHR asking for HTML' => [
+        'HTTP_ACCEPT' => $html,
+        'CONTENT_TYPE' => $form,
+        'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+      ],
       'JSON body' => ['HTTP_ACCEPT' => $html, 'CONTENT_TYPE' => 'application/json'],
       'no Accept' => ['HTTP_ACCEPT' => '', 'CONTENT_TYPE' => $form],
     ];
@@ -596,7 +625,7 @@ final class SignatureSessionTest extends KernelTestBase {
   /**
    * Asserts the guard's page: 403, HTML, never cached; returns the HTML.
    */
-  private function assertPage(?\Symfony\Component\HttpFoundation\Response $response): string {
+  private function assertPage(?Response $response): string {
     $this->assertNotNull($response);
     $this->assertNotInstanceOf(JsonResponse::class, $response);
     $this->assertSame(403, $response->getStatusCode());
@@ -615,7 +644,10 @@ final class SignatureSessionTest extends KernelTestBase {
     $guard = $this->container->get('localnodes_web3.signature_guard');
     $priority = $dispatcher->getListenerPriority(KernelEvents::REQUEST, [$guard, 'onRequest']);
     $this->assertNotNull($priority, 'The guard listens to every request.');
-    $router = $dispatcher->getListenerPriority(KernelEvents::REQUEST, [$this->container->get('router_listener'), 'onKernelRequest']);
+    $router = $dispatcher->getListenerPriority(KernelEvents::REQUEST, [
+      $this->container->get('router_listener'),
+      'onKernelRequest',
+    ]);
     $this->assertNotNull($router);
     $this->assertLessThan($router, $priority, 'The guard runs after routing and route access.');
 
@@ -720,7 +752,12 @@ final class SignatureSessionTest extends KernelTestBase {
    * An active account with this wallet address, or none.
    */
   private function member(string $name, ?string $address): UserInterface {
-    $account = User::create(['name' => $name, 'mail' => $name . '@example.com', 'status' => 1, 'field_ethereum_address' => $address]);
+    $account = User::create([
+      'name' => $name,
+      'mail' => $name . '@example.com',
+      'status' => 1,
+      'field_ethereum_address' => $address,
+    ]);
     $account->save();
     return $account;
   }
@@ -770,7 +807,10 @@ final class SignatureSessionTest extends KernelTestBase {
    * Pushes a request in the current session, on a route if given.
    */
   private function push(string $path, ?string $route = NULL, string $method = 'GET', ?string $body = NULL, array $server = []): Request {
-    $request = Request::create($path, $method, [], [], [], $server + ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.9'], $body);
+    $request = Request::create($path, $method, [], [], [], $server + [
+      'CONTENT_TYPE' => 'application/json',
+      'REMOTE_ADDR' => '203.0.113.9',
+    ], $body);
     $request->setSession($this->session);
     if ($route !== NULL) {
       $request->attributes->set('_route', $route);
@@ -830,7 +870,10 @@ final class SignatureSessionTest extends KernelTestBase {
    * POSTs to /siwe/verify on its route, so the sign-in hook sees the route.
    */
   private function postVerify(string $message, string $signature): JsonResponse {
-    $request = $this->push('/siwe/verify', 'siwe_login.verify', 'POST', json_encode(['message' => $message, 'signature' => $signature]));
+    $request = $this->push('/siwe/verify', 'siwe_login.verify', 'POST', json_encode([
+      'message' => $message,
+      'signature' => $signature,
+    ]));
     return SiweAuthController::create($this->container)->verify($request);
   }
 
@@ -852,7 +895,7 @@ final class SignatureSessionTest extends KernelTestBase {
   /**
    * Runs the guard on a request for this route and method.
    */
-  private function guard(Route $route, string $method, array $server = [], string $path = '/guarded'): ?\Symfony\Component\HttpFoundation\Response {
+  private function guard(Route $route, string $method, array $server = [], string $path = '/guarded'): ?Response {
     $request = $this->push($path, NULL, $method, NULL, $server);
     $request->attributes->set('_route_object', $route);
     $event = new RequestEvent($this->container->get('http_kernel'), $request, HttpKernelInterface::MAIN_REQUEST);
@@ -863,7 +906,7 @@ final class SignatureSessionTest extends KernelTestBase {
   /**
    * Sends a request to the marked test route through the real dispatcher.
    */
-  private function dispatchRequest(string $method, array $server = []): ?\Symfony\Component\HttpFoundation\Response {
+  private function dispatchRequest(string $method, array $server = []): ?Response {
     $request = $this->push('/localnodes-proof-test', NULL, $method, NULL, $server);
     $event = new RequestEvent($this->container->get('http_kernel'), $request, HttpKernelInterface::MAIN_REQUEST);
     $this->container->get('event_dispatcher')->dispatch($event, KernelEvents::REQUEST);

@@ -8,8 +8,21 @@ use Drupal\Core\Logger\LoggerChannel;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Psr\Log\LoggerInterface;
 
-/** Export-only verifier channels have no logging backends or member context. */
+/**
+ * Export-only verifier channels have no logging backends or member context.
+ */
 final class SilentLoggerFactory implements LoggerChannelFactoryInterface {
-  public function get($channel): LoggerChannel { return new LoggerChannel('export_confirmation'); }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function get($channel): LoggerChannel {
+    return new LoggerChannel('export_confirmation');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function addLogger(LoggerInterface $logger, $priority = 0): void {}
+
 }

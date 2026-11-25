@@ -164,7 +164,7 @@ final class Web3ReadinessCheckTest extends UnitTestCase {
    * @param \Drupal\gas_sponsor\GasSponsorInterface|\Closure $sponsor
    *   The sponsor, or a closure returning it.
    */
-  private function check(array $off = [], ?bool $network = TRUE, mixed $chainId = self::CHAIN_ID, GasSponsorInterface|\Closure $sponsor = NULL): Web3ReadinessCheck {
+  private function check(array $off = [], ?bool $network = TRUE, mixed $chainId = self::CHAIN_ID, GasSponsorInterface|\Closure|null $sponsor = NULL): Web3ReadinessCheck {
     $modules = $this->createMock(ModuleHandlerInterface::class);
     $modules->method('moduleExists')->willReturnCallback(fn (string $m) => !in_array($m, $off, TRUE));
     $config = $this->createMock(ImmutableConfig::class);

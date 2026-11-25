@@ -24,6 +24,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 final class SignatureProofRoutes implements EventSubscriberInterface {
 
   /**
+   * Constructs the subscriber.
+   *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager.
    * @param \Closure|null $jsonapiTypes

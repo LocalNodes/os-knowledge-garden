@@ -31,6 +31,7 @@ final class RestApisStayOffTest extends TestCase {
    * Module name => module directory.
    *
    * @return array<string, string>
+   *   The directories, keyed by module name.
    */
   private static function modules(): array {
     return [

@@ -117,8 +117,9 @@ function _localnodes_web3_show_wallet_button(): void {
 /**
  * Puts the wallet line into the organizer-created welcome mail.
  *
- * localnodes_platform sets the user mail bodies at its own install, before
- * this module is on; with it on, that body gains one line above the sign-off.
+ * The localnodes_platform module sets the user mail bodies at its own
+ * install, before this module is on; with it on, that body gains one line
+ * above the sign-off.
  */
 function _localnodes_web3_word_welcome_mail(): void {
   if (!\Drupal::moduleHandler()->moduleExists('localnodes_platform')) {
