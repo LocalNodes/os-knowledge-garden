@@ -675,6 +675,17 @@ jobs:
               ;;
             *)
               update_env "DEMO_MODULE" "$DEMO_MODULE_INPUT"
+              # The same for the two named demos: their own names, as their install would give
+              # them on a local site (neighbors_demo: SiteName::NAME in
+              # neighbors_demo/src/SiteName.php; boulder_demo: BOULDER_DEMO_SITE_NAME). The
+              # workflow test checks both against those files. A sign-up run keeps the
+              # manifest's name; any other module keeps the default.
+              if [ -z "$PROVISION_ID_INPUT" ] && [ -z "$SITE_NAME" ]; then
+                case "$DEMO_MODULE_INPUT" in
+                  neighbors_demo) SITE_NAME="Creekside Neighbors" ;;
+                  boulder_demo)   SITE_NAME="Boulder LocalNodes" ;;
+                esac
+              fi
               ;;
           esac
           # Demo and staging instances send from the demo.localnodes.xyz subdomain, so a demo
@@ -684,8 +695,8 @@ jobs:
             update_env "MAIL_FROM" "noreply@demo.localnodes.xyz"
           fi
           # SITE_NAME and ORGANIZER_EMAIL come from the provision manifest (GITHUB_ENV). A manual
-          # run has neither: a pack run takes its name from the pack map above, and any other
-          # manual run keeps the compose defaults.
+          # run has neither: a pack run or a neighbors_demo or boulder_demo run takes its name
+          # from the maps above, and any other manual run keeps the compose defaults.
           if [ -n "$SITE_NAME" ]; then
             update_env "DRUPAL_SITE_NAME" "$SITE_NAME"
             update_env "SITE_NAME" "$SITE_NAME"
