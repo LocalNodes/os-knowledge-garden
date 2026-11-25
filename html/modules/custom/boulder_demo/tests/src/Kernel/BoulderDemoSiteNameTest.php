@@ -66,7 +66,7 @@ final class BoulderDemoSiteNameTest extends KernelTestBase {
    */
   public function testInstallDefaultIsReplaced(string $name): void {
     $this->assertSame(
-      ['Boulder Creek Neighbors', 'Events, notes and a shared fund for our neighborhood'],
+      [BOULDER_DEMO_SITE_NAME, BOULDER_DEMO_SITE_SLOGAN],
       $this->install($name, ''),
     );
   }
@@ -100,7 +100,7 @@ final class BoulderDemoSiteNameTest extends KernelTestBase {
    * A default name with a slogan already set keeps that slogan.
    */
   public function testExistingSloganIsKept(): void {
-    $this->assertSame(['Boulder Creek Neighbors', 'Our street'], $this->install('LocalNodes', 'Our street'));
+    $this->assertSame([BOULDER_DEMO_SITE_NAME, 'Our street'], $this->install('LocalNodes', 'Our street'));
   }
 
   /**

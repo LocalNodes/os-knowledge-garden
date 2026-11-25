@@ -99,6 +99,11 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
   private const SITE_NAME = 'Repair Collective';
 
   /**
+   * The first group: the community's name and "Commons".
+   */
+  private const COMMONS = 'Repair Collective Commons';
+
+  /**
    * The meeting link the event uses.
    */
   private const MEETING_URL = 'https://meet.example.org/guild-call';
@@ -404,7 +409,7 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
     [$code, $printed] = $this->runWelcome();
     $this->assertSame(0, $code);
     $this->assertSame('Welcome mail already sent.', $printed);
-    $this->assertCount(1, $this->groupsNamed(self::SITE_NAME));
+    $this->assertCount(1, $this->groupsNamed(self::COMMONS));
 
     // The marker lost after the group was saved: found again, not duplicated.
     $state = $this->container->get('state');
@@ -413,7 +418,7 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
     [$code, $printed] = $this->runWelcome();
     $this->assertSame(0, $code);
     $this->assertSame("First group already exists.\nWelcome mail sent.", $printed);
-    $this->assertCount(1, $this->groupsNamed(self::SITE_NAME));
+    $this->assertCount(1, $this->groupsNamed(self::COMMONS));
     $this->assertNotEmpty($state->get('localnodes.install_step.first_group'));
   }
 
@@ -427,7 +432,7 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
 
     $this->assertSame(0, $code);
     $this->assertSame('Welcome mail sent.', $printed);
-    $this->assertSame([], $this->groupsNamed(self::SITE_NAME));
+    $this->assertSame([], $this->groupsNamed(self::COMMONS));
     $this->assertEmpty($this->container->get('state')->get('localnodes.install_step.first_group'));
   }
 
@@ -480,7 +485,7 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
   }
 
   /**
-   * Groups with the community's name.
+   * Groups with this name.
    *
    * @return \Drupal\group\Entity\GroupInterface[]
    *   The groups.
@@ -495,8 +500,8 @@ final class OnlineOnlyCommunityTest extends ImportKernelTestBase {
    * The one first group.
    */
   private function firstGroup(): GroupInterface {
-    $groups = $this->groupsNamed(self::SITE_NAME);
-    $this->assertCount(1, $groups, 'One group is named after the community.');
+    $groups = $this->groupsNamed(self::COMMONS);
+    $this->assertCount(1, $groups, 'One group is the community\'s Commons.');
     return $groups[0];
   }
 

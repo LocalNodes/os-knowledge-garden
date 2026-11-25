@@ -4,14 +4,14 @@
 # question is still open for them.
 5f5a1968-4fb2-407b-b142-1e91302ab97e:
   uuid: 5f5a1968-4fb2-407b-b142-1e91302ab97e
-  question: Where should the next litter pick start?
+  question: Where should the next creek cleanup start?
   uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
   group: aabb1122-3344-4556-6778-899001122334
   created: -2 day|10:00
   choices:
     - Kingbird Park
-    - The footbridge
-    - Behind the playground
+    - Cottonwood Green bandshell
+    - Pika Creek confluence
   answers:
     - uid: 11223344-5566-4778-8990-aabbccddeef0
       choice: 0

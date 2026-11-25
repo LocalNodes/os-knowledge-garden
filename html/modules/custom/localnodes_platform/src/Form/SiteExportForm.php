@@ -31,10 +31,6 @@ final class SiteExportForm extends FormBase {
       return $form;
     }
     if (!$this->access->allows((int) $this->currentUser()->id())) return $form;
-    if ($this->exports->refusal() !== NULL) {
-      $form['off'] = ['#markup' => '<p>' . $this->t('Site export is not available while direct messages are switched on.') . '</p>'];
-      return $form;
-    }
     $job = $this->exports->current();
     $form_state->set('export_operation', $operation);
     $form_state->set('export_id', $operation === 'request' ? '' : ($job['id'] ?? ''));

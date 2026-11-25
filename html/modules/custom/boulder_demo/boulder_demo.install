@@ -14,6 +14,16 @@
 const BOULDER_DEMO_DEFAULT_SITE_NAMES = ['', 'Drush Site-Install', 'LocalNodes'];
 
 /**
+ * The Boulder demo's site name, as the live Boulder site has it.
+ */
+const BOULDER_DEMO_SITE_NAME = 'Boulder LocalNodes';
+
+/**
+ * The Boulder demo's slogan, from its welcome topic.
+ */
+const BOULDER_DEMO_SITE_SLOGAN = 'Where mountains meet the mesh';
+
+/**
  * Implements hook_install().
  *
  * The Boulder name and clock are applied only when the entrypoint was asked
@@ -48,9 +58,9 @@ function _boulder_demo_set_site_name(): void {
   if (!in_array(trim((string) $site->get('name')), BOULDER_DEMO_DEFAULT_SITE_NAMES, TRUE)) {
     return;
   }
-  $site->set('name', 'Boulder Creek Neighbors');
+  $site->set('name', BOULDER_DEMO_SITE_NAME);
   if (trim((string) $site->get('slogan')) === '') {
-    $site->set('slogan', 'Events, notes and a shared fund for our neighborhood');
+    $site->set('slogan', BOULDER_DEMO_SITE_SLOGAN);
   }
   $site->save();
 }

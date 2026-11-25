@@ -1,0 +1,268 @@
+---
+# 10 topics for the neighbors demo, written for a neighbor with no background.
+# AI Coverage: The welcome topic has a long body (300+ words) for chunking
+# AI Coverage: The fund topic in Evening Hosts (group visibility) exercises permission filtering
+# AI Coverage: Topics across different groups exercise cross-group semantic search
+# AI Coverage: Research and Question types showcase the other topic types
+
+# Topic 1: Welcome (Blog, public, no group) -- LONG for chunking
+t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001:
+  uuid: t1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a10001
+  title: "Welcome! A look around a neighborhood site"
+  type: topic
+  langcode: en
+  uid: 66778899-00aa-4bbc-cdd0-eeff01223344
+  body: >
+    <p><strong>This is a demo</strong></p>
+
+    <p>Everything here is made up: the people, the groups, the events and the street addresses. It shows what a site like this could look like for your street, your building or your club. Have a look around; nothing you do here can break anything.</p>
+
+    <p><strong>What people do here</strong></p>
+
+    <p>Neighbors use the site to see what's on, say hello, and help each other out. Someone needs a ladder for an afternoon; someone else has one in the garage. A few people want to learn to fix a lamp; a neighbor who is good with wires offers an evening. Once a month there's a get-together at the community hall with tea, cake and one thing to learn, and anyone who lives nearby is welcome.</p>
+
+    <p><strong>The groups</strong></p>
+
+    <p>{{site_name}} is the main group and is open to everyone: you can read it without an account. Creek Path Walkers meets for a slow walk and a coffee. Garden Swap and Share is for anyone who grows something, even one tomato on a balcony. The Fix-It Table helps you mend things that are broken. You only see what each group shares with you, and some groups keep their posts to members.</p>
+
+    <p><strong>Getting started</strong></p>
+
+    <p>Open Events to see what's coming up. Pick one that looks friendly and turn up: every event says whether it's free and whether children are welcome. If you join a group, say hello in a short post. You don't need any experience, and you don't need to know anyone.</p>
+
+    <p><strong>The shared fund</strong></p>
+
+    <p>{{site_name}} keeps a small shared fund for the hall, the cake and the odd speaker's bus fare. Anyone in the group can suggest how to spend it, the group says yes or no, and everyone can see where the money went. There's an evening about it in the calendar if you're curious.</p>
+  field_topic_type: Blog
+  image:
+  image_alt:
+  field_content_visibility: public
+
+# Topic 2: What we've fixed (Blog, community, Fix-It Table)
+t2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002:
+  uuid: t2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a20002
+  title: "What we've fixed so far, and what beat us"
+  type: topic
+  langcode: en
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  body: >
+    <p>A quick count from our first sessions at the Fix-It Table. People brought 41 things. 27 went home working, 6 need a part we've ordered, and 8 beat us.</p>
+
+    <p><strong>Most common fixes:</strong> lamps with a loose wire in the plug, zips that came off one side, chairs with a wobbly leg (wood glue and a clamp overnight), and toasters full of crumbs that stopped the lever catching.</p>
+
+    <p><strong>What beat us:</strong> a coffee machine with a cracked boiler, two phones that need a new battery we can't get, and a radio from the 1960s that we're still hoping to save.</p>
+
+    <p><strong>What surprised us:</strong> most people don't want us to fix it for them. They want to see how, and a lot of them have come back with the next broken thing and fixed it themselves at our table.</p>
+
+    <p>If you're good with a needle, a screwdriver or a soldering iron, we'd love another pair of hands. And if you've never held a screwdriver, that's fine too: come and watch.</p>
+  field_topic_type: Blog
+  image:
+  image_alt:
+  group: bbcc2233-4455-4667-7889-900112233445
+  field_content_visibility: community
+
+# Topic 3: Notes from the last evening (News, public, the main group)
+# AI Coverage: Group-scoped content exercises retrieval within group boundaries
+t3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a30003:
+  uuid: t3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a30003
+  title: "Notes from our knife-sharpening evening"
+  type: topic
+  langcode: en
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  body: >
+    <p>Thank you to everyone who came to the neighbors' evening, and a big welcome to the three people who came for the first time.</p>
+
+    <p><strong>What we learned:</strong> Zara showed us how to sharpen a kitchen knife on a stone. Wet the stone, hold the blade at a slight angle (about the height of two stacked coins under the back of the blade), and push it across in smooth strokes, ten on each side. Test it on a sheet of paper, not your thumb.</p>
+
+    <p><strong>What's next:</strong> the potluck supper, then an evening about how we look after the shared fund, then soup and stories. All are in Events.</p>
+
+    <p><strong>The fund:</strong> the hall cost $40 and the two sharpening stones $36. The group now keeps the stones, so anyone can borrow them. Ask Mira.</p>
+  field_topic_type: News
+  image:
+  image_alt:
+  group: aabb1122-3344-4556-6778-899001122334
+  field_content_visibility: public
+
+# Topic 4: Idea: a tool shelf (Dialog, community, the main group)
+t4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004:
+  uuid: t4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a40004
+  title: "Idea: a shared tool shelf at the hall"
+  type: topic
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>Most of us own a drill we use twice a year. What if we kept a shelf of tools at the community hall that anyone in the group could borrow?</p>
+
+    <p><strong>What could go on it:</strong></p>
+    <ul>
+    <li>A drill and a box of bits</li>
+    <li>A ladder (the hall has room for a tall one)</li>
+    <li>A sewing machine</li>
+    <li>Garden shears and a wheelbarrow</li>
+    <li>The two knife-sharpening stones we already have</li>
+    </ul>
+
+    <p><strong>How borrowing might work:</strong> write your name in a notebook on the shelf, bring it back within a week. The hall is open whenever there's an event, so that's when you'd pick up and return.</p>
+
+    <p>We'd need a lockable cupboard, which the hall says would cost about $120. We could ask the group to spend that from the shared fund. What do you think? Would you use it, and what would you add?</p>
+  field_topic_type: Dialog
+  image:
+  image_alt:
+  group: aabb1122-3344-4556-6778-899001122334
+  field_content_visibility: community
+
+# Topic 5: What grew in the shared bed (Research, community, Garden Swap and Share)
+# AI Coverage: Research topic type
+t5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a50005:
+  uuid: t5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a50005
+  title: "What grew well in our shared bed: a simple record"
+  type: topic
+  langcode: en
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  body: >
+    <p><strong>Why we kept a record</strong></p>
+
+    <p>It is dry and sunny here, with big swings between day and night, and plenty of seed packets assume a damper place. So we wrote down what we planted in the shared bed behind the hall and how it did, to help the next person decide.</p>
+
+    <p><strong>What we did</strong></p>
+
+    <p>We split the bed into eight squares, planted a different crop in each, and watered everything the same: a long soak twice a week, early in the morning. Mulch (straw from a neighbor's rabbit hutch) went on half the squares.</p>
+
+    <p><strong>What we found</strong></p>
+
+    <p>Mulched squares needed about a third less water. Cherry tomatoes, bush beans, squash and kale did very well. Lettuce bolted fast in full sun, so next time it goes in the shade of the beans. Carrots were small in our hard soil; a deeper bag of compost should help. Sunflowers were the children's favorite and fed the birds after.</p>
+
+    <p><strong>What we'd tell a beginner</strong></p>
+
+    <p>Start with cherry tomatoes and beans, water deeply rather than often, and put something on top of the soil to keep it damp. Ask at the seed swap: someone will have a spare seedling.</p>
+  field_topic_type: Research
+  image:
+  image_alt:
+  group: ccdd3344-5566-4778-8990-011223344556
+  field_content_visibility: community
+
+# Topic 6: Benches on the path (Question, community, Creek Path Walkers)
+# AI Coverage: Question topic type
+t6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60006:
+  uuid: t6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a60006
+  title: "Where are the good spots to rest on the creek path?"
+  type: topic
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>A few of our walkers would like to come along but worry about going an hour without a sit-down. Where are the benches along the creek path, and how far apart are they?</p>
+
+    <p>Here's what I know so far:</p>
+    <ul>
+    <li>Kingbird Park, by the footbridge: two benches, and the toilets are open in the mornings</li>
+    <li>About ten minutes downstream: a low stone wall in the shade</li>
+    <li>The café on Kestrel Street at the end, with chairs outside</li>
+    </ul>
+
+    <p>Are there others? If you know one, add it below and I'll make a little map for the group, so nobody has to stay home because of the distance.</p>
+  field_topic_type: Question
+  image:
+  image_alt:
+  group: ddee4455-6677-4889-90aa-122334455667
+  field_content_visibility: community
+
+# Topic 7: Starting a vegetable patch (Blog, community, Garden Swap and Share)
+t7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a70007:
+  uuid: t7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a70007
+  title: "Starting a vegetable patch: notes for beginners"
+  type: topic
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  body: >
+    <p>Several people at the last swap said they'd love to grow something but don't know where to start. Here's what I tell my nieces.</p>
+
+    <p><strong>Start small.</strong> One big pot or a patch the size of a door is plenty. A small patch you look after beats a big one you give up on.</p>
+
+    <p><strong>Water early and deeply.</strong> Our air is dry and the sun is strong. A long drink in the early morning is better than a splash every evening.</p>
+
+    <p><strong>Shelter from the wind.</strong> A fence, a wall or a row of tall plants on the windy side makes a real difference.</p>
+
+    <p><strong>Pick easy plants.</strong> Cherry tomatoes, beans, squash, kale and herbs like mint and chives forgive a lot of mistakes.</p>
+
+    <p><strong>Ask.</strong> Bring a photo of your patch to the seed and cutting swap and we'll help you choose what to plant.</p>
+  field_topic_type: Blog
+  image:
+  image_alt:
+  group: ccdd3344-5566-4778-8990-011223344556
+  field_content_visibility: community
+
+# Topic 8: Fix-It Table so far (News, community, Fix-It Table)
+t8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a80008:
+  uuid: t8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a80008
+  title: "The Fix-It Table: what we've learned from our first sessions"
+  type: topic
+  langcode: en
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  body: >
+    <p>We started the Fix-It Table to keep things out of the landfill. It turned out to be just as much about meeting people.</p>
+
+    <p><strong>What worked:</strong> sitting side by side instead of taking things away to fix. People learn, and they talk while they wait for the glue to dry.</p>
+
+    <p><strong>What surprised us:</strong> the busiest table was sewing, not electronics. Hems, buttons, torn pockets and backpack straps.</p>
+
+    <p><strong>What needs work:</strong> we run out of small parts (fuses, buttons, zip pulls). There's now a jar by the door for anyone who wants to chip in, and Marco is collecting spare parts in a box.</p>
+
+    <p>We'd also like a second person who can sew, so the sewing table doesn't have a queue. If that's you, please say hello.</p>
+  field_topic_type: News
+  image:
+  image_alt:
+  group: bbcc2233-4455-4667-7889-900112233445
+  field_content_visibility: community
+
+# Topic 9: Fund plans (Dialog, group, Evening Hosts - members-only)
+# AI Coverage: PERMISSION TEST -- group-only visibility in a members-only group
+t9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a90009:
+  uuid: t9a9b9c9-d9e9-4f9a-b9c9-d9e9f9a90009
+  title: "Shared fund: costs for the next three evenings"
+  type: topic
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Hosts, here are the costs I expect for the next three neighbors' evenings, so we can ask the group before we spend anything. The fund has $310 in it right now.</p>
+
+    <ul>
+    <li>Hall booking, three evenings: $120</li>
+    <li>Cake and tea: $60</li>
+    <li>Soup ingredients for the stories night: $45</li>
+    <li>Bus fare for a guest speaker: $15</li>
+    </ul>
+
+    <p>That leaves $70 in case the tool cupboard idea goes ahead (it needs $120, so we'd have to wait a month or ask people to chip in).</p>
+
+    <p>Please reply here with any changes. Once we agree, I'll post it to the group as a suggestion so everyone can say yes or no.</p>
+  field_topic_type: Dialog
+  image:
+  image_alt:
+  group: eeff5566-7788-4990-0aa1-233445566778
+  field_content_visibility: group
+
+# Topic 10: Neighborhood map (Dialog, public, the main group)
+t10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a00010:
+  uuid: t10a0b0c0-d0e0-4f0a-b0c0-d0e0f0a00010
+  title: "Help us make a map of the neighborhood"
+  type: topic
+  langcode: en
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  body: >
+    <p>I'd like to make a simple map of the useful things around the creek that newcomers never find out about until someone tells them.</p>
+
+    <p><strong>What could go on it:</strong></p>
+    <ul>
+    <li>Benches and shady spots on the creek path</li>
+    <li>Drinking fountains and public toilets</li>
+    <li>Little free libraries and the book swap shelf</li>
+    <li>The shared garden and the community hall</li>
+    <li>Where to drop off batteries and old paint</li>
+    <li>Playgrounds with shade</li>
+    </ul>
+
+    <p>You know your own street better than anyone. Reply with anything you'd add, and roughly where it is. I'll draw it up and bring printed copies to the next neighbors' evening.</p>
+  field_topic_type: Dialog
+  image:
+  image_alt:
+  group: aabb1122-3344-4556-6778-899001122334
+  field_content_visibility: public

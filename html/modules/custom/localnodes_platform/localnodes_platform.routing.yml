@@ -75,3 +75,19 @@ localnodes_platform.site_export_confirm:
     operation: 'request|download|delete'
   options:
     no_cache: TRUE
+localnodes_platform.close_retained_reading:
+  path: '/group/{group}/former-members/{user}/close-reading'
+  defaults:
+    _form: '\Drupal\localnodes_platform\Form\CloseRetainedReadingForm'
+    _title: 'Close continued reading'
+  requirements:
+    _custom_access: '\Drupal\localnodes_platform\Form\CloseRetainedReadingForm::access'
+    group: '\d+'
+    user: '\d+'
+  options:
+    no_cache: TRUE
+    parameters:
+      group:
+        type: entity:group
+      user:
+        type: entity:user

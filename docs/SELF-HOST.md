@@ -217,7 +217,7 @@ This page does not install a web server or proxy for you. You need one to provid
 | Update to a newer LocalNodes release | `docker compose pull opensocial && docker compose up -d opensocial` (the site updates its database as it starts). Take a copy with the site closed first, as [Keeping your site up to date](hosting/UPDATES.md) step 3b shows |
 | Stop everything | `docker compose stop` |
 | Start the site again after it exits | `docker compose up -d opensocial` |
-| Make a full copy of the site | `drush localnodes:export` prints the path of an archive inside the container. Copy it out with `docker compose cp opensocial:<that path> .`, then delete it inside with `docker compose exec opensocial rm <that path>` (the container's copy is lost whenever the container is recreated). Its `RESTORE.md` says how to bring the site up again |
+| Make a copy of the site to move or read | `drush localnodes:export` closes the site while it runs and prints the path of an archive inside the container. Direct messages are not in it. Copy it out with `docker compose cp opensocial:<that path> .`, then delete it inside with `docker compose exec opensocial rm <that path>` (the container's copy is lost whenever the container is recreated). Its `RESTORE.md` says how to bring the site up again |
 
 Everything the site keeps is in this stack's Docker volumes (`docker volume ls`): the database, uploaded files, and the search indexes. Back them up the way you back up the rest of the server.
 

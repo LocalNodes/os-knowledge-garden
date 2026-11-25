@@ -4,6 +4,7 @@ namespace Drupal\localnodes_platform\Drush\Commands;
 
 use Drupal\Component\Utility\Html;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_platform\CommonsName;
 use Drupal\user\UserInterface;
 use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
@@ -174,7 +175,7 @@ class OrganizerCommands extends DrushCommands {
     // A later activation call finds the same account.
     $state->set(self::STATE_ORGANIZER_UID, (int) $account->id());
 
-    // The organizer finds a first group ready, named after the community, so
+    // The organizer finds a first group ready, the community's Commons, so
     // the guide can say "open your group".
     if (!$this->ensureFirstGroup($account)) {
       return self::EXIT_FAILURE;
@@ -259,18 +260,20 @@ class OrganizerCommands extends DrushCommands {
   /**
    * Creates the community's starting groups once, with the organizer as manager.
    *
-   * Without a community template this is the step as it was: one
-   * flexible group named after the community (SITE_NAME), with no address and
-   * no location, since a community needs no place. It is
-   * visible to signed-in members of the community only, which is the safer
-   * start; the organizer can open it up later.
+   * Without a community template the site gets one flexible group, its
+   * Commons: the community's name (SITE_NAME) with "Commons" added (see
+   * CommonsName), with no address and no location, since a community needs no
+   * place. It is visible to signed-in members of the community only, which is
+   * the safer start; the organizer can open it up later. It is recorded in
+   * state as everyone's group with no template named (an empty id, version
+   * 0), unless a record is already there (a demo pack's), which is kept.
    *
    * COMMUNITY_TEMPLATE names a community template instead: a versioned config
    * file, localnodes_platform.community_template.NAME, that lists the starting
-   * groups ({site} in a name is the community's name) and the kinds of group
-   * the organizer can add more of. Its group templates are only named and its
-   * "everyone" flag only recorded: nothing is applied and nobody but the
-   * organizer is added. What was used is kept in state, with the ids of the
+   * groups ({site} in a name is the community's name, {commons} its Commons)
+   * and the kinds of group the organizer can add more of. Its group templates
+   * are only named and its "everyone" flag only recorded: nothing is applied
+   * and nobody but the organizer is added. What was used is kept in state, with the ids of the
    * groups made, for the step that confirms them. A name that loads no template
    * prints a fixed sentence, never the value, and the site gets the one group.
    *
@@ -300,7 +303,17 @@ class OrganizerCommands extends DrushCommands {
       return FALSE;
     }
     if ($template === NULL) {
-      $created = $this->ensureGroup($account, $name, 'community', FALSE)[1];
+      [$group, $created] = $this->ensureGroup($account, self::startingGroupLabel('{commons}', $name), 'community', FALSE);
+      if ($state->get(self::STATE_COMMUNITY_TEMPLATE) === NULL) {
+        $state->set(self::STATE_COMMUNITY_TEMPLATE, [
+          'id' => '',
+          'version' => 0,
+          'groups' => [
+            ['group' => (int) $group->id(), 'everyone' => TRUE, 'group_template' => NULL],
+          ],
+          'repeatable' => [],
+        ]);
+      }
       $state->set(self::STATE_FIRST_GROUP, gmdate('Y-m-d\TH:i:s\Z'));
       $this->output()->writeln($created ? 'First group created.' : 'First group already exists.');
       return TRUE;
@@ -312,7 +325,7 @@ class OrganizerCommands extends DrushCommands {
     foreach ($template['groups'] as $starting) {
       $existing = $storage->loadByProperties([
         'type' => 'flexible_group',
-        'label' => mb_substr(str_replace('{site}', $name, (string) $starting['name']), 0, 255),
+        'label' => self::startingGroupLabel((string) $starting['name'], $name),
         'uid' => $account->id(),
       ]);
       if ($existing && (string) reset($existing)->get('field_flexible_group_visibility')->value !== (string) $starting['visibility']) {
@@ -324,7 +337,7 @@ class OrganizerCommands extends DrushCommands {
     $any_created = FALSE;
     $groups = [];
     foreach ($template['groups'] as $starting) {
-      $found = $this->ensureGroup($account, str_replace('{site}', $name, (string) $starting['name']), (string) $starting['visibility'], TRUE);
+      $found = $this->ensureGroup($account, self::startingGroupLabel((string) $starting['name'], $name), (string) $starting['visibility'], TRUE);
       if ($found === NULL) {
         return FALSE;
       }
@@ -351,12 +364,13 @@ class OrganizerCommands extends DrushCommands {
   /**
    * Loads the community template COMMUNITY_TEMPLATE names.
    *
-   * Two starting groups whose names come out alike once {site} is filled in
-   * (ignoring case and outer spaces) would collapse into one group and lose
-   * the second one's visibility, so such a template is refused.
+   * Two starting groups whose names come out alike once {site} and {commons}
+   * are filled in (ignoring case and outer spaces) would collapse into one
+   * group and lose the second one's visibility, so such a template is
+   * refused.
    *
    * @param string $site
-   *   The community's name, which fills in {site}.
+   *   The community's name, which fills in {site} and {commons}.
    *
    * @return array|false|null
    *   The template; NULL when the variable is unset or empty (nothing printed)
@@ -380,7 +394,7 @@ class OrganizerCommands extends DrushCommands {
     }
     $seen = [];
     foreach ($template['groups'] as $starting) {
-      $key = mb_strtolower(trim(mb_substr(str_replace('{site}', $site, (string) ($starting['name'] ?? '')), 0, 255)));
+      $key = mb_strtolower(trim(self::startingGroupLabel((string) ($starting['name'] ?? ''), $site)));
       if (isset($seen[$key])) {
         $this->output()->writeln('COMMUNITY_TEMPLATE names a template with two starting groups of the same name; nothing was made.');
         return FALSE;
@@ -388,6 +402,26 @@ class OrganizerCommands extends DrushCommands {
       $seen[$key] = TRUE;
     }
     return $template;
+  }
+
+  /**
+   * A starting group's label: the template's name with its tokens filled in.
+   *
+   * {site} is the community's name; {commons} is its Commons (CommonsName).
+   * Both are filled in one pass, so a community name that contains a token is
+   * not filled in again. The label is cut to the 255 characters a group
+   * label holds.
+   *
+   * @param string $pattern
+   *   The name as the template gives it.
+   * @param string $site
+   *   The community's name.
+   */
+  protected static function startingGroupLabel(string $pattern, string $site): string {
+    return mb_substr(strtr($pattern, [
+      '{commons}' => CommonsName::of($site),
+      '{site}' => $site,
+    ]), 0, 255);
   }
 
   /**
@@ -732,7 +766,8 @@ class OrganizerCommands extends DrushCommands {
   /**
    * Finds the community's first group the way localnodes:organizer-welcome made it.
    *
-   * By type, name (SITE_NAME) and owner. Never creates it.
+   * By type, name (the Commons of SITE_NAME, see CommonsName) and owner.
+   * Never creates it.
    */
   protected function findFirstGroup(UserInterface $organizer): ?GroupInterface {
     $name = trim((string) getenv('SITE_NAME'));
@@ -741,7 +776,7 @@ class OrganizerCommands extends DrushCommands {
     }
     $groups = \Drupal::entityTypeManager()->getStorage('group')->loadByProperties([
       'type' => 'flexible_group',
-      'label' => mb_substr($name, 0, 255),
+      'label' => self::startingGroupLabel('{commons}', $name),
       'uid' => $organizer->id(),
     ]);
     return $groups ? reset($groups) : NULL;

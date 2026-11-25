@@ -7,6 +7,7 @@ namespace Drupal\Tests\localnodes_platform\Kernel;
 use Drupal\Core\Config\FileStorage;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_platform\Drush\Commands\OrganizerCommands;
+use Drupal\localnodes_platform\FirstLanding;
 use Drupal\Tests\social_ai_indexing\Kernel\GroupAccessKernelTestBase;
 use Drupal\user\UserInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -18,9 +19,10 @@ use Symfony\Component\Console\Output\BufferedOutput;
  * site starts with and a kind of group the organizer can add more of. It only
  * names group templates (the house template, house_v1); it applies none and
  * adds no member but the organizer. The template is chosen with
- * COMMUNITY_TEMPLATE; nothing sets that variable yet, so every site
- * provisioned today takes the path without one, which must stay exactly
- * what it was.
+ * COMMUNITY_TEMPLATE. The first group everyone is in is named after the
+ * community with "Commons" added ({commons}), with or without a template;
+ * without one it is the site's only starting group and is recorded as
+ * everyone's group with no template named.
  *
  * Runs localnodes:organizer-setup, which calls the same step as
  * localnodes:organizer-welcome and sends no mail. The welcome command's own
@@ -48,6 +50,11 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
    * The community's name.
    */
   private const SITE_NAME = 'Willow Housing Co-op';
+
+  /**
+   * The first group everyone is in: the community's name and "Commons".
+   */
+  private const COMMONS = 'Willow Housing Co-op Commons';
 
   /**
    * The marker the step sets once every starting group exists.
@@ -96,7 +103,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * Without a template (unset or empty) the step is today's: one group, same words.
+   * Without a template (unset or empty): one group, the Commons, for everyone.
    *
    * @dataProvider noTemplateProvider
    */
@@ -109,10 +116,10 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     $this->assertSame(0, $code);
     $this->assertSame("First group created.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME], $this->labels());
-    $this->assertTodaysGroup($this->groupNamed(self::SITE_NAME));
+    $this->assertSame([self::COMMONS], $this->labels());
+    $this->assertTodaysGroup($this->groupNamed(self::COMMONS));
     $this->assertNotEmpty($this->state(self::MARKER));
-    $this->assertNull($this->state(self::TEMPLATE_STATE), 'No template is recorded.');
+    $this->assertSame($this->commonsRecord(), $this->state(self::TEMPLATE_STATE), 'The Commons is recorded as everyone\'s group, with no template.');
 
     // A second run, and a run after the marker is lost, are today's too.
     [, $printed] = $this->runSetup();
@@ -120,8 +127,8 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     $this->container->get('state')->delete(self::MARKER);
     [, $printed] = $this->runSetup();
     $this->assertSame("First group already exists.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME], $this->labels());
-    $this->assertNull($this->state(self::TEMPLATE_STATE));
+    $this->assertSame([self::COMMONS], $this->labels());
+    $this->assertSame($this->commonsRecord(), $this->state(self::TEMPLATE_STATE));
   }
 
   /**
@@ -150,9 +157,9 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     $this->assertSame(0, $code);
     $this->assertSame("COMMUNITY_TEMPLATE names no community template; the site gets one group.\nFirst group created.\n" . self::READY, $printed);
     $this->assertStringNotContainsString($value, str_replace(['COMMUNITY_TEMPLATE', 'community template'], '', $printed));
-    $this->assertSame([self::SITE_NAME], $this->labels());
-    $this->assertTodaysGroup($this->groupNamed(self::SITE_NAME));
-    $this->assertNull($this->state(self::TEMPLATE_STATE));
+    $this->assertSame([self::COMMONS], $this->labels());
+    $this->assertTodaysGroup($this->groupNamed(self::COMMONS));
+    $this->assertSame($this->commonsRecord(), $this->state(self::TEMPLATE_STATE));
   }
 
   /**
@@ -187,9 +194,10 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
       [$code, $printed] = $this->runSetup();
       $this->assertSame(0, $code);
       $this->assertSame($fallback, $printed, $value);
-      $this->assertSame([self::SITE_NAME], $this->labels(), $value);
-      $this->assertNull($this->state(self::TEMPLATE_STATE), $value);
+      $this->assertSame([self::COMMONS], $this->labels(), $value);
+      $this->assertSame($this->commonsRecord(), $this->state(self::TEMPLATE_STATE), $value);
       $this->container->get('state')->delete(self::MARKER);
+      $this->container->get('state')->delete(self::TEMPLATE_STATE);
       foreach ($this->groups() as $group) {
         $group->delete();
       }
@@ -204,11 +212,11 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     $template = $this->config('localnodes_platform.community_template.housing_coop')->get();
 
     $this->assertSame('housing_coop', $template['id']);
-    $this->assertSame(1, $template['version']);
+    $this->assertSame(2, $template['version']);
     $this->assertSame('Housing co-op with several houses', $template['label']);
     $this->assertNotEmpty($template['description']);
     $this->assertSame([
-      ['name' => '{site}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => NULL],
+      ['name' => '{commons}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => NULL],
     ], $template['groups']);
     $this->assertSame([
       ['kind' => 'house', 'label' => 'Add a house', 'group_template' => 'house_v1'],
@@ -228,7 +236,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     $template = $this->config('localnodes_platform.community_template.' . $id)->get();
 
     $this->assertSame($id, $template['id']);
-    $this->assertSame(1, $template['version']);
+    $this->assertSame(2, $template['version']);
     $this->assertSame($label, $template['label']);
     $this->assertNotEmpty($template['description']);
     $this->assertSame($groups, $template['groups']);
@@ -247,13 +255,13 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     $this->assertSame(0, $code);
     $this->assertSame("Starting groups created from the community template.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME], $this->labels());
-    $group = $this->groupNamed(self::SITE_NAME);
+    $this->assertSame([self::COMMONS], $this->labels());
+    $group = $this->groupNamed(self::COMMONS);
     $this->assertTodaysGroup($group);
     $this->assertSame($group->id(), $this->findFirstGroup()?->id(), 'The seed step finds this group.');
     $this->assertSame([
       'id' => $id,
-      'version' => 1,
+      'version' => 2,
       'groups' => [
         ['group' => (int) $group->id(), 'everyone' => TRUE, 'group_template' => $groups[0]['group_template']],
       ],
@@ -262,7 +270,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     // A second run changes nothing.
     $this->runSetup();
-    $this->assertSame([self::SITE_NAME], $this->labels());
+    $this->assertSame([self::COMMONS], $this->labels());
   }
 
   /**
@@ -270,7 +278,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
    */
   public static function shippedRecipeProvider(): array {
     $community = fn (?string $template) => [
-      ['name' => '{site}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => $template],
+      ['name' => '{commons}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => $template],
     ];
     return [
       'single house' => ['single_house', 'A single house', $community('house_v1'), []],
@@ -297,15 +305,15 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     $this->assertSame(0, $code);
     $this->assertSame("Starting groups created from the community template.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME], $this->labels());
-    $group = $this->groupNamed(self::SITE_NAME);
+    $this->assertSame([self::COMMONS], $this->labels());
+    $group = $this->groupNamed(self::COMMONS);
     $this->assertTodaysGroup($group);
     $this->assertSame($group->id(), $this->findFirstGroup()?->id(), 'The seed step finds this group.');
     $this->assertNotEmpty($this->state(self::MARKER));
 
     $this->assertSame([
       'id' => 'housing_coop',
-      'version' => 1,
+      'version' => 2,
       'groups' => [
         ['group' => (int) $group->id(), 'everyone' => TRUE, 'group_template' => NULL],
       ],
@@ -325,8 +333,8 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     $this->assertSame(0, $code);
     $this->assertSame("Starting groups created from the community template.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
-    $commons = $this->groupNamed(self::SITE_NAME);
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
+    $commons = $this->groupNamed(self::COMMONS);
     $upkeep = $this->groupNamed('Upkeep');
     $this->assertTodaysGroup($commons);
     $this->assertManagedOnlyByTheOrganizer($upkeep);
@@ -339,7 +347,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     // Run again: nothing new.
     [, $printed] = $this->runSetup();
     $this->assertSame(self::READY, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
 
     // The marker and the record lost: every group is found again, none doubled.
     $state = $this->container->get('state');
@@ -347,7 +355,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     $state->delete(self::TEMPLATE_STATE);
     [, $printed] = $this->runSetup();
     $this->assertSame("Starting groups already exist.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
     $this->assertSame((int) $upkeep->id(), $this->state(self::TEMPLATE_STATE)['groups'][1]['group']);
     $this->assertNotEmpty($this->state(self::MARKER));
   }
@@ -364,7 +372,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     [$code, $printed] = $this->runSetup();
     $this->assertSame(0, $code);
     $this->assertSame("Starting groups created from the community template.\n" . self::READY, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
   }
 
   /**
@@ -407,7 +415,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
 
     $this->assertSame(1, $code);
     $this->assertSame(self::VISIBILITY_CLASH, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
     $this->assertSame('public', $this->groupNamed('Upkeep')->get('field_flexible_group_visibility')->value);
     $this->assertNull($this->state(self::MARKER));
     $this->assertNull($this->state(self::TEMPLATE_STATE));
@@ -416,7 +424,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
     [$code, $printed] = $this->runSetup();
     $this->assertSame(1, $code);
     $this->assertSame(self::VISIBILITY_CLASH, $printed);
-    $this->assertSame([self::SITE_NAME, 'Upkeep'], $this->labels());
+    $this->assertSame([self::COMMONS, 'Upkeep'], $this->labels());
   }
 
   /**
@@ -460,7 +468,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
    *
    * They would collapse into one group, and the second entry's visibility
    * would be lost. Names are compared as the groups would be labelled, after
-   * {site} is filled in and ignoring case and outer spaces.
+   * {site} and {commons} are filled in, ignoring case and outer spaces.
    *
    * @dataProvider duplicateNamesProvider
    */
@@ -488,13 +496,101 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * The same name, the same name in another case, and {site} beside the name.
+   * The same name, another case, and {site} or {commons} beside the name.
    */
   public static function duplicateNamesProvider(): array {
     return [
       'same' => ['Upkeep', 'Upkeep'],
       'case and spaces' => ['Upkeep', ' upkeep '],
       'site filled in' => ['{site}', self::SITE_NAME],
+      'commons filled in' => ['{commons}', self::COMMONS],
+      'commons beside site' => ['{commons}', '{site} commons'],
+    ];
+  }
+
+  /**
+   * Without a template, the Commons is recorded as everyone's group.
+   *
+   * The record names no template (an empty id, version 0) and no kinds; the
+   * first-sign-in step finds the Commons in it, as it does for a template's,
+   * and joins a new member to it as FirstLandingTest shows.
+   */
+  public function testNoTemplateCommonsIsEveryonesGroup(): void {
+    [$code] = $this->runSetup();
+
+    $this->assertSame(0, $code);
+    $commons = $this->groupNamed(self::COMMONS);
+    $this->assertSame([
+      'id' => '',
+      'version' => 0,
+      'groups' => [
+        ['group' => (int) $commons->id(), 'everyone' => TRUE, 'group_template' => NULL],
+      ],
+      'repeatable' => [],
+    ], $this->state(self::TEMPLATE_STATE));
+    $found = FirstLanding::communityGroupIn($this->state(self::TEMPLATE_STATE), $this->container->get('entity_type.manager')->getStorage('group'));
+    $this->assertSame($commons->id(), $found?->id(), 'The first-sign-in step finds the Commons.');
+    $this->assertSame($commons->id(), $this->findFirstGroup()?->id(), 'The seed step finds the Commons.');
+  }
+
+  /**
+   * A record already there (a demo pack's) is kept when there is no template.
+   */
+  public function testNoTemplateKeepsAnEarlierRecord(): void {
+    $earlier = [
+      'id' => 'housing_coop',
+      'version' => 2,
+      'groups' => [['group' => 999, 'everyone' => TRUE, 'group_template' => NULL]],
+      'repeatable' => [],
+    ];
+    $this->container->get('state')->set(self::TEMPLATE_STATE, $earlier);
+
+    [$code, $printed] = $this->runSetup();
+
+    $this->assertSame(0, $code);
+    $this->assertSame("First group created.\n" . self::READY, $printed);
+    $this->assertSame([self::COMMONS], $this->labels());
+    $this->assertSame($earlier, $this->state(self::TEMPLATE_STATE));
+  }
+
+  /**
+   * A community whose name already ends in Commons gets no second one.
+   *
+   * @dataProvider endsInCommonsProvider
+   */
+  public function testNameEndingInCommonsGetsNoSecondOne(?string $template): void {
+    putenv('SITE_NAME=Oak Street commons');
+    if ($template !== NULL) {
+      $this->installShippedTemplate($template);
+      putenv('COMMUNITY_TEMPLATE=' . $template);
+    }
+    [$code] = $this->runSetup();
+
+    $this->assertSame(0, $code);
+    $this->assertSame(['Oak Street commons'], $this->labels());
+  }
+
+  /**
+   * Without a template, and with one.
+   */
+  public static function endsInCommonsProvider(): array {
+    return [
+      'no template' => [NULL],
+      'housing co-op' => ['housing_coop'],
+    ];
+  }
+
+  /**
+   * What the step without a template records: the Commons, everyone's group.
+   */
+  private function commonsRecord(): array {
+    return [
+      'id' => '',
+      'version' => 0,
+      'groups' => [
+        ['group' => (int) $this->groupNamed(self::COMMONS)->id(), 'everyone' => TRUE, 'group_template' => NULL],
+      ],
+      'repeatable' => [],
     ];
   }
 
@@ -519,7 +615,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
       'label' => 'Two groups',
       'description' => 'A test template.',
       'groups' => [
-        ['name' => '{site}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => NULL],
+        ['name' => '{commons}', 'visibility' => 'community', 'everyone' => TRUE, 'group_template' => NULL],
         ['name' => 'Upkeep', 'visibility' => 'members', 'everyone' => FALSE, 'group_template' => 'house_v1'],
       ],
       'repeatable' => [],
@@ -527,14 +623,15 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * Leaves the organizer and the community's group with no marker.
+   * Leaves the organizer and the community's group with no marker and no record.
    */
   private function runSetupWithoutTemplateThenForget(): void {
     putenv('COMMUNITY_TEMPLATE');
     $this->runSetup();
     $this->container->get('state')->delete(self::MARKER);
+    $this->container->get('state')->delete(self::TEMPLATE_STATE);
     putenv('COMMUNITY_TEMPLATE=two_groups');
-    $this->assertSame([self::SITE_NAME], $this->labels());
+    $this->assertSame([self::COMMONS], $this->labels());
   }
 
   /**
@@ -573,7 +670,7 @@ final class StartingGroupsTest extends GroupAccessKernelTestBase {
    */
   private function assertTodaysGroup(GroupInterface $group): void {
     $this->assertSame('flexible_group', $group->bundle());
-    $this->assertSame(self::SITE_NAME, $group->label());
+    $this->assertSame(self::COMMONS, $group->label());
     $this->assertSame('community', $group->get('field_flexible_group_visibility')->value);
     $this->assertManagedOnlyByTheOrganizer($group);
   }

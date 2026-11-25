@@ -54,7 +54,7 @@ final class ProofRoutes {
     'localnodes_web3.export_challenge' => 'Site export asks for its own fresh signature on every use.',
     'group_treasury.fund_creation_status' => 'GET only: reports fund-setup progress to a fund manager. It may record a result the site verifies on chain, but never starts, resends or signs a setup; that is the marked create form.',
     'group_treasury.public_notice' => 'POST that stores only the member\'s tick on the public-record notice (member, group, text hash, time); it changes no fund and casts nothing. The vote, payment and setup steps it unlocks are marked.',
-    'group_treasury.treasury' => 'Its only form re-reads the public balance (TreasuryRefreshForm); it changes no fund.',
+    'group_treasury.treasury' => 'Its two forms change no fund: TreasuryRefreshForm re-reads the public balance, and TreasuryApproverNudgeForm ("Not now") stores only that person\'s own flag hiding the second-approver note, like the public-notice tick. It adds, removes or proposes no approver; "Choose a second approver" is a link, and approver changes are approved and sent on marked routes.',
     'gas_sponsor.network_fees' => 'Its only form re-reads the public fee balance (NetworkFeeRefreshForm); it changes no fund.',
     'safe_governance_group.votes' => 'Its only form re-reads the public vote record (RefreshVotesForm); voting posts to the marked vote route.',
     'safe_governance_group.proposal' => 'Its only form re-reads the public vote record (RefreshVotesForm); voting posts to the marked vote route.',
@@ -116,9 +116,8 @@ final class ProofRoutes {
    * Marked routes whose GET and HEAD need the proof too, each with the reason.
    */
   public const PROOF_ON_READ = [
-    // SetupSignatureController::messages() prepares the setup approvals on
-    // first read (SetupApprovals::prepare()), which builds the Safe
-    // transaction and saves the group's voting setup state.
+    // The first read prepares the setup approvals and saves the group's
+    // voting setup, so a read changes it.
     'safe_governance_group.setup_messages',
   ];
 

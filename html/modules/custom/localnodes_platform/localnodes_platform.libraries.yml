@@ -65,3 +65,12 @@ site_export:
   css:
     theme:
       css/site-export.css: {}
+
+house_mentions:
+  js:
+    js/house-mentions.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - social_mentions/social_mentions

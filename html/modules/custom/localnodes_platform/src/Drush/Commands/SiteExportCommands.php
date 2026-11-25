@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\localnodes_platform\Drush\Commands;
 
+use Drupal\Core\Site\Settings;
+use Drupal\localnodes_platform\Backup\BackupCapture;
+use Drupal\localnodes_platform\Backup\BackupPause;
 use Drupal\localnodes_platform\Export\SiteExporter;
 use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
@@ -16,8 +19,22 @@ use Drush\Drush;
  * prints the archive's path on the server, never a URL: the archive holds
  * every member's account and all private content. SiteExporter says what is
  * in it; RESTORE.md inside it says how to bring the site up elsewhere.
+ *
+ * The site takes no writes while the copy is made: the command closes it
+ * with the same pause as the web export and the nightly backup, and opens
+ * it again when the copy is done or has failed.
  */
 class SiteExportCommands extends DrushCommands {
+
+  /**
+   * Seconds of the pause kept back for finishing the archive.
+   */
+  private const MARGIN = 60;
+
+  /**
+   * Unix time by which the copy must be done, while the command runs.
+   */
+  private ?float $deadline = NULL;
 
   /**
    * Write the site's export archive and print its path.
@@ -25,9 +42,11 @@ class SiteExportCommands extends DrushCommands {
   #[CLI\Command(name: 'localnodes:export', aliases: ['ln-export'])]
   #[CLI\Option(name: 'destination', description: 'Absolute path of the folder for the archive. Without it, the archive goes to the exports folder next to the Drupal root (never under it).')]
   #[CLI\Option(name: 'no-library', description: 'Leave out library/, the readable Markdown copy of every published topic, event and page.')]
+  #[CLI\Option(name: 'drain-seconds', description: 'Seconds to wait, once the site is closed, for work already under way to finish before the copy starts.')]
+  #[CLI\Option(name: 'max-pause', description: 'Longest time, in seconds, the site stays closed for the copy. The run stops and the site opens again at this limit.')]
   #[CLI\Usage(name: 'drush localnodes:export', description: 'Write the archive to the default folder and print its path.')]
   #[CLI\Usage(name: 'drush localnodes:export --destination=/srv/exports', description: 'Write it somewhere else the web server does not serve.')]
-  public function export(array $options = ['destination' => self::REQ, 'no-library' => FALSE]): int {
+  public function export(array $options = ['destination' => self::REQ, 'no-library' => FALSE, 'drain-seconds' => 20, 'max-pause' => 5400]): int {
     /** @var \Drupal\localnodes_platform\Export\SiteExporter $exporter */
     $exporter = \Drupal::service('localnodes_platform.site_exporter');
     $destination = (string) ($options['destination'] ?: $exporter->defaultDestination());
@@ -37,13 +56,32 @@ class SiteExportCommands extends DrushCommands {
     }
 
     $library = $options['no-library'] ? NULL : $this->library();
+    $drain = (int) ($options['drain-seconds'] ?? 20);
+    $max_pause = (int) ($options['max-pause'] ?? 5400);
+    $private = (string) Settings::get('file_private_path', '');
+    $why = match (TRUE) {
+      $private === '' => 'this site has no private files folder, so there is nowhere to keep the pause',
+      $drain < 0 => '--drain-seconds cannot be negative',
+      $max_pause <= $this->margin() + $drain => '--max-pause must be more than ' . ($this->margin() + $drain) . ' seconds',
+      default => NULL,
+    };
+    if ($why !== NULL) {
+      $this->logger()->error("Export refused: $why. Nothing was written.");
+      return self::EXIT_FAILURE;
+    }
 
     try {
-      $result = $exporter->export($destination, $this->dumper(), $library);
+      $result = (new BackupCapture())->run(new BackupPause($private), 'export', $max_pause, $drain, $this->margin(), function (float $deadline) use ($exporter, $destination, $library): array {
+        $this->deadline = $deadline;
+        return $exporter->export($destination, $this->dumper(), $library, $deadline);
+      });
     }
     catch (\Throwable $e) {
       $this->logger()->error($e->getMessage());
       return self::EXIT_FAILURE;
+    }
+    finally {
+      $this->deadline = NULL;
     }
 
     $manifest = $result['manifest'];
@@ -73,11 +111,18 @@ class SiteExportCommands extends DrushCommands {
         'result-file' => $sql_file,
         'structure-tables-list' => implode(',', $structure_only),
       ]);
-      $process->setTimeout(3600);
+      $process->setTimeout($this->deadline === NULL ? 3600 : SiteBackupCommands::timeLeft($this->deadline));
       // mustRun(): the exporter turns its failure into the command and the
       // exit code, without the tool's stderr.
       $process->mustRun();
     };
+  }
+
+  /**
+   * Seconds held back from --max-pause for finishing the archive.
+   */
+  protected function margin(): int {
+    return self::MARGIN;
   }
 
   /**

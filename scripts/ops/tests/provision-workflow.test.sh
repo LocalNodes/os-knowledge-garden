@@ -366,7 +366,7 @@ check "create passes Coolify 4.1 path validation (leading-slash docker_compose_l
 check "  ...and sends the compose path and domain as JSON" '[ "$(head -1 "$WORK/state/bodies.log" | jq -r ".docker_compose_location + \" \" + .docker_compose_domains[0].domain")" = "/docker-compose.yaml https://demo.localnodes.xyz" ]'
 
 echo "# Configure environment variables: demo sender (MAIL_FROM)"
-for DM in localnodes_demo boulder_demo portland_demo; do
+for DM in localnodes_demo boulder_demo neighbors_demo portland_demo; do
   reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=$DM
   check "$DM instance sends from noreply@demo.localnodes.xyz" '[ $RC -eq 0 ] && [ "$(stored MAIL_FROM)" = noreply@demo.localnodes.xyz ]'
 done
@@ -376,7 +376,7 @@ check "pack:lanternrow stores DEMO_MODULE=localnodes_demo_packs and DEMO_PACK=la
   '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = localnodes_demo_packs ] && [ "$(stored DEMO_PACK)" = lanternrow ]'
 check "  ...and the pack site sends from the demo sender" '[ "$(stored MAIL_FROM)" = noreply@demo.localnodes.xyz ]'
 check "  ...and the pack value itself is never stored" '! grep -q "pack:" "$WORK/state/envs.json"'
-for DM in none localnodes_demo boulder_demo portland_demo; do
+for DM in none localnodes_demo boulder_demo neighbors_demo portland_demo; do
   reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=$DM
   check "$DM stores DEMO_MODULE as given and no DEMO_PACK" '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = "$DM" ] && [ -z "$(stored DEMO_PACK)" ] && ! grep -q " DEMO_PACK$" "$WORK/state/requests.log"'
 done
@@ -451,7 +451,7 @@ reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]
 check "a manifest name wins over the pack map" '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ]'
 OTHER_OPTIONS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module | [.options[] | select(startswith("pack:") | not)] | join(" ")' "$WORK/wf.json")"
 check "the other demo_module options are unchanged, and the default is none" \
-  '[ "$OTHER_OPTIONS" = "localnodes_demo boulder_demo portland_demo none" ] && [ "$(jq -r "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.default" "$WORK/wf.json")" = none ]'
+  '[ "$OTHER_OPTIONS" = "localnodes_demo boulder_demo neighbors_demo portland_demo none" ] && [ "$(jq -r "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.default" "$WORK/wf.json")" = none ]'
 check "the pack loader module is not an option on its own (a pack module with no pack stops the install)" \
   '! jq -e "(.[\"true\"] // .on).workflow_dispatch.inputs.demo_module.options | index(\"localnodes_demo_packs\")" "$WORK/wf.json" >/dev/null'
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" DEMO_MODULE_INPUT=none

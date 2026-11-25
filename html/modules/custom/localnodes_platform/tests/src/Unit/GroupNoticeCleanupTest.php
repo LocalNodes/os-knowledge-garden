@@ -204,11 +204,13 @@ final class GroupNoticeCleanupTest extends UnitTestCase {
 
   public function testNoActivityModuleDoesNotQueryAnyTables(): void {
     $manager = $this->createMock(EntityTypeManagerInterface::class);
-    $manager->method('hasDefinition')->with('activity')->willReturn(FALSE);
+    // Nothing is installed: not activity, nor the pages a departure records.
+    $manager->method('hasDefinition')->willReturn(FALSE);
     $database = $this->database();
     $database->expects($this->never())->method('schema');
     (new GroupNoticeCleanup($database, $manager, $this->departures, $this->clock()))->remove(7, 5);
     $this->assertSame(self::NOW, $this->departures->get('7:5'));
+    $this->assertSame(['node' => [], 'post' => []], $this->departures->get('authored:7:5'));
   }
 
   public function testRecipientGroupCanIdentifyTheActivityDirectly(): void {

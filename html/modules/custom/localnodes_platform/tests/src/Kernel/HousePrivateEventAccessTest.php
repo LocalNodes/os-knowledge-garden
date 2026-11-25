@@ -170,6 +170,23 @@ final class HousePrivateEventAccessTest extends GroupAccessKernelTestBase {
     }
   }
 
+  public function testFormerEventAuthorCanReadButCannotManageEnrollmentRecords(): void {
+    [$house, $event, $enrollment, $author] = $this->event();
+    $house->removeMember($author);
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $this->context($author, $event);
+    $this->assertTrue($event->access('view', $author), 'The authored-event reading rule remains.');
+    $this->assertFalse($event->access('update', $author));
+    $route = $this->container->get('router.route_provider')->getRouteByName('view.event_manage_enrollments.page_manage_enrollments');
+    $match = new RouteMatch('view.event_manage_enrollments.page_manage_enrollments', $route, ['node' => $event]);
+    $this->assertTrue((new EventManagersController($this->container->get('entity_type.manager')))->access($author, $match)->isAllowed(), 'The original controller alone would grant organizer access.');
+    $this->assertFalse($enrollment->access('view', $author));
+    $this->assertFalse($enrollment->access('update', $author));
+    foreach (['view.event_manage_enrollments.page_manage_enrollments', 'view.event_enrollments.view_enrollments', 'social_event_managers.add_enrollees'] as $name) {
+      $this->assertFalse($this->container->get('access_manager')->checkNamedRoute($name, ['node' => $event->id()], $author, TRUE)->isAllowed());
+    }
+  }
+
   public function testAllThirteenEnrollmentRoutesExistAndKeepTheirMembershipGate(): void {
     $names = [
       'view.event_enrollments.view_enrollments',
@@ -231,6 +248,56 @@ final class HousePrivateEventAccessTest extends GroupAccessKernelTestBase {
     drupal_static_reset('social_event_get_current_event');
     drupal_static_reset('social_event_manager_or_organizer');
     $this->container->get('entity_type.manager')->getAccessControlHandler('event_enrollment')->resetCache();
+  }
+
+  public function testCachedEnrollmentAjaxCannotWriteAfterAuthorLeavesAndWorksAfterRejoin(): void {
+    [$house, $event, , $author] = $this->event();
+    $this->context($author, $event);
+    $enrollment = EventEnrollment::create([
+      'user_id' => $author->id(), 'status' => 1, 'field_event' => $event->id(),
+      'field_account' => $author->id(), 'field_enrollment_status' => '1',
+    ]);
+    $enrollment->save();
+    $id = $enrollment->id();
+    $storage = $this->container->get('entity_type.manager')->getStorage('event_enrollment');
+    $count = (int) $storage->getQuery()->accessCheck(FALSE)->condition('field_event', $event->id())->count()->execute();
+    // Isolate only the render rebuild. The concrete Social callback, real
+    // enrollment storage, membership and new permission guard remain actual.
+    $builder = $this->createMock(\Drupal\Core\Form\FormBuilderInterface::class);
+    $builder->expects($this->once())->method('rebuildForm')->willReturn(['enroll_wrapper' => ['#markup' => '']]);
+    $this->container->set('form_builder', $builder);
+    $handler = \Drupal\social_event\Form\EnrollActionForm::create($this->container);
+    $state = (new \Drupal\Core\Form\FormState())->setFormObject($handler)->setValues([
+      'event' => $event->id(), 'to_enroll_status' => '0',
+    ]);
+    // These are the exact server-built hidden value and concrete #ajax handler
+    // used by EnrollActionForm. Keep this cached array across the departure.
+    $form = [
+      'event' => ['#type' => 'hidden', '#value' => $event->id()],
+      'enroll_wrapper' => ['submit' => ['#type' => 'submit', '#ajax' => ['callback' => [$handler, 'ajaxSubmitEnrollForm']]]],
+    ];
+    $form = $this->container->get('localnodes_platform.event_participation_form_guard')->protect($form, $state);
+    $trigger = $form['enroll_wrapper']['submit'];
+    $state->setTriggeringElement($trigger);
+    $house->removeMember($author);
+    $this->context($author, $event);
+    $denied = FALSE;
+    try {
+      \Drupal\localnodes_platform\Access\EventParticipationFormGuard::ajax($form, $state);
+    }
+    catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $exception) {
+      $denied = TRUE;
+    }
+    $this->assertTrue($denied, 'Cached enrollment callbacks recheck current membership.');
+    $stored = $storage->loadUnchanged($id);
+    $this->assertNotNull($stored);
+    $this->assertTrue($stored->isEnrolled());
+    $this->assertSame($count, (int) $storage->getQuery()->accessCheck(FALSE)->condition('field_event', $event->id())->count()->execute());
+    $house->addMember($author);
+    $this->context($author, $event);
+    $response = \Drupal\localnodes_platform\Access\EventParticipationFormGuard::ajax($form, $state);
+    $this->assertInstanceOf(\Drupal\Core\Ajax\AjaxResponse::class, $response);
+    $this->assertNull($storage->loadUnchanged($id), 'A rejoined current member can cancel through the actual Social callback.');
   }
 
 }

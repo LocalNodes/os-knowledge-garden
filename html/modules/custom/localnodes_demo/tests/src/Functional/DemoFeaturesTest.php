@@ -19,10 +19,10 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Loads each demo module the way docker/entrypoint.sh does, with the shared
  * plugin list that script reads, then checks what a visitor would see: events in
- * this month and the next, a quick poll with answers from group members, and
- * a welcome post at the top of every demo group's stream. Direct messages
- * are off, so no message thread is loaded. No mail reaches the fictional
- * demo addresses.
+ * this month and the next, a quick poll with answers from group members, a
+ * welcome post at the top of every demo group's stream, and a public group a
+ * signed-out visitor can open. Direct messages are off, so no message
+ * thread is loaded. No mail reaches the fictional demo addresses.
  *
  * Functional, because the demo content needs Open Social's profile.
  *
@@ -66,6 +66,7 @@ final class DemoFeaturesTest extends BrowserTestBase {
     return [
       'localnodes_demo' => ['localnodes_demo'],
       'boulder_demo' => ['boulder_demo'],
+      'neighbors_demo' => ['neighbors_demo'],
     ];
   }
 
@@ -89,6 +90,7 @@ final class DemoFeaturesTest extends BrowserTestBase {
     $this->assertEventsFillTwoMonths();
     $this->assertPollAnswered($content);
     $this->assertWelcomeTopsEveryGroup($content);
+    $this->assertVisitorOpensAPublicGroup($content);
 
     foreach ($this->sentMails() as $mail) {
       foreach ($mail->getTo() as $address) {
@@ -226,6 +228,26 @@ final class DemoFeaturesTest extends BrowserTestBase {
       $this->assertSame('2', (string) $post->get('field_visibility')->value, 'Welcome post ' . $post->id() . ' is community visibility.');
       $this->assertTrue($post->access('view', $visitor), 'A signed-in non-member reads welcome post ' . $post->id() . '.');
     }
+  }
+
+  /**
+   * A signed-out visitor opens every public demo group, and there is one.
+   */
+  private function assertVisitorOpensAPublicGroup(array $content): void {
+    $repository = $this->container->get('entity.repository');
+    $opened = 0;
+    foreach ($content['group'] as $uuid => $item) {
+      if (($item['field_flexible_group_visibility'] ?? '') !== 'public') {
+        continue;
+      }
+      $group = $repository->loadEntityByUuid('group', $uuid);
+      $this->assertTrue($group->access('view', User::getAnonymousUser()), $group->label() . ' is open to a signed-out visitor.');
+      $this->drupalGet('/group/' . $group->id());
+      $this->assertSession()->statusCodeEquals(200);
+      $this->assertSession()->pageTextContains($group->label());
+      $opened++;
+    }
+    $this->assertGreaterThan(0, $opened, 'A signed-out visitor has at least one demo group to open.');
   }
 
   /**

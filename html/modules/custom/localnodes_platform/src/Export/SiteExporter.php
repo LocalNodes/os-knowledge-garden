@@ -12,6 +12,7 @@ use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Site\Settings;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
@@ -57,8 +58,8 @@ final class SiteExporter {
    * Tables whose rows are left out (structure kept), as LIKE patterns.
    *
    * Caches, cache tags, sessions, flood control, logs, locks, batches and
-   * the expiring key-value store (temp stores, form drafts). Pending work in
-   * queue and advancedqueue is kept.
+   * the expiring key-value store (temp stores, form drafts). The backup keeps
+   * pending work; the export leaves it out (PENDING_WORK_TABLE_PATTERNS).
    */
   public const LEFT_OUT_TABLE_PATTERNS = [
     'cache%',
@@ -87,6 +88,20 @@ final class SiteExporter {
   public const MESSAGE_TABLE_PATTERNS = [
     'private_message%',
     'pm_thread_history',
+  ];
+
+  /**
+   * Pending work, as LIKE patterns: queued jobs and digest entries waiting
+   * to be sent.
+   *
+   * A site copy leaves their rows out: pending work belongs to the site that
+   * queued it, and a restored copy does not replay pending mail. The backup
+   * keeps them.
+   */
+  public const PENDING_WORK_TABLE_PATTERNS = [
+    'queue',
+    'advancedqueue',
+    'user_activity_digest',
   ];
 
   /**
@@ -137,19 +152,16 @@ final class SiteExporter {
   public const DEADLINE_MESSAGE = 'The export ran past its time limit and was stopped. The archive was deleted.';
 
   /**
-   * Why a site export is refused while direct messages are switched on.
-   *
-   * The export does not separate members' conversations from the rest of
-   * the copy, so it does not start at all while the module is enabled.
+   * The message when direct messages changed while the copy was made.
    */
-  public const MESSAGES_REFUSAL = 'Site export is not available while direct messages are switched on.';
+  public const MESSAGES_CHANGED_MESSAGE = 'Direct messages changed while the export ran, so it was stopped and the archive was deleted. Run the export again.';
 
   /**
    * Unix time by which the current export() must be done, or NULL.
    *
-   * Set only for the length of one export() call. The nightly backup passes
-   * one so the whole capture fits inside its pause; the export command does
-   * not.
+   * Set only for the length of one export() call. The web export, the
+   * export command and the nightly backup each pass one, so the whole copy
+   * fits inside their pause.
    */
   private ?float $deadline = NULL;
 
@@ -226,7 +238,7 @@ final class SiteExporter {
    */
   public function leftOutTables(bool $keep_messages = FALSE): array {
     $tables = [];
-    $patterns = $keep_messages ? self::LEFT_OUT_TABLE_PATTERNS : array_merge(self::LEFT_OUT_TABLE_PATTERNS, self::MESSAGE_TABLE_PATTERNS);
+    $patterns = $keep_messages ? self::LEFT_OUT_TABLE_PATTERNS : array_merge(self::LEFT_OUT_TABLE_PATTERNS, self::MESSAGE_TABLE_PATTERNS, self::PENDING_WORK_TABLE_PATTERNS);
     foreach ($patterns as $pattern) {
       foreach ($this->database->schema()->findTables($pattern) as $table) {
         $tables[$table] = $table;
@@ -565,16 +577,6 @@ final class SiteExporter {
   }
 
   /**
-   * Why a site export may not start now, or NULL when it may.
-   *
-   * A backup ($keep_messages in export()) is not a site export and is not
-   * refused.
-   */
-  public function refusal(): ?string {
-    return $this->moduleHandler->moduleExists('private_message') ? self::MESSAGES_REFUSAL : NULL;
-  }
-
-  /**
    * Builds the archive.
    *
    * @param string $destination
@@ -596,10 +598,6 @@ final class SiteExporter {
    *   'path' => the archive's path, 'manifest' => the manifest.
    */
   public function export(string $destination, callable $dumper, ?callable $library = NULL, ?float $deadline = NULL, ?callable $progress = NULL, bool $keep_messages = FALSE): array {
-    // Before anything else is read or written.
-    if (!$keep_messages && ($why = $this->refusal())) {
-      throw new \RuntimeException($why);
-    }
     if ($why = $this->refuseDestination($destination)) {
       throw new \RuntimeException("Refusing to write the archive to $destination: $why.");
     }
@@ -688,12 +686,10 @@ final class SiteExporter {
       // their other rows. The backup keeps them whole.
       $conversations = new ConversationRows($this->database);
       $filtered = [];
+      $state = NULL;
       if (!$this->keepMessages) {
-        foreach ($conversations->tables() as $table => $column) {
-          if (!in_array($table, $left_out, TRUE) && $conversations->touches($table, $column)) {
-            $filtered[$table] = $column;
-          }
-        }
+        $filtered = $this->touchedTables($conversations, $left_out);
+        $state = $this->conversationState($conversations, $filtered);
       }
 
       // Database: the dump, then the cleaned config rows, then gzip. The
@@ -713,12 +709,17 @@ final class SiteExporter {
       // Files.
       $public = (string) $this->fileSystem->realpath('public://');
       $private = (string) $this->fileSystem->realpath('private://');
-      // Files put into messages and used nowhere else stay out with them.
-      // secret:// keeps its files in the private folder.
+      // Files put into messages and used nowhere else stay out with them, as
+      // do temporary files. secret:// keeps its files in the private folder.
       $message_files = ['public' => [], 'private' => []];
-      foreach ($this->keepMessages ? [] : $conversations->files() as $uri) {
-        [$scheme, $path] = explode('://', $uri, 2) + [1 => ''];
+      foreach ($this->keepMessages ? [] : $conversations->leftOutFiles() as $uri) {
+        [$scheme] = explode('://', $uri, 2);
         $scheme = $scheme === 'secret' ? 'private' : $scheme;
+        // As tar names it: the target as Drupal reads it (leading and
+        // trailing slashes and backslashes trimmed), then "./" and empty
+        // segments dropped and ".." resolved.
+        $target = StreamWrapperManager::getTarget($uri);
+        $path = $target === FALSE ? '' : self::canonicalPath($target);
         if (isset($message_files[$scheme]) && $path !== '') {
           $message_files[$scheme][] = $path;
         }
@@ -738,6 +739,15 @@ final class SiteExporter {
           $bytes = 0;
           foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($work . '/library', \FilesystemIterator::SKIP_DOTS)) as $file) if ($file->isFile()) $bytes += $file->getSize();
           ($this->progress)('library', $bytes);
+        }
+      }
+
+      // Direct-message records that changed while the copy was made stop
+      // the run, and the archive is deleted.
+      if ($state !== NULL) {
+        $now = new ConversationRows($this->database);
+        if ($this->conversationState($now, $this->touchedTables($now, $left_out)) !== $state) {
+          throw new \RuntimeException(self::MESSAGES_CHANGED_MESSAGE);
         }
       }
 
@@ -783,6 +793,54 @@ final class SiteExporter {
     finally {
       $this->fileSystem->deleteRecursive($staging);
     }
+  }
+
+  /**
+   * The tables holding a row about a conversation now, outside $left_out.
+   *
+   * @return array<string, string>
+   *   Unprefixed table name => key column, as ConversationRows::tables().
+   */
+  private function touchedTables(ConversationRows $conversations, array $left_out): array {
+    $touched = [];
+    foreach ($conversations->tables() as $table => $column) {
+      if (!in_array($table, $left_out, TRUE) && $conversations->touches($table, $column)) {
+        $touched[$table] = $column;
+      }
+    }
+    return $touched;
+  }
+
+  /**
+   * What the export classified about conversations: notice and activity
+   * ids, the files it leaves out, and the tables holding such rows.
+   */
+  private function conversationState(ConversationRows $conversations, array $touched): string {
+    return hash('sha256', serialize([
+      array_keys($conversations->messageIds()),
+      array_keys($conversations->activityIds()),
+      $conversations->leftOutFiles(),
+      array_keys($touched),
+    ]));
+  }
+
+  /**
+   * A path inside a files folder as tar names it: no empty or "."
+   * segments, ".." resolved, never above the folder.
+   */
+  public static function canonicalPath(string $path): string {
+    $parts = [];
+    foreach (explode('/', $path) as $part) {
+      if ($part === '' || $part === '.') {
+        continue;
+      }
+      if ($part === '..') {
+        array_pop($parts);
+        continue;
+      }
+      $parts[] = $part;
+    }
+    return implode('/', $parts);
   }
 
   /**
@@ -860,13 +918,13 @@ final class SiteExporter {
       }
     }
     $custom = [];
-    foreach (['localnodes_platform', 'social_ai_indexing', 'localnodes_import', 'localnodes_web3', 'localnodes_openrouter', 'boulder_demo', 'portland_demo', 'localnodes_demo', 'siwe_login', 'safe_smart_accounts', 'group_treasury', 'safe_governance', 'gas_sponsor'] as $module) {
+    foreach (['localnodes_platform', 'social_ai_indexing', 'localnodes_import', 'localnodes_web3', 'localnodes_openrouter', 'boulder_demo', 'neighbors_demo', 'portland_demo', 'localnodes_demo', 'siwe_login', 'safe_smart_accounts', 'group_treasury', 'safe_governance', 'gas_sponsor'] as $module) {
       if ($this->moduleHandler->moduleExists($module)) {
         $info = $this->moduleList->getExtensionInfo($module);
         $custom[$module] = $info['version'] ?? self::composerVersion('drupal/' . $module) ?? ($commit ? 'commit ' . substr($commit, 0, 7) : 'unknown');
       }
     }
-    $demo_modules = array_values(array_filter(['localnodes_demo', 'boulder_demo', 'portland_demo', 'social_demo'], [$this->moduleHandler, 'moduleExists']));
+    $demo_modules = array_values(array_filter(['localnodes_demo', 'boulder_demo', 'neighbors_demo', 'portland_demo', 'social_demo'], [$this->moduleHandler, 'moduleExists']));
     return [
       'format' => 'localnodes-export',
       'format_version' => self::FORMAT_VERSION,
@@ -898,11 +956,11 @@ final class SiteExporter {
         'left_out_tables' => $left_out,
         'left_out_note' => $this->keepMessages
           ? 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores) are not included.'
-          : 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores, and private messages between members) are not included.',
+          : 'These tables keep their structure; their rows (caches, logs, sessions, flood control, locks, batches, temporary stores, pending jobs and digest entries, and private messages between members) are not included.',
         'config_scrubbed' => $scrubbed,
       ] + ($this->keepMessages ? [] : [
         'message_rows_left_out' => $removed,
-        'message_rows_note' => 'Rows in these tables that refer to a private message or a conversation (its notices, activity records, read times, queued jobs and the usage records of files put into a message) are not included, nor are files used only in messages; the tables\' other rows are.',
+        'message_rows_note' => 'Rows in these tables that refer to a private message or a conversation (its notices, activity records, read times, the usage records and download counts of files put into a message, and the text extracted from files used only in messages) are not included, nor are files used only in messages, nor temporary files (uploads never saved to anything) with their records and extracted text; the tables\' other rows are.',
       ]),
       'files' => [
         'public_count' => $file_counts['public'],

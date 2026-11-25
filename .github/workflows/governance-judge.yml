@@ -44,7 +44,7 @@ jobs:
   governance-judge:
     # Main only: a dispatch from another ref would hand the secrets to unreviewed workflow code.
     if: github.ref == 'refs/heads/main'
-    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 110
     steps:
       # The relayer repository is fixed, never an input: this job holds the wallet key, so it

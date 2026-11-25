@@ -30,12 +30,12 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   protected static $modules = [
     'block', 'dropdown', 'profile', 'social_user', 'role_delegation', 'social_post',
     'message', 'dynamic_entity_reference', 'activity_creator', 'activity_logger',
-    'activity_basics', 'activity_viewer', 'mentions', 'votingapi', 'localnodes_platform',
+    'activity_basics', 'activity_viewer', 'mentions', 'votingapi', 'social_event', 'localnodes_platform',
   ];
 
   protected function setUp(): void {
     parent::setUp();
-    foreach (['post', 'profile', 'message', 'activity', 'mentions', 'vote'] as $type) $this->installEntitySchema($type);
+    foreach (['post', 'profile', 'message', 'activity', 'mentions', 'vote', 'vote_result'] as $type) $this->installEntitySchema($type);
     $this->installSchema('activity_creator', ['activity_notification_status']);
     $this->installShippedConfig('social_post', ['social_post.post_type.post', 'comment.type.post_comment']);
     foreach (['visibility', 'recipient_group', 'recipient_user', 'post', 'post_comments'] as $suffix) {
@@ -47,7 +47,16 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
       $this->installShippedConfig('activity_creator', ["field.storage.activity.$name", "field.field.activity.activity.$name"]);
     }
     $this->installShippedConfig('activity_creator', ['core.entity_view_display.activity.activity.default']);
-    $this->installShippedConfig('social_group_flexible_group', ['taxonomy.vocabulary.group_type']);
+    // Events and their enrollments, for event invitations.
+    $this->installEntitySchema('event_enrollment');
+    $this->installShippedConfig('social_event', ['node.type.event', 'field.field.node.event.field_content_visibility']);
+    foreach (['field_event_enroll', 'field_hide_enrollments', 'field_event_send_confirmation', 'field_enroll_method'] as $name) {
+      $this->installShippedConfig('social_event', ["field.storage.node.$name", "field.field.node.event.$name"]);
+    }
+    foreach (['field_event', 'field_account', 'field_enrollment_status', 'field_request_or_invite_status'] as $name) {
+      $this->installShippedConfig('social_event', ["field.storage.event_enrollment.$name", "field.field.event_enrollment.event_enrollment.$name"]);
+    }
+    $this->installShippedConfig('social_group_flexible_group', ['taxonomy.vocabulary.group_type', 'group.content_type.flexible_group-group_node-event']);
     $this->installShippedConfig('social_group', ['flag.flag.mute_group_notifications']);
     require_once DRUPAL_ROOT . '/core/includes/module.inc';
     $this->container->get('module_handler')->loadInclude('social_group_flexible_group', 'install');
@@ -186,12 +195,12 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   }
 
   /**
-   * A notice's own page (its number) opens for its recipients only.
+   * A notice's own page opens for its recipients only.
    */
   public function testNotificationPageOpensForItsRecipientOnly(): void {
     $f = $this->fixture();
     $carl = $f['carl'];
-    // A mention of Carl in the hidden group, as Open Social writes it: two
+    // A mention of Carl in the hidden group, as mentions are written: two
     // destinations, the notice list and email.
     $topic = Comment::load(Activity::load($f['carls']['comment on your content'])->get('field_activity_entity')->target_id)->getCommentedEntity();
     $mention = \Drupal\mentions\Entity\Mentions::create([
@@ -223,6 +232,197 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
   }
 
   /**
+   * Every recipient opens a notice for several members; nobody else does.
+   *
+   * A notice whose only destination is the notification list, as
+   * invitations are written, addressed to two members in either order. A
+   * blocked account is refused it, also as its first recipient.
+   */
+  public function testEveryRecipientOpensANoticeForSeveralMembers(): void {
+    $f = $this->fixture();
+    $access = $this->container->get('access_manager');
+    $handler = $this->container->get('entity_type.manager')->getAccessControlHandler('activity');
+    $post = Post::load(Activity::load($f['carls']['group post'])->get('field_activity_entity')->target_id);
+    $problems = [];
+    foreach (['Ana first' => [$f['ana'], $f['carl']], 'Carl first' => [$f['carl'], $f['ana']]] as $order => $recipients) {
+      $id = $this->notification($f['ana'], $recipients, $post, NULL, 'Ana_Author invited you to join the Mendwell Stewards Circle group');
+      $handler->resetCache();
+      foreach (['Ana' => $f['ana'], 'Carl' => $f['carl']] as $who => $viewer) {
+        if (!$access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $viewer)) $problems[] = "$order: recipient $who opens it";
+      }
+      foreach (['another member' => $f['ben'], 'a signed-out visitor' => $this->anonymous()] as $who => $viewer) {
+        if ($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $viewer)) $problems[] = "$order: $who is refused it";
+      }
+    }
+    $this->assertSame([], $problems);
+    // A blocked account is refused a notice in which it is the first
+    // recipient, in both shapes.
+    $ids = ['notifications only' => $id, 'notifications and mail' => $this->notification($f['ana'], [$f['carl'], $f['ana']], $post, NULL, 'Ana_Author mentioned you in a post')];
+    Activity::load($ids['notifications and mail'])->set('field_activity_destinations', [['value' => 'notifications'], ['value' => 'email']])->save();
+    \Drupal\user\Entity\User::load($f['carl']->id())->block()->save();
+    $blocked = \Drupal\user\Entity\User::load($f['carl']->id());
+    $rule = [\Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::class, 'personalNotificationAccess'];
+    foreach ($ids as $shape => $notice) {
+      $this->resetAccess();
+      $result = $rule(Activity::load($notice), 'view', $blocked);
+      $this->assertTrue($result->isForbidden(), "$shape: the rule refuses a blocked account.");
+      $this->assertContains('user:' . $blocked->id(), $result->getCacheTags(), "$shape: the refusal varies with the account.");
+      $this->assertFalse($access->checkNamedRoute('entity.activity.canonical', ['activity' => $notice], $blocked), "$shape: a blocked account is refused it.");
+    }
+  }
+
+  /**
+   * A recipient who has left a hidden group no longer opens its notices.
+   *
+   * A notice that also goes by mail follows its item too: a topic in a
+   * hidden group is for its members.
+   */
+  public function testRemovedRecipientCannotOpenNoticeAboutHiddenTopic(): void {
+    $f = $this->fixture();
+    $group = $this->createFlexibleGroup('Larkspur Quiet Council', 'members');
+    $this->addMember($group, $f['ana']);
+    $this->addMember($group, $f['carl']);
+    $topic = $this->createGroupTopic($group, 'Larkspur private agenda', 'Body.', 'group');
+    $topic->setOwnerId($f['ana']->id())->save();
+    $id = $this->notification($f['ana'], $f['carl'], $topic, $group->id(), 'Ana_Author created a Topic Larkspur private agenda in the Larkspur Quiet Council group');
+    Activity::load($id)->set('field_activity_destinations', [['value' => 'notifications'], ['value' => 'email']])->save();
+    $access = $this->container->get('access_manager');
+    $handler = $this->container->get('entity_type.manager')->getAccessControlHandler('activity');
+    $handler->resetCache();
+    $this->assertTrue($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $f['carl']), 'A member of the group opens the notice.');
+    $group->removeMember(\Drupal\user\Entity\User::load($f['carl']->id()));
+    drupal_static_reset('getAllGroupsForUser');
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $handler->resetCache();
+    $this->assertFalse($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $f['carl']), 'A recipient who has left the hidden group cannot open the notice.');
+  }
+
+  /**
+   * A notice for the notification list alone follows its item.
+   *
+   * A recipient opens it only while they may view the topic it is about,
+   * in whichever place they stand among its recipients.
+   */
+  public function testRecipientWhoLeftTheGroupIsRefusedANoticeForTheListOnly(): void {
+    $f = $this->fixture();
+    $group = $this->createFlexibleGroup('Larkspur Quiet Council', 'members');
+    $this->addMember($group, $f['ana']);
+    $this->addMember($group, $f['carl']);
+    $topic = $this->createGroupTopic($group, 'Larkspur private agenda', 'Body.', 'group');
+    $text = 'Ana_Author invited you to join the Larkspur Quiet Council group';
+    $ids = [
+      'Carl first' => $this->notification($f['ana'], [$f['carl'], $f['ana']], $topic, $group->id(), $text),
+      'Carl second' => $this->notification($f['ana'], [$f['ana'], $f['carl']], $topic, $group->id(), $text),
+    ];
+    $access = $this->container->get('access_manager');
+    $this->resetAccess();
+    foreach ($ids as $order => $id) {
+      $this->assertTrue($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $f['carl']), "$order: a member of the group opens the notice.");
+    }
+    $group->removeMember(\Drupal\user\Entity\User::load($f['carl']->id()));
+    $this->resetAccess();
+    $problems = [];
+    foreach ($ids as $order => $id) {
+      if ($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $f['carl'])) $problems[] = "$order: a recipient who has left the group is refused the notice";
+      if (!$access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $f['ana'])) $problems[] = "$order: a recipient who is still a member opens the notice";
+    }
+    $this->assertSame([], $problems);
+  }
+
+  /**
+   * Being a recipient is enough for a notice about no item or a gone item.
+   */
+  public function testRecipientOpensNoticeAboutNoItemOrAGoneItem(): void {
+    $f = $this->fixture();
+    $comment = $this->createComment(Comment::load(Activity::load($f['carls']['comment on your content'])->get('field_activity_entity')->target_id)->getCommentedEntity(), 'Soon gone.');
+    $gone = $this->notification($f['ana'], [$f['ana'], $f['carl']], $comment, NULL, 'Ana_Author commented on your topic');
+    $comment->delete();
+    $none = $this->notification($f['ana'], [$f['ana'], $f['carl']], $comment, NULL, 'Ana_Author sent you a notice');
+    Activity::load($none)->set('field_activity_entity', [])->save();
+    $access = $this->container->get('access_manager');
+    $this->resetAccess();
+    $problems = [];
+    foreach (['about no item' => $none, 'about a gone item' => $gone] as $kind => $id) {
+      foreach (['Ana' => $f['ana'], 'Carl' => $f['carl']] as $who => $viewer) {
+        if (!$access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $viewer)) $problems[] = "$kind: recipient $who opens it";
+      }
+      foreach (['another member' => $f['ben'], 'a signed-out visitor' => $this->anonymous()] as $who => $viewer) {
+        if ($access->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $viewer)) $problems[] = "$kind: $who is refused it";
+      }
+    }
+    $this->assertSame([], $problems);
+  }
+
+  /**
+   * An event invitation follows the event it invites to.
+   *
+   * The invitee opens it while they may view the event, and is refused it
+   * once they may not; when the event is gone, being invited is enough.
+   */
+  public function testEventInvitationFollowsTheEvent(): void {
+    $f = $this->fixture();
+    $group = $this->createFlexibleGroup('Larkspur Quiet Council', 'members');
+    $this->addMember($group, $f['ana']);
+    $this->addMember($group, $f['carl']);
+    $event = \Drupal\node\Entity\Node::create([
+      'type' => 'event', 'title' => 'Larkspur private gathering', 'uid' => $f['ana']->id(),
+      'status' => 1, 'field_content_visibility' => 'group',
+    ]);
+    $event->save();
+    $group->addRelationship($event, 'group_node:event');
+    $invite = function (AccountInterface $invitee) use ($f, $event): int {
+      $enrollment = \Drupal\social_event\Entity\EventEnrollment::create([
+        'user_id' => $f['ana']->id(), 'field_event' => $event->id(), 'field_account' => $invitee->id(),
+        'field_enrollment_status' => 0, 'field_request_or_invite_status' => 4, 'status' => 1,
+      ]);
+      $enrollment->save();
+      return $this->notification($f['ana'], [$f['ana'], $invitee], $enrollment, NULL, 'Ana_Author invited you to the event Larkspur private gathering');
+    };
+    $carls = $invite($f['carl']);
+    $bens = $invite($f['ben']);
+    $access = $this->container->get('access_manager');
+    $this->resetAccess();
+    $this->assertFalse(\Drupal\social_event\Entity\EventEnrollment::load(Activity::load($carls)->get('field_activity_entity')->target_id)->access('view', $f['carl']), 'The invitee may not view the enrollment record itself.');
+    $this->assertTrue($event->access('view', $f['carl']), 'A member of the group may view the event.');
+    $this->assertTrue($access->checkNamedRoute('entity.activity.canonical', ['activity' => $carls], $f['carl']), 'An invitee who may view the event opens the invitation.');
+    $this->assertFalse($access->checkNamedRoute('entity.activity.canonical', ['activity' => $bens], $f['ben']), 'An invitee who may not view the event is refused the invitation.');
+    $group->removeMember(\Drupal\user\Entity\User::load($f['carl']->id()));
+    $this->resetAccess();
+    $this->assertFalse($access->checkNamedRoute('entity.activity.canonical', ['activity' => $carls], $f['carl']), 'An invitee who has left the group is refused the invitation.');
+    $event->delete();
+    $this->resetAccess();
+    $this->assertTrue($access->checkNamedRoute('entity.activity.canonical', ['activity' => $bens], $f['ben']), 'When the event is gone, being invited is enough.');
+  }
+
+  private function resetAccess(): void {
+    drupal_static_reset('getAllGroupsForUser');
+    foreach (['activity', 'node', 'group', 'group_content', 'comment', 'event_enrollment'] as $type) {
+      $this->container->get('entity_type.manager')->getAccessControlHandler($type)->resetCache();
+    }
+    // A fresh page load reads an enrollment's event anew.
+    $this->container->get('entity_type.manager')->getStorage('event_enrollment')->resetCache();
+  }
+
+  /**
+   * The rule holds for a signed-out visitor and varies by viewer.
+   */
+  public function testNoticeForAnonymousAccountIsRefusedAndCachedPerUser(): void {
+    $f = $this->fixture();
+    $rule = [\Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::class, 'personalNotificationAccess'];
+    $comment = Comment::load(Activity::load($f['carls']['comment on your content'])->get('field_activity_entity')->target_id);
+    // A notice left addressed to the anonymous account.
+    $id = $this->notification($f['ana'], $this->anonymous(), $comment, NULL, 'Ana_Author commented on your topic Carl hidden plan');
+    $activity = Activity::load($id);
+    $result = $rule($activity, 'view', $this->anonymous());
+    $this->assertTrue($result->isForbidden(), 'A signed-out visitor is refused a notice addressed to the anonymous account.');
+    $this->assertFalse($this->container->get('access_manager')->checkNamedRoute('entity.activity.canonical', ['activity' => $id], $this->anonymous()));
+    foreach ([$this->anonymous(), $f['ben'], $f['carl']] as $viewer) {
+      $this->assertContains('user', $rule($activity, 'view', $viewer)->getCacheContexts(), 'The answer varies by viewer.');
+    }
+    $this->assertContains('user', $rule(Activity::load($f['carls']['mention']), 'view', $f['carl'])->getCacheContexts());
+  }
+
+  /**
    * Streams are left as they were; activity administrators keep notices.
    */
   public function testStreamActivitiesAndAdministratorsKeepTheirAccess(): void {
@@ -232,8 +432,8 @@ final class NotificationsOwnOnlyTest extends GroupAccessKernelTestBase {
     $mention = $f['carls']['mention'];
     Activity::load($mention)->set('field_activity_destinations', [['value' => 'notifications'], ['value' => 'email']])->save();
     $handler->resetCache();
-    // The new rule refuses others, never an activity administrator; what
-    // Open Social itself grants them is left as it was.
+    // The rule refuses others, never an activity administrator; what the
+    // activity module itself grants them is left as it was.
     $rule = [\Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::class, 'personalNotificationAccess'];
     $this->assertFalse($rule(Activity::load($mention), 'view', $admin)->isForbidden(), 'An activity administrator is not refused a notice.');
     $this->assertTrue($rule(Activity::load($mention), 'view', $f['ben'])->isForbidden(), 'Another member is refused it.');

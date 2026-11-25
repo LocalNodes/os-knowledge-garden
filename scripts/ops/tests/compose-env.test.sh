@@ -94,7 +94,8 @@ fi
 
 # 6. settings.php env mappings, run for real with php (no Drupal needed: it only fills $settings/$config).
 settings_probe() {  # settings_probe NAME=VALUE ... -> JSON {"s": $settings, "c": $config}
-  env -i PATH="$PATH" HOME="${TMPDIR:-/tmp}" "$@" php -r '
+  # settings.php reads DRUPAL_HASH_SALT and refuses to load without a private salt, so the probe gets a throwaway one.
+  env -i PATH="$PATH" HOME="${TMPDIR:-/tmp}" DRUPAL_HASH_SALT=compose-env-probe-salt "$@" php -r '
     $app_root = "/x"; $site_path = "sites/default"; $settings = []; $config = []; $databases = [];
     include $argv[1];
     echo json_encode(["s" => $settings, "c" => $config]);' "$SETTINGS" 2>/dev/null

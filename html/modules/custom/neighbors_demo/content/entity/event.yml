@@ -1,0 +1,317 @@
+---
+# 14 events for the neighbors demo, dated from install day.
+# "+N day" / "-N day" are offsets from install day; "this month day N" and
+# "next month day N" keep the month calendar full (DemoDate). Month-anchored
+# events can fall either side of install day, so their text names no time.
+# No event names a season, month or weekday, so it reads right on any
+# install day.
+# AI Coverage: The Evening Hosts event (group visibility) exercises permission-filtered retrieval
+# AI Coverage: Public events exercise community-wide search
+# AI Coverage: Past events exercise historical content retrieval
+
+# Event 1: shared money evening (future +30 day, public, the main group)
+e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1:
+  uuid: e1a1b1c1-d1e1-4f1a-b1c1-d1e1f1a1b1c1
+  title: Looking after our shared money, over tea
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>A relaxed hour for complete beginners. Our group keeps a small shared fund for things like the hall and the cake. We'll show how the money is looked after, who can spend it and how anyone in the group can see where it went, slowly and with plenty of time for questions.</p>
+
+    <p>You can just watch: nobody will ask you to sign up for anything or spend any money. Tea and biscuits are on the table. Free.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +30 day|18:30
+  field_event_date_end: +30 day|19:30
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Event 2: creek path litter pick (future +14 day, public, no group)
+e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2:
+  uuid: e2a2b2c2-d2e2-4f2a-b2c2-d2e2f2a2b2c2
+  title: Creek path litter pick
+  type: event
+  langcode: en
+  uid: 11223344-5566-4778-8990-aabbccddeef0
+  body: >
+    <p>Two hours picking up litter along the creek path, from Kingbird Park down to the footbridge. We work in pairs, so it's a nice way to meet someone new.</p>
+
+    <p>Gloves, bags and litter grabbers provided. Children are welcome with an adult, and there's a smaller job for anyone who'd rather not bend. Free. We finish with hot drinks by the park benches.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 101 Willowbend Path
+  field_event_date: +14 day|09:30
+  field_event_date_end: +14 day|11:30
+  image:
+  image_alt:
+  field_event_location: Kingbird Park, by the playground
+  field_content_visibility: public
+  field_event_type: de45fa67-bc89-4d01-2e3f-4a5b6c7d8e9f
+
+# Event 3: potluck (future +21 day, public, the main group)
+e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3:
+  uuid: e3a3b3c3-d3e3-4f3a-b3c3-d3e3f3a3b3c3
+  title: Neighbors' potluck supper
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>Bring a dish to share if you can, and come anyway if you can't: there is always more than enough. Long tables, name stickers, and someone at the door to say hello so nobody walks into a room of strangers.</p>
+
+    <p>Children are very welcome; there's a drawing table in the corner. Free.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +21 day|17:30
+  field_event_date_end: +21 day|20:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Event 4: hosts' planning (past -14 day, group, Evening Hosts - members-only)
+# AI Coverage: Past event in a members-only group exercises permission filtering for historical content
+e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4:
+  uuid: e4a4b4c4-d4e4-4f4a-b4c4-d4e4f4a4b4c4
+  title: Hosts' planning chat
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Half an hour to sort out the next few evenings: who books the hall, who brings the cake, and whether the fund can cover a speaker's bus fare. We'll also check the receipts from last month.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 900 Prairie Smoke Road
+  field_event_date: -14 day|18:00
+  field_event_date_end: -14 day|18:30
+  image:
+  image_alt:
+  field_event_location: Online video call
+  field_content_visibility: group
+  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
+  group: eeff5566-7788-4990-0aa1-233445566778
+
+# Event 5: seed swap (future +7 day, community, Garden Swap and Share)
+e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5:
+  uuid: e5a5b5c5-d5e5-4f5a-b5c5-d5e5f5a5b5c5
+  title: Seed and cutting swap
+  type: event
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  body: >
+    <p>Bring seeds you saved, a cutting from a houseplant, or spare seedlings, and take home something new. Nothing to bring? Come anyway and take something: that's how most of us started.</p>
+
+    <p>Lucia will be at the tomato table answering questions about growing in our dry air. Free.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1630 Sweetgrass Avenue
+  field_event_date: +7 day|10:00
+  field_event_date_end: +7 day|12:00
+  image:
+  image_alt:
+  field_event_location: The shared garden behind Cottonwood Community Hall
+  field_content_visibility: community
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ccdd3344-5566-4778-8990-011223344556
+
+# Event 6: repair afternoon (future +45 day, community, Fix-It Table)
+e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6:
+  uuid: e6a6b6c6-d6e6-4f6a-b6c6-d6e6f6a6b6c6
+  title: "Bring it, we'll try to fix it"
+  type: event
+  langcode: en
+  uid: bb22cc33-dd44-4ee5-5ff6-677889900aa1
+  body: >
+    <p>Bring one thing that's broken and sit with a neighbor who likes fixing things. Lamps, toasters, zips, bike lights, chairs, torn bags. You stay with your item and learn what went wrong.</p>
+
+    <p>We can't promise every fix, but about two in three things go home working. Free; there's a jar for spare parts if you want to chip in.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +45 day|13:00
+  field_event_date_end: +45 day|16:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall, back room
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: bbcc2233-4455-4667-7889-900112233445
+
+# Event 7: soup and stories (future +60 day, public, no group)
+e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7:
+  uuid: e7a7b7c7-d7e7-4f7a-b7c7-d7e7f7a7b7c7
+  title: Soup and stories night
+  type: event
+  langcode: en
+  uid: 44556677-8899-400a-abb0-cddeeff01223
+  body: >
+    <p>Soup is on us. Bring a bowl and, if you like, a short story about your street, your family or the first place you lived in town. Two minutes is plenty, and listening is just as good.</p>
+
+    <p>Children and first-timers are very welcome. Free, bring a bowl.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1750 Gooseberry Street
+  field_event_date: +60 day|18:00
+  field_event_date_end: +60 day|20:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+
+# Event 8: knife sharpening evening (past -30 day, public, the main group)
+e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8:
+  uuid: e8a8b8c8-d8e8-4f8a-b8c8-d8e8f8a8b8c8
+  title: "Neighbors' evening: sharpening kitchen knives"
+  type: event
+  langcode: en
+  uid: ff667788-9900-4aa1-1bb2-2cc33dd44ee5
+  body: >
+    <p>Our monthly evening: tea, cake, and one thing to learn together. Zara showed us how to sharpen a kitchen knife safely with a simple stone, and everyone had a go with their own knife.</p>
+
+    <p>Fourteen people came, including three who were new. The fund paid for the hall and two sharpening stones the group now keeps.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1750 Gooseberry Street
+  field_event_date: -30 day|18:30
+  field_event_date_end: -30 day|20:00
+  image:
+  image_alt:
+  field_event_location: Cottonwood Community Hall
+  field_content_visibility: public
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Board games evening (this month day 4, community, the main group; month-anchored so the calendar is never empty)
+2275752d-29f6-4738-a12d-a12cbb45c83d:
+  uuid: 2275752d-29f6-4738-a12d-a12cbb45c83d
+  title: Board games evening
+  type: event
+  langcode: en
+  uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
+  body: >
+    <p>A shelf of games, a pot of tea and a few tables. Bring a favorite game or learn one of ours.</p>
+
+    <p>New faces always welcome; someone will teach you the rules.</p>
+  field_event_address:
+    country_code: US
+    address_line1: Tansy Street and Burdock Lane
+  field_event_date: this month day 4|18:00
+  field_event_date_end: this month day 4|20:30
+  field_event_location: Quarry Hill Pavilion
+  field_content_visibility: community
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: aabb1122-3344-4556-6778-899001122334
+
+# Creek path walk (this month day 13, public, Creek Path Walkers; month-anchored so the calendar is never empty)
+6fba96bb-8bd5-4259-a8e0-74da36dec443:
+  uuid: 6fba96bb-8bd5-4259-a8e0-74da36dec443
+  title: Slow walk along the creek path
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>About an hour along the flat creek path at an easy pace, then coffee.</p>
+
+    <p>All ages welcome: pushchairs, dogs and walking sticks too. Free.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 101 Willowbend Path
+  field_event_date: this month day 13|09:00
+  field_event_date_end: this month day 13|10:30
+  field_event_location: Kingbird Park, by the footbridge
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ddee4455-6677-4889-90aa-122334455667
+
+# Fix-It drop-in (this month day 22, community, Fix-It Table; month-anchored so the calendar is never empty)
+9cf102d8-17e3-4e94-a115-6e717844b214:
+  uuid: 9cf102d8-17e3-4e94-a115-6e717844b214
+  title: Fix-It drop-in
+  type: event
+  langcode: en
+  uid: dd44ee55-ff66-4778-8990-0aa11bb22cc3
+  body: >
+    <p>A shorter session for small jobs: a loose button, a squeaky door hinge, a phone screen protector.</p>
+
+    <p>Drop in any time in the two hours. Free.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1600 Kestrel Street
+  field_event_date: this month day 22|16:00
+  field_event_date_end: this month day 22|18:00
+  field_event_location: Kestrel Street Library, meeting room
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: bbcc2233-4455-4667-7889-900112233445
+
+# Jam-making morning (next month day 6, community, Garden Swap and Share; month-anchored so the calendar is never empty)
+c1bc8f88-386a-47cc-8736-1699558d919e:
+  uuid: c1bc8f88-386a-47cc-8736-1699558d919e
+  title: Making jam together
+  type: event
+  langcode: en
+  uid: cc33dd44-ee55-4ff6-6778-89900aa11bb2
+  body: >
+    <p>We cook up whatever fruit people have spare and split the jars among everyone who comes.</p>
+
+    <p>Bring clean jars if you have them. Children welcome with an adult.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1630 Sweetgrass Avenue
+  field_event_date: next month day 6|10:00
+  field_event_date_end: next month day 6|13:00
+  field_event_location: Sweetgrass Church kitchen
+  field_content_visibility: community
+  field_event_type: bc23de45-fa67-4b89-0c1d-2e3f4a5b6c7d
+  group: ccdd3344-5566-4778-8990-011223344556
+
+# Walk and coffee (next month day 15, public, Creek Path Walkers; month-anchored so the calendar is never empty)
+53b055e9-91cb-4a5a-88c6-70bfa9f0688e:
+  uuid: 53b055e9-91cb-4a5a-88c6-70bfa9f0688e
+  title: Walk and coffee
+  type: event
+  langcode: en
+  uid: 22334455-6677-4889-90aa-bbccddeeff01
+  body: >
+    <p>The same easy walk along the creek, ending at the café on Kestrel Street.</p>
+
+    <p>Everyone welcome. Free; buy your own coffee if you'd like one.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1600 Kestrel Street
+  field_event_date: next month day 15|09:00
+  field_event_date_end: next month day 15|10:30
+  field_event_location: Kingbird Park, by the footbridge
+  field_content_visibility: public
+  field_event_type: ab12cd34-ef56-4a78-9b0c-1d2e3f4a5b6c
+  group: ddee4455-6677-4889-90aa-122334455667
+
+# How we decide (next month day 24, community, the main group; month-anchored so the calendar is never empty)
+2752f2ec-8b08-4754-a30b-0489a6e6df67:
+  uuid: 2752f2ec-8b08-4754-a30b-0489a6e6df67
+  title: How we decide what to spend our money on
+  type: event
+  langcode: en
+  uid: ee55ff66-7788-4990-0aa1-1bb22cc33dd4
+  body: >
+    <p>Anyone in the group can suggest how to spend our small shared fund, and everyone gets a say. Come and see how it works, using the vote on the hall and the cake as the example.</p>
+
+    <p>Bring your questions and your ideas. Join in person or online; the link is posted in the group the day before.</p>
+  field_event_address:
+    country_code: US
+    address_line1: 1600 Kestrel Street
+  field_event_date: next month day 24|18:30
+  field_event_date_end: next month day 24|19:30
+  field_event_location: Kestrel Street Library, meeting room
+  field_content_visibility: community
+  field_event_type: cd34ef56-ab78-4c90-1d2e-3f4a5b6c7d8e
+  group: aabb1122-3344-4556-6778-899001122334

@@ -1,14 +1,14 @@
-# A neighborhood association: one group everyone is in, named after the
-# community. The block kind is recorded for later group creation, with no
-# group template suggested.
+# A neighborhood association: one group everyone is in, the community's
+# Commons ('{commons}': its name and "Commons"). The block kind is recorded
+# for later group creation, with no group template suggested.
 # Raise the version whenever the groups or kinds change.
 id: neighbourhood_association
-version: 1
+version: 2
 label: 'Neighborhood association'
 description: 'One group for the whole association, and a group for each block.'
 groups:
   -
-    name: '{site}'
+    name: '{commons}'
     visibility: community
     everyone: true
     group_template: null
