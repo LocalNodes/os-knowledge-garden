@@ -55,3 +55,32 @@ services:
   logger.channel.localnodes_web3:
     parent: logger.channel_base
     arguments: ['localnodes_web3']
+  # Members-only groups do not start or publish votes: the route check (on
+  # the routes PublicVotesRoutes marks), the refusal in words, and the
+  # subscriber that marks the routes.
+  localnodes_web3.public_votes:
+    class: Drupal\localnodes_web3\Votes\PublicVotes
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: access_check, applies_to: _localnodes_web3_public_votes }
+  localnodes_web3.public_votes_routes:
+    class: Drupal\localnodes_web3\Routing\PublicVotesRoutes
+    tags:
+      - { name: event_subscriber }
+  localnodes_web3.public_votes_refusal:
+    class: Drupal\localnodes_web3\EventSubscriber\PublicVotesRefusal
+    arguments: ['@localnodes_web3.public_votes', '@current_user', '@bare_html_page_renderer', '@html_response.attachments_processor']
+    tags:
+      - { name: event_subscriber }
+  # A group turns members-only only when no change to who may vote waits:
+  # the fund's lock, the fresh reads and the check behind the visibility
+  # field's constraint and the group save check.
+  # The save check's refusal answered with the plain refusal page.
+  localnodes_web3.members_only_refusal:
+    class: Drupal\localnodes_web3\EventSubscriber\MembersOnlyRefusal
+    arguments: ['@localnodes_web3.public_votes_refusal']
+    tags:
+      - { name: event_subscriber }
+  localnodes_web3.members_only_wait:
+    class: Drupal\localnodes_web3\Votes\MembersOnlyWait
+    arguments: ['@entity_type.manager', '@lock', '@database', '@keyvalue', '@logger.channel.localnodes_web3', '@datetime.time', '@?group_treasury.treasury_service']
