@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\neighbors_demo\Unit;
 
 use Drupal\Component\Serialization\Yaml;
+use Drupal\localnodes_platform\CommonsName;
 use Drupal\neighbors_demo\SiteName;
 use Drupal\Tests\UnitTestCase;
 
@@ -126,11 +127,22 @@ final class NeighborsContentTest extends UnitTestCase {
     $this->assertSame(1, $places, 'The site name is written in SiteName only.');
 
     $groups = $this->content()['group.yml'];
-    $this->assertContains(SiteName::NAME, array_column($groups, 'label'), 'The main group carries the site name.');
+    $this->assertContains(CommonsName::of(SiteName::NAME), array_column($groups, 'label'), 'The main group is the site\'s Commons.');
     foreach ($this->strings() as $at => $text) {
       $this->assertStringNotContainsString(SiteName::PLACEHOLDER, $text, "$at keeps an unfilled placeholder.");
+      $this->assertStringNotContainsString(SiteName::COMMONS_PLACEHOLDER, $text, "$at keeps an unfilled placeholder.");
       $this->assertStringNotContainsString('{{', $text, "$at has a placeholder SiteName does not fill.");
     }
+  }
+
+  /**
+   * Fill puts the Commons name in place of its placeholder, from the rule.
+   */
+  public function testFillCommons(): void {
+    $this->assertSame(
+      ['a' => 'Open ' . CommonsName::of(SiteName::NAME) . ' on ' . SiteName::NAME],
+      SiteName::fill(['a' => 'Open ' . SiteName::COMMONS_PLACEHOLDER . ' on ' . SiteName::PLACEHOLDER]),
+    );
   }
 
   /**

@@ -15,7 +15,7 @@ aabb1122-3344-4556-6778-899001122334:
   image_alt: A child practicing letters at a table
   uid: aa11bb22-cc33-4dd4-ee55-ff6677889900
   created: -90 day|10:00
-  label: '{{site_name}}'
+  label: '{{commons_name}}'
   type: flexible_group
   field_flexible_group_visibility: public
   field_group_allowed_join_method: direct

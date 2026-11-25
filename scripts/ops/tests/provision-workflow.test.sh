@@ -447,6 +447,25 @@ check "a manual run of a pack with no map entry keeps the compose default name" 
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT=localnodes_demo
 check "a manual non-pack demo run keeps the compose default name" \
   '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
+# A manual run of the two named demos names the site the way their install would locally: Boulder
+# by the module's own name, neighbors by SiteName::NAME, read from the PHP file so a rename there
+# cannot leave the workflow's copy behind.
+NEIGHBORS_NAME="$(sed -n "s/^ *public const NAME = '\(.*\)';\$/\1/p" "$REPO/html/modules/custom/neighbors_demo/src/SiteName.php")"
+BOULDER_NAME="$(sed -n "s/^const BOULDER_DEMO_SITE_NAME = '\(.*\)';\$/\1/p" "$REPO/html/modules/custom/boulder_demo/boulder_demo.install")"
+check "SiteName::NAME and BOULDER_DEMO_SITE_NAME are read from the modules" \
+  '[ -n "$NEIGHBORS_NAME" ] && [ "$BOULDER_NAME" = "Boulder LocalNodes" ]'
+for DN in "neighbors_demo|$NEIGHBORS_NAME" "boulder_demo|$BOULDER_NAME"; do
+  DM="${DN%%|*}"; NAME="${DN#*|}"
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT="$DM"
+  check "a manual $DM run names the site '$NAME' (DRUPAL_SITE_NAME and SITE_NAME), the module's own name" \
+    '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = "$DM" ] && [ "$(stored DRUPAL_SITE_NAME)" = "$NAME" ] && [ "$(stored SITE_NAME)" = "$NAME" ]'
+  reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME="$MANIFEST_SITE" DEMO_MODULE_INPUT="$DM"
+  check "a manifest name wins over $DM's own name" \
+    '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ]'
+done
+reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME= DEMO_MODULE_INPUT=portland_demo
+check "a manual portland_demo run keeps the compose default name" \
+  '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" SITE_NAME="$MANIFEST_SITE" DEMO_MODULE_INPUT=pack:lanternrow
 check "a manifest name wins over the pack map" '[ $RC -eq 0 ] && [ "$(stored DRUPAL_SITE_NAME)" = "$MANIFEST_SITE" ] && [ "$(stored SITE_NAME)" = "$MANIFEST_SITE" ]'
 OTHER_OPTIONS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module | [.options[] | select(startswith("pack:") | not)] | join(" ")' "$WORK/wf.json")"
@@ -609,6 +628,11 @@ SIGNUP=(DEMO_MODULE_INPUT=none CALLBACK_URL_INPUT=https://cb.test IMAGE_TAG_INPU
 reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" SITE_NAME= DEMO_MODULE_INPUT=pack:lanternrow
 check "a sign-up run never takes a name from the pack map" \
   '[ $RC -eq 0 ] && [ "$(stored DEMO_PACK)" = lanternrow ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
+for DM in neighbors_demo boulder_demo; do
+  reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" SITE_NAME= DEMO_MODULE_INPUT="$DM"
+  check "a sign-up run of $DM with no manifest name takes no name from the demo" \
+    '[ $RC -eq 0 ] && [ "$(stored DEMO_MODULE)" = "$DM" ] && [ "$(stored DRUPAL_SITE_NAME)" = LocalNodes ] && [ -z "$(stored SITE_NAME)" ]'
+done
 flagged() {  # flagged KEY -> true when every body sent for KEY carried is_shown_once and is_literal true
   jq -s -e --arg k "$1" '[.[] | select(.key == $k)] | length > 0 and all(.is_shown_once == true and .is_literal == true)' "$WORK/state/bodies.log" >/dev/null
 }
