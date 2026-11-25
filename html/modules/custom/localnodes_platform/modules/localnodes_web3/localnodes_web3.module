@@ -12,14 +12,21 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_web3\EmailLink;
 use Drupal\localnodes_web3\SignIn;
 use Drupal\localnodes_web3\SignInEmail;
 use Drupal\localnodes_web3\Sponsor\FeeStatusRefresh;
 use Drupal\localnodes_web3\SiweHelpLink;
+use Drupal\localnodes_web3\Votes\MembersOnlyRefusedException;
+use Drupal\localnodes_web3\Votes\MembersOnlyWait;
+use Drupal\localnodes_web3\Votes\PublicVotes;
+use Drupal\localnodes_web3\Votes\PublicVotesQueueHold;
 use Drupal\safe_smart_accounts\Entity\SafeAccountInterface;
 use Drupal\safe_smart_accounts\Entity\SafeTransactionInterface;
 use Drupal\user\UserInterface;
@@ -339,4 +346,154 @@ function localnodes_web3_module_implements_alter(array &$implementations, string
  */
 function localnodes_web3_cron(): void {
   FeeStatusRefresh::fromContainer(\Drupal::getContainer())->run();
+  // Approvals held while a group was members-only are sent for approval
+  // once no group of the fund is. The service is there whenever the module
+  // is on; a container without it (a test that loads this file alone) has
+  // nothing held.
+  if (\Drupal::hasService('localnodes_web3.members_only_wait')) {
+    \Drupal::service('localnodes_web3.members_only_wait')->releaseApprovals();
+  }
+}
+
+/**
+ * Implements hook_element_info_alter().
+ *
+ * A link to a voting step a members-only group may not take renders
+ * nothing: the site's check runs first for every link
+ * (PublicVotes::preRenderLink()).
+ */
+function localnodes_web3_element_info_alter(array &$info): void {
+  if (isset($info['link']['#pre_render'])) {
+    array_unshift($info['link']['#pre_render'], [PublicVotes::class, 'preRenderLink']);
+  }
+}
+
+/**
+ * Implements hook_queue_info_alter().
+ *
+ * The voting module's set-up steps and role changes wait while their group
+ * is members-only: the site's worker holds them and hands everything else
+ * to the voting module's own worker, kept here.
+ */
+function localnodes_web3_queue_info_alter(array &$queues): void {
+  foreach (PublicVotesQueueHold::QUEUES as $id) {
+    if (isset($queues[$id]['class'])) {
+      $queues[$id][PublicVotesQueueHold::INNER] = $queues[$id]['class'];
+      $queues[$id]['class'] = PublicVotesQueueHold::class;
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_bundle_field_info_alter().
+ *
+ * A flexible group's visibility can't turn members-only while a change to
+ * who may vote waits (MembersOnlyWait).
+ */
+function localnodes_web3_entity_bundle_field_info_alter(array &$fields, EntityTypeInterface $entity_type, string $bundle): void {
+  if ($entity_type->id() === 'group' && isset($fields['field_flexible_group_visibility'])) {
+    $fields['field_flexible_group_visibility']->addConstraint('LocalnodesMembersOnlyWait');
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for groups.
+ *
+ * A group with a fund turns members-only only after validation took the
+ * fund's lock, and only when, checked again under it, no change waits. The
+ * lock is given back once the save's transaction is over, whether the save
+ * went through or not. Any other save is untouched.
+ */
+function localnodes_web3_group_presave(GroupInterface $group): void {
+  $wait = \Drupal::service('localnodes_web3.members_only_wait');
+  if (!$wait->turnsMembersOnly($group)) {
+    return;
+  }
+  $fund_id = $wait->fundId($group);
+  if ($fund_id === NULL) {
+    return;
+  }
+  if (!$wait->holdsFund($fund_id)) {
+    // The page says what the edit form would: the waiting line while a
+    // change waits (the edit form's read), else to use the settings page.
+    $plain = $wait->waits($group) ? MembersOnlyWait::LINE : MembersOnlyWait::FROM_HERE;
+    throw new MembersOnlyRefusedException(MembersOnlyWait::NOT_LOCKED, (string) $group->label(), $plain);
+  }
+  $wait->unlockAfterTransaction($fund_id);
+  if ($wait->refuses($group)) {
+    throw new MembersOnlyRefusedException(MembersOnlyWait::LINE, (string) $group->label());
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for the group forms (base form id).
+ *
+ * On a group's edit form, while a change to who may vote still waits, one
+ * line right after the visibility choice says why the group can't turn
+ * members-only yet. The form varies with the group.
+ */
+function localnodes_web3_form_group_form_alter(array &$form, FormStateInterface $form_state): void {
+  $form_object = $form_state->getFormObject();
+  $group = method_exists($form_object, 'getEntity') ? $form_object->getEntity() : NULL;
+  if (!$group instanceof GroupInterface || $group->isNew() || $form_object->getOperation() !== 'edit' || !isset($form['field_flexible_group_visibility'])) {
+    return;
+  }
+  $form['#cache']['tags'] = array_values(array_unique(array_merge($form['#cache']['tags'] ?? [], $group->getCacheTags())));
+  $wait = \Drupal::service('localnodes_web3.members_only_wait');
+  if (!$wait->membersOnlyNow($group->id()) && $wait->waits($group)) {
+    $line = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => t(MembersOnlyWait::LINE),
+    ];
+    $form['field_flexible_group_visibility']['#suffix'] = ($form['field_flexible_group_visibility']['#suffix'] ?? '') . \Drupal::service('renderer')->renderInIsolation($line);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for Approve new members.
+ *
+ * For every group the approve button's submit is the site's
+ * MembersOnlyWait::approveUnderLock(), which decides when the button is
+ * pressed, under the fund's lock, whether to hold the approval (a
+ * members-only group) or to run the voting module's own submit. In a
+ * members-only group, as built, one line at the top says who may vote or
+ * propose is kept on this site. Nothing else on the form changes; the form
+ * varies with the group.
+ */
+function localnodes_web3_form_safe_governance_group_approve_members_alter(array &$form, FormStateInterface $form_state): void {
+  $group_id = $form_state->get('group_id');
+  if ($group_id !== NULL) {
+    $form['#cache']['tags'] = array_values(array_unique(array_merge($form['#cache']['tags'] ?? [], ['group:' . $group_id])));
+  }
+  _localnodes_web3_swap_approve_submit($form);
+  // In a members-only group, as built, one line at the top says roles stay
+  // on this site. Display only.
+  $group = $group_id === NULL ? NULL : \Drupal::entityTypeManager()->getStorage('group')->load($group_id);
+  if ($group instanceof GroupInterface && PublicVotes::refuses($group)) {
+    $form['localnodes_web3_roles_line'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => t(PublicVotes::ROLES_LINE),
+      '#weight' => -1000,
+    ];
+  }
+}
+
+/**
+ * Puts the site's submit on the approve button, wherever it sits.
+ *
+ * @param array<string, mixed> $element
+ *   The form or one of its elements.
+ */
+function _localnodes_web3_swap_approve_submit(array &$element): void {
+  if (($element['#name'] ?? NULL) === 'approve' && ($element['#submit'] ?? NULL) === ['::submitApprove']) {
+    $element['#submit'] = [[MembersOnlyWait::class, 'approveUnderLock']];
+    return;
+  }
+  foreach (Element::children($element) as $key) {
+    if (is_array($element[$key])) {
+      _localnodes_web3_swap_approve_submit($element[$key]);
+    }
+  }
 }
