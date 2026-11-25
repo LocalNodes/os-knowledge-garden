@@ -31,6 +31,7 @@ Sign in with a one-time link: `ddev drush user:login`
 
 ```bash
 scripts/install.sh --demo=boulder    # Boulder community demo
+scripts/install.sh --demo=neighbors  # Neighbors demo: a neighbourhood group site, no technical words
 scripts/install.sh --demo=cascadia   # Cascadia community demo
 scripts/install.sh --demo=all        # Both
 scripts/install.sh                   # No demo content

@@ -20,7 +20,7 @@ class LocalNodesDemoCommands extends DrushCommands {
    * module, as docker/entrypoint.sh loads it for DEMO_PACK.
    */
   #[CLI\Command(name: 'localnodes-demo:install', aliases: ['lnd-install'])]
-  #[CLI\Argument(name: 'module', description: 'Demo module name (localnodes_demo, boulder_demo, portland_demo or localnodes_demo_packs)')]
+  #[CLI\Argument(name: 'module', description: 'Demo module name (localnodes_demo, boulder_demo, neighbors_demo, portland_demo or localnodes_demo_packs)')]
   #[CLI\Option(name: 'pack', description: 'The pack to load, a directory name under localnodes_demo_packs/packs. Required for localnodes_demo_packs, refused for any other module.')]
   #[CLI\Usage(name: 'localnodes-demo:install localnodes_demo', description: 'Install the content of the localnodes_demo module')]
   #[CLI\Usage(name: 'localnodes-demo:install localnodes_demo_packs --pack=lanternrow', description: 'Install the demo pack named lanternrow')]
@@ -63,7 +63,7 @@ class LocalNodesDemoCommands extends DrushCommands {
    * entrypoint has always loaded for it.
    */
   #[CLI\Command(name: 'localnodes-demo:plugins')]
-  #[CLI\Argument(name: 'module', description: 'Demo module name (localnodes_demo, boulder_demo or portland_demo)')]
+  #[CLI\Argument(name: 'module', description: 'Demo module name (localnodes_demo, boulder_demo, neighbors_demo or portland_demo)')]
   #[CLI\Usage(name: 'localnodes-demo:plugins boulder_demo', description: 'The plugin ids docker/entrypoint.sh passes to drush social-demo:add')]
   public function demoPlugins(string $module): string {
     return implode(' ', DemoPlugins::ids($module));

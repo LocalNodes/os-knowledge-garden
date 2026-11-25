@@ -32,7 +32,9 @@ use Symfony\Component\Routing\RouteCollection;
  * Forms: every form class of these modules is listed with the routes whose
  * pages show it. A form posts back to the page it is on, so the page's mark
  * covers its submit, before any validate or submit handler runs. Forms on
- * exempt pages may only be the refresh forms, which change no fund or vote.
+ * exempt pages may only re-read the public record, store the person's own
+ * choice to hide a note, or sign a signed-out person in by emailed link; none
+ * changes a fund or vote.
  *
  * @group localnodes_web3
  */
@@ -98,10 +100,37 @@ final class ProofRoutesTest extends KernelTestBase {
   ];
 
   /**
+   * Forms that store only the viewer's own choice to hide a note.
+   *
+   * They change no fund, approver, payment or vote, so they may sit on exempt
+   * pages; testOwnNoteFormsWriteNothingElse() holds them to that. Each maps to
+   * every call it makes on its own services (property->method), nothing more.
+   */
+  private const OWN_NOTE_FORMS = [
+    'Drupal\group_treasury\Form\TreasuryApproverNudgeForm' => [
+      'dismissals->dismiss',
+      'entityTypeManager->getStorage',
+      'treasuryService->getGroupsForTreasury',
+    ],
+  ];
+
+  /**
+   * The services those forms write through, with every call each makes.
+   */
+  private const OWN_NOTE_SERVICES = [
+    'Drupal\group_treasury\Service\ApproverNudgeDismissals' => [
+      'tagsInvalidator->invalidateTags',
+      'userData->get',
+      'userData->set',
+    ],
+  ];
+
+  /**
    * Each form class: the routes whose pages show it, or why it has none.
    */
   private const FORMS = [
     'Drupal\gas_sponsor\Form\NetworkFeeRefreshForm' => ['gas_sponsor.network_fees'],
+    'Drupal\group_treasury\Form\TreasuryApproverNudgeForm' => ['group_treasury.treasury'],
     'Drupal\group_treasury\Form\TreasuryCreateForm' => ['group_treasury.create'],
     'Drupal\group_treasury\Form\TreasuryLinkForm' => ['group_treasury.link'],
     'Drupal\group_treasury\Form\TreasuryRefreshForm' => ['group_treasury.treasury'],
@@ -192,7 +221,7 @@ final class ProofRoutesTest extends KernelTestBase {
   }
 
   /**
-   * Every form class is placed; exempt pages show only refresh forms.
+   * Every form is placed; no form on an exempt page changes a fund or vote.
    */
   public function testEveryFormIsOnAMarkedPage(): void {
     $classes = [];
@@ -233,13 +262,36 @@ final class ProofRoutesTest extends KernelTestBase {
       foreach ($hosts as $name) {
         $route = $routes->getRouteByName($name);
         if (isset(ProofRoutes::EXEMPT[$name])) {
-          $this->assertTrue(in_array($class, self::REFRESH_FORMS, TRUE) || str_starts_with($name, 'localnodes_web3.email_link'), $class . ' changes something but its page ' . $name . ' is exempt.');
+          $this->assertTrue(in_array($class, self::REFRESH_FORMS, TRUE) || isset(self::OWN_NOTE_FORMS[$class]) || str_starts_with($name, 'localnodes_web3.email_link'), $class . ' changes something but its page ' . $name . ' is exempt.');
         }
         else {
           $this->assertTrue($route->getOption(SignatureSession::ROUTE_OPTION), $class . ' on ' . $name);
         }
       }
     }
+  }
+
+  /**
+   * A form allowed on an exempt page for hiding a note writes nothing else.
+   *
+   * "Not now" records only that person's own choice to hide the note. It
+   * changes no fund, approver, payment or vote, and proposes or signs
+   * nothing; anything more belongs on a marked page.
+   */
+  public function testOwnNoteFormsWriteNothingElse(): void {
+    foreach (self::OWN_NOTE_FORMS + self::OWN_NOTE_SERVICES as $class => $calls) {
+      $this->assertTrue(class_exists($class), $class);
+      $code = file_get_contents((new \ReflectionClass($class))->getFileName());
+      foreach (['->save(', '->delete(', '->remove', 'SafeTransaction', 'propose', 'Signature', '->execute(', 'Database', '->insert(', '->update(', '->merge(', '\\Drupal::'] as $write) {
+        $this->assertStringNotContainsString($write, $code, $class . ' contains ' . $write . '; place it on a marked page.');
+      }
+      preg_match_all('/\$this->(\w+)->(\w+)\(/', $code, $m, PREG_SET_ORDER);
+      $made = array_values(array_unique(array_map(fn(array $c): string => $c[1] . '->' . $c[2], $m)));
+      sort($made);
+      $this->assertSame($calls, $made, $class . ' calls a service this test does not know; place it on a marked page or review the call.');
+    }
+    $nudge = file_get_contents((new \ReflectionClass('Drupal\group_treasury\Form\TreasuryApproverNudgeForm'))->getFileName());
+    $this->assertStringContainsString('$this->dismissals->dismiss(', $nudge);
   }
 
   /**
@@ -374,8 +426,8 @@ final class ProofRoutesTest extends KernelTestBase {
   /**
    * A real POST to a fund form cannot pass as another method.
    *
-   * Symfony honours X-HTTP-Method-Override on a POST, and the form still
-   * reads the posted values, so the guard must go by the method sent.
+   * A post to a fund form needs the proof whatever method it names, because
+   * the form still takes what was posted.
    */
   public function testMethodOverrideOnAFundForm(): void {
     foreach (['OPTIONS', 'GET', 'HEAD'] as $override) {
@@ -390,9 +442,9 @@ final class ProofRoutesTest extends KernelTestBase {
   /**
    * Preparing the voting setup approvals is a GET that saves setup state.
    *
-   * SetupSignatureController::messages() prepares the approvals on first
-   * read, so a read of that route changes the fund's voting setup and needs
-   * the proof like a post does.
+   * The first read prepares the approvals and saves the group's voting
+   * setup, so a read of that route changes it and needs the proof like a
+   * post does.
    */
   public function testSetupMessagesNeedProofOnRead(): void {
     foreach (['GET', 'HEAD'] as $method) {

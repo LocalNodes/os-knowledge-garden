@@ -523,22 +523,21 @@ final class SiteExportButtonTest extends KernelTestBase {
     $this->assertStringContainsString('the export started', $result['export']);
   }
 
-  public function testExportRefusesAndWritesNothingWhileDirectMessagesAreOn(): void {
+  /**
+   * Direct messages on no longer stop the export: the copy leaves them out
+   * (the direct-message privacy test checks what the archive holds).
+   */
+  public function testExportStartsWhileDirectMessagesAreOn(): void {
     $owner = $this->owner();
     $this->enableModules(['private_message']);
     $this->assertTrue($this->container->get('module_handler')->moduleExists('private_message'));
-    $sentence = 'Site export is not available while direct messages are switched on.';
     $result = $this->tryEveryWay($owner);
-    $this->assertSame($sentence, $result['job']);
-    $this->assertSame($sentence, $result['export']);
-    $this->assertStringContainsString($sentence, (string) $result['page']['off']['#markup']);
-    $this->assertArrayNotHasKey('screen', $result['page']);
-    $this->assertArrayNotHasKey('actions', $result['page']);
-    // No job record, no lock file, no export folder, no destination.
-    $this->assertSame([], $this->container->get('localnodes_platform.export_manager')->current());
-    $this->assertSame(0, (int) $this->container->get('database')->select('localnodes_site_export')->countQuery()->execute()->fetchField());
-    $this->assertSame(['.', '..'], scandir($this->base . '/private'));
-    $this->assertDirectoryDoesNotExist($this->base . '/exports');
+    $this->assertIsArray($result['job']);
+    $this->assertSame('queued', $result['job']['status']);
+    $this->assertSame($result['job']['id'], $this->container->get('localnodes_platform.export_manager')->current()['id']);
+    $this->assertArrayHasKey('screen', $result['page']);
+    $this->assertArrayNotHasKey('off', $result['page']);
+    $this->assertStringContainsString('the export started', $result['export']);
   }
 
 }

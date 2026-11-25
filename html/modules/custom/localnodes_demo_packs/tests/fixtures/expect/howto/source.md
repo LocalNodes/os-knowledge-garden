@@ -87,7 +87,7 @@ If the settings are missing or an email keeps arriving unexpectedly, ask an orga
 
 ### P08 — Leave a group
 
-Open the group's page. Open **Joined**, choose **Leave group**, then confirm with **Leave**.
+Open the group's page. Open **Joined**, choose **Leave group**, then confirm with **Leave this house**.
 
 Check the group name before confirming. Leaving a group is different from closing your site account. It does not erase the group's records or messages you have already contributed.
 
@@ -165,7 +165,7 @@ All rows were read from the roots above. “Own” means the emitting label is i
 | P07 | Never | OS `modules/custom/activity_send/modules/activity_send_email/src/Plugin/EmailFrequency/None.php:15` | O2; only listed notification categories, not all mail. |
 | P07 | Save | Core `lib/Drupal/Core/Entity/EntityForm.php:234`; inherited through `modules/user/src/ProfileForm.php:17` | O1/O2; OS's Create @entity rewrite is for compatible content forms, not this account form. |
 | P08 | Joined; Leave group | OS `modules/social_features/social_group/src/Plugin/Join/SocialGroupAlreadyJoin.php:28`, `:34`; C `group/src/Entity/Group.php:24` supplies singular group | O1; exact rendered substitution for Leave @entity_type_id. |
-| P08 | Leave | OS `modules/social_features/social_group/social_group.module:1081` | O1; confirmation submit. Do not claim a complete exit/deletion or leaver-access outcome. |
+| P08 | Leave this house | H `html/modules/custom/localnodes_platform/src/Form/HouseDepartureForms.php:69` | O1; confirmation submit. Do not claim a complete exit/deletion or leaver-access outcome. |
 | P09 | Report a problem with this page | H `html/modules/custom/localnodes_import/templates/localnodes-import-source-box.html.twig:81` | Own, only when report URL exists; imported pages. |
 | P09 | What's the problem?; Details (optional); Your email (optional); Send report | H `html/modules/custom/localnodes_import/src/Form/ReportProblemForm.php:145`, `:157`, `:164`, `:187` | Own form. Recipients at `:139`, supplied email visibility at `:165`; sending/delivery not tested here. |
 | P09, P10; tour | Get help | H `html/modules/custom/localnodes_platform/templates/footer/localnodes-footer.html.twig:34` | Own footer link; current help page has no tour replay. |
@@ -238,7 +238,7 @@ These are acceptance procedures, **not executed results**. Index only the approp
 | How do I add a file the assistant can read? | P03 — Add a page or file to the library | Import → Upload files → Choose files; permission/rights and audience checks; use selectable text; the full file-count import button. No immediate-indexing promise. |
 | How do I check whether the assistant's answer is right? | P04 — Ask the assistant and check sources | Open a numbered link under Sources and read the original passage; an answer can be wrong. No claimed action or certainty. |
 | How do I stop one kind of notification email? | P07 — Change which emails you get | Account Settings → Email notifications → Never for that category → Save. No promise to stop all mail. |
-| How do I leave a group? | P08 — Leave a group | Joined → Leave group → Leave. No erasure, account-closure or blanket later-access promise. |
+| How do I leave a group? | P08 — Leave a group | Joined → Leave group → Leave this house. No erasure, account-closure or blanket later-access promise. |
 
 Run these two questions with **only the supplied how-to pages in scope**, or a controlled library containing no answer to them. They test the coverage boundary, not denial of information that another real page actually contains.
 

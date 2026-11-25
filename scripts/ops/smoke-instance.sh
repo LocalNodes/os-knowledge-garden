@@ -7,7 +7,7 @@
 #
 #   ./scripts/ops/smoke-instance.sh cascadia.localnodes.xyz --no-chat     # GET checks only
 #   ./scripts/ops/smoke-instance.sh staging.localnodes.xyz                # GET checks + chatbot
-#   ./scripts/ops/smoke-instance.sh boulder.localnodes.xyz solstice "Summer Solstice Gathering"
+#   ./scripts/ops/smoke-instance.sh boulder.localnodes.xyz gathering "Community Gathering at Boulder Creek"
 #
 #   --no-chat may appear in any position.
 #

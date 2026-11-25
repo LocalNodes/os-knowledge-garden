@@ -1,14 +1,14 @@
-# A market or local business group: one group everyone is in, named after the
-# community. The vendor kind is recorded for later group creation, with no
-# group template suggested.
+# A market or local business group: one group everyone is in, the community's
+# Commons ('{commons}': its name and "Commons"). The vendor kind is recorded
+# for later group creation, with no group template suggested.
 # Raise the version whenever the groups or kinds change.
 id: market
-version: 1
+version: 2
 label: 'Market or local business group'
 description: 'One group for the whole market, and a group for each vendor.'
 groups:
   -
-    name: '{site}'
+    name: '{commons}'
     visibility: community
     everyone: true
     group_template: null

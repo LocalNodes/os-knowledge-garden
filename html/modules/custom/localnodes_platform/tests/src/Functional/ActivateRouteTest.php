@@ -266,7 +266,11 @@ final class ActivateRouteTest extends BrowserTestBase {
     $this->assertNotEmpty($this->stateValue('localnodes.install_step.organizer_setup'));
 
     $groups = $this->container->get('entity_type.manager')->getStorage('group')
-      ->loadByProperties(['type' => 'flexible_group', 'label' => self::SITE_NAME, 'uid' => $organizer->id()]);
+      ->loadByProperties([
+        'type' => 'flexible_group',
+        'label' => self::SITE_NAME . ' Commons',
+        'uid' => $organizer->id(),
+      ]);
     $this->assertCount(1, $groups, 'The first group exists, owned by the organizer.');
     $member = reset($groups)->getMember($organizer);
     $this->assertNotFalse($member);

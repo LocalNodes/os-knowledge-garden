@@ -119,11 +119,11 @@ final class CommunitySeedTest extends GroupAccessKernelTestBase {
       'mail' => self::ORGANIZER_EMAIL,
       'roles' => ['sitemanager'],
     ]);
-    // The first group, as localnodes:organizer-welcome made it: named after the
-    // community, owned by the organizer, visible to the community.
+    // The first group, as localnodes:organizer-welcome made it: the community's
+    // Commons, owned by the organizer, visible to the community.
     $this->group = Group::create([
       'type' => 'flexible_group',
-      'label' => self::SITE_NAME,
+      'label' => self::SITE_NAME . ' Commons',
       'uid' => $this->organizer->id(),
       'field_flexible_group_visibility' => 'community',
     ]);
@@ -464,7 +464,7 @@ final class CommunitySeedTest extends GroupAccessKernelTestBase {
       $this->assertTrue($organizer->isBlocked(), 'The organizer is blocked.');
 
       $groups = $this->container->get('entity_type.manager')->getStorage('group')
-        ->loadByProperties(['type' => 'flexible_group', 'label' => $site_name, 'uid' => $organizer->id()]);
+        ->loadByProperties(['type' => 'flexible_group', 'label' => $site_name . ' Commons', 'uid' => $organizer->id()]);
       $this->assertCount(1, $groups, 'One first group, owned by the organizer.');
       $member = reset($groups)->getMember($organizer);
       $this->assertNotFalse($member);

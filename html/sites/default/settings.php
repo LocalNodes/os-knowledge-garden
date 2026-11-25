@@ -65,6 +65,7 @@ $settings['container_yamls'][] = $app_root . '/' . $site_path . '/services.yml';
 $settings['config_exclude_modules'] = [
   'localnodes_demo',
   'boulder_demo',
+  'neighbors_demo',
   'portland_demo',
   'social_demo',
 ];

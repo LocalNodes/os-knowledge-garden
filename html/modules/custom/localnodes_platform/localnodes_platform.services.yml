@@ -1,7 +1,7 @@
 services:
   localnodes_platform.private_house_query_subscriber:
     class: Drupal\localnodes_platform\QueryAccess\PrivateHouseQuerySubscriber
-    arguments: ['@database', '@entity_type.manager']
+    arguments: ['@database', '@entity_type.manager', '@localnodes_platform.departed_author_access']
     tags:
       - { name: event_subscriber }
   # D-27 (Tom, 2026-11-05; checker W-1): at the ai_usage_limits token
@@ -81,7 +81,7 @@ services:
       - { name: http_middleware, priority: 250 }
   localnodes_platform.group_notice_cleanup:
     class: Drupal\localnodes_platform\Mail\GroupNoticeCleanup
-    arguments: ['@database', '@entity_type.manager', '@localnodes_platform.notice_departures', '@datetime.time']
+    arguments: ['@database', '@entity_type.manager', '@localnodes_platform.notice_departures', '@datetime.time', '@cache_tags.invalidator']
   localnodes_platform.notice_departures:
     class: Drupal\Core\KeyValueStore\KeyValueStoreInterface
     factory: ['@keyvalue', get]
@@ -108,6 +108,17 @@ services:
     decorates: logger.factory
     arguments: ['@.inner']
 
+  localnodes_platform.departed_author_access:
+    class: Drupal\localnodes_platform\Access\DepartedAuthorAccess
+    arguments: ['@entity_type.manager', '@localnodes_platform.group_notice_cleanup']
+  localnodes_platform.house_participation_access:
+    class: Drupal\localnodes_platform\Access\HouseParticipationAccess
+    arguments: ['@localnodes_platform.departed_author_access', '@entity_type.manager']
+    tags:
+      - { name: access_check, applies_to: _localnodes_house_participation }
+  localnodes_platform.house_interaction_controls:
+    class: Drupal\localnodes_platform\Comment\HouseInteractionControls
+    arguments: ['@localnodes_platform.departed_author_access']
   localnodes_platform.house_enrollment_access:
     class: Drupal\localnodes_platform\Access\HouseEnrollmentAccess
     arguments: ['@entity_type.manager']
@@ -119,6 +130,17 @@ services:
     arguments: ['@config.factory', '@router.builder']
     tags:
       - { name: event_subscriber }
+  localnodes_platform.house_routes:
+    class: Drupal\localnodes_platform\Routing\HouseRouteSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  localnodes_platform.house_departure_forms:
+    class: Drupal\localnodes_platform\Form\HouseDepartureForms
+    arguments: ['@entity_type.manager', '@localnodes_platform.group_notice_cleanup', '@current_user', '@messenger', '@string_translation']
+  localnodes_platform.departed_author_notice:
+    class: Drupal\localnodes_platform\Render\DepartedAuthorNotice
+    arguments: ['@localnodes_platform.departed_author_access', '@localnodes_platform.group_notice_cleanup', '@date.formatter', '@current_user', '@string_translation']
   localnodes_platform.house_enrollment_routes:
     class: Drupal\localnodes_platform\Routing\HouseEnrollmentRouteSubscriber
     tags:
@@ -126,3 +148,7 @@ services:
   localnodes_platform.event_date_tile:
     class: Drupal\localnodes_platform\EventDateTile
     arguments: ['@date.formatter']
+
+  localnodes_platform.event_participation_form_guard:
+    class: Drupal\localnodes_platform\Access\EventParticipationFormGuard
+    arguments: ['@localnodes_platform.departed_author_access', '@entity_type.manager', '@current_user', '@current_route_match']

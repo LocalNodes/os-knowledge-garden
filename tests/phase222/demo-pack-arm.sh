@@ -19,7 +19,7 @@
 #   5. good         the smoke fixture's directory: returns 0.
 #   6. command      the pack command loads pack_file first and ends with the
 #                   extras and --profile=packs/smoke/.
-#   7. other arms   localnodes_demo, boulder_demo and portland_demo load
+#   7. other arms   localnodes_demo, boulder_demo, neighbors_demo and portland_demo load
 #                   exactly their own plugins, with no --profile.
 #   8. uninstall    the fresh install uninstalls the loader and social_demo
 #                   for packs only (a live statement, not a comment), and a
@@ -124,7 +124,7 @@ expect() {  # expect PREFIX [EXTRA...]
   echo "$out"
 }
 bad=""
-for spec in "localnodes_demo localnodes quick_poll" "boulder_demo boulder quick_poll" "portland_demo portland"; do
+for spec in "localnodes_demo localnodes quick_poll" "boulder_demo boulder quick_poll" "neighbors_demo neighbors quick_poll" "portland_demo portland"; do
   read -r m p extras <<< "$spec"
   # shellcheck disable=SC2086
   want="$(expect "$p" $extras)"

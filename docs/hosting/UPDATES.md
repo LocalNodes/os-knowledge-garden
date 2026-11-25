@@ -46,7 +46,7 @@ The first line prints the image name and the image id. The name alone does not i
   ```
 
   The site is closed (members see a maintenance page) while the database and files are copied. The copy is encrypted and a separate record holds the site's secrets. Require a successful exit and an `ok` status line for the right site and capture time. The `ok` line says the copy was stored and read back; it does not show that a restore works. Try a restore on a separate test site before you depend on it, and keep the private decryption key off the site's server.
-- On a plain Compose installation from `docs/SELF-HOST.md`, the `localnodes-backup` command does not exist. Take the same kind of copy by hand, with the site closed while it is taken. Do not use `drush localnodes:export` for this copy: it does not close the site, so members and the background worker can change records between its database copy and its file copy. From the site's Compose directory:
+- On a plain Compose installation from `docs/SELF-HOST.md`, the `localnodes-backup` command does not exist. Take the same kind of copy by hand, with the site closed while it is taken. Do not use `drush localnodes:export` for this copy: it leaves out direct messages and pending work, so it is not a full copy. From the site's Compose directory:
 
   ```sh
   uuid="$(docker compose exec -T opensocial /var/www/html/vendor/bin/drush -r /var/www/html/html config:get system.site uuid --format=string)"

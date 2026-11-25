@@ -29,8 +29,8 @@ final class PackCommunityGroupTest extends UnitTestCase {
    */
   private const TEMPLATE = [
     'id' => 'housing_coop',
-    'version' => 1,
-    'groups' => [['name' => '{site}', 'visibility' => 'community', 'everyone' => TRUE]],
+    'version' => 2,
+    'groups' => [['name' => '{commons}', 'visibility' => 'community', 'everyone' => TRUE]],
     'repeatable' => [['kind' => 'house', 'label' => 'Add a house', 'group_template' => 'house_v1']],
   ];
 
@@ -47,7 +47,7 @@ final class PackCommunityGroupTest extends UnitTestCase {
     $this->assertSame([
       FirstLanding::TEMPLATE_STATE => [
         'id' => 'housing_coop',
-        'version' => 1,
+        'version' => 2,
         'groups' => [['group' => 7, 'everyone' => TRUE, 'group_template' => NULL]],
         'repeatable' => self::TEMPLATE['repeatable'],
       ],

@@ -63,4 +63,4 @@ Install and redeploy flow:
 - `localnodes_platform/modules/localnodes_web3` — the optional Web3 stack, opt-in through `WEB3_ENABLED`: wallet and email sign-in (`siwe_login`), Safe smart accounts, group treasuries, group governance (`safe_governance`) and gas sponsoring (`gas_sponsor`)
 - `social_ai_indexing` — search indexing, RAG, the chatbot, the AI overview
 - `localnodes_import` — the document importer
-- `localnodes_demo` / `boulder_demo` / `portland_demo` — instance-specific demo content
+- `localnodes_demo` / `boulder_demo` / `neighbors_demo` / `portland_demo` — instance-specific demo content (`boulder_demo` is the Ethereum localism example; `neighbors_demo` is a plain neighbourhood site)

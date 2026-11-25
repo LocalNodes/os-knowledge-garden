@@ -163,7 +163,7 @@ export async function setUpGroupFund(
   // The page title is "Set Up Group Fund": Title Case (Tom, 2026-11-07), and the T4/U36 h1
   // conflict went to Tom's later list (21-29). The button below stays "Set up group fund".
   await expect(page.getByRole('heading', { name: 'Set Up Group Fund', exact: true, level: 1 })).toBeVisible();
-  await expect(page.getByText('A group fund is held in a shared account that needs several organizers to approve payments. Choose who approves, then confirm it in your wallet.')).toBeVisible();
+  await expect(page.getByText('A group fund is held in a shared account. The people your group chose approve each payment. Choose who approves.')).toBeVisible();
   const networkRadio = page.getByRole('radio', { name: opts.network.label, exact: true });
   if (await networkRadio.count()) await networkRadio.check();
   if (opts.onForm) await opts.onForm(page);

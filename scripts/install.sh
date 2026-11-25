@@ -6,6 +6,7 @@
 #   ./scripts/install.sh                        # Install without demo content
 #   ./scripts/install.sh --demo=cascadia        # Install with Cascadia demo
 #   ./scripts/install.sh --demo=boulder         # Install with Boulder demo
+#   ./scripts/install.sh --demo=neighbors       # Install with the neighbors demo
 #   ./scripts/install.sh --demo=all             # Install with all demo content
 #   ./scripts/install.sh --demo=<pack>          # Install with a demo pack from
 #                                               # localnodes_demo_packs/packs/
@@ -30,7 +31,7 @@ done
 # any DDEV call: a bad name stops the script with nothing started.
 PACKS_DIR="$(dirname "$0")/../html/modules/custom/localnodes_demo_packs/packs"
 case "$DEMO" in
-  cascadia|boulder|all|"") ;;
+  cascadia|boulder|neighbors|all|"") ;;
   *)
     if ! [[ "$DEMO" =~ ^[a-z0-9_]+$ ]] || [ ! -d "$PACKS_DIR/$DEMO" ]; then
       echo "install.sh: unknown demo pack '$DEMO'" >&2
@@ -38,7 +39,7 @@ case "$DEMO" in
       for d in "$PACKS_DIR"/*/; do
         [ -d "$d" ] && echo "  $(basename "$d")" >&2
       done
-      echo "Older demos: cascadia, boulder, all" >&2
+      echo "Older demos: cascadia, boulder, neighbors, all" >&2
       exit 1
     fi
     ;;
@@ -120,8 +121,16 @@ case "$DEMO" in
     ;;
   boulder)
     echo ">>> Installing Boulder demo content..."
-    ddev drush en boulder_demo -y
+    # DEMO_MODULE tells the module this is a fresh demo, as the entrypoint
+    # does, so it names the site and sets its clock.
+    ddev exec env DEMO_MODULE=boulder_demo drush en boulder_demo -y
     ddev drush localnodes-demo:install boulder_demo || echo "    (demo content created; post-request indexing deferred to Step 5)"
+    ;;
+  neighbors)
+    # Its own site, not part of "all": it shares Boulder's content ids.
+    echo ">>> Installing the neighbors demo content..."
+    ddev exec env DEMO_MODULE=neighbors_demo drush en neighbors_demo -y
+    ddev drush localnodes-demo:install neighbors_demo || echo "    (demo content created; post-request indexing deferred to Step 5)"
     ;;
   all)
     echo ">>> Installing all demo content..."
@@ -130,7 +139,7 @@ case "$DEMO" in
     ddev drush localnodes-demo:install boulder_demo || echo "    (demo content created; post-request indexing deferred to Step 5)"
     ;;
   "")
-    echo ">>> Skipping demo content (use --demo=<pack>, or cascadia|boulder|all)"
+    echo ">>> Skipping demo content (use --demo=<pack>, or cascadia|boulder|neighbors|all)"
     ;;
   *)
     # A pack that passed the check above. Load it as the entrypoint does, then

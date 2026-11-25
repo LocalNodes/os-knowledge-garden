@@ -6,16 +6,18 @@ namespace Drupal\localnodes_platform\QueryAccess;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\localnodes_platform\Access\DepartedAuthorAccess;
 use Drupal\social_node\Event\NodeQueryAccessEvent;
 use Drupal\social_node\Event\SocialNodeEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-/** Keeps private house nodes out of listings after their author leaves. */
+/** Keeps private house listings aligned with membership and author reading. */
 final class PrivateHouseQuerySubscriber implements EventSubscriberInterface {
 
   public function __construct(
     private readonly Connection $database,
     private readonly EntityTypeManagerInterface $entities,
+    private readonly DepartedAuthorAccess $departedAuthors,
   ) {}
 
   public static function getSubscribedEvents(): array {
@@ -96,10 +98,43 @@ final class PrivateHouseQuerySubscriber implements EventSubscriberInterface {
       $member->condition('member_house_membership.entity_id', (int) $account->id());
       $access->exists($member);
     }
-    // This is an AND on the query, not another branch of the author's OR.
+    if ($account->isAuthenticated() && $account->hasPermission('access content')) {
+      $departedGroups = array_values(array_filter(array_map('intval', $this->departedAuthors->departedGroupIds($account)), static fn(int $gid): bool => $gid > 0));
+      if ($departedGroups !== []) {
+        $former = $this->database->select($relationshipTable, 'retained_house_node');
+        $former->addExpression('1');
+        $former->condition('retained_house_node.plugin_id', $nodePlugins, 'IN');
+        $beforeDeparture = $former->orConditionGroup();
+        foreach ($departedGroups as $gid) {
+          $timestamp = $this->departedAuthors->departureTime((int) $account->id(), $gid);
+          $authored = $this->departedAuthors->authoredAtDeparture((int) $account->id(), $gid, 'node');
+          if ($timestamp !== NULL && $authored !== []) {
+            $beforeDeparture->condition($former->andConditionGroup()
+              ->condition('retained_house_node.gid', $gid)
+              ->condition('retained_house_node.entity_id', $authored, 'IN')
+              ->condition("$node.created", $timestamp, '<='));
+          }
+        }
+      }
+      // A departure cleared since the list was read leaves nothing to add;
+      // an empty group would also be invalid SQL.
+      if ($departedGroups !== [] && $beforeDeparture->count() > 0) {
+        $former->condition($beforeDeparture);
+        $former->where("retained_house_node.entity_id = $node.nid");
+        $former->innerJoin($groupTable, 'retained_house', 'retained_house.id = retained_house_node.gid');
+        $retained = $query->andConditionGroup()
+          ->condition("$node.uid", (int) $account->id())
+          ->exists($former);
+        // Both gates need the same exception. The upstream grant otherwise
+        // depends on an edit-own permission, which reading does not require.
+        $event->getConditions()->condition($retained);
+        $access->condition($retained);
+      }
+    }
+    // Keep the privacy guard independent of upstream ownership grants.
     $query->condition($access);
     $cache = $event->cacheableMetadata();
-    $cache->addCacheContexts(['user']);
+    $cache->addCacheContexts(['user', 'user.permissions']);
     foreach (['group_content', 'group', 'group_content_type'] as $entityType) {
       $cache->addCacheTags($this->entities->getDefinition($entityType)->getListCacheTags());
     }

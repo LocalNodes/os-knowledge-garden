@@ -336,8 +336,8 @@ final class LibraryWriterTest extends ImportKernelTestBase {
     $command->setInput(new ArrayInput([]));
     $command->setOutput($output = new BufferedOutput());
     try {
-      $this->assertSame(0, $command->export(['destination' => "$base/with", 'no-library' => FALSE]));
-      $this->assertSame(0, $command->export(['destination' => "$base/without", 'no-library' => TRUE]));
+      $this->assertSame(0, $command->export(['destination' => "$base/with", 'no-library' => FALSE, 'drain-seconds' => 0]));
+      $this->assertSame(0, $command->export(['destination' => "$base/without", 'no-library' => TRUE, 'drain-seconds' => 0]));
       $printed = $output->fetch();
       $this->assertStringContainsString('library of 1 pages and 0 files.', $printed);
       $this->assertStringContainsString('no library.', $printed);

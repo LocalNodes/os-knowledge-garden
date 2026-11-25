@@ -37,6 +37,7 @@ final class DemoPlugins {
   public const PREFIXES = [
     'localnodes_demo' => 'localnodes',
     'boulder_demo' => 'boulder',
+    'neighbors_demo' => 'neighbors',
     'portland_demo' => 'portland',
     'localnodes_demo_packs' => 'pack',
   ];
@@ -56,6 +57,7 @@ final class DemoPlugins {
   public const EXTRAS = [
     'localnodes_demo' => ['quick_poll'],
     'boulder_demo' => ['quick_poll'],
+    'neighbors_demo' => ['quick_poll'],
     'localnodes_demo_packs' => ['quick_poll'],
   ];
 

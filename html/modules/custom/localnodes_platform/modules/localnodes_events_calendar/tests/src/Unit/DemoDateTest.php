@@ -159,7 +159,7 @@ final class DemoDateTest extends UnitTestCase {
    */
   public function testDemoEventsFillTwoMonths(string $now, string $this_month, string $next_month): void {
     $custom = dirname(__DIR__, 6);
-    foreach (['localnodes_demo', 'boulder_demo'] as $module) {
+    foreach (['localnodes_demo', 'boulder_demo', 'neighbors_demo'] as $module) {
       $events = Yaml::decode(file_get_contents("$custom/$module/content/entity/event.yml"));
       $months = [];
       foreach ($events as $event) {

@@ -33,6 +33,7 @@ final class DemoPluginsTest extends UnitTestCase {
   public function testTheList(): void {
     $order = ['file', 'user_terms', 'event_type', 'user', 'group', 'topic', 'event', 'event_enrollment', 'post', 'comment', 'like'];
     $this->assertSame(array_merge(array_map(fn ($name) => "boulder_$name", $order), ['boulder_quick_poll']), DemoPlugins::ids('boulder_demo'));
+    $this->assertSame(array_merge(array_map(fn ($name) => "neighbors_$name", $order), ['neighbors_quick_poll']), DemoPlugins::ids('neighbors_demo'));
     $this->assertSame(array_merge(array_map(fn ($name) => "localnodes_$name", $order), ['localnodes_quick_poll']), DemoPlugins::ids('localnodes_demo'));
     $this->assertSame(array_map(fn ($name) => "portland_$name", $order), DemoPlugins::ids('portland_demo'));
     $this->assertSame(array_merge(array_map(fn ($name) => "pack_$name", $order), ['pack_quick_poll']), DemoPlugins::ids('localnodes_demo_packs'));
@@ -49,7 +50,7 @@ final class DemoPluginsTest extends UnitTestCase {
    */
   public function testPluginsCommandPrintsTheList(): void {
     $commands = new LocalNodesDemoCommands();
-    foreach (['localnodes_demo', 'boulder_demo', 'portland_demo', 'localnodes_demo_packs', 'social_demo'] as $module) {
+    foreach (['localnodes_demo', 'boulder_demo', 'neighbors_demo', 'portland_demo', 'localnodes_demo_packs', 'social_demo'] as $module) {
       $this->assertSame(DemoPlugins::ids($module), explode(' ', $commands->demoPlugins($module)));
     }
   }

@@ -29,7 +29,7 @@ final class HousePrivateNoticeAccessTest extends GroupAccessKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('activity');
-    foreach (['field_activity_entity', 'field_activity_recipient_user', 'field_activity_recipient_group'] as $field) {
+    foreach (['field_activity_entity', 'field_activity_recipient_user', 'field_activity_recipient_group', 'field_activity_destinations'] as $field) {
       $this->installShippedConfig('activity_creator', [
         "field.storage.activity.$field", "field.field.activity.activity.$field",
       ]);

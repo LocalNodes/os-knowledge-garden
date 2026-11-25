@@ -14,9 +14,14 @@ use Drupal\Core\Database\Connection;
  * the sender, the recipient and a link to the conversation), the activity's
  * read status and digest entries, queued jobs that carry the same ids, and
  * a per-person "last read" entry for the conversation in users_data, and
- * the usage record of any file put into a message. The export leaves the
- * message tables out; this class says which of these other rows, and which
- * files, go with them.
+ * the usage record of any file put into a message, the text the assistant
+ * extracted from such a file, and the download counter's rows about it. The
+ * export leaves the message tables out; this class says which of these other
+ * rows, and which files, go with them.
+ *
+ * Temporary files (uploads never saved to anything, such as an attachment
+ * of a message that was never sent) are left out with them: their records,
+ * their bytes and their extracted text.
  *
  * Rows are matched by id, never by text: most of them hold only numbers.
  */
@@ -26,6 +31,12 @@ final class ConversationRows {
    * Entity types that are a conversation or a message in one.
    */
   public const PRIVATE_TYPES = ['private_message', 'private_message_thread'];
+
+  /**
+   * The key_value collection holding the text extracted from a file, keyed
+   * by file id (social_ai_indexing's FileTextStore::COLLECTION).
+   */
+  public const FILE_TEXT_COLLECTION = 'social_ai_indexing.file_text';
 
   /**
    * Message ids that refer to a conversation, or NULL until computed.
@@ -48,6 +59,13 @@ final class ConversationRows {
    */
   private ?array $files = NULL;
 
+  /**
+   * Temporary files, by id, or NULL until computed.
+   *
+   * @var array<int, string>|null
+   */
+  private ?array $temporary = NULL;
+
   public function __construct(private readonly Connection $database) {}
 
   /**
@@ -65,7 +83,7 @@ final class ConversationRows {
   public function tables(): array {
     $schema = $this->database->schema();
     $tables = [];
-    foreach (['message' => 'mid', 'message_field_data' => 'mid', 'activity' => 'id', 'activity_field_data' => 'id', 'activity_notification_status' => 'aid', 'user_activity_digest' => 'activity', 'users_data' => 'module', 'file_usage' => 'id', 'file_managed' => 'fid', 'queue' => '', 'advancedqueue' => ''] as $table => $column) {
+    foreach (['message' => 'mid', 'message_field_data' => 'mid', 'activity' => 'id', 'activity_field_data' => 'id', 'activity_notification_status' => 'aid', 'user_activity_digest' => 'activity', 'users_data' => 'module', 'file_usage' => 'id', 'file_managed' => 'fid', 'key_value' => 'collection', 'download_count' => 'type', 'queue' => '', 'advancedqueue' => ''] as $table => $column) {
       if ($schema->tableExists($table)) {
         $tables[$table] = $column;
       }
@@ -84,7 +102,7 @@ final class ConversationRows {
         throw new \RuntimeException("Export refused: table $table has no $column column, so its rows about private messages cannot be found.");
       }
     }
-    foreach (['queue' => ['name', 'data'], 'advancedqueue' => ['type', 'payload'], 'file_usage' => ['fid', 'type'], 'file_managed' => ['uri']] as $table => $columns) {
+    foreach (['queue' => ['name', 'data'], 'advancedqueue' => ['type', 'payload'], 'file_usage' => ['fid', 'type'], 'file_managed' => ['uri', 'status'], 'key_value' => ['name'], 'download_count' => ['fid']] as $table => $columns) {
       foreach (isset($tables[$table]) ? $columns : [] as $column) {
         if (!$schema->fieldExists($table, $column)) {
           throw new \RuntimeException("Export refused: table $table has no $column column, so its rows about private messages cannot be found.");
@@ -197,6 +215,40 @@ final class ConversationRows {
   }
 
   /**
+   * Temporary files: uploads never saved to anything.
+   *
+   * @return array<int, string>
+   *   File id => its URI.
+   */
+  public function temporaryFiles(): array {
+    if ($this->temporary !== NULL) {
+      return $this->temporary;
+    }
+    $files = [];
+    if ($this->database->schema()->tableExists('file_managed')) {
+      $query = $this->database->select('file_managed', 'f')->fields('f', ['fid', 'uri'])->condition('f.status', 1, '<>');
+      foreach ($query->execute()->fetchAllKeyed() as $fid => $uri) {
+        $files[(int) $fid] = (string) $uri;
+      }
+    }
+    ksort($files);
+    return $this->temporary = $files;
+  }
+
+  /**
+   * The files a site copy leaves out: those used only in conversations, and
+   * temporary files.
+   *
+   * @return array<int, string>
+   *   File id => its URI.
+   */
+  public function leftOutFiles(): array {
+    $files = $this->files() + $this->temporaryFiles();
+    ksort($files);
+    return $files;
+  }
+
+  /**
    * One row as it goes into the export: unchanged, changed, or NULL to leave
    * it out.
    *
@@ -214,7 +266,16 @@ final class ConversationRows {
       return in_array($row['type'] ?? NULL, self::PRIVATE_TYPES, TRUE) ? NULL : $row;
     }
     if ($table === 'file_managed') {
-      return isset($this->files()[(int) ($row['fid'] ?? 0)]) ? NULL : $row;
+      return isset($this->leftOutFiles()[(int) ($row['fid'] ?? 0)]) ? NULL : $row;
+    }
+    if ($table === 'key_value') {
+      // The extracted text of a file the copy leaves out.
+      return ($row['collection'] ?? NULL) === self::FILE_TEXT_COLLECTION && isset($this->leftOutFiles()[(int) ($row['name'] ?? 0)]) ? NULL : $row;
+    }
+    if ($table === 'download_count') {
+      // Downloads of a file in a conversation, or of a file the copy leaves
+      // out.
+      return in_array($row['type'] ?? NULL, self::PRIVATE_TYPES, TRUE) || isset($this->leftOutFiles()[(int) ($row['fid'] ?? 0)]) ? NULL : $row;
     }
     if ($table === 'queue') {
       return $this->keepQueueItem($row);
@@ -237,7 +298,26 @@ final class ConversationRows {
       return (bool) $this->database->select('file_usage', 'u')->condition('u.type', self::PRIVATE_TYPES, 'IN')->countQuery()->execute()->fetchField();
     }
     if ($table === 'file_managed') {
-      return $this->files() !== [];
+      return $this->leftOutFiles() !== [];
+    }
+    if ($table === 'download_count') {
+      if ($this->database->select('download_count', 'd')->condition('d.type', self::PRIVATE_TYPES, 'IN')->countQuery()->execute()->fetchField()) {
+        return TRUE;
+      }
+      foreach (array_chunk(array_keys($this->leftOutFiles()), 1000) as $chunk) {
+        if ($this->database->select('download_count', 'd')->condition('d.fid', $chunk, 'IN')->countQuery()->execute()->fetchField()) {
+          return TRUE;
+        }
+      }
+      return FALSE;
+    }
+    if ($table === 'key_value') {
+      foreach (array_chunk(array_map('strval', array_keys($this->leftOutFiles())), 1000) as $chunk) {
+        if ($this->database->select('key_value', 'k')->condition('k.collection', self::FILE_TEXT_COLLECTION)->condition('k.name', $chunk, 'IN')->countQuery()->execute()->fetchField()) {
+          return TRUE;
+        }
+      }
+      return FALSE;
     }
     if ($table === 'queue' || $table === 'advancedqueue') {
       foreach ($this->rows($table) as $row) {

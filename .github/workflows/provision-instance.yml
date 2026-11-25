@@ -36,6 +36,7 @@ on:
         options:
           - localnodes_demo
           - boulder_demo
+          - neighbors_demo
           - portland_demo
           - pack:lanternrow
           - pack:maplestreet

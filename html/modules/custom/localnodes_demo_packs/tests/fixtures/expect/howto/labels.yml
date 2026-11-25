@@ -327,7 +327,7 @@
   in_copy: true
 - id: P08-leave
   page: P08
-  label: Leave
+  label: Leave this house
   check: screen
   as: member
   where: leave form

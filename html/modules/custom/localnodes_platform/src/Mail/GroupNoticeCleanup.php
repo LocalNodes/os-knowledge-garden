@@ -3,6 +3,7 @@
 namespace Drupal\localnodes_platform\Mail;
 
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -17,6 +18,9 @@ use Drupal\user\UserInterface;
  */
 final class GroupNoticeCleanup {
 
+  /** @var array<int, array<int, int>> Current request departure snapshots. */
+  private array $departedGroupCache = [];
+
   public const DROP = 0;
   public const FULL = 1;
   public const GENERIC_REPORT = 2;
@@ -26,6 +30,7 @@ final class GroupNoticeCleanup {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly KeyValueStoreInterface $departures,
     private readonly TimeInterface $time,
+    private readonly ?CacheTagsInvalidatorInterface $cacheTags = NULL,
   ) {}
 
   /**
@@ -36,7 +41,13 @@ final class GroupNoticeCleanup {
       return;
     }
     // Producers may not have created their activity when membership is removed.
-    $this->departures->set($uid . ':' . $gid, $this->time->getCurrentTime());
+    if (!$this->hasDeparture($uid, $gid)) {
+      $this->departures->set($uid . ':' . $gid, $this->time->getCurrentTime());
+      // What they owned in this house as they left. A page handed to them
+      // afterwards never joins this list.
+      $this->departures->set('authored:' . $uid . ':' . $gid, $this->ownedInHouse($uid, $gid));
+    }
+    $this->invalidateDeparture($uid, $gid);
     if (!$this->entityTypeManager->hasDefinition('activity')) {
       return;
     }
@@ -48,6 +59,13 @@ final class GroupNoticeCleanup {
         $this->database->delete('user_activity_digest')->condition('uid', $uid)->condition('activity', $remove, 'IN')->execute();
       }
     }
+    if ($schema->tableExists('activity_notification_status')) {
+      $ids = $this->database->select('activity_notification_status', 'n')->fields('n', ['aid'])->condition('uid', $uid)->execute()->fetchCol();
+      $remove = array_filter($ids, fn($id) => $this->belongsToGroup((int) $id, $gid, $uid));
+      if ($remove) {
+        $this->database->delete('activity_notification_status')->condition('uid', $uid)->condition('aid', $remove, 'IN')->execute();
+      }
+    }
   }
 
   /**
@@ -55,6 +73,103 @@ final class GroupNoticeCleanup {
    */
   public function clearDeparture(int $uid, int $gid): void {
     $this->departures->delete($uid . ':' . $gid);
+    $this->departures->delete('read_closed:' . $uid . ':' . $gid);
+    $this->departures->delete('removed:' . $uid . ':' . $gid);
+    $this->departures->delete('authored:' . $uid . ':' . $gid);
+    $this->invalidateDeparture($uid, $gid);
+  }
+
+  /**
+   * IDs of the pages ('node') or posts ('post') a person owned in a house when
+   * they left it. Empty when nothing was recorded.
+   *
+   * @return int[]
+   */
+  public function authoredAtDeparture(int $uid, int $gid, string $type): array {
+    $value = $this->departures->get('authored:' . $uid . ':' . $gid, []);
+    return is_array($value) && isset($value[$type]) && is_array($value[$type]) ? array_map('intval', $value[$type]) : [];
+  }
+
+  /** @return array{node: int[], post: int[]} */
+  private function ownedInHouse(int $uid, int $gid): array {
+    $owned = ['node' => [], 'post' => []];
+    if ($this->entityTypeManager->hasDefinition('group_content') && $this->entityTypeManager->hasDefinition('node')) {
+      $schema = $this->database->schema();
+      $relationships = $this->entityTypeManager->getDefinition('group_content')->getDataTable();
+      $nodes = $this->entityTypeManager->getDefinition('node')->getDataTable();
+      if ($relationships && $nodes && $schema->tableExists($relationships) && $schema->tableExists($nodes)) {
+        $query = $this->database->select($relationships, 'r');
+        $query->innerJoin($nodes, 'n', 'n.nid = r.entity_id');
+        $query->addField('r', 'entity_id');
+        $query->condition('r.gid', $gid)
+          ->condition('r.plugin_id', $this->database->escapeLike('group_node:') . '%', 'LIKE')
+          ->condition('n.uid', $uid);
+        $owned['node'] = array_values(array_unique(array_map('intval', $query->execute()->fetchCol())));
+      }
+    }
+    if ($this->entityTypeManager->hasDefinition('post')) {
+      $schema = $this->database->schema();
+      $posts = $this->entityTypeManager->getDefinition('post')->getDataTable();
+      if ($posts && $schema->tableExists($posts) && $schema->tableExists('post__field_recipient_group')) {
+        $query = $this->database->select('post__field_recipient_group', 'g');
+        $query->innerJoin($posts, 'p', 'p.id = g.entity_id');
+        $query->addField('g', 'entity_id');
+        $query->condition('g.field_recipient_group_target_id', $gid)
+          ->condition('g.deleted', 0)
+          ->condition('p.user_id', $uid);
+        $owned['post'] = array_values(array_unique(array_map('intval', $query->execute()->fetchCol())));
+      }
+    }
+    return $owned;
+  }
+
+  /** The current absence's recorded time, never an inferred author date. */
+  public function departureTime(int $uid, int $gid): ?int {
+    $value = $this->departures->get($uid . ':' . $gid);
+    return is_numeric($value) && (int) $value > 0 ? (int) $value : NULL;
+  }
+
+  /** @return array<int, int> House IDs and their current departure times. */
+  public function departedGroups(int $uid): array {
+    if (array_key_exists($uid, $this->departedGroupCache)) return $this->departedGroupCache[$uid];
+    $groups = [];
+    foreach ($this->departures->getAll() as $key => $value) {
+      if (preg_match('/^' . $uid . ':([1-9][0-9]*)$/', (string) $key, $match) && is_numeric($value) && (int) $value > 0) {
+        $groups[(int) $match[1]] = (int) $value;
+      }
+    }
+    return $this->departedGroupCache[$uid] = $groups;
+  }
+
+  public function retainedReadingClosed(int $uid, int $gid): bool {
+    return (bool) $this->departures->get('read_closed:' . $uid . ':' . $gid, FALSE);
+  }
+
+  /** A manager's explicit safety choice; ordinary departure never calls this. */
+  public function closeRetainedReading(int $uid, int $gid): void {
+    if ($uid <= 0 || $gid <= 0) return;
+    $this->departures->set('read_closed:' . $uid . ':' . $gid, TRUE);
+    $this->invalidateDeparture($uid, $gid);
+  }
+
+  public function recordRemoval(int $uid, int $gid, bool $closeReading = FALSE): void {
+    if ($uid <= 0 || $gid <= 0) return;
+    $this->departures->set('removed:' . $uid . ':' . $gid, TRUE);
+    if ($closeReading) $this->closeRetainedReading($uid, $gid);
+    $this->invalidateDeparture($uid, $gid);
+  }
+
+  public function wasRemoved(int $uid, int $gid): bool {
+    return (bool) $this->departures->get('removed:' . $uid . ':' . $gid, FALSE);
+  }
+
+  public function groupIdsForEntity(?EntityInterface $entity): array {
+    return $this->entityGroups($entity);
+  }
+
+  private function invalidateDeparture(int $uid, int $gid): void {
+    unset($this->departedGroupCache[$uid]);
+    $this->cacheTags?->invalidateTags(['localnodes_departure:' . $uid . ':' . $gid, 'group_content_list']);
   }
 
   private function hasDeparture(int $uid, int $gid): bool {
@@ -64,6 +179,51 @@ final class GroupNoticeCleanup {
   /** Whether the recipient may receive the complete notice. */
   public function allows(FieldableEntityInterface $activity, int $uid): bool {
     return $this->delivery($activity, $uid) === self::FULL;
+  }
+
+  /**
+   * Whether a recipient may open a notice's own page under the house rule.
+   *
+   * As for delivery, an inactive account and a member who has left the house
+   * are refused, and so is someone who may not view the item. A notice about
+   * no item or about an item that is gone is not refused for that, and an
+   * event invitation asks the event, not the enrollment record.
+   */
+  public function opens(FieldableEntityInterface $activity, int $uid): bool {
+    try {
+      if ($uid <= 0) {
+        return FALSE;
+      }
+      $users = $this->entityTypeManager->getStorage('user');
+      $users->resetCache([$uid]);
+      $account = $users->load($uid);
+      if (!$account instanceof UserInterface || (int) $account->id() !== $uid
+        || !$account->isActive() || !$account->isAuthenticated()) {
+        return FALSE;
+      }
+      $groups = $this->activityGroups($activity);
+      if ($groups) {
+        $this->entityTypeManager->getStorage('group')->resetCache($groups);
+        if ($this->entityTypeManager->hasDefinition('group_content')) {
+          $this->entityTypeManager->getStorage('group_content')->resetCache();
+        }
+        $this->resetAccess('group');
+      }
+      $targets = $this->viewTargets($activity->getRelatedEntity(), TRUE);
+      if ($targets === NULL) {
+        return FALSE;
+      }
+      foreach ($targets as $target) {
+        $this->resetAccess($target->getEntityTypeId());
+        if (!$target->access('view', $account)) {
+          return FALSE;
+        }
+      }
+      return !$this->departedWithoutMembership($uid, $groups);
+    }
+    catch (\Throwable) {
+      return FALSE;
+    }
   }
 
   /** Rechecks the actual content and recipient immediately before delivery. */
@@ -116,18 +276,24 @@ final class GroupNoticeCleanup {
     }
   }
 
-  /** Keep every view restriction, including a reply hidden on a readable page. */
-  private function viewTargets(?EntityInterface $entity): array {
+  /**
+   * Keep every view restriction, including a reply hidden on a readable page.
+   *
+   * When a notice is opened ($opening): an event invitation asks the event,
+   * not the enrollment record, and a notice whose item is gone is not
+   * refused for that. NULL means refused.
+   */
+  private function viewTargets(?EntityInterface $entity, bool $opening = FALSE): ?array {
     $targets = $seen = [];
     while ($entity instanceof EntityInterface && count($seen) < 16) {
       $type = $entity->getEntityTypeId();
       if ($type === 'activity') {
-        return [];
+        return $opening ? NULL : [];
       }
       $id = $entity->id();
       $key = $type . ':' . ($id ?? ('object-' . spl_object_id($entity)));
       if (isset($seen[$key])) {
-        return [];
+        return $opening ? NULL : [];
       }
       $seen[$key] = TRUE;
       if ($id !== NULL && $id !== '') {
@@ -135,10 +301,12 @@ final class GroupNoticeCleanup {
         $storage->resetCache([$id]);
         $entity = $storage->load($id);
         if (!$entity instanceof EntityInterface) {
-          return [];
+          return $opening ? $targets : [];
         }
       }
-      $targets[] = $entity;
+      if (!$opening || $type !== 'event_enrollment') {
+        $targets[] = $entity;
+      }
       if ($type === 'mentions') {
         $entity = $entity->getMentionedEntity();
       }
@@ -160,6 +328,9 @@ final class GroupNoticeCleanup {
       else {
         return $targets;
       }
+    }
+    if ($opening) {
+      return $entity instanceof EntityInterface ? NULL : $targets;
     }
     return [];
   }

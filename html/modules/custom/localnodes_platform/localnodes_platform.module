@@ -9,11 +9,13 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\File\Exception\FileException;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_platform\Export\ConversationRows;
 use Drupal\localnodes_platform\GroupTour;
 use Drupal\localnodes_platform\Form\TermsConsent;
 use Drupal\localnodes_platform\InviteLanding;
@@ -198,6 +200,11 @@ function _localnodes_platform_private_house_access(EntityInterface $entity, stri
     // A page explicitly shared with several houses follows their ordinary
     // grants: current membership in any related house can qualify.
     if ($group->getMember($account)) return $result;
+  }
+  if ($operation === 'view' && \Drupal::hasService('localnodes_platform.departed_author_access')) {
+    $policy = \Drupal::service('localnodes_platform.departed_author_access');
+    $result->addCacheableDependency($policy->accessMetadata($entity, $account));
+    if ($policy->canRetainView($entity, $account)) return $result;
   }
   return \Drupal\Core\Access\AccessResult::forbidden('Private house content requires current house access.')
     ->addCacheableDependency($result);
@@ -713,7 +720,8 @@ function localnodes_platform_form_user_register_form_alter(array &$form, FormSta
  */
 function localnodes_platform_modules_installed(array $modules, $is_syncing): void {
   \Drupal\localnodes_platform\Mail\NoticeMailTemplates::configure();
-  // Feature installers can add site-role grants after the platform installs.
+  // Optional feature installers can add fresh site-role grants. Reapply after
+  // all of their install hooks, without blocking a recovered host account.
   \Drupal::moduleHandler()->loadInclude('localnodes_platform', 'install');
   _localnodes_platform_protect_private_groups();
 }
@@ -728,6 +736,13 @@ function localnodes_platform_group_content_predelete(\Drupal\group\Entity\GroupR
   if ($relationship->getPluginId() === 'group_membership') {
     try {
       \Drupal::service('localnodes_platform.group_notice_cleanup')->remove((int) $relationship->getEntityId(), (int) $relationship->getGroupId());
+      // Someone else ending this membership is a removal, whichever screen
+      // or bulk action did it. Leaving on one's own is not. A removal alone
+      // never closes reading; only the organizer's explicit safety choice does.
+      $actor = (int) \Drupal::currentUser()->id();
+      if ($actor > 0 && $actor !== (int) $relationship->getEntityId()) {
+        \Drupal::service('localnodes_platform.group_notice_cleanup')->recordRemoval((int) $relationship->getEntityId(), (int) $relationship->getGroupId());
+      }
     }
     catch (\Throwable $exception) {
       // Cleanup must never prevent a member from leaving. Log no member text.
@@ -846,9 +861,91 @@ function localnodes_platform_file_download($uri) {
 }
 
 
+/** Implements hook_entity_type_alter(). */
+function localnodes_platform_entity_type_alter(array &$entity_types): void {
+  if (isset($entity_types['post'])) {
+    $entity_types['post']->setAccessClass(\Drupal\localnodes_platform\Access\DepartedAuthorPostAccessControlHandler::class);
+    foreach (['default', 'add', 'edit'] as $operation) {
+      if ($entity_types['post']->getFormClass($operation) === \Drupal\social_post\Form\PostForm::class) {
+        $entity_types['post']->setFormClass($operation, \Drupal\localnodes_platform\Form\DepartedPostForm::class);
+      }
+    }
+  }
+  if (isset($entity_types['comment']) && \Drupal::moduleHandler()->moduleExists('group_core_comments')) {
+    $entity_types['comment']->setAccessClass(\Drupal\localnodes_platform\Comment\DepartedCommentAccessControlHandler::class);
+    $form_class = $entity_types['comment']->getFormClass('default');
+    $ajax = $form_class && is_a($form_class, \Drupal\ajax_comments\Form\AjaxCommentsForm::class, TRUE);
+    $entity_types['comment']->setFormClass('default', $ajax
+      ? \Drupal\localnodes_platform\Form\DepartedAjaxCommentForm::class
+      : \Drupal\localnodes_platform\Form\DepartedCommentForm::class);
+  }
+  foreach (['node', 'post', 'comment'] as $type) {
+    if (isset($entity_types[$type])) $entity_types[$type]->addConstraint('HouseMentionEligibility');
+  }
+}
+
+/** Implements hook_field_formatter_info_alter(). */
+function localnodes_platform_field_formatter_info_alter(array &$definitions): void {
+  foreach ([
+    'comment_group_content' => \Drupal\localnodes_platform\Plugin\Field\FieldFormatter\RetainedGroupCommentFormatter::class,
+    'comment_post' => \Drupal\localnodes_platform\Plugin\Field\FieldFormatter\RetainedPostCommentFormatter::class,
+  ] as $id => $class) {
+    if (isset($definitions[$id])) $definitions[$id]['class'] = $class;
+  }
+}
+
+/** Implements hook_entity_view_alter(). */
+function localnodes_platform_entity_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display): void {
+  \Drupal::service('localnodes_platform.house_interaction_controls')->alterEntityView($build, $entity, \Drupal::currentUser());
+  \Drupal::service('localnodes_platform.departed_author_notice')->attachToView($build, $entity, \Drupal::currentUser());
+}
+
+/** Implements hook_comment_links_alter(). */
+function localnodes_platform_comment_links_alter(array &$links, \Drupal\comment\CommentInterface $comment, array &$context): void {
+  \Drupal\localnodes_platform\Mention\HouseMentions::alterCommentLinks($links, $comment);
+  \Drupal::service('localnodes_platform.house_interaction_controls')->alterCommentLinks($links, $comment, \Drupal::currentUser());
+}
+
+/** Implements hook_module_implements_alter(). */
+function localnodes_platform_module_implements_alter(array &$implementations, $hook): void {
+  if (in_array($hook, ['comment_links_alter', 'entity_type_alter', 'form_alter'], TRUE) && isset($implementations['localnodes_platform'])) {
+    $implementation = $implementations['localnodes_platform'];
+    unset($implementations['localnodes_platform']);
+    $implementations['localnodes_platform'] = $implementation;
+  }
+}
+
+/** Implements hook_form_alter(). */
+function localnodes_platform_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  \Drupal\localnodes_platform\Mention\HouseMentions::alterForm($form, $form_state);
+  \Drupal::service('localnodes_platform.house_departure_forms')->alter($form, $form_state);
+  if (in_array($form_id, ['enroll_action_form', 'event_an_enroll_action_form'], TRUE)) {
+    \Drupal::service('localnodes_platform.event_participation_form_guard')->alter($form, $form_state);
+  }
+}
+
+/** Implements hook_flag_action_access(). */
+function localnodes_platform_flag_action_access($action, $flag, AccountInterface $account, ?EntityInterface $flaggable = NULL) {
+  return \Drupal::service('localnodes_platform.house_interaction_controls')->flagActionAccess((string) $action, $flag, $account, $flaggable);
+}
+
 /** Implements hook_event_enrollment_access(). */
 function localnodes_platform_event_enrollment_access(EntityInterface $enrollment, $operation, AccountInterface $account) {
   return \Drupal::service('localnodes_platform.house_enrollment_access')->entityAccess($enrollment, $account);
+}
+
+/** Implements hook_entity_presave(). */
+function localnodes_platform_entity_presave(EntityInterface $entity): void {
+  if (in_array($entity->getEntityTypeId(), ['node', 'post', 'comment'], TRUE)) {
+    (new \Drupal\localnodes_platform\Mention\MentionEligibility())->assertAllowed($entity);
+  }
+}
+
+/** Implements hook_group_content_delete(). */
+function localnodes_platform_group_content_delete(\Drupal\group\Entity\GroupRelationshipInterface $relationship): void {
+  // Producers can add a notice while processing membership deletion itself.
+  // Repeating cleanup preserves the first leave time and report exceptions.
+  localnodes_platform_group_content_predelete($relationship);
 }
 
 
@@ -865,10 +962,19 @@ function localnodes_platform_views_plugins_filter_alter(array &$plugins): void {
 /**
  * Implements hook_ENTITY_TYPE_access() for activity.
  *
- * A personal notification's own page opens only for its recipients.
+ * Two rules apply to a notice, and a refusal from either one stands:
+ * - a personal notification opens only for its recipients;
+ * - a house notice is no longer addressed to a member who has left the house.
+ * The result keeps both rules' cache data, so a refusal for one member is
+ * never reused for another.
  */
 function localnodes_platform_activity_access(EntityInterface $activity, $operation, AccountInterface $account) {
-  return \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::personalNotificationAccess($activity, (string) $operation, $account);
+  $recipients = \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::personalNotificationAccess($activity, (string) $operation, $account);
+  $house = \Drupal\localnodes_platform\Activity\HouseActivityAccess::access($activity, (string) $operation, $account);
+  // orIf() keeps only the refusing side's cache data; add both.
+  return $recipients->orIf($house)
+    ->addCacheableDependency($recipients)
+    ->addCacheableDependency($house);
 }
 
 /** Implements hook_views_pre_view(). */
@@ -969,4 +1075,79 @@ function localnodes_platform_tokens(string $type, array $tokens, array $data, ar
   }
   $replacements[$tokens['name-and-slogan']] = implode(' | ', array_filter($parts, 'strlen'));
   return $replacements;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_predelete() for private_message.
+ *
+ * A file put into a message and used nowhere else is deleted with the
+ * message: its bytes, its record and the text extracted from it. Only a
+ * site with direct messages on has messages to delete.
+ */
+function localnodes_platform_private_message_predelete(EntityInterface $message): void {
+  _localnodes_platform_delete_conversation_files('private_message', $message);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_predelete() for private_message_thread.
+ *
+ * A file attached to a conversation itself, and used nowhere else, is
+ * deleted with the conversation, as a message's file is with the message.
+ */
+function localnodes_platform_private_message_thread_predelete(EntityInterface $thread): void {
+  _localnodes_platform_delete_conversation_files('private_message_thread', $thread);
+}
+
+/**
+ * Deletes the files used only in one message or conversation.
+ *
+ * Runs before the entity's own fields and other modules let go of the
+ * files, so every usage record is still there to read. A file also used
+ * anywhere else stays.
+ *
+ * A file counts as removed only when the site can search its folder and the
+ * file is not in it. Otherwise the record stays, with a usage record of this
+ * module's own: the file stays a message's file, and a site copy leaves it
+ * out.
+ *
+ * @param string $type
+ *   The entity type: private_message or private_message_thread.
+ */
+function _localnodes_platform_delete_conversation_files(string $type, EntityInterface $entity): void {
+  $database = \Drupal::database();
+  $id = (string) $entity->id();
+  $fids = $database->select('file_usage', 'u')->fields('u', ['fid'])
+    ->condition('u.type', $type)->condition('u.id', $id)
+    ->distinct()->execute()->fetchCol();
+  if ($fids === []) {
+    return;
+  }
+  $elsewhere = $database->select('file_usage', 'u')->fields('u', ['fid'])->condition('u.fid', $fids, 'IN');
+  $elsewhere->condition($elsewhere->orConditionGroup()
+    ->condition('u.type', $type, '<>')
+    ->condition('u.id', $id, '<>'));
+  $only = array_diff($fids, $elsewhere->distinct()->execute()->fetchCol());
+  if ($only === []) {
+    return;
+  }
+  $file_system = \Drupal::service('file_system');
+  $texts = \Drupal::keyValue(ConversationRows::FILE_TEXT_COLLECTION);
+  foreach (\Drupal::entityTypeManager()->getStorage('file')->loadMultiple($only) as $file) {
+    $uri = $file->getFileUri();
+    $removed = TRUE;
+    try {
+      $file_system->delete($uri);
+    }
+    catch (FileException) {
+      $removed = FALSE;
+    }
+    $folder = $file_system->realpath($file_system->dirname($uri));
+    if (!$removed || !$folder || !is_dir($folder) || !is_executable($folder) || file_exists($uri)) {
+      \Drupal::service('file.usage')->add($file, 'localnodes_platform', $type, $id);
+      \Drupal::logger('localnodes_platform')->error('The file of a deleted direct message could not be removed (file @fid). It is kept as a message file, so the site export leaves it out.', ['@fid' => $file->id()]);
+      continue;
+    }
+    $texts->delete((string) $file->id());
+    $file->delete();
+  }
 }

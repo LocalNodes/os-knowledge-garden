@@ -45,7 +45,7 @@ localnodes_platform.community_template.*:
         mapping:
           name:
             type: label
-            label: 'Group name; {site} is the community name'
+            label: 'Group name; {site} is the community name, {commons} its Commons (the name and "Commons")'
           visibility:
             type: string
             label: 'Who can see the group'

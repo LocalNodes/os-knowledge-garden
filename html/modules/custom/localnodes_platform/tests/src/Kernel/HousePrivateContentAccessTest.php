@@ -228,20 +228,145 @@ final class HousePrivateContentAccessTest extends GroupAccessKernelTestBase {
   }
 
   /** @dataProvider siteRoleAndHouse */
-  public function testLeavingTheHouseRemovesAnAuthorSiteManagersAccess(string $role, string $visibility): void {
+  public function testLeavingTheHouseKeepsOnlyAnAuthorsReading(string $role, string $visibility): void {
     [$group, $outsider, , $manager, $topic] = $this->house($role, $visibility);
     $this->addMember($group, $outsider);
     $topic->setOwnerId((int) $outsider->id())->save();
+    // A subsequent request reads both stored IDs with their persisted types.
+    $outsider = $this->container->get('entity_type.manager')->getStorage('user')->loadUnchanged($outsider->id());
+    $topic = $this->container->get('entity_type.manager')->getStorage('node')->loadUnchanged($topic->id());
     $this->assertTrue($topic->access('view', $outsider));
     $group->removeMember($outsider);
     $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
-    $this->assertFalse($topic->access('view', $outsider), 'Authorship must not become a permanent private-house grant.');
+    $this->assertTrue($topic->access('view', $outsider), 'A recorded former author retains reading only.');
     $this->assertFalse($topic->access('update', $outsider));
     $this->container->get('current_user')->setAccount($outsider);
     $ids = $this->container->get('entity_type.manager')->getStorage('node')->getQuery()
       ->accessCheck(TRUE)->condition('nid', $topic->id())->execute();
-    $this->assertSame([], array_values($ids), 'Authorship cannot retain a private Topic in access-checked lists.');
+    $this->assertSame([(string) $topic->id()], array_map('strval', array_values($ids)), 'A former author can find their own retained page.');
     $this->assertTrue($topic->access('update', $manager));
+  }
+
+  /**
+   * A member with a site role writes in the house, then an organizer removes
+   * them. A second holder of the same site role never joined.
+   *
+   * @return array<string, mixed>
+   */
+  private function departedWriter(string $role, string $visibility): array {
+    [$group, $writer, $member, $manager] = $this->house($role, $visibility);
+    $staff = $this->createUser([], 'other_site_staff', FALSE, ['roles' => ['verified', $role]]);
+    $this->addMember($group, $writer);
+    $own = $this->createGroupTopic($group, 'Writer page', '<p>The writer\'s own words.</p>', 'group');
+    $own->setOwnerId((int) $writer->id())->save();
+    $ownComment = $this->createComment($own, 'The writer replying on their own page.');
+    $ownComment->setOwnerId((int) $writer->id())->save();
+    $replyByOther = $this->createComment($own, 'A member replying to the writer.');
+    $other = $this->createGroupTopic($group, 'Member page', '<p>Someone else\'s words.</p>', 'group');
+    $other->setOwnerId((int) $member->id())->save();
+    $commentOnOther = $this->createComment($other, 'The writer commenting on a member page.');
+    $commentOnOther->setOwnerId((int) $writer->id())->save();
+    $ownPost = Post::create([
+      'type' => 'post', 'user_id' => $writer->id(), 'status' => 1,
+      'field_visibility' => '3', 'field_recipient_group' => $group->id(),
+      'field_post' => ['value' => 'The writer\'s own house post.', 'format' => 'plain_text'],
+    ]);
+    $ownPost->save();
+    $otherPost = Post::create([
+      'type' => 'post', 'user_id' => $member->id(), 'status' => 1,
+      'field_visibility' => '3', 'field_recipient_group' => $group->id(),
+      'field_post' => ['value' => 'A member\'s house post.', 'format' => 'plain_text'],
+    ]);
+    $otherPost->save();
+    // The organizer removes the writer; this is not the writer leaving.
+    $this->container->get('current_user')->setAccount($manager);
+    $group->removeMember($writer);
+    $storage = $this->container->get('entity_type.manager');
+    // Later requests read the saved records, with their stored ID types.
+    $writer = $storage->getStorage('user')->loadUnchanged($writer->id());
+    $fresh = static fn($entity) => $storage->getStorage($entity->getEntityTypeId())->loadUnchanged($entity->id());
+    $this->resetHouseAccess();
+    return [
+      'group' => $group, 'writer' => $writer, 'staff' => $staff, 'manager' => $manager,
+      'own' => $fresh($own), 'ownComment' => $fresh($ownComment), 'replyByOther' => $fresh($replyByOther),
+      'ownPost' => $fresh($ownPost), 'other' => $fresh($other), 'commentOnOther' => $fresh($commentOnOther),
+      'otherPost' => $fresh($otherPost),
+    ];
+  }
+
+  private function resetHouseAccess(): void {
+    foreach (['node', 'post', 'comment'] as $type) {
+      $this->container->get('entity_type.manager')->getAccessControlHandler($type)->resetCache();
+    }
+  }
+
+  /** @return string[] Node IDs an access-checked query returns to the account. */
+  private function listedTopics(AccountInterface $account, array $nodes): array {
+    $this->container->get('current_user')->setAccount($account);
+    $ids = $this->container->get('entity_type.manager')->getStorage('node')->getQuery()
+      ->accessCheck(TRUE)->condition('nid', array_map(static fn($node) => $node->id(), $nodes), 'IN')->execute();
+    sort($ids);
+    return array_map('strval', array_values($ids));
+  }
+
+  /** @dataProvider siteRoleAndHouse */
+  public function testRemovedWriterKeepsReadingTheirOwnPostsAndComments(string $role, string $visibility): void {
+    $c = $this->departedWriter($role, $visibility);
+    $writer = $c['writer'];
+    $this->assertTrue($c['own']->access('view', $writer), 'A removed writer keeps reading the page they wrote.');
+    $this->assertTrue($c['ownComment']->access('view', $writer), 'Their own comment on that page stays readable.');
+    $this->assertTrue($c['replyByOther']->access('view', $writer), 'The owner ruled their pages stay readable with the replies under them.');
+    $this->assertTrue($c['ownPost']->access('view', $writer), 'Their own house post stays readable.');
+    $this->assertSame([(string) $c['own']->id()], $this->listedTopics($writer, [$c['own'], $c['other']]));
+    // Reading only: no editing, deleting or commenting.
+    foreach (['own', 'ownComment', 'ownPost'] as $key) {
+      $this->assertFalse($c[$key]->access('update', $writer), "$key cannot be edited after removal.");
+      $this->assertFalse($c[$key]->access('delete', $writer), "$key cannot be deleted after removal.");
+    }
+    $this->assertTrue($this->container->get('localnodes_platform.group_notice_cleanup')->wasRemoved((int) $writer->id(), (int) $c['group']->id()));
+  }
+
+  /** @dataProvider siteRoleAndHouse */
+  public function testRemovedWriterReadsNobodyElsesWords(string $role, string $visibility): void {
+    $c = $this->departedWriter($role, $visibility);
+    $writer = $c['writer'];
+    $this->assertTrue($c['own']->access('view', $writer), 'The retained reading exists, so the closures below are not trivial.');
+    $this->assertFalse($c['other']->access('view', $writer), 'Another member\'s page stays closed.');
+    $this->assertFalse($c['commentOnOther']->access('view', $writer), 'A page they only commented on stays closed, with their comment on it.');
+    $this->assertFalse($c['otherPost']->access('view', $writer), 'Another member\'s post stays closed.');
+    $this->assertNotContains((string) $c['other']->id(), $this->listedTopics($writer, [$c['own'], $c['other']]));
+  }
+
+  /** @dataProvider siteRoleAndHouse */
+  public function testSafetyRemovalClosesTheWritersReading(string $role, string $visibility): void {
+    $c = $this->departedWriter($role, $visibility);
+    $writer = $c['writer'];
+    $this->assertTrue($c['own']->access('view', $writer));
+    $route = ['group' => $c['group']->id(), 'user' => $writer->id()];
+    $access = $this->container->get('access_manager');
+    $this->assertTrue($access->checkNamedRoute('localnodes_platform.close_retained_reading', $route, $c['manager']), 'The house organizer can close the reading after the removal.');
+    $this->assertFalse($access->checkNamedRoute('localnodes_platform.close_retained_reading', $route, $c['staff']), 'A site role alone cannot.');
+    $this->container->get('current_user')->setAccount($c['manager']);
+    $state = (new \Drupal\Core\Form\FormState())->addBuildInfo('args', [$c['group'], $writer])->setValues(['confirm' => 1]);
+    $this->container->get('form_builder')->submitForm(\Drupal\localnodes_platform\Form\CloseRetainedReadingForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->resetHouseAccess();
+    foreach (['own', 'ownComment', 'replyByOther', 'ownPost'] as $key) {
+      $this->assertFalse($c[$key]->access('view', $writer), "$key is closed after the safety choice.");
+    }
+    $this->assertSame([], $this->listedTopics($writer, [$c['own'], $c['other']]));
+    $this->assertTrue($c['own']->access('view', $c['manager']), 'Current members keep the page.');
+  }
+
+  /** @dataProvider siteRoleAndHouse */
+  public function testNonMemberSiteStaffReadNoneOfIt(string $role, string $visibility): void {
+    $c = $this->departedWriter($role, $visibility);
+    $staff = $c['staff'];
+    $this->assertTrue($c['own']->access('view', $c['writer']), 'The writer\'s reading is personal, not a role grant.');
+    foreach (['own', 'ownComment', 'replyByOther', 'ownPost', 'other', 'commentOnOther', 'otherPost'] as $key) {
+      $this->assertFalse($c[$key]->access('view', $staff), "A $role who never joined cannot read $key.");
+    }
+    $this->assertSame([], $this->listedTopics($staff, [$c['own'], $c['other']]));
   }
 
   /** @dataProvider siteRoleAndHouse */

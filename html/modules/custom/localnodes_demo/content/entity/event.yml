@@ -55,7 +55,7 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
   field_content_visibility: public
   field_event_type: 1fa2259f-3098-4140-9b62-95a47f63a02d
 
-# Community Land Trust Open House (future +21 day, public, Land Trust group)
+# Community Land Trust Open House (future +21 day, community, Land Trust group)
 59bc2859-4716-4f5b-abb3-fb12bdfe0aca:
   uuid: 59bc2859-4716-4f5b-abb3-fb12bdfe0aca
   title: Community Land Trust Open House
@@ -76,7 +76,7 @@ ed8e50c0-3215-4c96-968a-7a571cd20829:
   image: 6a503fe4-5993-492c-babf-e0d6e4827e82
   image_alt: Community garden with raised beds
   field_event_location: Hollyhock Commons Grounds
-  field_content_visibility: public
+  field_content_visibility: community
   field_event_type: ae629674-25e5-47a7-bf05-a34a21b8b4aa
   group: cfb62c3f-6d94-4137-96b8-26cd70baadf4
 
