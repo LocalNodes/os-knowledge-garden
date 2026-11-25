@@ -324,7 +324,9 @@ final class SafetyHelpLinksTest extends SafeKernelTestBase {
     $this->container->get('router.builder')->rebuild();
   }
 
-  /** Removes only the help route, preserving all real service dependencies. */
+  /**
+   * Removes only the help route, preserving all real service dependencies.
+   */
   private function removeHelpRoute(): void {
     $provider = $this->container->get('router.route_provider');
     $this->assertCount(1, $provider->getRoutesByNames([SiweHelpLink::ROUTE]));

@@ -7,12 +7,31 @@ namespace Drupal\localnodes_web3\Export;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Psr\Log\LoggerInterface;
 
-/** Covers SIWE exceptions that fetch the global factory instead of DI. */
+/**
+ * Covers SIWE exceptions that fetch the global factory instead of DI.
+ */
 final class ExportProofLoggerFactory implements LoggerChannelFactoryInterface {
+
+  /**
+   * Constructs the factory around the site's own logger factory.
+   */
   public function __construct(private readonly LoggerChannelFactoryInterface $inner) {}
+
+  /**
+   * {@inheritdoc}
+   */
   public function get($channel) {
-    if ($channel === 'siwe_login' && ExportProofLogs::active()) return (new SilentLoggerFactory())->get($channel);
+    if ($channel === 'siwe_login' && ExportProofLogs::active()) {
+      return (new SilentLoggerFactory())->get($channel);
+    }
     return $this->inner->get($channel);
   }
-  public function addLogger(LoggerInterface $logger, $priority = 0): void { $this->inner->addLogger($logger, $priority); }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addLogger(LoggerInterface $logger, $priority = 0): void {
+    $this->inner->addLogger($logger, $priority);
+  }
+
 }

@@ -243,7 +243,14 @@ class SignatureSession {
       // The proof keeps the change time it was issued under; isProven()
       // requires it to be the current one, so a change after this line ends
       // the proof too.
-      $session->set(self::SESSION_KEY, ['uid' => $uid, 'address' => strtolower($pending['address']), 'signIn' => $signIn, 'sid' => $sid, 'changed' => $pending['changed'], 'at' => $this->time->getCurrentMicroTime()]);
+      $session->set(self::SESSION_KEY, [
+        'uid' => $uid,
+        'address' => strtolower($pending['address']),
+        'signIn' => $signIn,
+        'sid' => $sid,
+        'changed' => $pending['changed'],
+        'at' => $this->time->getCurrentMicroTime(),
+      ]);
       return TRUE;
     }
     catch (\Throwable) {

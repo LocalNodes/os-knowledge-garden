@@ -140,6 +140,7 @@ final class GeneratedApiRoutesTest extends KernelTestBase {
    * Built routes whose default $key equals $value.
    *
    * @return array<string, \Symfony\Component\Routing\Route>
+   *   The routes, keyed by name.
    */
   private function routesWhere(string $key, string $value): array {
     $found = [];

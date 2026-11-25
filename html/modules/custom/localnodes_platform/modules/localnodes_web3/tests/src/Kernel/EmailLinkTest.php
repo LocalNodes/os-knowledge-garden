@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
- * "Email me a sign-in link", the email step after the button, and the marker.
+ * The sign-in link by email, the email step after the button, the marker.
  *
  * - The link: made for one account and send time; it stops working after a
  *   day, after the account signs in, for a blocked account (for good, even

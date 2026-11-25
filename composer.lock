@@ -7648,17 +7648,17 @@
         },
         {
             "name": "drupal/safe_governance",
-            "version": "1.0.0-alpha3",
+            "version": "1.0.0-alpha4",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_governance.git",
-                "reference": "1.0.0-alpha3"
+                "reference": "1.0.0-alpha4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_governance-1.0.0-alpha3.zip",
-                "reference": "1.0.0-alpha3",
-                "shasum": "509c8a7a1b0fa3d7826fe7a20be7a63ec87c5e53"
+                "url": "https://ftp.drupal.org/files/projects/safe_governance-1.0.0-alpha4.zip",
+                "reference": "1.0.0-alpha4",
+                "shasum": "6a7897bfa2cfff55e1c53ef490f8486819cfb326"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7678,8 +7678,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha3",
-                    "datestamp": "1794876193",
+                    "version": "1.0.0-alpha4",
+                    "datestamp": "1795619223",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7709,7 +7709,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_governance"
             },
-            "published-time": "2026-11-17T00:41:51+00:00"
+            "published-time": "2026-11-25T15:05:41+00:00"
         },
         {
             "name": "drupal/safe_smart_accounts",

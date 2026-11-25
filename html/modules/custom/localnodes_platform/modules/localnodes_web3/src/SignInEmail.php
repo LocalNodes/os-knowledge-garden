@@ -11,7 +11,7 @@ use Drupal\user\UserInterface;
 /**
  * The email step after the sign-in button, for a member with no address.
  *
- * localnodes_web3_install() turns on siwe_login's require_email_verification,
+ * Localnodes_web3_install() turns on siwe_login's require_email_verification,
  * so a sign-in by an account with no real address (a new member, or one made
  * before the step was on, with only an "@ethereum.local" address) stops at
  * siwe_login's form and asks for one. The member then opens the link mailed

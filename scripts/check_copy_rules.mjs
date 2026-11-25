@@ -34,7 +34,8 @@
  *             Try again or Refresh
  *
  * A line holding a `copy-allow` comment, or directly under one, is skipped
- * (organizer-only help text that has to name a system thing). Exit 1 on any
+ * (organizer-only help text that has to name a system thing). One phrase is
+ * allowed on one page: "search index" on the site's terms (SYSTEM_ALLOWED). Exit 1 on any
  * finding, 0 when clean, 2 on bad arguments.
  *
  * Usage:
@@ -67,9 +68,16 @@ const DEFAULT_PATHS = [
 ];
 
 const PLACE = /\b(your town|your area|local residents|near you|neighbou?rs)\b/i;
-// RAG and LLM only in capitals: "rag" and "llm" in lower case aren't the terms.
-const SYSTEM = /\b(nodes?|entit(?:y|ies)|index(?:es|ed|ing)?|Solr|Qdrant|cron|batch(?:es)?|queues?|embeddings?|tokens?)\b|\b(RAG|LLM)\b/i;
+// RAG and LLM only in capitals: "rag" and "llm" in lower case aren't the terms. The two are separate patterns, so a
+// lower-case "llm" never hides a later system word.
+const SYSTEM = /\b(nodes?|entit(?:y|ies)|index(?:es|ed|ing)?|Solr|Qdrant|cron|batch(?:es)?|queues?|embeddings?|tokens?)\b/i;
 const SYSTEM_CASE_SENSITIVE = /\b(RAG|LLM)\b/;
+// The site's terms are legal wording, kept by the owner: a copy rule must not move their text, or with it the terms'
+// date. So that page, and only that page, may say "search index"; every other system
+// word on it, and the same phrase anywhere else, is still flagged.
+const SYSTEM_ALLOWED = new Map([
+  ['html/modules/custom/localnodes_platform/templates/localnodes-site-terms.html.twig', /\bsearch index\b/gi],
+]);
 const LONE_BUTTONS = ['submit', 'ok', 'yes', 'continue', 'cancel', 'retry', 'try again', 'refresh'];
 const YAML_COPY_KEYS = new Set(['label', 'description', 'message', 'first_message', 'bot_name', 'title', 'placeholder', 'text', 'help']);
 
@@ -240,12 +248,13 @@ function extract(file, source) {
   }
 }
 
-function findings(text) {
+function findings(text, allowedSystem = null) {
   const found = [];
   const place = PLACE.exec(text);
   if (place) found.push(['place', place[0]]);
-  const system = SYSTEM.exec(text);
-  if (system && (system[1] !== undefined || SYSTEM_CASE_SENSITIVE.test(text))) {
+  const sys = allowedSystem ? text.replace(allowedSystem, blank) : text;
+  const system = SYSTEM.exec(sys) ?? SYSTEM_CASE_SENSITIVE.exec(sys);
+  if (system) {
     found.push(['system', system[0]]);
   }
   const bare = text.trim().replace(/[.!…]+$/, '').toLowerCase();
@@ -262,11 +271,12 @@ for (const file of files) {
   const source = readFileSync(file, 'utf8');
   const lines = source.split('\n');
   const allowed = (line) => /copy-allow/.test(lines[line - 1] ?? '') || /copy-allow/.test(lines[line - 2] ?? '');
+  const allowedSystem = SYSTEM_ALLOWED.get(relative(repoRoot, file)) ?? null;
   for (const { text, offset } of extract(file, source)) {
     strings++;
     const line = lineAt(source, offset);
     if (allowed(line)) continue;
-    for (const [rule, word] of findings(text)) {
+    for (const [rule, word] of findings(text, allowedSystem)) {
       flagged++;
       const shown = text.replace(/\s+/g, ' ').trim().slice(0, 120);
       console.log(`FLAG ${relative(repoRoot, file) || file}:${line} ${rule} "${word}": ${shown}`);

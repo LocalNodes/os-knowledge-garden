@@ -13,13 +13,20 @@ use Drupal\localnodes_platform\Export\ExportSignatureProofInterface;
 use Drupal\siwe_login\Service\ContractWalletDetector;
 use Drupal\siwe_login\Service\SiweMessageValidator;
 use Drupal\siwe_login\Service\SiweNonceStore;
+use Drupal\siwe_login\SignerAttachments;
 use Drupal\siwe_login\Siwe\ChainIds;
 use Drupal\siwe_login\Siwe\SiweMessage;
 use Drupal\siwe_login\Siwe\SiweMessageParser;
 use Drupal\siwe_login\Siwe\SiweMessageSerializer;
 
-/** One exact message per browser session; never authenticates or links users. */
+/**
+ * One exact message per browser session; never authenticates or links users.
+ */
 class ExportSignatureProof implements ExportSignatureProofInterface {
+
+  /**
+   * Constructs the export signature proof.
+   */
   public function __construct(
     private readonly ExportAccess $access,
     private readonly SiweNonceStore $nonces,
@@ -33,78 +40,144 @@ class ExportSignatureProof implements ExportSignatureProofInterface {
     private readonly ?object $attachments = NULL,
   ) {}
 
+  /**
+   * The member's wallet address, checksummed, or '' when none may confirm.
+   */
   protected function address(int $uid): string {
-    if (!$this->access->allows($uid)) return '';
+    if (!$this->access->allows($uid)) {
+      return '';
+    }
     $user = $this->access->account($uid);
-    if (!$user || $user->getPassword() || !$user->hasField('field_ethereum_address')) return '';
+    if (!$user || $user->getPassword() || !$user->hasField('field_ethereum_address')) {
+      return '';
+    }
     $address = (string) $user->get('field_ethereum_address')->value;
     return preg_match('/^0x[0-9a-fA-F]{40}$/D', $address) ? SiweMessageParser::toChecksumAddress($address) : '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function available(int $uid): bool {
-    if ($this->waitingUntil($uid) !== NULL) return FALSE;
+    if ($this->waitingUntil($uid) !== NULL) {
+      return FALSE;
+    }
     $address = $this->address($uid);
     // An unavailable classifier is not proof of a contract account. An EOA
     // signature can still verify offline, exactly as it does at sign-in.
     return $address !== '' && $this->detector->classify($address) !== ContractWalletDetector::CONTRACT;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function waitingUntil(int $uid): ?int {
-    if ($this->attachments === NULL) return NULL;
+    if ($this->attachments === NULL) {
+      return NULL;
+    }
     $address = $this->address($uid);
-    if ($address === '') return NULL;
+    if ($address === '') {
+      return NULL;
+    }
     $account = $this->access->account($uid);
-    if ($account === NULL) return NULL;
+    if ($account === NULL) {
+      return NULL;
+    }
     $attached = $this->attachments->attachedAt($account, $address);
     return is_int($attached) && $attached + 86400 > $this->time->getCurrentTime() ? $attached + 86400 : NULL;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function attach(array &$form): bool {
-    if (!class_exists(\Drupal\siwe_login\SignerAttachments::class)) return FALSE;
-    return \Drupal\siwe_login\SignerAttachments::attach($form);
+    if (!class_exists(SignerAttachments::class)) {
+      return FALSE;
+    }
+    return SignerAttachments::attach($form);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function issue(int $uid, string $action, string $exportId): array {
     return ExportProofLogs::quiet(fn () => $this->issueChallenge($uid, $action, $exportId));
   }
 
+  /**
+   * Builds and stores the one message this session may sign for the step.
+   */
   private function issueChallenge(int $uid, string $action, string $exportId): array {
-    if ($this->waitingUntil($uid) !== NULL) throw new \RuntimeException('Export confirmation unavailable.');
+    if ($this->waitingUntil($uid) !== NULL) {
+      throw new \RuntimeException('Export confirmation unavailable.');
+    }
     $address = $this->address($uid);
-    if ($address === '' || !$this->contextValid($action, $exportId)) throw new \RuntimeException('Export confirmation unavailable.');
+    if ($address === '' || !$this->contextValid($action, $exportId)) {
+      throw new \RuntimeException('Export confirmation unavailable.');
+    }
     $config = $this->config->get('siwe_login.settings');
     $domain = trim(explode(',', (string) $config->get('expected_domain'))[0]);
     $uri = trim(explode(',', (string) $config->get('expected_uri'))[0]);
-    if ($uri === '') $uri = 'https://' . $domain;
-    if ($domain === '') throw new \RuntimeException('Export confirmation unavailable.');
+    if ($uri === '') {
+      $uri = 'https://' . $domain;
+    }
+    if ($domain === '') {
+      throw new \RuntimeException('Export confirmation unavailable.');
+    }
     $nonce = $this->nonces->issue($address, 'export:' . $action, $uid);
     $key = $this->key();
-    if ($key === NULL || !$this->lock->acquire('export-proof:' . $key, 10)) throw new \RuntimeException('Export confirmation unavailable.');
+    if ($key === NULL || !$this->lock->acquire('export-proof:' . $key, 10)) {
+      throw new \RuntimeException('Export confirmation unavailable.');
+    }
     try {
       $expires = min($nonce['expires'], $this->time->getCurrentTime() + 300);
       $site = $this->site();
       // SIWE statements are single-line ASCII. Keep the real site name in
-      // the stored context even when its printable signing label needs a fallback.
+      // the stored context even when its printable signing label needs a
+      // fallback.
       $name = preg_match("#^[A-Za-z0-9\\-._~:/?\\#\\[\\]@!$&'()*+,;= ]+$#D", $site['name']) ? $site['name'] : $domain;
-      $words = ['request' => 'request a copy of', 'download' => 'download a copy of', 'delete' => 'delete only the prepared download from'];
-      $message = (new SiweMessageSerializer())->serialize(new SiweMessage(NULL, $domain, $address,
+      $words = [
+        'request' => 'request a copy of',
+        'download' => 'download a copy of',
+        'delete' => 'delete only the prepared download from',
+      ];
+      $message = (new SiweMessageSerializer())->serialize(new SiweMessage(
+        NULL,
+        $domain,
+        $address,
         'Confirm you want to ' . $words[$action] . ' ' . $name . '. Includes private records from every group.',
-        $uri, '1', ChainIds::defaultChainId($config), $nonce['nonce'], gmdate('Y-m-d\TH:i:s\Z', $nonce['issued']), gmdate('Y-m-d\TH:i:s\Z', $expires), NULL,
+        $uri,
+        '1',
+        ChainIds::defaultChainId($config),
+        $nonce['nonce'],
+        gmdate('Y-m-d\TH:i:s\Z', $nonce['issued']),
+        gmdate('Y-m-d\TH:i:s\Z', $expires),
+        NULL,
         'export-' . $action . '-' . $uid . '-' . ($exportId ?: 'new'),
       ));
       $this->stores->get('localnodes_export_signature')->set($key, compact('uid', 'action', 'exportId', 'address', 'site', 'message', 'expires'));
       return ['message' => $message, 'expectedAddress' => $address];
     }
-    finally { $this->lock->release('export-proof:' . $key); }
+    finally {
+      $this->lock->release('export-proof:' . $key);
+    }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function confirm(int $uid, string $action, string $exportId, string $message, string $signature): bool {
     return ExportProofLogs::quiet(fn () => $this->checkChallenge($uid, $action, $exportId, $message, $signature));
   }
 
+  /**
+   * Checks a signature against the one stored message, used once.
+   */
   private function checkChallenge(int $uid, string $action, string $exportId, string $message, string $signature): bool {
     $key = $this->key();
-    if ($key === NULL || !$this->lock->acquire('export-proof:' . $key, 10)) return FALSE;
+    if ($key === NULL || !$this->lock->acquire('export-proof:' . $key, 10)) {
+      return FALSE;
+    }
     try {
       $store = $this->stores->get('localnodes_export_signature');
       $pending = $store->get($key);
@@ -112,7 +185,9 @@ class ExportSignatureProof implements ExportSignatureProofInterface {
       if (!is_array($pending) || $this->waitingUntil($uid) !== NULL || strlen($message) > 8192 || strlen($signature) > 2048
         || $pending['uid'] !== $uid || $pending['action'] !== $action || $pending['exportId'] !== $exportId
         || $pending['site'] !== $this->site() || $pending['expires'] <= $this->time->getCurrentTime()
-        || !hash_equals($pending['message'], $message) || $pending['address'] !== $this->address($uid)) return FALSE;
+        || !hash_equals($pending['message'], $message) || $pending['address'] !== $this->address($uid)) {
+        return FALSE;
+      }
       $verified = $this->validator->validateMessage($message, $signature, 'export:' . $action, $uid);
       // The wallet may have changed, a password been set or a new signer
       // attached while the signature was checked: read the account again.
@@ -120,20 +195,41 @@ class ExportSignatureProof implements ExportSignatureProofInterface {
         && $pending['address'] === $this->address($uid)
         && $this->waitingUntil($uid) === NULL;
     }
-    catch (\Throwable) { return FALSE; }
-    finally { $this->lock->release('export-proof:' . $key); }
+    catch (\Throwable) {
+      return FALSE;
+    }
+    finally {
+      $this->lock->release('export-proof:' . $key);
+    }
   }
 
+  /**
+   * The store key of this browser session, or NULL when it has none.
+   */
   private function key(): ?string {
     $binding = $this->nonces->currentBinding();
     return $binding === NULL ? NULL : hash('sha256', $binding);
   }
+
+  /**
+   * The site facts a confirmation is bound to.
+   */
   private function site(): array {
     $site = $this->config->get('system.site');
     $settings = $this->config->get('siwe_login.settings');
-    return ['uuid' => (string) $site->get('uuid'), 'name' => (string) $site->get('name'), 'domain' => (string) $settings->get('expected_domain'), 'uri' => (string) $settings->get('expected_uri')];
+    return [
+      'uuid' => (string) $site->get('uuid'),
+      'name' => (string) $site->get('name'),
+      'domain' => (string) $settings->get('expected_domain'),
+      'uri' => (string) $settings->get('expected_uri'),
+    ];
   }
+
+  /**
+   * Whether the step and the export id fit together.
+   */
   private function contextValid(string $action, string $id): bool {
     return $action === 'request' ? $id === '' : in_array($action, ['download', 'delete'], TRUE) && (bool) preg_match('/^[a-f0-9]{32}$/D', $id);
   }
+
 }

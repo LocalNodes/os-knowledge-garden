@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\localnodes_web3\EmailLink;
 
 /**
- * "Email me a sign-in link": asks for an address and mails a link to it.
+ * The "Email me a sign-in link" form: asks for an address, mails a link.
  *
  * The page answers the same way, and as fast, whether or not an account
  * uses the address, so it never tells a visitor who has an account here:
@@ -43,7 +43,12 @@ final class EmailLinkRequestForm extends FormBase {
       '#description' => $this->t('We will email you a link that signs you in. It works once, for one day, on any device.'),
       '#required' => TRUE,
       '#maxlength' => 254,
-      '#attributes' => ['autocomplete' => 'email', 'autocorrect' => 'off', 'autocapitalize' => 'off', 'spellcheck' => 'false'],
+      '#attributes' => [
+        'autocomplete' => 'email',
+        'autocorrect' => 'off',
+        'autocapitalize' => 'off',
+        'spellcheck' => 'false',
+      ],
     ];
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [

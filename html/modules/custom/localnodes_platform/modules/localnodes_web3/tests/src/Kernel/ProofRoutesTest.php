@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_web3\Kernel;
 
+use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Routing\RouteBuildEvent;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
@@ -64,8 +65,10 @@ final class ProofRoutesTest extends KernelTestBase {
   ];
 
   /**
-   * Routes that move or commit funds, change who controls a fund, or take a
-   * signature for one; each must stay marked whatever else changes.
+   * Routes that must stay marked whatever else changes.
+   *
+   * They move or commit funds, change who controls a fund, or take a
+   * signature for one.
    */
   private const MUST_MARK = [
     'safe_smart_accounts.api_transaction_execute',
@@ -141,14 +144,20 @@ final class ProofRoutesTest extends KernelTestBase {
     'Drupal\safe_governance_group\Form\DecisionProposalForm' => ['safe_governance_group.proposal_new_decision'],
     'Drupal\safe_governance_group\Form\PaymentProposalForm' => ['safe_governance_group.proposal_new_payment'],
     'Drupal\safe_governance_group\Form\ProposalFormBase' => 'Abstract base of the two proposal forms.',
-    'Drupal\safe_governance_group\Form\RefreshVotesForm' => ['safe_governance_group.votes', 'safe_governance_group.proposal'],
+    'Drupal\safe_governance_group\Form\RefreshVotesForm' => [
+      'safe_governance_group.votes',
+      'safe_governance_group.proposal',
+    ],
     'Drupal\safe_governance_group\Form\VotingSetupForm' => ['safe_governance_group.setup'],
     'Drupal\safe_governance_group\Form\WithdrawChangesForm' => ['safe_governance_group.members_withdraw'],
     'Drupal\safe_smart_accounts\Form\ErrorSummaryTrait' => 'A trait, not a form.',
     'Drupal\safe_smart_accounts\Form\SafeAccountCreateForm' => ['safe_smart_accounts.user_account_create'],
     'Drupal\safe_smart_accounts\Form\SafeAccountFormTrait' => 'A trait, not a form.',
     'Drupal\safe_smart_accounts\Form\SafeAccountManageForm' => ['safe_smart_accounts.user_account_manage'],
-    'Drupal\safe_smart_accounts\Form\SafeNetworkForm' => ['entity.safe_network.add_form', 'entity.safe_network.edit_form'],
+    'Drupal\safe_smart_accounts\Form\SafeNetworkForm' => [
+      'entity.safe_network.add_form',
+      'entity.safe_network.edit_form',
+    ],
     'Drupal\safe_smart_accounts\Form\SafeSettingsForm' => ['safe_smart_accounts.admin_settings'],
     'Drupal\safe_smart_accounts\Form\SafeTransactionForm' => ['safe_smart_accounts.transaction_create'],
     'Drupal\safe_smart_accounts\Form\SafeTransactionFormTrait' => 'A trait, not a form.',
@@ -223,7 +232,7 @@ final class ProofRoutesTest extends KernelTestBase {
   /**
    * Every form is placed; no form on an exempt page changes a fund or vote.
    */
-  public function testEveryFormIsOnAMarkedPage(): void {
+  public function testEveryFormIsOnMarkedPage(): void {
     $classes = [];
     $embedded = [];
     foreach ($this->sourceDirectories() as $namespace => $directory) {
@@ -282,7 +291,20 @@ final class ProofRoutesTest extends KernelTestBase {
     foreach (self::OWN_NOTE_FORMS + self::OWN_NOTE_SERVICES as $class => $calls) {
       $this->assertTrue(class_exists($class), $class);
       $code = file_get_contents((new \ReflectionClass($class))->getFileName());
-      foreach (['->save(', '->delete(', '->remove', 'SafeTransaction', 'propose', 'Signature', '->execute(', 'Database', '->insert(', '->update(', '->merge(', '\\Drupal::'] as $write) {
+      foreach ([
+        '->save(',
+        '->delete(',
+        '->remove',
+        'SafeTransaction',
+        'propose',
+        'Signature',
+        '->execute(',
+        'Database',
+        '->insert(',
+        '->update(',
+        '->merge(',
+        '\\Drupal::',
+      ] as $write) {
         $this->assertStringNotContainsString($write, $code, $class . ' contains ' . $write . '; place it on a marked page.');
       }
       preg_match_all('/\$this->(\w+)->(\w+)\(/', $code, $m, PREG_SET_ORDER);
@@ -312,6 +334,7 @@ final class ProofRoutesTest extends KernelTestBase {
    * The routes of the covered modules, found without ProofRoutes::covers().
    *
    * @return array<string, \Symfony\Component\Routing\Route>
+   *   The routes, keyed by name.
    */
   private function moduleRoutes(): array {
     $providers = [];
@@ -344,7 +367,12 @@ final class ProofRoutesTest extends KernelTestBase {
   public function testScriptsLoadThePanel(): void {
     $discovery = $this->container->get('library.discovery');
     $panel = 'localnodes_web3/signature_proof';
-    foreach ([['safe_governance', 'vote'], ['safe_governance', 'propose'], ['safe_smart_accounts', 'transaction_manager'], ['safe_smart_accounts', 'safe_deployment']] as [$extension, $name]) {
+    foreach ([
+      ['safe_governance', 'vote'],
+      ['safe_governance', 'propose'],
+      ['safe_smart_accounts', 'transaction_manager'],
+      ['safe_smart_accounts', 'safe_deployment'],
+    ] as [$extension, $name]) {
       $library = $discovery->getLibraryByName($extension, $name);
       $this->assertIsArray($library, "$extension/$name exists.");
       $this->assertContains($panel, $library['dependencies'] ?? [], "$extension/$name needs the panel.");
@@ -429,7 +457,7 @@ final class ProofRoutesTest extends KernelTestBase {
    * A post to a fund form needs the proof whatever method it names, because
    * the form still takes what was posted.
    */
-  public function testMethodOverrideOnAFundForm(): void {
+  public function testMethodOverrideOnFundForm(): void {
     foreach (['OPTIONS', 'GET', 'HEAD'] as $override) {
       $request = $this->routedRequest('group_treasury.unlink', 'POST', ['HTTP_X_HTTP_METHOD_OVERRIDE' => $override]);
       $this->assertSame($override, $request->getMethod());
@@ -479,7 +507,7 @@ final class ProofRoutesTest extends KernelTestBase {
   /**
    * The guard's answer to a request, or NULL when it lets it through.
    */
-  private function guardAnswer(Request $request): ?\Symfony\Component\HttpFoundation\Response {
+  private function guardAnswer(Request $request): ?Response {
     $event = new RequestEvent($this->container->get('http_kernel'), $request, HttpKernelInterface::MAIN_REQUEST);
     $this->container->get('localnodes_web3.signature_guard')->onRequest($event);
     return $event->getResponse();
@@ -489,6 +517,7 @@ final class ProofRoutesTest extends KernelTestBase {
    * Namespace => src directory, for each covered module.
    *
    * @return array<string, string>
+   *   The src directories, keyed by namespace.
    */
   private function sourceDirectories(): array {
     $list = $this->container->get('extension.list.module');
