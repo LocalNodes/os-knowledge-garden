@@ -1,0 +1,18 @@
+--- a/modules/social_features/social_group/social_group.module
++++ b/modules/social_features/social_group/social_group.module
+@@ -1393,4 +1393,6 @@
+       if ($group_id !== NULL) {
+         $selected_groups = Group::loadMultiple([$group_id]);
++        // Only groups the current user may view.
++        $selected_groups = array_filter($selected_groups, static fn ($group) => $group->access('view'));
+       }
+       // Ensure we disable the correct visibility options.
+--- a/modules/social_features/social_group/src/Plugin/Field/FieldWidget/SocialGroupSelectorWidget.php
++++ b/modules/social_features/social_group/src/Plugin/Field/FieldWidget/SocialGroupSelectorWidget.php
+@@ -377,4 +377,6 @@
+     $groups = \Drupal::entityTypeManager()->getStorage('group')
+       ->loadMultiple($groupIds);
++    // Only groups the current user may view.
++    $groups = array_filter($groups, static fn ($group) => $group->access('view'));
+ 
+     return social_group_get_allowed_content_visibility_options_for_multiple_groups($groups, $entity);

@@ -120,7 +120,7 @@ final class CommentAdminListingAccessTest extends GroupAccessKernelTestBase {
    */
   public function testListingShowsOnlyReadableComments(): void {
     // The narrowed site-wide roles, as non-members: no comment, no listing.
-    foreach (['sitemanager', 'contentmanager'] as $role) {
+    foreach (['sitemanager', 'contentmanager', 'administrator'] as $role) {
       $outsider = $this->createUser([], "site_$role", FALSE, ['roles' => ['verified', $role]]);
       $this->assertFalse(Views::getView('comment')->access('page_published', $outsider), "Role $role cannot open the comment listing.");
       foreach ($this->comments as $name => $comment) {
@@ -129,8 +129,13 @@ final class CommentAdminListingAccessTest extends GroupAccessKernelTestBase {
       }
     }
 
-    $this->assertNotSame([], $this->listingRoles, 'Some shipped role can open the comment listing.');
-    foreach ($this->listingRoles as $role) {
+    // No shipped site role opens the listing; a site may grant it on purpose,
+    // and the listing must still show only what each reader may read.
+    $this->assertSame([], $this->listingRoles, 'No shipped role can open the comment listing.');
+    Role::create(['id' => 'comment_lister', 'label' => 'Comment lister'])
+      ->grantPermission('administer comments')
+      ->save();
+    foreach (['comment_lister'] as $role) {
       $this->assertListingShowsOnlyReadable($role);
     }
   }

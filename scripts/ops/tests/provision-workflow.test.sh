@@ -428,18 +428,18 @@ reset_state; run_step "Check Gemini key tier (G8)" ok DEMO_MODULE_INPUT=pack:lan
 check "a pack site skips the paid-key check, as any demo does" '[ $RC -eq 0 ] && grep -q "paid-key check skipped" <<<"$OUT"'
 reset_state; run_step "Summary" ok DEMO_MODULE_INPUT=pack:lanternrow GEMINI_KEY_TIER_INPUT=paid
 check "the Summary shows the pack value as chosen" '[ $RC -eq 0 ] && grep -qF "pack:lanternrow" "$WORK/summary.md"'
-# One pack:<name> option per site in the packs README ("The four sites"), and every shipped pack
+# One pack:<name> option per site in the packs README ("The sites"), and every shipped pack
 # has its option. An option may come before its pack directory: "Check the demo pack ships"
 # refuses it before any Coolify mutation (cases below), so no half-made app is left behind.
 PACKS_DIR="$REPO/html/modules/custom/localnodes_demo_packs/packs"
 PACKS_README="$REPO/html/modules/custom/localnodes_demo_packs/README.md"
 # The README table rows as "<pack>|<site name>", read from the section, never typed here.
-README_SITES="$(awk '/^## The four sites/ { s = 1; next } /^## / { s = 0 } s && /^\| [^-|]/ && /`[a-z0-9_]+`/' "$PACKS_README" \
+README_SITES="$(awk '/^## The sites/ { s = 1; next } /^## / { s = 0 } s && /^\| [^-|]/ && /`[a-z0-9_]+`/' "$PACKS_README" \
   | awk -F'|' '{ n = $2; p = $3; gsub(/^ +| +$/, "", n); gsub(/^ +`|` +$/, "", p); print p "|" n }')"
 README_PACKS="$(cut -d'|' -f1 <<<"$README_SITES" | LC_ALL=C sort | tr '\n' ' ')"
 SHIPPED_PACKS="$(find "$PACKS_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort | tr '\n' ' ')"
 OPTION_PACKS="$(jq -r '(.["true"] // .on).workflow_dispatch.inputs.demo_module.options | map(select(startswith("pack:")) | sub("^pack:"; "")) | sort | join(" ")' "$WORK/wf.json" | tr -d '\n'; echo -n ' ')"
-check "the README names four sites (${README_PACKS% })" '[ "$(wc -l <<<"$README_SITES")" -eq 4 ]'
+check "the README names five sites (${README_PACKS% })" '[ "$(wc -l <<<"$README_SITES")" -eq 5 ]'
 check "the pack:<name> options are the README's packs" '[ -n "$README_PACKS" ] && [ "$OPTION_PACKS" = "$README_PACKS" ]'
 check "every shipped pack has its option (shipped: ${SHIPPED_PACKS% })" \
   '[ -n "$SHIPPED_PACKS" ] && [ -z "$(for p in $SHIPPED_PACKS; do grep -qw "$p" <<<"$OPTION_PACKS" || echo "$p"; done)" ]'

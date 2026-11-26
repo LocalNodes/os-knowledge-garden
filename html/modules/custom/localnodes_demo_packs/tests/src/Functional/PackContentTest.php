@@ -104,6 +104,33 @@ final class PackContentTest extends BrowserTestBase {
   }
 
   /**
+   * An event's open sign-up loads as the pack states it.
+   *
+   * An event that states field_event_enroll_outside_group has that value once
+   * loaded; one that does not keeps the field's default (off). Either way its
+   * changed time stays its created time.
+   */
+  public function testOpenSignUpLoadsAsWritten(): void {
+    $stated = 0;
+    foreach (self::packs() as $pack) {
+      $this->loadPack($pack);
+      $repository = $this->container->get('entity.repository');
+      foreach (self::entries(self::packYaml($pack)['event.yml'] ?? []) as [$uuid, $data]) {
+        $event = $repository->loadEntityByUuid('node', $uuid);
+        $this->assertNotNull($event, "Pack $pack, event $uuid loads.");
+        $expected = !empty($data['field_event_enroll_outside_group']);
+        $stated += $expected ? 1 : 0;
+        $this->assertSame($expected, (bool) $event->get('field_event_enroll_outside_group')->value, "Pack $pack, event $uuid: open sign-up as written.");
+        // The pack's dates decide the home stream's order: a loaded event's
+        // changed time is its created time (StampsChangedTime).
+        $this->assertSame((int) $event->getCreatedTime(), (int) $event->getChangedTime(), "Pack $pack, event $uuid: changed is created.");
+      }
+      $this->removePack($pack);
+    }
+    $this->assertGreaterThan(0, $stated, 'At least one pack event is open to people outside its group.');
+  }
+
+  /**
    * The pack loads as many of each kind as its expectation file states.
    */
   public function testCountsMatchThePack(): void {

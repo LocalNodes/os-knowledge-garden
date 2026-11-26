@@ -27,7 +27,7 @@ final class SiteGuide {
   /**
    * The site roles that may edit a Site guide page they can already see.
    */
-  public const EDITOR_ROLES = ['sitemanager', 'contentmanager'];
+  public const EDITOR_ROLES = ['administrator', 'sitemanager', 'contentmanager'];
 
   /**
    * What an editor is told on the edit form of a Site guide page.

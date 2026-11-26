@@ -1,0 +1,244 @@
+---
+# One row for each member the source lists as going. A title is the username, then the event title.
+e39eb857-8860-4c01-958d-070328f238cf:
+  uuid: "e39eb857-8860-4c01-958d-070328f238cf"
+  title: "noor_haddix @ Sample: newcomers' coffee"
+  langcode: "en"
+  uid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  field_event: "8e50d9d2-3a14-4d00-abf7-c705b754068d"
+  field_enrollment_status: 1
+  field_account: "f5bf2851-1459-4844-af7d-3692c8116d88"
+
+9b6b3cb5-b87c-45bf-b6ba-2dd8e8fc2976:
+  uuid: "9b6b3cb5-b87c-45bf-b6ba-2dd8e8fc2976"
+  title: "jonah_wilder @ Sample: newcomers' coffee"
+  langcode: "en"
+  uid: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+  field_event: "8e50d9d2-3a14-4d00-abf7-c705b754068d"
+  field_enrollment_status: 1
+  field_account: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+
+cd8c8f79-76d4-416a-a4d9-6fe5c2388058:
+  uuid: "cd8c8f79-76d4-416a-a4d9-6fe5c2388058"
+  title: "felix_brandt @ Sample: newcomers' coffee"
+  langcode: "en"
+  uid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  field_event: "8e50d9d2-3a14-4d00-abf7-c705b754068d"
+  field_enrollment_status: 1
+  field_account: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+
+d8169b1a-22aa-4250-bb5b-d427f72a5250:
+  uuid: "d8169b1a-22aa-4250-bb5b-d427f72a5250"
+  title: "felix_brandt @ Sample: build night"
+  langcode: "en"
+  uid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  field_event: "18874275-7a90-4c4f-8e61-3b7b39d82ecd"
+  field_enrollment_status: 1
+  field_account: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+
+4778b5ad-aeef-4812-a7f4-bcf135388c99:
+  uuid: "4778b5ad-aeef-4812-a7f4-bcf135388c99"
+  title: "noor_haddix @ Sample: build night"
+  langcode: "en"
+  uid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  field_event: "18874275-7a90-4c4f-8e61-3b7b39d82ecd"
+  field_enrollment_status: 1
+  field_account: "f5bf2851-1459-4844-af7d-3692c8116d88"
+
+c27dbaa3-5341-4473-9793-1e8c595ed65f:
+  uuid: "c27dbaa3-5341-4473-9793-1e8c595ed65f"
+  title: "tamsin_reyes @ Sample: short talks evening"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  field_event: "add64cb2-cb7b-4b98-8dda-25a9529a7177"
+  field_enrollment_status: 1
+  field_account: "2a27b688-1230-419b-ac89-441ca6a778ad"
+
+02d1c448-8a9f-46f5-80b1-126d095814f3:
+  uuid: "02d1c448-8a9f-46f5-80b1-126d095814f3"
+  title: "jonah_wilder @ Sample: short talks evening"
+  langcode: "en"
+  uid: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+  field_event: "add64cb2-cb7b-4b98-8dda-25a9529a7177"
+  field_enrollment_status: 1
+  field_account: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+
+0aabb248-82be-4293-bbb3-346ba033cc04:
+  uuid: "0aabb248-82be-4293-bbb3-346ba033cc04"
+  title: "noor_haddix @ Sample: short talks evening"
+  langcode: "en"
+  uid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  field_event: "add64cb2-cb7b-4b98-8dda-25a9529a7177"
+  field_enrollment_status: 1
+  field_account: "f5bf2851-1459-4844-af7d-3692c8116d88"
+
+fd5db0ef-0450-4a55-ab7c-466f065eaa88:
+  uuid: "fd5db0ef-0450-4a55-ab7c-466f065eaa88"
+  title: "felix_brandt @ Sample: short talks evening"
+  langcode: "en"
+  uid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  field_event: "add64cb2-cb7b-4b98-8dda-25a9529a7177"
+  field_enrollment_status: 1
+  field_account: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+
+6014e2b5-df2b-4b17-ae1d-6d5d209b5413:
+  uuid: "6014e2b5-df2b-4b17-ae1d-6d5d209b5413"
+  title: "noor_haddix @ Sample: weekend walk and talk"
+  langcode: "en"
+  uid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  field_event: "4fd12a38-08ae-456e-be28-972c94cdcc8d"
+  field_enrollment_status: 1
+  field_account: "f5bf2851-1459-4844-af7d-3692c8116d88"
+
+efc21b0b-b23f-4c04-9749-4c4c2f7cc276:
+  uuid: "efc21b0b-b23f-4c04-9749-4c4c2f7cc276"
+  title: "lena_ostrova @ Sample: study group"
+  langcode: "en"
+  uid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  field_event: "b7d032a2-558f-49f3-9a1d-cc836f81ddae"
+  field_enrollment_status: 1
+  field_account: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+
+087b4e16-8e15-4170-b1a5-d8f451e8533e:
+  uuid: "087b4e16-8e15-4170-b1a5-d8f451e8533e"
+  title: "caleb_fenwick @ Sample: study group"
+  langcode: "en"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_event: "b7d032a2-558f-49f3-9a1d-cc836f81ddae"
+  field_enrollment_status: 1
+  field_account: "b4100482-a544-4882-b2f4-73db28e61cbd"
+
+47ce0ae3-1c9b-4288-a458-3d935106b0be:
+  uuid: "47ce0ae3-1c9b-4288-a458-3d935106b0be"
+  title: "felix_brandt @ Sample: project show and tell"
+  langcode: "en"
+  uid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  field_event: "03b6cc10-b6f2-4a09-8588-7a68521b4cfa"
+  field_enrollment_status: 1
+  field_account: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+
+a3578609-58b8-433a-aba3-210c78987500:
+  uuid: "a3578609-58b8-433a-aba3-210c78987500"
+  title: "lena_ostrova @ Sample: project show and tell"
+  langcode: "en"
+  uid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  field_event: "03b6cc10-b6f2-4a09-8588-7a68521b4cfa"
+  field_enrollment_status: 1
+  field_account: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+
+20a47abf-25f1-40d7-b0b8-8490c80edf9f:
+  uuid: "20a47abf-25f1-40d7-b0b8-8490c80edf9f"
+  title: "tamsin_reyes @ Sample: project show and tell"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  field_event: "03b6cc10-b6f2-4a09-8588-7a68521b4cfa"
+  field_enrollment_status: 1
+  field_account: "2a27b688-1230-419b-ac89-441ca6a778ad"
+
+a8f07262-56e1-451c-997e-91eb1e92edd2:
+  uuid: "a8f07262-56e1-451c-997e-91eb1e92edd2"
+  title: "caleb_fenwick @ Sample: reading circle"
+  langcode: "en"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_event: "a4e80a11-3c26-4a7e-a36e-80fb2fe53bc1"
+  field_enrollment_status: 1
+  field_account: "b4100482-a544-4882-b2f4-73db28e61cbd"
+
+fd9e5089-9b81-4475-bea2-13542a25e8e4:
+  uuid: "fd9e5089-9b81-4475-bea2-13542a25e8e4"
+  title: "lena_ostrova @ Sample: reading circle"
+  langcode: "en"
+  uid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  field_event: "a4e80a11-3c26-4a7e-a36e-80fb2fe53bc1"
+  field_enrollment_status: 1
+  field_account: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+
+d277b0d2-994d-41b6-823b-11ca4cba09ff:
+  uuid: "d277b0d2-994d-41b6-823b-11ca4cba09ff"
+  title: "lena_ostrova @ Sample: morning trail meetup"
+  langcode: "en"
+  uid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  field_event: "4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0"
+  field_enrollment_status: 1
+  field_account: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+
+39784204-d9e5-406f-80bb-3f403dc52284:
+  uuid: "39784204-d9e5-406f-80bb-3f403dc52284"
+  title: "felix_brandt @ Sample: morning trail meetup"
+  langcode: "en"
+  uid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  field_event: "4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0"
+  field_enrollment_status: 1
+  field_account: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+
+0fdca512-ab4d-48aa-965f-97aa6322f0ff:
+  uuid: "0fdca512-ab4d-48aa-965f-97aa6322f0ff"
+  title: "caleb_fenwick @ Sample: morning trail meetup"
+  langcode: "en"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_event: "4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0"
+  field_enrollment_status: 1
+  field_account: "b4100482-a544-4882-b2f4-73db28e61cbd"
+
+69b42cd9-d5bb-4dc8-951e-5b91c7159951:
+  uuid: "69b42cd9-d5bb-4dc8-951e-5b91c7159951"
+  title: "idris_calloway @ Sample: get-together for all groups"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  field_event: "f5dc6b02-387e-474b-9a2c-22530d2d85b6"
+  field_enrollment_status: 1
+  field_account: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+
+f7c82137-42e7-42b0-a914-7a18db777ecc:
+  uuid: "f7c82137-42e7-42b0-a914-7a18db777ecc"
+  title: "priya_vance @ Sample: get-together for all groups"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  field_event: "f5dc6b02-387e-474b-9a2c-22530d2d85b6"
+  field_enrollment_status: 1
+  field_account: "af0f6327-28f5-46d0-9717-24654756fb14"
+
+ac33da21-dd22-4159-8f9d-8c00534207a4:
+  uuid: "ac33da21-dd22-4159-8f9d-8c00534207a4"
+  title: "caleb_fenwick @ Sample: get-together for all groups"
+  langcode: "en"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_event: "f5dc6b02-387e-474b-9a2c-22530d2d85b6"
+  field_enrollment_status: 1
+  field_account: "b4100482-a544-4882-b2f4-73db28e61cbd"
+
+b858bdcb-4587-48a2-8e0e-cdd9611244b9:
+  uuid: "b858bdcb-4587-48a2-8e0e-cdd9611244b9"
+  title: "jonah_wilder @ Sample: get-together for all groups"
+  langcode: "en"
+  uid: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+  field_event: "f5dc6b02-387e-474b-9a2c-22530d2d85b6"
+  field_enrollment_status: 1
+  field_account: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+
+502b4136-edfd-41af-9a2c-14b3e4b0a8f7:
+  uuid: "502b4136-edfd-41af-9a2c-14b3e4b0a8f7"
+  title: "idris_calloway @ Sample: organizers' planning hour"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  field_event: "3674a478-7937-400e-9ad3-5b9f6cc4a756"
+  field_enrollment_status: 1
+  field_account: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+
+0c0b5f76-ae50-4e26-a3f5-0c6981f28d17:
+  uuid: "0c0b5f76-ae50-4e26-a3f5-0c6981f28d17"
+  title: "priya_vance @ Sample: organizers' planning hour"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  field_event: "3674a478-7937-400e-9ad3-5b9f6cc4a756"
+  field_enrollment_status: 1
+  field_account: "af0f6327-28f5-46d0-9717-24654756fb14"
+
+8bbd9901-4a35-42c8-98b8-8c4fd1bc8904:
+  uuid: "8bbd9901-4a35-42c8-98b8-8c4fd1bc8904"
+  title: "caleb_fenwick @ Sample: help desk for new members"
+  langcode: "en"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_event: "bcb8295f-7ffc-43f8-a576-04dc50224182"
+  field_enrollment_status: 1
+  field_account: "b4100482-a544-4882-b2f4-73db28e61cbd"

@@ -36,6 +36,30 @@ final class PackFictionalTest extends UnitTestCase {
   ];
 
   /**
+   * The only real names any pack may state: two group names, in one pack.
+   *
+   * The owner named these two real groups for the practice show site (pack
+   * cryptorado, 26 November 2026). Each is allowed as the whole name, written
+   * exactly so, in that pack only. The bare city word still fails REAL_WORDS,
+   * the names still fail in every other pack, and the pack's text about them
+   * is one line each saying the page is a sample, not the group's own.
+   * Nothing else is allowed this way.
+   */
+  public const OWNER_NAMED_REAL_GROUPS = [
+    'cryptorado' => ['Denver Blockchain', 'Boulder Blockchain'],
+  ];
+
+  /**
+   * A pack's text with its allowed real group names taken out, whole only.
+   */
+  public static function withoutOwnerNamedGroups(string $pack, string $text): string {
+    foreach (self::OWNER_NAMED_REAL_GROUPS[$pack] ?? [] as $name) {
+      $text = (string) preg_replace('/(?<![\p{L}\p{N}_])' . preg_quote($name, '/') . '(?![\p{L}\p{N}_])/u', '', $text);
+    }
+    return $text;
+  }
+
+  /**
    * Every account is a person record of the source's People section.
    *
    * The name is a listed username, and the first and last name together are
@@ -61,7 +85,7 @@ final class PackFictionalTest extends UnitTestCase {
     );
     $this->assertNotEmpty($files, "Pack $pack has files to scan.");
     foreach ($files as $path) {
-      $found = PackFiction::realWordProblems((string) file_get_contents($path), self::REAL_WORDS);
+      $found = PackFiction::realWordProblems(self::withoutOwnerNamedGroups($pack, (string) file_get_contents($path)), self::REAL_WORDS);
       $this->assertSame([], $found, "Pack $pack, " . basename($path) . ' names a real place or provider.');
     }
   }
@@ -175,7 +199,7 @@ final class PackFictionalTest extends UnitTestCase {
     $people = [];
     $files = [];
     foreach ($scopes as $name) {
-      $inventory = array_merge($inventory, PackFiction::names(self::inventory($name)));
+      $inventory = array_merge($inventory, PackFiction::names(self::inventory($name)), self::OWNER_NAMED_REAL_GROUPS[$name] ?? []);
       $people = array_merge($people, PackFiction::peopleNames(self::inventory($name)));
       foreach (self::scopeSegments($name) as $file => $segments) {
         $files[$name . '/' . $file] = $segments;
@@ -231,7 +255,7 @@ final class PackFictionalTest extends UnitTestCase {
    * @dataProvider packProvider
    */
   public function testStructuredNamesAreInventoried(string $pack): void {
-    $inventory = array_merge(PackFiction::names(self::inventory($pack)), PackFiction::names(self::inventory('howto')));
+    $inventory = array_merge(PackFiction::names(self::inventory($pack)), PackFiction::names(self::inventory('howto')), self::OWNER_NAMED_REAL_GROUPS[$pack] ?? []);
     $names = PackFiction::structuredNames(array_merge(self::packYaml($pack), self::siteGuideFiles()));
     $this->assertNotSame([], $names, "Pack $pack states names in its fields.");
     $this->assertSame([], array_values(array_diff($names, $inventory)), "Pack $pack's name fields not in an inventory.");
@@ -283,6 +307,92 @@ final class PackFictionalTest extends UnitTestCase {
     }
     $this->assertSame([], PackFiction::staleEntries(PackFiction::names(self::inventory($scope)), $strings), "Scope $scope lists a name its text never states.");
     $this->assertSame([], PackFiction::staleEntries(PackFiction::ordinaryWords(self::inventory($scope)), $strings), "Scope $scope lists an ordinary word its text never states.");
+  }
+
+  /**
+   * The allowance covers the two whole names in their one pack, nothing more.
+   */
+  public function testOwnerNamedGroupsAreAllowedOnlyWholeAndOnlyInTheirPack(): void {
+    $this->assertSame(['cryptorado'], array_keys(self::OWNER_NAMED_REAL_GROUPS));
+    $this->assertSame(['Denver Blockchain', 'Boulder Blockchain'], self::OWNER_NAMED_REAL_GROUPS['cryptorado']);
+    $real = static fn (string $pack, string $text): array => PackFiction::realWordProblems(self::withoutOwnerNamedGroups($pack, $text), self::REAL_WORDS);
+    $this->assertSame([], $real('cryptorado', 'Join Denver Blockchain or Boulder Blockchain.'));
+    $this->assertSame(['Denver'], $real('cryptorado', 'A cafe in Denver.'));
+    $this->assertSame(['Boulder'], $real('cryptorado', 'Denver Blockchain meets in Boulder.'));
+    $this->assertSame(['Denver'], $real('cryptorado', 'denver blockchain'));
+    $this->assertSame(['Denver'], $real('cryptorado', 'Denver Blockchains'));
+    $this->assertSame(['Denver'], $real('lanternrow', 'Denver Blockchain'));
+    $this->assertSame(['Colorado'], $real('cryptorado', 'Denver Blockchain, Colorado'));
+  }
+
+  /**
+   * Every item of the practice show site says "Sample" in its title or first line.
+   *
+   * The two real-named groups too: their one line says the page is a sample.
+   */
+  public function testEveryShowSiteItemSaysSample(): void {
+    $files = self::packYaml('cryptorado');
+    $this->assertNotSame([], $files, 'The practice show site pack has files.');
+    $this->assertSame([], self::sampleProblems($files));
+    foreach (self::entries($files['group.yml'] ?? []) as [, $group]) {
+      if (in_array((string) ($group['label'] ?? ''), self::OWNER_NAMED_REAL_GROUPS['cryptorado'], TRUE)) {
+        $this->assertStringContainsString("not this group's own", (string) $group['description'], 'A real-named group says its page is not its own.');
+      }
+    }
+  }
+
+  /**
+   * The sample check fails on an item that lost its mark.
+   */
+  public function testAnItemWithoutSampleIsReported(): void {
+    $files = self::packYaml('cryptorado');
+    $event = array_key_first($files['event.yml']);
+    $files['event.yml'][$event]['title'] = 'Newcomers coffee';
+    $files['event.yml'][$event]['body'] = '<p>An easy first meetup. Sample text later.</p>';
+    $this->assertCount(1, self::sampleProblems($files));
+    $files = self::packYaml('cryptorado');
+    $user = array_key_first($files['user.yml']);
+    $files['user.yml'][$user]['self_introduction'] = 'Looks after the events.';
+    $this->assertCount(1, self::sampleProblems($files));
+    $files = self::packYaml('cryptorado');
+    $files['group.yml']['x'] = ['label' => 'Denver Blockchain', 'description' => '<p>People who meet.</p>'];
+    $this->assertCount(1, self::sampleProblems($files));
+  }
+
+  /**
+   * Items whose title and first line both lack the word "Sample".
+   *
+   * @param array<string, array> $files
+   *   The pack's parsed files by file name.
+   *
+   * @return string[]
+   *   One message for each item.
+   */
+  private static function sampleProblems(array $files): array {
+    $fields = [
+      'user.yml' => ['self_introduction', 'self_introduction'],
+      'group.yml' => ['label', 'description'],
+      'event.yml' => ['title', 'body'],
+      'topic.yml' => ['title', 'body'],
+      'post.yml' => ['field_post', 'field_post'],
+    ];
+    $first = static function (string $html): string {
+      $text = trim(html_entity_decode(strip_tags(str_replace('</p>', "</p>\n", $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+      $line = strtok($text, "\n") ?: '';
+      $sentence = preg_split('/(?<=[.?!])\s/u', $line, 2)[0] ?? '';
+      return $sentence;
+    };
+    $problems = [];
+    foreach ($fields as $file => [$title, $body]) {
+      foreach (self::entries($files[$file] ?? []) as [$uuid, $data]) {
+        $marked = str_contains((string) ($data[$title] ?? ''), 'Sample')
+          || str_contains($first((string) ($data[$body] ?? '')), 'Sample');
+        if (!$marked) {
+          $problems[] = "$file, $uuid: neither the title nor the first sentence says Sample.";
+        }
+      }
+    }
+    return $problems;
   }
 
 }

@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Install functions for LocalNodes Events.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * The site manager may open the attendee list of events outside members-only
+ * groups. The platform's site-role list
+ * (_localnodes_platform_house_role_allowed_permissions()) names this
+ * permission, so its prune keeps it.
+ */
+function localnodes_events_install(): void {
+  if ($role = \Drupal\user\Entity\Role::load('sitemanager')) {
+    $role->grantPermission('manage enrollments outside members-only groups')->save();
+  }
+}

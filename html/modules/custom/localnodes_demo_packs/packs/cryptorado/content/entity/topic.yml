@@ -1,0 +1,57 @@
+---
+# Pages: one made-up sample page in each group, open to everyone, and one for the members of the first city group only.
+329f02c9-4b8f-4aae-ad1a-d3661bda3365:
+  uuid: "329f02c9-4b8f-4aae-ad1a-d3661bda3365"
+  title: "Sample: how our meetups usually run"
+  type: "topic"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  created: "-14 day|09:00"
+  body: "<p>Sample page, made up for this practice site. Meetups start with ten minutes of introductions. Newcomers are paired with someone who has been before. We finish by choosing the next event together.</p>"
+  field_topic_type: "Reference"
+  image: null
+  image_alt: ""
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_content_visibility: "public"
+
+691c86d9-10e7-48a9-8b50-6a83fe9ffd1a:
+  uuid: "691c86d9-10e7-48a9-8b50-6a83fe9ffd1a"
+  title: "Sample: questions people ask before coming"
+  type: "topic"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  created: "-14 day|09:00"
+  body: "<p>Sample page, made up for this practice site. You need nothing before you come. The sample events are free. You are welcome to bring a friend.</p>"
+  field_topic_type: "Reference"
+  image: null
+  image_alt: ""
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_content_visibility: "public"
+
+0957c0cf-6366-44be-bea8-aebfcdc99b60:
+  uuid: "0957c0cf-6366-44be-bea8-aebfcdc99b60"
+  title: "Sample: how events work on this site"
+  type: "topic"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  created: "-14 day|09:00"
+  body: "<p>Sample page, made up for this practice site. Every group lists its events on its own events tab, and the events page shows the events of all groups together. Say you are going on an event page and the organizer sees you on the list.</p>"
+  field_topic_type: "Reference"
+  image: null
+  image_alt: ""
+  group: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  field_content_visibility: "public"
+
+1bc338fb-8eb5-49fa-b2fd-9ddd5bc4c874:
+  uuid: "1bc338fb-8eb5-49fa-b2fd-9ddd5bc4c874"
+  title: "Sample: notes for members of this group"
+  type: "topic"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  created: "-14 day|09:00"
+  body: "<p>Sample page, made up for this practice site. Notes for members only: who brings the sign-in sheet and who locks up after a meetup.</p>"
+  field_topic_type: "Reference"
+  image: null
+  image_alt: ""
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_content_visibility: "group"

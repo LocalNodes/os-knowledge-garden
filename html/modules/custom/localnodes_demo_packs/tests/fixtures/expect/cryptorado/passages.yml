@@ -1,0 +1,6 @@
+# One passage per page the assistant rows cite: the text exactly as the source states it.
+- id: first-group-meetup-start
+  uuid: 329f02c9-4b8f-4aae-ad1a-d3661bda3365
+  field: body
+  text: "Meetups start with ten minutes of introductions."
+  source_line: 36

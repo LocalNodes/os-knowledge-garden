@@ -1,0 +1,163 @@
+<?php
+
+/**
+ * @file
+ * Events: who may open an event's attendee list.
+ */
+
+declare(strict_types=1);
+
+use Drupal\block\Entity\Block;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\localnodes_events\Plugin\Action\AttendeeListDeleteAction;
+use Drupal\localnodes_events\Plugin\views\field\AttendeeListBulkForm;
+use Drupal\localnodes_events\Plugin\Action\AttendeeListSendEmail;
+use Drupal\node\NodeInterface;
+use Drupal\views\ViewExecutable;
+
+/**
+ * Implements hook_views_pre_view().
+ *
+ * Runs after social_event_managers_views_pre_view(), which hides the select
+ * and operations columns of the attendee list from anyone who is not the
+ * event's organizer. Everyone the attendee-list rule admits gets them.
+ */
+function localnodes_events_views_pre_view(ViewExecutable $view, $display_id, array &$args): void {
+  if ($view->id() !== 'event_manage_enrollments') {
+    return;
+  }
+  $event = social_event_get_current_event();
+  if (!$event instanceof NodeInterface
+    || !\Drupal::service('localnodes_events.attendee_list_access')->allowed($event, \Drupal::currentUser())) {
+    return;
+  }
+  $fields = $view->display_handler->getOption('fields');
+  foreach (['operations_1', 'social_views_bulk_operations_bulk_form_enrollments_1'] as $field) {
+    if (isset($fields[$field])) {
+      $fields[$field]['exclude'] = FALSE;
+    }
+  }
+  $view->display_handler->overrideOption('fields', $fields);
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function localnodes_events_module_implements_alter(array &$implementations, string $hook): void {
+  if ($hook === 'views_pre_view' && isset($implementations['localnodes_events'])) {
+    $ours = $implementations['localnodes_events'];
+    unset($implementations['localnodes_events']);
+    $implementations['localnodes_events'] = $ours;
+  }
+}
+
+/**
+ * Implements hook_action_info_alter().
+ *
+ * The attendee list's two bulk actions admit everyone the attendee-list rule
+ * admits, as the list itself does.
+ */
+function localnodes_events_action_info_alter(array &$definitions): void {
+  if (isset($definitions['social_event_managers_delete_event_enrollment_action'])) {
+    $definitions['social_event_managers_delete_event_enrollment_action']['class'] = AttendeeListDeleteAction::class;
+  }
+  if (isset($definitions['social_event_managers_send_email_action'])) {
+    $definitions['social_event_managers_send_email_action']['class'] = AttendeeListSendEmail::class;
+  }
+}
+
+/**
+ * Implements hook_block_access().
+ *
+ * The enrollments shown on the event page follow the same rule as the
+ * attendees' own tab: the attendee-list rule, or, while "Hide enrollments" is
+ * off and enrollment is on, anyone who may view the event.
+ */
+function localnodes_events_block_access(Block $block, string $operation, AccountInterface $account): AccessResultInterface {
+  if ($operation !== 'view' || $block->getPluginId() !== 'views_block:event_enrollments-event_enrollments') {
+    return AccessResult::neutral();
+  }
+  $event = social_event_get_current_event();
+  if (!$event instanceof NodeInterface) {
+    return AccessResult::neutral()->addCacheContexts(['route']);
+  }
+  $names = \Drupal::service('localnodes_events.attendee_list_access')->namesAccess($event, $account);
+  return ($names->isAllowed() ? AccessResult::neutral() : AccessResult::forbidden())
+    ->addCacheableDependency($names)->addCacheContexts(['route']);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for event_enrollment.
+ *
+ * Everyone the attendee-list rule admits for the enrollment's event may open,
+ * change and remove it, as the event's organizers may.
+ */
+function localnodes_events_event_enrollment_access(EntityInterface $enrollment, string $operation, AccountInterface $account): AccessResultInterface {
+  if (!in_array($operation, ['view', 'update', 'delete'], TRUE)) {
+    return AccessResult::neutral();
+  }
+  $rule = \Drupal::service('localnodes_events.attendee_list_access');
+  $event = $rule->eventOf($enrollment);
+  if (!$event instanceof NodeInterface) {
+    return AccessResult::neutral()->addCacheableDependency($enrollment);
+  }
+  $access = $rule->access($event, $account);
+  return ($access->isAllowed() ? AccessResult::allowed() : AccessResult::neutral())
+    ->addCacheableDependency($access)->addCacheableDependency($enrollment);
+}
+
+/**
+ * Implements hook_views_plugins_field_alter().
+ */
+function localnodes_events_views_plugins_field_alter(array &$plugins): void {
+  if (isset($plugins['social_views_bulk_operations_bulk_form_enrollments'])) {
+    $plugins['social_views_bulk_operations_bulk_form_enrollments']['class'] = AttendeeListBulkForm::class;
+  }
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ *
+ * Open Social's preprocess removes the attendee list's bulk controls from
+ * anyone who is not its organizer; ours keeps them for everyone the
+ * attendee-list rule admits.
+ */
+function localnodes_events_theme_registry_alter(array &$theme_registry): void {
+  // Every entry that runs it: views_view and its template suggestions (the
+  // theme's views-view--event-manage-enrollments template has its own entry).
+  foreach ($theme_registry as &$entry) {
+    if (!isset($entry['preprocess functions']) || !is_array($entry['preprocess functions'])) {
+      continue;
+    }
+    $at = array_search('social_event_managers_preprocess_views_view', $entry['preprocess functions'], TRUE);
+    if ($at !== FALSE) {
+      $entry['preprocess functions'][$at] = 'localnodes_events_preprocess_views_view_attendee_list';
+    }
+  }
+  unset($entry);
+}
+
+/**
+ * Open Social's preprocess, with the bulk controls kept for the rule's people.
+ */
+function localnodes_events_preprocess_views_view_attendee_list(array &$variables): void {
+  $view = $variables['view'];
+  $keep = [];
+  if ($view->id() === 'event_manage_enrollments') {
+    $event = social_event_get_current_event();
+    if ($event instanceof NodeInterface && \Drupal::service('localnodes_events.attendee_list_access')->allowed($event, \Drupal::currentUser())) {
+      foreach (['social_views_bulk_operations_bulk_form_enrollments_1', 'header', 'actions'] as $key) {
+        if (isset($variables['rows'][$key])) {
+          $keep[$key] = $variables['rows'][$key];
+        }
+      }
+    }
+  }
+  social_event_managers_preprocess_views_view($variables);
+  foreach ($keep as $key => $value) {
+    $variables['rows'][$key] = $value;
+  }
+}

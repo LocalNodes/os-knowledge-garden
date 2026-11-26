@@ -140,6 +140,16 @@ final class HousePrivateAccountAccessTest extends GroupAccessKernelTestBase {
     }
   }
 
+  public function testSiteAdministratorRoleKeepsItsPlaceAboveSiteManagers(): void {
+    $admin = $this->createUser([], 'site_administrator', FALSE, ['roles' => ['verified', 'administrator']]);
+    $this->assertTrue($admin->hasPermission('block users'));
+    foreach (['user_block_user_action', 'user_unblock_user_action'] as $id) {
+      $action = $this->container->get('plugin.manager.action')->createInstance($id);
+      $this->assertFalse($action->access($admin, $this->manager, TRUE)->isAllowed(), 'A site manager cannot block an administrator.');
+      $this->assertTrue($action->access($this->manager, $admin, TRUE)->isAllowed(), 'An administrator manages a site manager.');
+    }
+  }
+
   public function testStatusActionsProtectHostAdministratorsAndTheCurrentManager(): void {
     Role::create(['id' => 'custom_host_role', 'label' => 'Custom host role', 'is_admin' => TRUE])->save();
     $admin = $this->createUser([], 'custom_admin', FALSE, ['roles' => ['custom_host_role']]);

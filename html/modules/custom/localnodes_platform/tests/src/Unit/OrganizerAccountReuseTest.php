@@ -33,6 +33,7 @@ final class OrganizerAccountReuseTest extends UnitTestCase {
     foreach ($role_flags as $id => $is_admin) {
       $role = $this->createMock(RoleInterface::class);
       $role->method('isAdmin')->willReturn($is_admin);
+      $role->method('id')->willReturn($id);
       $roles[$id] = $role;
     }
     $role_storage = $this->createMock(EntityStorageInterface::class);
@@ -64,6 +65,7 @@ final class OrganizerAccountReuseTest extends UnitTestCase {
       'host uid1' => [1, []],
       'administrator role' => [7, ['administrator' => TRUE]],
       'custom administrator role' => [7, ['support_admin' => TRUE]],
+      'administrator role without every permission' => [7, ['administrator' => FALSE]],
     ];
   }
 

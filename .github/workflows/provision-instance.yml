@@ -65,6 +65,7 @@ on:
           - pack:maplestreet
           - pack:mallowbend
           - pack:thawfest
+          - pack:cryptorado
           - none
         default: none
       gemini_key_tier:
@@ -1007,7 +1008,7 @@ jobs:
               update_env "DEMO_MODULE" "localnodes_demo_packs"
               update_env "DEMO_PACK" "${DEMO_MODULE_INPUT#pack:}"
               # A manual pack run has no manifest, so the site takes the pack's own name from
-              # this fixed map (the names in localnodes_demo_packs/README.md, "The four sites").
+              # this fixed map (the names in localnodes_demo_packs/README.md, "The sites").
               # A sign-up run keeps the manifest's name; a pack with no entry keeps the default.
               if [ -z "$PROVISION_ID_INPUT" ] && [ -z "$SITE_NAME" ]; then
                 case "${DEMO_MODULE_INPUT#pack:}" in
@@ -1015,6 +1016,7 @@ jobs:
                   maplestreet) SITE_NAME="Maple Street Neighbors" ;;
                   mallowbend)  SITE_NAME="Mallow Bend Farmers' Market" ;;
                   thawfest)    SITE_NAME="Thawfest" ;;
+                  cryptorado)  SITE_NAME="Cryptorado" ;;
                 esac
               fi
               ;;

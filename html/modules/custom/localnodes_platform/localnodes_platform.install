@@ -133,15 +133,98 @@ function _localnodes_platform_protect_private_groups(): void {
     }
     if ($changed) $role->save();
   }
+  _localnodes_platform_narrow_administrator_role();
+  _localnodes_platform_close_group_overview();
   if (!$entities->hasDefinition('group_role')) return;
   foreach ($entities->getStorage('group_role')->loadMultiple() as $role) {
-    if (!in_array($role->getGlobalRoleId(), ['sitemanager', 'contentmanager'], TRUE)) continue;
+    if (!in_array($role->getGlobalRoleId(), ['sitemanager', 'contentmanager', 'administrator'], TRUE)) continue;
     if (!$role->isAdmin() && $role->getPermissions() === []) continue;
     // Ordinary house membership and individual house-manager roles remain.
     $role->set('admin', FALSE);
     $role->set('permissions', []);
     $role->save();
   }
+}
+
+/**
+ * Site-wide roles do not read a group they are not in.
+ *
+ * The administrator role keeps every permission the site defines except the
+ * ones that reach into groups without membership. It is no longer an
+ * all-permissions role, so each run grants the permissions of modules
+ * enabled since. The recovery account (user 1) keeps Drupal's full access.
+ */
+function _localnodes_platform_narrow_administrator_role(): void {
+  $role = \Drupal::entityTypeManager()->getStorage('user_role')->load('administrator');
+  if ($role === NULL) return;
+  $changed = FALSE;
+  if ($role->isAdmin()) {
+    $role->setIsAdmin(FALSE);
+    $changed = TRUE;
+  }
+  foreach (array_keys(\Drupal::service('user.permissions')->getPermissions()) as $permission) {
+    $withheld = _localnodes_platform_permission_reaches_into_groups((string) $permission);
+    if ($withheld && $role->hasPermission($permission)) {
+      $role->revokePermission($permission);
+      $changed = TRUE;
+    }
+    elseif (!$withheld && !$role->hasPermission($permission)) {
+      $role->grantPermission($permission);
+      $changed = TRUE;
+    }
+  }
+  if ($changed) $role->save();
+}
+
+/** Permissions that open a group's pages, members or content to a non-member. */
+function _localnodes_platform_permission_reaches_into_groups(string $permission): bool {
+  return in_array($permission, [
+    'bypass node access',
+    'manage all groups',
+    // Group-level elsewhere; the members list also asks for it site-wide.
+    'administer members',
+    'administer group',
+    // Administration lists of content, notices, files, groups and
+    // memberships stay with the recovery account.
+    'administer post entities',
+    'administer comments',
+    'administer activity entities',
+    'edit activity entities',
+    'administer messages',
+    'overview messages',
+    'access files overview',
+    'access group overview',
+    'administer social_user_export',
+    'administer polls',
+    'view all published activity entities',
+    'administer safe smart accounts',
+    'view published queue storage entity entities',
+    'view unpublished queue storage entity entities',
+    'edit queue storage entity entities',
+    'administer queue storage entity entities',
+  ], TRUE) || preg_match('/^view \S+:group content$/', $permission) === 1;
+}
+
+/**
+ * The group overview admits only the recovery account.
+ *
+ * The overview asks for a permission no site role holds. The view is shipped
+ * by social_group before this module, so config/install cannot change it. A
+ * site without the view is left alone.
+ */
+function _localnodes_platform_close_group_overview(): void {
+  $view = \Drupal::configFactory()->getEditable('views.view.groups_overview');
+  if ($view->isNew()) return;
+  $changed = FALSE;
+  foreach (array_keys($view->get('display') ?? []) as $display) {
+    $key = "display.$display.display_options.access";
+    $access = $view->get($key);
+    if (is_array($access) && ($access['type'] ?? NULL) === 'role') {
+      $view->set($key, ['type' => 'perm', 'options' => ['perm' => 'manage all groups']]);
+      $changed = TRUE;
+    }
+  }
+  if ($changed) $view->save();
 }
 
 /** Exact site-role capabilities. New feature grants remain off until reviewed. */
@@ -254,6 +337,9 @@ function _localnodes_platform_house_role_allowed_permissions(string $role_id = '
     'view blocked user',
     'export localnodes site',
     'view network fee account',
+    // localnodes_events: attendee lists of events outside members-only
+    // groups; granted in localnodes_events_install().
+    'manage enrollments outside members-only groups',
   ] : [];
   return array_fill_keys(array_merge($ordinary, $site), TRUE);
 }

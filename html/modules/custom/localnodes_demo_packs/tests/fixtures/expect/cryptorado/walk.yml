@@ -1,0 +1,57 @@
+# The practice show site pack's walk: what one ordinary member checks. Same format as the smoke pack's walk.
+witness:
+  user: b69a3637-dd49-4dd1-ae42-334dfecebb38
+  member_of:
+    - 1e8ce9d5-b1bf-4783-ab91-641e69f6d853
+    - 998cecc0-a853-40c0-b722-2b4d8d271ae3
+  not_member_of:
+    - 38c423c6-25c9-437a-bc9e-8dfaa43ad879
+  roles:
+    - authenticated
+    - verified
+owner: 2a27b688-1230-419b-ac89-441ca6a778ad
+steps:
+  - id: 1
+    status: checked
+    checks:
+      - kind: post
+        uuid: a5ac987c-7ba0-4fc6-aa1f-49f194ee4e71
+        phrase: "Sample post: who is coming to the newcomers' coffee? I will be there early."
+        likes: 0
+  - id: 2
+    status: checked
+    checks:
+      - kind: calendar
+        event: 8e50d9d2-3a14-4d00-abf7-c705b754068d
+        group: 998cecc0-a853-40c0-b722-2b4d8d271ae3
+      - kind: event
+        uuid: 8e50d9d2-3a14-4d00-abf7-c705b754068d
+        phrases:
+          - "a cafe downtown"
+        going: 3
+        start: +3 day|18:00
+  - id: 3
+    status: checked
+    checks:
+      - kind: page
+        uuid: 329f02c9-4b8f-4aae-ad1a-d3661bda3365
+        passage: first-group-meetup-start
+  - id: 4
+    status: checked
+    assistant:
+      - meetup-start
+    checks: []
+  - id: 5
+    status: held
+    owner: pages shared between groups (this pack shares no page between groups)
+  - id: 6
+    status: held
+    owner: direct messages (off on this site)
+  - id: 7
+    status: pending
+    owner: practice funds
+    needs: practice funds turned on when the site is made
+  - id: 8
+    status: checked
+    checks:
+      - kind: export

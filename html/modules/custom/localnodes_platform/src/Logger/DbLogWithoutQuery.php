@@ -46,6 +46,13 @@ final class DbLogWithoutQuery implements LoggerInterface {
         $context[$key] = self::withoutExportRoute(self::withoutSearchWords(self::withoutQuery($context[$key])));
       }
     }
+    // A page or reply title can belong to a members-only group; the log keeps
+    // the action and the link's id, not the words.
+    if (in_array($context['channel'] ?? NULL, ['content', 'comment', 'group_content'], TRUE)) {
+      foreach (['%title', '%subject'] as $key) {
+        if (isset($context[$key])) $context[$key] = '(not logged)';
+      }
+    }
     $this->inner->log($level, $message, $context);
   }
 

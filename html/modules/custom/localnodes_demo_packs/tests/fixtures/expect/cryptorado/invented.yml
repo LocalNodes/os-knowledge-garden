@@ -1,0 +1,45 @@
+# Every person, organisation, place and street the practice show site pack and
+# its expectation files name. Each is made up. The two real group names the
+# owner chose for this show site are not listed here: PackFictionalTest allows
+# them for this pack only (OWNER_NAMED_REAL_GROUPS).
+people:
+  - Tamsin Reyes
+  - Idris Calloway
+  - Priya Vance
+  - Noor Haddix
+  - Felix Brandt
+  - Jonah Wilder
+  - Lena Ostrova
+  - Caleb Fenwick
+organisations: []
+places:
+  - Commons
+  - "a cafe downtown"
+  - "a cafe near the campus"
+  - "a community hall"
+  - "a coworking room"
+  - "a library meeting room"
+  - "a park by the river"
+  - "a shared office space"
+  - "a trailhead parking lot"
+  - "online"
+  - "the back room of a bookshop"
+streets: []
+ordinary:
+  - Sample
+  - An
+  - Come
+  - Three
+  - Wear
+  - Five
+  - Organizers
+  - Drop
+  - Every
+  - Newcomers
+  - Likes
+  - Goes
+  - Helps
+  - Meetups
+  - Two
+  - Where
+  - Notes

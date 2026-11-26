@@ -1,0 +1,154 @@
+---
+# Practice show site: eight made-up sample members, in the order the source lists them.
+# Tamsin Reyes is the export owner. No account names an organization.
+2a27b688-1230-419b-ac89-441ca6a778ad:
+  uuid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  created: "now|00:00"
+  name: "tamsin_reyes"
+  mail: "tamsin.reyes@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Tamsin"
+  last_name: "Reyes"
+  organization: ""
+  function: "Sample member. Looks after the sample events in the Commons."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Looks after the sample events in the Commons."
+
+c34d0dd6-1597-460f-906a-6b37b0a8db5c:
+  uuid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  created: "now|00:00"
+  name: "idris_calloway"
+  mail: "idris.calloway@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Idris"
+  last_name: "Calloway"
+  organization: ""
+  function: "Sample member. Organizes the sample events of the first city group."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Organizes the sample events of the first city group."
+
+af0f6327-28f5-46d0-9717-24654756fb14:
+  uuid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  created: "now|00:00"
+  name: "priya_vance"
+  mail: "priya.vance@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Priya"
+  last_name: "Vance"
+  organization: ""
+  function: "Sample member. Organizes the sample events of the second city group."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Organizes the sample events of the second city group."
+
+f5bf2851-1459-4844-af7d-3692c8116d88:
+  uuid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  created: "now|00:00"
+  name: "noor_haddix"
+  mail: "noor.haddix@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Noor"
+  last_name: "Haddix"
+  organization: ""
+  function: "Sample member. Likes the newcomers' coffee best."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Likes the newcomers' coffee best."
+
+2ca839f7-7f7c-4929-90ea-88d4f28fb967:
+  uuid: "2ca839f7-7f7c-4929-90ea-88d4f28fb967"
+  created: "now|00:00"
+  name: "felix_brandt"
+  mail: "felix.brandt@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Felix"
+  last_name: "Brandt"
+  organization: ""
+  function: "Sample member. Goes to the build nights in both groups."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Goes to the build nights in both groups."
+
+b69a3637-dd49-4dd1-ae42-334dfecebb38:
+  uuid: "b69a3637-dd49-4dd1-ae42-334dfecebb38"
+  created: "now|00:00"
+  name: "jonah_wilder"
+  mail: "jonah.wilder@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Jonah"
+  last_name: "Wilder"
+  organization: ""
+  function: "Sample member. New to the site."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. New to the site."
+
+d0d1e8df-0647-4a06-82bd-8e924b2647c5:
+  uuid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  created: "now|00:00"
+  name: "lena_ostrova"
+  mail: "lena.ostrova@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Lena"
+  last_name: "Ostrova"
+  organization: ""
+  function: "Sample member. Runs the sample study group."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Runs the sample study group."
+
+b4100482-a544-4882-b2f4-73db28e61cbd:
+  uuid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  created: "now|00:00"
+  name: "caleb_fenwick"
+  mail: "caleb.fenwick@cryptorado.example"
+  timezone: "UTC"
+  status: 1
+  image: null
+  image_alt: ""
+  first_name: "Caleb"
+  last_name: "Fenwick"
+  organization: ""
+  function: "Sample member. Helps new members find their way around."
+  phone_number: ""
+  expertise: []
+  interests: []
+  address: ""
+  self_introduction: "Sample member. Helps new members find their way around."

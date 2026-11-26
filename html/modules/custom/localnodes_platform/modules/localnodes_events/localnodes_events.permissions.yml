@@ -1,0 +1,4 @@
+manage enrollments outside members-only groups:
+  title: 'See and manage enrollments of events outside members-only groups'
+  description: 'Open the attendee list of any event the person may see, except events inside members-only groups.'
+  restrict access: true

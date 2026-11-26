@@ -8,11 +8,11 @@ use Drupal\activity_viewer\Plugin\views\filter\ActivityFilterPersonalisedHomepag
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Database\Query\Condition;
 
-/** Applies ordinary home-stream filtering to site and content managers. */
+/** Applies ordinary home-stream filtering to every site role. */
 final class HouseActivityHomepageFilter extends ActivityFilterPersonalisedHomepage {
 
   /**
-   * Keeps the installed filter query with only the administrator role skip.
+   * Keeps the installed filter query, skipped for the recovery account only.
    *
    * The parent hard-codes its three-role early return inside query(), so this
    * method follows that query; inherited entity-ID and comment rules remain.
@@ -21,13 +21,11 @@ final class HouseActivityHomepageFilter extends ActivityFilterPersonalisedHomepa
    */
   public function query() {
     $account = $this->view->getUser();
-    $skip_roles = [
-      'administrator',
-    ];
     $hide_from_view = $nids = $pids = $cids = [];
 
-    // Skip filter for users that have full access to the site content.
-    if (!empty(array_intersect($skip_roles, $account->getRoles()))) {
+    // Only the recovery account skips the filter; site-wide roles do not
+    // read a group they are not in.
+    if ((int) $account->id() === 1) {
       return;
     }
 

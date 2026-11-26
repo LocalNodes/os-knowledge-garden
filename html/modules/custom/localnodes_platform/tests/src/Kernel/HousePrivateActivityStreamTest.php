@@ -71,7 +71,7 @@ final class HousePrivateActivityStreamTest extends GroupAccessKernelTestBase {
   }
 
   public static function staffRoles(): array {
-    return [['sitemanager'], ['contentmanager']];
+    return [['sitemanager'], ['contentmanager'], ['administrator']];
   }
 
   private function activities(GroupInterface $house, AccountInterface $author, string $prefix): array {
@@ -143,6 +143,10 @@ final class HousePrivateActivityStreamTest extends GroupAccessKernelTestBase {
     [, , $staff, $privateIds, $communityIds] = $this->fixture($role);
     [$ids, $html] = $this->homepage($staff);
     $this->assertSame([], array_values(array_intersect($privateIds, $ids)));
+    $handler = $this->container->get('entity_type.manager')->getAccessControlHandler('activity');
+    foreach (Activity::loadMultiple($privateIds) as $activity) {
+      $this->assertFalse($handler->access($activity, 'view', $staff), 'A private house activity page stays closed.');
+    }
     foreach ($communityIds as $id) $this->assertContains($id, $ids, 'The staff member keeps their joined community-house feed.');
     foreach (['Maple Private House', 'Avery_Private_House', 'Private topic'] as $text) $this->assertStringNotContainsString($text, $html);
     $this->assertStringContainsString('Cedar Community House', $html);

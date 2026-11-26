@@ -57,7 +57,7 @@ final class HousePrivateRetrievalAccessTest extends GroupAccessKernelTestBase {
   }
 
   public static function siteRoles(): array {
-    return ['site manager' => ['sitemanager'], 'content manager' => ['contentmanager']];
+    return ['site manager' => ['sitemanager'], 'content manager' => ['contentmanager'], 'administrator' => ['administrator']];
   }
 
   /** @dataProvider siteRoles */

@@ -1,0 +1,10 @@
+services:
+  localnodes_events.attendee_list_access:
+    class: Drupal\localnodes_events\Access\AttendeeListAccess
+    arguments: ['@entity_type.manager', '@tempstore.private']
+    tags:
+      - { name: access_check, applies_to: _localnodes_attendee_list, method: routeAccess }
+  localnodes_events.attendee_list_routes:
+    class: Drupal\localnodes_events\Routing\AttendeeListRouteSubscriber
+    tags:
+      - { name: event_subscriber }
