@@ -46,6 +46,17 @@ check() { if eval "$2"; then ok "$1"; else nok "$1"; fi; }
 line_missing() { printf '%s' "::error::This app's settings do not show $1 as held. Only the run that creates a site writes its keys and passwords: create the site again, or the site's owner must place the key. Nothing was stored or sent."; }
 line_taken()   { printf '%s' "::error::The app this run just created already shows a value for $1, so this run does not write it. Nothing was stored or sent."; }
 line_unclear() { printf '%s' "::error::This app's settings did not clearly show $1. Nothing was stored or sent."; }
+line_shape()   { printf '%s' "::error::This app's settings did not come back as one readable list, so $1 was not checked. Nothing was stored or sent."; }
+line_unreadable() { printf '%s' "::error::This token was shown no saved value in this app's settings, so $1 was not checked. If the Coolify API token cannot read saved values, the owner must give it that ability (read:sensitive). Nothing was stored or sent."; }
+# Every refusal is followed by one line saying what the run saw: names from the fixed list of six and kinds only.
+SUMMARY_PREFIX="What this run saw (names and kinds only, no values): "
+KIND='(preview )?(no value field|null|empty|stars|non-empty|number|boolean|array|object)'
+NAMES_RE=""
+for n in DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN; do
+  NAMES_RE="$NAMES_RE; $n: (no row|$KIND(, $KIND)*)"
+done
+SUMMARY_RE="^What this run saw \\(names and kinds only, no values\\): (not readable as JSON|not one JSON document \\([0-9]+\\)|one JSON (object|string|number|boolean|null), not a list|a list of [0-9]+ rows, [0-9]+ without a value field, [0-9]+ not objects$NAMES_RE)\$"
+summary_ok() { [ "$(printf '%s\n' "$1" | wc -l)" -eq 1 ] && grep -qE "$SUMMARY_RE" <<<"$1"; }
 
 yaml_json() {
   if command -v ruby >/dev/null 2>&1; then
@@ -61,13 +72,13 @@ yaml_json "$PROVISION_WF" > "$WORK/prov.json" || { echo "FAIL - could not parse 
 yaml_json "$FUNDS_WF" > "$WORK/funds.json" || { echo "FAIL - could not parse $FUNDS_WF"; exit 1; }
 run_text "$WORK/prov.json" provision "Configure environment variables" > "$WORK/prov-run.sh"
 run_text "$WORK/funds.json" funds_on "Turn group funds on (practice)" > "$WORK/funds-run.sh"
-for fn in secret_names created_here check_secret; do
+for fn in secret_names created_here check_secret settings_summary; do
   extract_fn "$WORK/prov-run.sh" "$fn" >> "$WORK/prov.fn"
   extract_fn "$WORK/funds-run.sh" "$fn" >> "$WORK/funds.fn"
 done
 
 echo "# the two copies of the key rule"
-for fn in secret_names created_here check_secret; do
+for fn in secret_names created_here check_secret settings_summary; do
   check "$fn is non-empty in both workflows and the two copies are byte-identical (sha256)" \
     '[ -n "$(extract_fn "$WORK/prov-run.sh" "$fn")" ] && [ "$(extract_fn "$WORK/prov-run.sh" "$fn" | sha256sum)" = "$(extract_fn "$WORK/funds-run.sh" "$fn" | sha256sum)" ]'
 done
@@ -173,10 +184,10 @@ row() {
               '[ "$wrc" -eq 0 ] && [ "$out" = PASSED ] && [ "$drc" -eq 0 ] && [ ! -s "$WORK/d.out" ] && [ ! -s "$WORK/d.err" ]' ;;
           *)
             want="$(line_"$expect" "$key")"
-            check "$wf | $mode | $key | $label | refuse ($expect): the step stops there with the one fixed line, no value printed" \
-              '[ "$wrc" -ne 0 ] && [ "$out" = "$want" ] && ! grep -qF -e "$HELD" -e "$OTHER" <<<"$out"'
-            check "$wf | $mode | $key | $label | refuse ($expect), called on its own: status 1, nothing on stdout, the line alone on stderr" \
-              '[ "$drc" -eq 1 ] && [ ! -s "$WORK/d.out" ] && [ "$(cat "$WORK/d.err")" = "$want" ]' ;;
+            check "$wf | $mode | $key | $label | refuse ($expect): the step stops there with the one fixed line and the names-and-kinds line, no value printed" \
+              '[ "$wrc" -ne 0 ] && [ "$(head -n 1 <<<"$out")" = "$want" ] && summary_ok "$(tail -n +2 <<<"$out")" && ! grep -qF -e "$HELD" -e "$OTHER" -e "********" <<<"$out"'
+            check "$wf | $mode | $key | $label | refuse ($expect), called on its own: status 1, nothing on stdout, the line and the names-and-kinds line alone on stderr" \
+              '[ "$drc" -eq 1 ] && [ ! -s "$WORK/d.out" ] && [ "$(head -n 1 "$WORK/d.err")" = "$want" ] && summary_ok "$(tail -n +2 "$WORK/d.err")"' ;;
         esac
       done
     done
@@ -205,28 +216,37 @@ row "a held value ending in a newline (kept: it never passes through the shell)"
 row "two rows hold different values"                              taken unclear 0 "[$A, $(r k1 '$h'), $(r k2 '$o')]"
 row "an empty row ahead of a held row"                            taken unclear 0 "[$A, $(r k1 '""'), $(r k2 '$h')]"
 row "a compose-default row next to a held row"                    taken unclear 0 "[$A, $(r k1 '$h'), $(r k2 '$d')]"
+# what Coolify 4.7.6 is read to list for a new compose app: every name the compose file uses, once, with no stored value
+# (null), and only the site address rows hold text; before its compose file is read, only those address rows
+S1='{uuid: "s1", key: "SERVICE_FQDN_OPENSOCIAL", value: "demo.localnodes.xyz", is_preview: false}'
+S2='{uuid: "s2", key: "SERVICE_URL_OPENSOCIAL", value: "https://demo.localnodes.xyz", is_preview: false}'
+N1='{uuid: "n1", key: "DEMO_MODULE", value: null, is_preview: false}'
+row "a new app as Coolify 4.7.6 lists it: the key's row holds null, other names null, address rows hold text" new missing 0 "[$S1, $S2, $N1, $(r k1 null)]"
+row "a new app before its compose file is read: only the address rows" new missing 0 "[$S1, $S2]"
+row "a held row and a null row for the key"                       taken unclear 0 "[$A, $(r k1 '$h'), $(r k2 null)]"
+row "the key's row holds a number (another kind of value)"        unclear unclear 0 "[$A, $(r k1 7)]"
 # unclear answers: refused on every run
-row "the key's row has no value field (hidden from this token)"   unclear unclear 0 "[$A, {uuid: \"k1\", key: \$k, is_preview: false}]"
-row "every row has no value field (hidden scenario)"              unclear unclear 0 "[{uuid: \"a1\", key: \"DEMO_MODULE\", is_preview: false}, {uuid: \"k1\", key: \$k, is_preview: false}]"
-row "the key's row holds null"                                    unclear unclear 0 "[$A, $(r k1 null)]"
+row "the key's row has no value field (hidden from this token)"   new unclear 0 "[$A, {uuid: \"k1\", key: \$k, is_preview: false}]"
+row "every row has no value field (hidden scenario)"              new unreadable 0 "[{uuid: \"a1\", key: \"DEMO_MODULE\", is_preview: false}, {uuid: \"k1\", key: \$k, is_preview: false}]"
+row "the key's row holds null"                                    new missing 0 "[$A, $(r k1 null)]"
 row "the key's row holds a number"                                unclear unclear 0 "[$A, $(r k1 123)]"
-row "a held row and a row with no value field"                    unclear unclear 0 "[$A, $(r k1 '$h'), {uuid: \"k2\", key: \$k, is_preview: false}]"
-row "guard: every value empty (hidden values sent as empty strings)" unclear unclear 0 "[{uuid: \"a1\", key: \"DEMO_MODULE\", value: \"\", is_preview: false}, $(r k1 '""')]"
-row "guard: no production row holds a value, only a preview row does" unclear unclear 0 "[$(r k1 '""'), $(r p1 '$o' true)]"
-row "guard: the empty list"                                       unclear unclear 0 "[]"
-row "not a list (an object)"                                      unclear unclear 0 '{data: []}'
-row "an error body that is not a list"                            unclear unclear 0 '{message: "Unauthenticated."}'
-row "a list of strings, not objects"                              unclear unclear 0 '["x"]'
-row "a list holding null"                                         unclear unclear 0 '[null]'
-row "a list of objects and one null"                              unclear unclear 0 "[$A, null]"
-row "a row whose key is not a string"                             unclear unclear 0 "[$A, {uuid: \"k1\", key: 7, value: \"\", is_preview: false}]"
-row "an error status (curl fails on it)"                          unclear unclear 22 '{message: "Service Unavailable"}'
-row "no answer at all (curl cannot connect)"                      unclear unclear 7 'RAW:'
-row "an empty body"                                               unclear unclear 0 'RAW:'
-row "a whitespace-only body"                                      unclear unclear 0 'RAW: \n\t \n'
-row "a body that is not JSON"                                     unclear unclear 0 'RAW:<html>502 Bad Gateway</html>'
-row "two documents: a list, then the empty list"                  unclear unclear 0 "RAW:[{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\",\"is_preview\":false}] []"
-row "two documents, each a list holding a different value"        unclear unclear 0 "RAW:[{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\"},{\"uuid\":\"k1\",\"key\":\"DB_PASSWORD\",\"value\":\"$HELD\"},{\"uuid\":\"k2\",\"key\":\"SPONSOR_RELAYER_PRIVATE_KEY\",\"value\":\"$HELD\"}] [{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\"},{\"uuid\":\"k1\",\"key\":\"DB_PASSWORD\",\"value\":\"$OTHER\"},{\"uuid\":\"k2\",\"key\":\"SPONSOR_RELAYER_PRIVATE_KEY\",\"value\":\"$OTHER\"}]"
+row "a held row and a row with no value field"                    taken unclear 0 "[$A, $(r k1 '$h'), {uuid: \"k2\", key: \$k, is_preview: false}]"
+row "guard: every value empty (hidden values sent as empty strings)" new unreadable 0 "[{uuid: \"a1\", key: \"DEMO_MODULE\", value: \"\", is_preview: false}, $(r k1 '""')]"
+row "guard: no production row holds a value, only a preview row does" new unreadable 0 "[$(r k1 '""'), $(r p1 '$o' true)]"
+row "guard: the empty list"                                       new unreadable 0 "[]"
+row "not a list (an object)"                                      shape shape 0 '{data: []}'
+row "an error body that is not a list"                            shape shape 0 '{message: "Unauthenticated."}'
+row "a list of strings, not objects"                              shape shape 0 '["x"]'
+row "a list holding null"                                         shape shape 0 '[null]'
+row "a list of objects and one null"                              shape shape 0 "[$A, null]"
+row "a row whose key is not a string"                             shape shape 0 "[$A, {uuid: \"k1\", key: 7, value: \"\", is_preview: false}]"
+row "an error status (curl fails on it)"                          shape shape 22 '{message: "Service Unavailable"}'
+row "no answer at all (curl cannot connect)"                      shape shape 7 'RAW:'
+row "an empty body"                                               shape shape 0 'RAW:'
+row "a whitespace-only body"                                      shape shape 0 'RAW: \n\t \n'
+row "a body that is not JSON"                                     shape shape 0 'RAW:<html>502 Bad Gateway</html>'
+row "two documents: a list, then the empty list"                  shape shape 0 "RAW:[{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\",\"is_preview\":false}] []"
+row "two documents, each a list holding a different value"        shape shape 0 "RAW:[{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\"},{\"uuid\":\"k1\",\"key\":\"DB_PASSWORD\",\"value\":\"$HELD\"},{\"uuid\":\"k2\",\"key\":\"SPONSOR_RELAYER_PRIVATE_KEY\",\"value\":\"$HELD\"}] [{\"uuid\":\"a1\",\"key\":\"DEMO_MODULE\",\"value\":\"x\"},{\"uuid\":\"k1\",\"key\":\"DB_PASSWORD\",\"value\":\"$OTHER\"},{\"uuid\":\"k2\",\"key\":\"SPONSOR_RELAYER_PRIVATE_KEY\",\"value\":\"$OTHER\"}]"
 
 echo "# created_here: only the Create step's output naming this very app, with no REUSE, counts"
 ch() { env -i PATH=/usr/bin:/bin "$@" bash --noprofile --norc -c "$(cat "$WORK/prov.fn")"$'\n''created_here'; }

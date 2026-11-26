@@ -141,6 +141,21 @@ case "$cmd" in
   status) [ "${FAIL_BOOTSTRAP:-0}" = 1 ] && exit 1; [ -f "$SITE/installed" ] && echo "Successful" ;;
   site:install) echo "$*" > "$SITE/siteinstall_args"; [ -n "${FAIL_INSTALL:-}" ] && exit "$FAIL_INSTALL"; touch "$SITE/installed" "$SITE/users_table" ;;
   en)
+    # Module list (the redeploy fix): $SITE/mods_on holds the modules that are on. As drush and
+    # core do, naming a module that is already on installs nothing, not even a module it now
+    # requires; naming one that is off turns it on. FAIL_EN_REQ=<name> leaves that one off
+    # (exit 1). Without $SITE/mods_on nothing here is recorded.
+    if [ -f "$SITE/mods_on" ]; then
+      en_rc=0
+      for m in "$@"; do
+        case "$m" in -*) continue ;; esac
+        if [ -n "${FAIL_EN_REQ:-}" ] && [ "$m" = "$FAIL_EN_REQ" ]; then en_rc=1; continue; fi
+        # HANG_EN_REQ=<name>: the enable naming it never returns (sleep is stubbed above, so the real one).
+        if [ -n "${HANG_EN_REQ:-}" ] && [ "$m" = "$HANG_EN_REQ" ]; then /bin/sleep 3600 & wait; fi
+        grep -qx "$m" "$SITE/mods_on" || echo "$m" >> "$SITE/mods_on"
+      done
+      [ "$en_rc" = 0 ] || { echo "Unable to install modules" >&2; exit 1; }
+    fi
     [ "${FAIL_EN:-0}" = 1 ] && [ "$1" = localnodes_platform ] && exit 1
     # FAIL_EN_W3=1 fails enabling localnodes_web3.
     [ "${FAIL_EN_W3:-0}" = 1 ] && [ "$1" = localnodes_web3 ] && { echo "Unable to install modules" >&2; exit 1; }
@@ -162,6 +177,18 @@ case "$cmd" in
       *'"node"'*) [ "${FAIL_NODE_COUNT:-0}" = 1 ] && exit 1; cat "$SITE/nodes" 2>/dev/null || echo 0 ;;
       # 23-40 provider flip guard: the module state (1 when $SITE/or_enabled exists)
       # and the vector index item count ($SITE/indexed; INDEXED_OUT overrides it).
+      # The redeploy fix: the modules our installed modules require ($SITE/mods_req, one per
+      # line) that are not on ($SITE/mods_on), sorted, one line. FAIL_REQ_READ=1 fails the read;
+      # REQ_READ_OUT replaces the answer.
+      *extension.list.module*)
+        [ "${FAIL_REQ_READ:-0}" = 1 ] && exit 1
+        if [ -n "${REQ_READ_OUT:-}" ]; then echo "$REQ_READ_OUT"; exit 0; fi
+        # HANG_REQ_READ=1: the read never returns. FAIL_REQ_READBACK=1: only the read after an enable fails.
+        if [ "${HANG_REQ_READ:-0}" = 1 ]; then /bin/sleep 3600 & wait; fi
+        if [ "${FAIL_REQ_READBACK:-0}" = 1 ] && grep -q '^en ' "$SITE/calls"; then exit 1; fi
+        [ -f "$SITE/mods_req" ] || { echo; exit 0; }
+        touch "$SITE/mods_on"
+        sort -u "$SITE/mods_req" | grep -vxF -f "$SITE/mods_on" | tr '\n' ' ' | sed 's/ $//'; echo ;;
       *moduleExists*) [ "${FAIL_OR_READ:-0}" = 1 ] && exit 1; [ -f "$SITE/or_enabled" ] && echo 1 || echo 0 ;;
       *getIndexedItemsCount*)
         [ "${FAIL_INDEXED_READ:-0}" = 1 ] && exit 1
@@ -885,6 +912,52 @@ if [ -n "${IMAGE:-}" ]; then
 else
   echo "SKIP image checks (set IMAGE to run them)"
 fi
+
+# 14. A redeploy turns on the modules our installed modules newly require. On the published
+#     image a redeploy ran `drush en localnodes_web3` and the demo module; both were already on,
+#     so nothing was installed (drush still printed "has been installed"), and the group set-up
+#     and decisions pages answered "not found". The start must name the modules that are off.
+reqsite() {  # reqsite -> a redeploy fixture whose platform now requires three modules that are off
+  local t; t="$(rsite)"
+  printf '%s\n' localnodes_platform localnodes_web3 localnodes_demo > "$t/mods_on"
+  printf '%s\n' localnodes_group_setup localnodes_consensus localnodes_proposal_feed localnodes_platform > "$t/mods_req"
+  echo "$t"
+}
+on3() {  # on3 DIR -> how many of the three modules are on
+  grep -cxE 'localnodes_group_setup|localnodes_consensus|localnodes_proposal_feed' "$1/mods_on"
+}
+REQ_FAIL_LINE="ERROR: modules this site's own modules require are still off after this start"
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG)"
+check "required modules, manual redeploy: exit 0, ready, all three on, no failure line" "0 yes 3 no" "$rc $(has "$t/out" "=== EXISTING INSTALL READY ===") $(on3 "$t") $(has "$t/out" "$REQ_FAIL_LINE")"
+check "required modules: named to drush in one call, after updatedb" "1 yes" \
+  "$(grep -cx 'drush en localnodes_consensus localnodes_group_setup localnodes_proposal_feed -y' "$t/seq") $(before "$t" "drush updatedb" "drush en localnodes_consensus")"
+check "required modules: the module list is read again after turning them on" 2 "$(grep -c '^drush php:eval .*extension.list.module' "$t/seq")"
+t="$(reqsite)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=true)"
+check "required modules, practice redeploy: all three on, before the readiness check, ready sent" "0 3 yes ready" "$rc $(on3 "$t") $(before "$t" "drush en localnodes_consensus" "drush localnodes-web3:check") $(cb_statuses "$t")"
+# Nothing to turn on: one read, no extra drush en.
+t="$(reqsite)"; printf '%s\n' localnodes_group_setup localnodes_consensus localnodes_proposal_feed >> "$t/mods_on"
+rc="$(run_ep "$t" $ORG)"
+check "required modules all on: exit 0, one read, no extra en" "0 1 0" "$rc $(grep -c '^drush php:eval .*extension.list.module' "$t/seq") $(grep -c '^drush en localnodes_consensus' "$t/seq")"
+# One stays off: one loud line naming it, the site still starts, no callback for it.
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG $CB FAIL_EN_REQ=localnodes_consensus)"
+check "required module stays off: exit 0, apache started, the line names it, ready still sent" "0 yes yes ready" \
+  "$rc $(has "$t/out" "APACHE STARTED") $(has "$t/out" "$REQ_FAIL_LINE: localnodes_consensus.") $(cb_statuses "$t")"
+# The read fails, or answers something that is not module names: one line, nothing named to drush, the site starts.
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG FAIL_REQ_READ=1)"
+check "required-module read fails: exit 0, apache started, says so, nothing turned on" "0 yes yes 0" "$rc $(has "$t/out" "APACHE STARTED") $(has "$t/out" "ERROR: could not read which modules this site's own modules require") $(on3 "$t")"
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG 'REQ_READ_OUT=Deprecated: x; rm -rf')"
+check "required-module read answers other words: exit 0, says so, no drush en with them" "0 yes 0" "$rc $(has "$t/out" "ERROR: could not read which modules this site's own modules require") $(grep -c '^drush en Deprecated' "$t/seq")"
+# A drush that hangs is ended at its time limit: one line, the site still starts.
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG HANG_EN_REQ=localnodes_consensus REQUIRED_EN_TIMEOUT=2)"
+check "required-module enable hangs: ended, exit 0, apache started, the lines name the modules" "0 yes yes yes" \
+  "$rc $(has "$t/out" "APACHE STARTED") $(has "$t/out" "ERROR: turning on the required modules did not finish (exit 124): localnodes_consensus localnodes_group_setup localnodes_proposal_feed.") $(has "$t/out" "$REQ_FAIL_LINE: localnodes_consensus localnodes_group_setup localnodes_proposal_feed.")"
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG HANG_REQ_READ=1 REQUIRED_READ_TIMEOUT=2)"
+check "required-module read hangs: ended, exit 0, apache started, says so" "0 yes yes" "$rc $(has "$t/out" "APACHE STARTED") $(has "$t/out" "ERROR: could not read which modules this site's own modules require")"
+# The read back fails: the line still names what was turned on.
+t="$(reqsite)"; rc="$(run_ep "$t" $ORG FAIL_REQ_READBACK=1)"
+check "required-module read back fails: exit 0, the line names the modules" "0 yes" "$rc $(has "$t/out" "ERROR: could not read the module list back after turning on: localnodes_consensus localnodes_group_setup localnodes_proposal_feed.")"
+# The entrypoint's own words: the step writes no configuration (CLAUDE.md).
+check "required modules: no config:set, no config import, no deploy in the entrypoint" "0 0" "$(grep -c 'config:set' "$ENTRYPOINT") $(grep -cE '\$DRUSH (config:import|cim|deploy)' "$ENTRYPOINT")"
 
 echo "passed $PASS, failed $FAIL"
 [ "$FAIL" -eq 0 ]

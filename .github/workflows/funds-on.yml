@@ -38,9 +38,10 @@ name: Turn group funds on (practice)
 # a site the entrypoint only warns when the group funds modules fail to start and skips its
 # readiness check. The Summary says so in plain words. The sign-up app is not told anything here.
 #
-# Unverified against a real host: nobody has yet seen what the real Coolify sends for an empty setting. A row whose
-# value comes back as null counts as unclear: the run stops before any write ("did not clearly show <name>"), and
-# nothing held is lost. The first practice provisioning of the staging site is the check.
+# The real host (Coolify 4.7.6), from its source; not yet seen in a run of this workflow: a setting with nothing saved
+# is listed as null, which counts as empty, so a key or token row holding null is not held and the run stops before
+# any write ("do not show <name> as held"); nothing held is lost. Every refusal of the key check prints what it saw:
+# names and kinds only, never a value. This workflow deletes nothing under a key or password name.
 #
 # Every workflow input and secret reaches the shell through env: only and is expanded as a quoted
 # variable. No expression appears inside a run: block, so an input is data, never shell source. The
@@ -225,11 +226,16 @@ jobs:
           # preview copies are no longer removed here. Treating them as duplicates of each other
           # once deleted a held production value (the site's fee wallet key) behind an empty
           # preview row.
-          # Every read must pass values_readable, or the cleanup stops before any DELETE. On every run but the one
-          # that created this app (created_here), rows of the six secret names (secret_names) are left out: nothing
-          # under a secret name is ever deleted by a later run, whatever it reads as. Then, in
+          # On every run but the one that created this app (created_here), every read must pass values_readable, or the
+          # cleanup stops before any DELETE, and rows of the six secret names (secret_names) are left out: nothing under a
+          # secret name is ever deleted by a later run, whatever it reads as. On the run that created this app, every read
+          # must be one list, and when no production row this token may see (not written show-once) has a value field the
+          # cleanup stops with one line saying this token is not shown saved values; otherwise a null value or a missing
+          # value field counts as empty (a new app lists its compose settings with no saved value). On that run the rows of the six names are looked at
+          # only before its first write (dedup_envs before-write), and a duplicate under one of them is deleted only while
+          # every row of that name holds nothing; once the run has written, nothing under those names is deleted. Then, in
           # every round and before any DELETE, every group of duplicates (any key) is checked: a row
-          # with no value field or a value that is not a string (null included) stops the cleanup, and
+          # with no value field or a value that is not a string stops the cleanup, and
           # so do two rows holding different non-empty values: a person has to choose, and nothing is
           # deleted. Otherwise the kept row is one holding the group's value (they are all equal), or
           # the first row when every row is empty, and every row deleted is empty or equal to the kept
@@ -238,15 +244,37 @@ jobs:
             printf '%s' "$1" | jq -r '[group_by([.key, (.is_preview | not | not)])[] | select(length > 1) | .[0].key] | unique | .[]'
           }
           dedup_envs() {
-            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND VERDICT WHY WHICH
+            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND VERDICT WHY WHICH VIEW SECRETS_IN=no
             # Rounds 1-3 read, then delete; round 4 only reads back the third round's result.
             for ROUND in 1 2 3 4; do
               ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
                 -H "Authorization: Bearer $COOLIFY_TOKEN" \
                 -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
-              values_readable "$ENV_VARS" \
-                || { echo "::error::The env var list could not be read (empty, not a list, or no value this token can read); duplicate cleanup stopped."; return 1; }
-              if ! created_here; then
+              if created_here; then
+                VIEW=$(printf '%s' "$ENV_VARS" | jq -sr '
+                  if length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object" and (.key | type) == "string"))
+                  then ([.[0][] | select((.is_preview | not) and (.is_shown_once | not))] as $v
+                    | if ($v | length) > 0 and all($v[]; has("value") | not) then "hidden" else "ok" end)
+                  else "shape" end' 2>/dev/null) || VIEW="shape"
+                case "$VIEW" in
+                  ok) ;;
+                  hidden)
+                    echo "::error::This token is not shown this app's saved values, so the run cannot check or read back its settings; the duplicate cleanup stopped and deleted nothing. The owner must give the Coolify API token the ability to read saved values (read:sensitive), then create the site again."
+                    settings_summary "$ENV_VARS"
+                    return 1 ;;
+                  *)
+                    echo "::error::This app's settings did not come back as one readable list; the duplicate cleanup stopped and deleted nothing."
+                    settings_summary "$ENV_VARS"
+                    return 1 ;;
+                esac
+                ENV_VARS=$(printf '%s' "$ENV_VARS" | jq -c '[.[] | if (.is_shown_once | not) and ((has("value") | not) or .value == null) then .value = "" else . end]') \
+                  || { echo "::error::Could not parse env var list"; return 1; }
+                if [ "${1:-}" = "before-write" ]; then SECRETS_IN=yes; fi
+              else
+                values_readable "$ENV_VARS" \
+                  || { echo "::error::The env var list could not be read (empty, not a list, or no value this token can read); duplicate cleanup stopped."; return 1; }
+              fi
+              if [ "$SECRETS_IN" != "yes" ]; then
                 ENV_VARS=$(printf '%s' "$ENV_VARS" | S="$(secret_names)" jq -c '(env.S | fromjson) as $s | [.[] | select(.key | IN($s[]) | not)]') \
                   || { echo "::error::Could not parse env var list"; return 1; }
               fi
@@ -259,11 +287,13 @@ jobs:
 
               # Before any DELETE of this round: look at every group of duplicates. Prints only a
               # verdict word and the key name, never a value.
-              VERDICT=$(printf '%s' "$ENV_VARS" | jq -r '
-                group_by([.key, (.is_preview | not | not)])[]
+              VERDICT=$(printf '%s' "$ENV_VARS" | S="$(secret_names)" jq -r '
+                (env.S | fromjson) as $s
+                | group_by([.key, (.is_preview | not | not)])[]
                 | select(length > 1)
                 | .[0].key as $k
                 | if any(.[]; (has("value") | not) or ((.value | type) != "string")) then "unreadable " + $k
+                  elif ($k | IN($s[])) and any(.[]; .value != "") then "holds " + $k
                   elif ([.[] | .value | select(. != "")] | unique | length) > 1 then "split " + $k
                   else empty end') || { echo "::error::Could not parse env var list"; return 1; }
               if [ -n "$VERDICT" ]; then
@@ -271,6 +301,7 @@ jobs:
                   case "$WHY" in
                     split) echo "::error::$WHICH has two different saved values; no duplicate was deleted. A person has to choose which one to keep." ;;
                     unreadable) echo "::error::$WHICH has duplicate rows whose values cannot be read (the API token needs read:sensitive); no duplicate was deleted." ;;
+                    holds) echo "::error::$WHICH has more than one row and one of them holds a value; no row was deleted and nothing was written under it." ;;
                   esac
                 done <<<"$VERDICT"
                 return 1
@@ -324,13 +355,19 @@ jobs:
 
           # check_secret KEY DEFAULT: called once per secret name the step needs, as a plain statement, before the step's first
           # write. One read of the app's settings; it prints nothing on stdout and never a value, and it never writes.
-          # The answer counts only when it is one JSON document, a list of objects whose keys are strings, with at least one
-          # production row holding a non-empty string (this token reads values at all). Then, over the production rows of KEY:
-          #   on the run that created this app (created_here): passes only when every row holds "" or DEFAULT (the
-          #     docker-compose.yaml default; no row included): what a new app is known to show. The caller makes the secret.
-          #   on every other run: passes only when the name is listed and every row holds one same value, a non-empty string
-          #     other than DEFAULT: the secret is held and is kept. The caller writes nothing under the name.
-          # Anything else refuses with one fixed line naming the key, status 1. The caller runs under bash -e, so the step stops.
+          # The answer counts only when it is one JSON document, a list of objects whose keys are strings. Then, over the
+          # production rows of KEY:
+          #   on the run that created this app (created_here): passes only when every row shows nothing (no value field,
+          #     null or "") or DEFAULT (the docker-compose.yaml default; no row included). A new app lists every name its
+          #     compose file uses with no saved value, and a row of the app this run made seconds ago holds no key. The caller
+          #     makes the secret. A row that shows any other value refuses: this run does not write over it.
+          #   on every other run: at least one production row must hold a non-empty string (this token reads values at all),
+          #     and the check passes only when the name is listed and every row holds one same value, a non-empty string other
+          #     than DEFAULT: the secret is held and is kept. The caller writes nothing under the name. A null value is read as
+          #     empty (nothing saved), so it is never held.
+          # Anything else refuses with one fixed line naming the key (the list could not be read; this token was shown no
+          # value; or this name is unclear), then one line of what the run saw (settings_summary: names and kinds only),
+          # status 1. The caller runs under bash -e, so the step stops.
           # Plain statement only: callers must not put this in an if condition or behind && or ||.
           check_secret() {
             local KEY="$1" ENV_VARS VERDICT OWN=no
@@ -338,23 +375,59 @@ jobs:
             ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               -H "Accept: application/json" 2>/dev/null) || ENV_VARS=""
-            VERDICT=$(printf '%s' "$ENV_VARS" | K="$KEY" D="$2" jq -sr '
-              if length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object" and (.key | type) == "string")) then .[0] else error("shape") end
-              | [.[] | select(.is_preview | not)] as $prod
-              | if any($prod[]; (.value | type) == "string" and .value != "") then . else error("unreadable") end
-              | [$prod[] | select(.key == env.K)] as $rows
-              | if all($rows[]; has("value") and (.value | type) == "string") then . else error("unclear") end
-              | [$rows[].value] as $v
-              | if all($v[]; . == "" or . == env.D) then "empty"
-                elif all($v[]; . != "" and . != env.D) and ($v | unique | length) == 1 then "held"
-                else "mixed" end' 2>/dev/null) || VERDICT=""
+            VERDICT=$(printf '%s' "$ENV_VARS" | K="$KEY" D="$2" O="$OWN" jq -sr '
+              if length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object" and (.key | type) == "string"))
+              then .[0]
+                | [.[] | select(.is_preview | not)] as $prod
+                | [$prod[] | select(.key == env.K)] as $rows
+                | if env.O == "yes" then
+                    if all($rows[]; (has("value") | not) or .value == null or .value == "" or .value == env.D) then "empty"
+                    elif all($rows[]; (has("value") | not) or .value == null or (.value | type) == "string") then "held"
+                    else "unclear" end
+                  elif any($prod[]; (.value | type) == "string" and .value != "") | not then "unreadable"
+                  elif all($rows[]; has("value") and ((.value | type) == "string" or .value == null)) | not then "unclear"
+                  else [$rows[] | .value // ""] as $v
+                    | if all($v[]; . == "" or . == env.D) then "empty"
+                      elif all($v[]; . != "" and . != env.D) and ($v | unique | length) == 1 then "held"
+                      else "mixed" end
+                  end
+              else "shape" end' 2>/dev/null) || VERDICT="shape"
             case "$OWN:$VERDICT" in
               yes:empty|no:held) return 0 ;;
-              yes:held|yes:mixed) echo "::error::The app this run just created already shows a value for $KEY, so this run does not write it. Nothing was stored or sent." >&2 ;;
+              yes:held) echo "::error::The app this run just created already shows a value for $KEY, so this run does not write it. Nothing was stored or sent." >&2 ;;
               no:empty) echo "::error::This app's settings do not show $KEY as held. Only the run that creates a site writes its keys and passwords: create the site again, or the site's owner must place the key. Nothing was stored or sent." >&2 ;;
+              *:shape) echo "::error::This app's settings did not come back as one readable list, so $KEY was not checked. Nothing was stored or sent." >&2 ;;
+              *:unreadable) echo "::error::This token was shown no saved value in this app's settings, so $KEY was not checked. If the Coolify API token cannot read saved values, the owner must give it that ability (read:sensitive). Nothing was stored or sent." >&2 ;;
               *) echo "::error::This app's settings did not clearly show $KEY. Nothing was stored or sent." >&2 ;;
             esac
+            settings_summary "$ENV_VARS"
             return 1
+          }
+
+          # settings_summary LIST: one line on stderr saying what a read of the settings looked like, so a refusal on a
+          # real host tells which case it met: the kind of answer, the row count, and for each of the six names (from the
+          # fixed list, never from the answer) one word per row: preview or not, and no value field, null, empty, stars,
+          # non-empty or the value's type. It never prints a value, a part of one or its length.
+          settings_summary() {
+            local S
+            S=$(printf '%s' "$1" | N="$(secret_names)" jq -sr '
+              if length != 1 then "not one JSON document (\(length))"
+              elif (.[0] | type) != "array" then "one JSON \(.[0] | type), not a list"
+              else .[0] as $l
+                | "a list of \($l | length) rows, \([$l[] | select(type == "object" and (has("value") | not))] | length) without a value field, \([$l[] | select(type != "object")] | length) not objects"
+                  + ([(env.N | fromjson)[] as $n
+                      | "; " + $n + ": "
+                        + ([$l[] | select(type == "object" and .key == $n)
+                            | (if .is_preview then "preview " else "" end)
+                              + (if has("value") | not then "no value field"
+                                 elif .value == null then "null"
+                                 elif (.value | type) != "string" then (.value | type)
+                                 elif .value == "" then "empty"
+                                 elif (.value | test("^[*]+$")) then "stars"
+                                 else "non-empty" end)]
+                           | if length == 0 then "no row" else join(", ") end)] | join(""))
+              end' 2>/dev/null) || S="not readable as JSON"
+            echo "What this run saw (names and kinds only, no values): $S" >&2
           }
 
           # verify_env KEY EXPECTED [secret]: read the saved production value back and compare it
@@ -374,7 +447,11 @@ jobs:
               echo "  Verified $KEY (present; value not read back)"
               return 0
             fi
-            if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1 and (.[0] | has("value"))' >/dev/null 2>&1; then
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1' >/dev/null 2>&1; then
+              echo "::error::$KEY: expected exactly one production variable"
+              return 1
+            fi
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))][0] | has("value")' >/dev/null 2>&1; then
               echo "::error::$KEY: expected exactly one readable production variable (the API token needs read:sensitive)"
               return 1
             fi

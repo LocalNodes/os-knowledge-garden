@@ -375,7 +375,7 @@ owner_refusal key-empty ok SPONSOR_RELAYER_PRIVATE_KEY missing 'row_set SPONSOR_
 owner_refusal key-not-listed ok SPONSOR_RELAYER_PRIVATE_KEY missing 'envs_edit "map(select(.key != \"SPONSOR_RELAYER_PRIVATE_KEY\"))"; HELD_VALUES=("$HELD_TOKEN")'
 owner_refusal token-empty ok SPONSOR_RELAYER_TOKEN missing 'row_set SPONSOR_RELAYER_TOKEN "\"\""; HELD_VALUES=("$HELD_KEY")'
 owner_refusal interrupted-provisioning ok SPONSOR_RELAYER_PRIVATE_KEY missing 'row_set SPONSOR_RELAYER_PRIVATE_KEY "\"\""; row_set SPONSOR_RELAYER_TOKEN "\"\""; HELD_VALUES=()'
-owner_refusal key-null ok SPONSOR_RELAYER_PRIVATE_KEY unclear 'row_set SPONSOR_RELAYER_PRIVATE_KEY null'
+owner_refusal key-null ok SPONSOR_RELAYER_PRIVATE_KEY missing 'row_set SPONSOR_RELAYER_PRIVATE_KEY null'
 check "the owner line says the site's owner must place the key" 'grep -qF "the site'"'"'s owner must place the key" <<<"$(line_missing SPONSOR_RELAYER_PRIVATE_KEY)"'
 
 # ---------------------------------------------------------------------------------------------
@@ -508,8 +508,8 @@ done
 for SC in envs_empty_at_2 envs_blank_at_2 envs_empty_at_3; do
   env_case "key-$SC" "$SC" ''
   KEYNAME=SPONSOR_RELAYER_PRIVATE_KEY; [ "$SC" = envs_empty_at_3 ] && KEYNAME=SPONSOR_RELAYER_TOKEN
-  check "key-$SC: the key check's read is that answer: refused naming $KEYNAME, nothing written, no redeploy" \
-    '[ "$RUN_RC" -ne 0 ] && grep -qxF -- "$(line_unclear "$KEYNAME")" <<<"$OUT" && nothing_written'
+  check "key-$SC: the key check's read is that answer: refused naming $KEYNAME with the could-not-read-a-list line and what it saw, nothing written, no redeploy" \
+    '[ "$RUN_RC" -ne 0 ] && grep -qxF -- "::error::This app'"'"'s settings did not come back as one readable list, so $KEYNAME was not checked. Nothing was stored or sent." <<<"$OUT" && grep -qxF -- "What this run saw (names and kinds only, no values): not one JSON document (0)" <<<"$OUT" && nothing_written'
 done
 # Every value comes back as an empty string (blanked): the first read stops the run before any write of any kind, also with
 # an empty key row listed ahead of the held one.
@@ -582,7 +582,7 @@ post_write_failure() {
   check "$1: the run fails and says: $msg" '[ "$RUN_RC" -ne 0 ] && grep -qF -- "::error::$msg" <<<"$OUT"'
   check "$1: no application is deleted" '! app_deleted'
 }
-post_write_failure drop_scale drop_scale "FEE_WALLET_SCALE: expected exactly one readable production variable (the API token needs read:sensitive)"
+post_write_failure drop_scale drop_scale "FEE_WALLET_SCALE: expected exactly one production variable"
 check "drop_scale: the read-back stops the run before any deploy request" '! grep -q "/deploy?" "$WORK/state/requests.log"'
 post_write_failure deploy_fail deploy_fail "Failed to trigger deployment (HTTP 200, no deployment uuid in the reply)"
 check "deploy_fail: stops before the waits (no GET of /deployments/ and none of the login page)" '! grep -q "/deployments/" "$WORK/state/requests.log" && ! grep -q "/user/login" "$WORK/state/requests.log"'
@@ -600,7 +600,7 @@ extract_fn() {  # extract_fn RUNTEXTFILE NAME -> the definition, from `NAME() {`
 }
 run_text "$WORK/prov.json" provision "Configure environment variables" > "$WORK/prov-run.sh"
 run_text "$WORK/wf.json" funds_on "Turn group funds on (practice)" > "$WORK/funds-run.sh"
-SHARED_FNS="env_request update_env list_dupes dedup_envs values_readable verify_env secret_names created_here check_secret turn_on_practice_funds verify_practice_funds"
+SHARED_FNS="env_request update_env list_dupes dedup_envs values_readable verify_env secret_names created_here check_secret settings_summary turn_on_practice_funds verify_practice_funds"
 for fn in $SHARED_FNS; do
   extract_fn "$WORK/prov-run.sh" "$fn" > "$WORK/p.fn"
   extract_fn "$WORK/funds-run.sh" "$fn" > "$WORK/f.fn"

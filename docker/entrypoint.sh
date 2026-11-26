@@ -299,6 +299,54 @@ web3_ready_check() {
   done
 }
 
+# --- Redeploy: turn on the modules this site's own modules now require ---
+# A new release can make one of our modules require a module the site does not have yet.
+# Naming the already-installed module to drush (`drush en localnodes_web3`) does not install
+# it: core skips a module that is already on before it looks at requirements, though drush
+# prints "has been installed" for each one (patches/issues/drush-enable-reports-dependencies-not-installed.md).
+# So the redeploy asks the site which modules are off but required by a module of ours that is
+# on (under modules/custom, requirements followed through, from the site's own module list,
+# not a kept list), names exactly those to drush so core installs them in its own order, and
+# reads the list again. Their config/install is applied by that install; nothing else is set.
+# Nothing here stops the start: a read that fails, or a module still off, is one loud ERROR
+# line and the site comes up (the pages needing that module answer "not found" until a later
+# start turns it on). It sends no callback. Each drush call has a time limit (REQUIRED_READ_TIMEOUT,
+# default 120 s; REQUIRED_EN_TIMEOUT, default 600 s), so a drush that hangs is ended and logged.
+# Test: scripts/ops/tests/install-resume.test.sh (section 14)
+REQUIRED_OFF_PHP='$all = \Drupal::service("extension.list.module")->getList(); $on = \Drupal::moduleHandler()->getModuleList(); $off = []; foreach (array_keys($on) as $name) { if (!isset($all[$name]) || strpos($all[$name]->getPath(), "modules/custom/") !== 0) { continue; } foreach (array_keys($all[$name]->requires ?? []) as $dep) { if (!isset($on[$dep])) { $off[$dep] = $dep; } } } ksort($off); echo implode(" ", $off), "\n";'
+REQUIRED_OFF=""
+required_modules_off() {  # sets REQUIRED_OFF to the names, space-separated; returns 1 when unreadable
+  local out
+  REQUIRED_OFF=""
+  out="$(timeout --kill-after=10 "${REQUIRED_READ_TIMEOUT:-120}" $DRUSH php:eval "$REQUIRED_OFF_PHP")" || return 1
+  [[ "$out" =~ ^[a-z0-9_\ ]*$ ]] || return 1
+  REQUIRED_OFF="$out"
+}
+turn_on_required_modules() {
+  local wanted
+  if ! required_modules_off; then
+    echo "ERROR: could not read which modules this site's own modules require; none were turned on by this start."
+    return 0
+  fi
+  if [ -z "$REQUIRED_OFF" ]; then
+    echo "Every module this site's own modules require is on."
+    return 0
+  fi
+  wanted="$REQUIRED_OFF"
+  echo "Turning on modules this site's own modules now require: $wanted"
+  # shellcheck disable=SC2086  # one word per module name, checked above
+  timeout --kill-after=30 "${REQUIRED_EN_TIMEOUT:-600}" $DRUSH en $wanted -y \
+    || echo "ERROR: turning on the required modules did not finish (exit $?): $wanted."
+  if ! required_modules_off; then
+    echo "ERROR: could not read the module list back after turning on: $wanted."
+  elif [ -n "$REQUIRED_OFF" ]; then
+    echo "ERROR: modules this site's own modules require are still off after this start: $REQUIRED_OFF."
+  else
+    echo "Required modules are on."
+  fi
+  return 0
+}
+
 # Every step after site:install. Each one is safe to run again on resume.
 run_post_install() {
   # Enable LocalNodes platform (AI config, block placement, Solr/Qdrant overrides)
@@ -554,6 +602,10 @@ else
       REDEPLOY_W3_EN_FAILED=true
     fi
   fi
+
+  # After the web3 enable, so a module it now requires is turned on too, and before the
+  # practice readiness check below (which needs the web3 modules on).
+  turn_on_required_modules
 
   # Ensure the OpenRouter submodule matches AI_PROVIDER on redeploy, with the provider flip
   # guard (23-40, D-21: a site's chat and embedding models are fixed at install). Redeploy
