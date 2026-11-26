@@ -8,6 +8,8 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_consensus\Entity\RosterAudit;
@@ -41,10 +43,20 @@ use Symfony\Component\EventDispatcher\GenericEvent;
  *
  * The roster decides who responds, never who reads.
  *
+ * Two changes need no reason from a person, and store a reason code in
+ * its place (who decides by default):
+ * - automatic: in a Group where every way in needs approval or an invite
+ *   (JoinRule), a member is put on the roster when they join, or by the
+ *   cron catch-up if they joined before; never over an existing entry.
+ * - first_list: in a Group where any way in is free, its organizer makes
+ *   the first roster once, while the Group has no entry and no audit row.
+ * Every later change goes through approve(), remove() or dispute(), with a
+ * reason.
+ *
  * Refusals throw \InvalidArgumentException whose message starts with a
  * reason code: group_type_not_listed, not_manager, reason_required,
- * not_member, no_entry or not_on_roster. A busy lock throws
- * \RuntimeException.
+ * not_member, no_entry, not_on_roster or first_list_done. A busy lock
+ * throws \RuntimeException.
  */
 class RosterManager {
 
@@ -59,6 +71,21 @@ class RosterManager {
    */
   public const ANNOUNCE_BATCH = 50;
 
+  /**
+   * The stored reason for an automatic approval.
+   */
+  public const REASON_AUTOMATIC = 'automatic';
+
+  /**
+   * The stored reason for an approval on the organizer's first list.
+   */
+  public const REASON_FIRST_LIST = 'first_list';
+
+  /**
+   * State key: the last Group id the automatic catch-up finished.
+   */
+  public const CATCH_UP_CURSOR = 'localnodes_consensus.auto_catchup_cursor';
+
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly GroupScope $groupScope,
@@ -67,7 +94,182 @@ class RosterManager {
     protected readonly LockBackendInterface $lock,
     protected readonly TimeInterface $time,
     protected readonly AccountInterface $currentUser,
+    protected readonly JoinRule $joinRule,
+    protected readonly StateInterface $state,
+    protected readonly LoggerChannelFactoryInterface $loggerFactory,
   ) {}
+
+  /**
+   * Puts a member of an automatic Group on the roster, if nothing is there.
+   *
+   * Writes only for a listed Group whose every way in needs approval or an
+   * invite, a current member, and an account with no entry of any standing:
+   * an organizer's removal or dispute, or a departure, always stands. The
+   * member is the actor; the reason is the code "automatic". Never throws
+   * for "not applicable"; a busy lock is logged and left to the catch-up.
+   *
+   * @return \Drupal\localnodes_consensus\Entity\RosterAudit|null
+   *   The audit row written, or NULL when nothing was written.
+   */
+  public function approveAutomatically(GroupInterface $group, AccountInterface $member): ?RosterAudit {
+    $uid = (int) $member->id();
+    if ($uid < 1 || !$this->groupScope->isAllowedGroup($group) || !$this->joinRule->isAutomatic($group)) {
+      return NULL;
+    }
+    $lock = $this->lockName($group);
+    if (!$this->lock->acquire($lock) && ($this->lock->wait($lock, 5) || !$this->lock->acquire($lock))) {
+      $this->loggerFactory->get('localnodes_consensus')->notice('Group @gid was busy; account @uid is left to the next catch-up.', [
+        '@gid' => $group->id(),
+        '@uid' => $uid,
+      ]);
+      return NULL;
+    }
+    try {
+      if ($this->entry($group, $uid) !== NULL || !$this->isCurrent($group, $uid)) {
+        return NULL;
+      }
+      return $this->write($group, NULL, $uid, $uid, self::REASON_AUTOMATIC, RosterEntry::APPROVED);
+    }
+    finally {
+      $this->lock->release($lock);
+    }
+  }
+
+  /**
+   * Puts earlier members of automatic Groups on the roster, a batch a pass.
+   *
+   * Walks listed Groups by id, from the Group after the last one finished
+   * (kept in state) round to it again, so each pass looks at every Group
+   * once. In each Group whose rule is automatic, every current member with
+   * no entry of any standing is approved through approveAutomatically().
+   * Stops after $limit writes, leaving the cursor before the unfinished
+   * Group so the next pass resumes there.
+   *
+   * @return int
+   *   How many members were put on a roster.
+   */
+  public function catchUpAutomatic(int $limit = 50): int {
+    $storage = $this->entityTypeManager->getStorage('group');
+    $cursor = (int) $this->state->get(self::CATCH_UP_CURSOR, 0);
+    $written = 0;
+    // After the cursor, then from the start up to it.
+    foreach ([[$cursor, NULL], [0, $cursor]] as [$after, $upto]) {
+      $last = $after;
+      while (TRUE) {
+        $query = $storage->getQuery()
+          ->accessCheck(FALSE)
+          ->condition('id', $last, '>')
+          ->sort('id', 'ASC')
+          ->range(0, 100);
+        if ($upto !== NULL) {
+          $query->condition('id', $upto, '<=');
+        }
+        $ids = array_map('intval', $query->execute());
+        if ($ids === []) {
+          break;
+        }
+        foreach ($storage->loadMultiple($ids) as $group) {
+          if (!$group instanceof GroupInterface) {
+            continue;
+          }
+          if ($this->groupScope->isAllowedGroup($group) && $this->joinRule->isAutomatic($group)) {
+            foreach ($this->currentMembers($group) as $uid) {
+              if ($this->entry($group, $uid) !== NULL) {
+                continue;
+              }
+              if ($written >= $limit) {
+                // Resume this Group next pass.
+                $this->state->set(self::CATCH_UP_CURSOR, (int) $group->id() - 1);
+                return $written;
+              }
+              $account = $this->entityTypeManager->getStorage('user')->load($uid);
+              if ($account instanceof UserInterface && $this->approveAutomatically($group, $account) !== NULL) {
+                $written++;
+              }
+            }
+          }
+          $this->state->set(self::CATCH_UP_CURSOR, (int) $group->id());
+        }
+        $last = (int) end($ids);
+      }
+    }
+    return $written;
+  }
+
+  /**
+   * The organizer's first roster: no reason asked, once per Group.
+   *
+   * Only while the Group has no roster entry and no audit row of any kind.
+   * The actor must be a current manager; every account must be a current
+   * member, checked before anything is written. An empty set becomes the
+   * organizer alone, so the Group is never left with nobody. All rows are
+   * written in one transaction under the Group's lock, reason "first_list".
+   *
+   * @param int[] $uids
+   *   The accounts to approve.
+   *
+   * @return \Drupal\localnodes_consensus\Entity\RosterAudit[]
+   *   The audit rows written.
+   */
+  public function approveFirstList(GroupInterface $group, array $uids, AccountInterface $organizer): array {
+    if (!$this->groupScope->isAllowedGroup($group)) {
+      throw new \InvalidArgumentException('group_type_not_listed: This Group cannot keep a roster.');
+    }
+    if (!$this->groupScope->isCurrentManager($group, $organizer)) {
+      throw new \InvalidArgumentException('not_manager: Only a manager of this Group makes its first roster.');
+    }
+    $uids = array_values(array_unique(array_filter(array_map('intval', $uids), fn (int $uid) => $uid > 0)));
+    if ($uids === []) {
+      $uids = [(int) $organizer->id()];
+    }
+    $lock = $this->lockName($group);
+    if (!$this->lock->acquire($lock) && ($this->lock->wait($lock, 5) || !$this->lock->acquire($lock))) {
+      throw new \RuntimeException('The roster is busy; try again.');
+    }
+    try {
+      if ($this->hasAnyRow($group)) {
+        throw new \InvalidArgumentException('first_list_done: This Group already has a roster.');
+      }
+      foreach ($uids as $uid) {
+        if (!$this->isCurrent($group, $uid)) {
+          throw new \InvalidArgumentException('not_member: Only a current member of this Group can be approved.');
+        }
+      }
+      $audits = [];
+      $transaction = $this->database->startTransaction();
+      try {
+        foreach ($uids as $uid) {
+          $audits[] = $this->write($group, NULL, $uid, (int) $organizer->id(), self::REASON_FIRST_LIST, RosterEntry::APPROVED);
+        }
+      }
+      catch (\Throwable $e) {
+        $transaction->rollBack();
+        throw $e;
+      }
+      unset($transaction);
+      return $audits;
+    }
+    finally {
+      $this->lock->release($lock);
+    }
+  }
+
+  /**
+   * Whether the Group has ever had a roster entry or audit row.
+   */
+  public function hasAnyRow(GroupInterface $group): bool {
+    foreach (['localnodes_roster_entry', 'localnodes_roster_audit'] as $type) {
+      $count = (int) $this->entityTypeManager->getStorage($type)->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('gid', $group->id())
+        ->count()
+        ->execute();
+      if ($count > 0) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
 
   /**
    * A manager puts a current member on the roster.

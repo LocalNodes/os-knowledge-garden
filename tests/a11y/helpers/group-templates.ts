@@ -20,7 +20,7 @@ export const RESULTS_DIR = join(REPO_ROOT, 'test-results', '25.3-group-templates
 export const CONTENT = '#block-socialblue-content';
 
 export const NON_AUTHORITY = 'This records a decision. It does not authorize or send a payment.';
-export const CLOSE_ON_AGREE = "Everyone else on this decision's roster has agreed. If you agree, it will close and everyone's responses will be final.";
+export const CLOSE_ON_AGREE = "Everyone else who decides on it has agreed. If you agree, it will close and everyone's responses will be final.";
 export const PROVENANCE = 'Human-confirmed meeting report · no online responses collected';
 export const NOT_ADOPTED = 'Example · not adopted';
 

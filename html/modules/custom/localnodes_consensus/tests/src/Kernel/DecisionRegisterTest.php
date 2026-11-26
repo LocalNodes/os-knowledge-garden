@@ -416,7 +416,7 @@ final class DecisionRegisterTest extends ConsensusRecordTestBase {
   /**
    * The close-on-agree line.
    */
-  protected const CLOSES = "Everyone else on this decision's roster has agreed. If you agree, it will close and everyone's responses will be final.";
+  protected const CLOSES = "Everyone else who decides on it has agreed. If you agree, it will close and everyone's responses will be final.";
 
   /**
    * Words no visitor should meet on these pages.

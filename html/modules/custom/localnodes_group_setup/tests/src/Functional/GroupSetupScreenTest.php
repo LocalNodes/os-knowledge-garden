@@ -213,8 +213,8 @@ final class GroupSetupScreenTest extends BrowserTestBase {
     $this->signIn($this->people['Alder_manager']);
     $this->drupalGet($setup);
     $this->assertPreview(TRUE);
-    $this->assertSession()->pageTextContains('Everyday and money decisions need at least two-thirds of the roster to respond within 7 days.');
-    $this->assertSession()->pageTextContains('Changing the rules needs at least two-thirds of the roster to respond within 14 days.');
+    $this->assertSession()->pageTextContains('Everyday and money decisions need at least two-thirds of the people who decide to respond within 7 days.');
+    $this->assertSession()->pageTextContains('Changing the rules needs at least two-thirds of the people who decide to respond within 14 days.');
     $this->assertSession()->pageTextContains('After setup, changing these rules is itself a group decision.');
     $this->assertSession()->pageTextContains('New rules do not change decisions that are already open.');
     $this->assertInputsLabelled();

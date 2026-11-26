@@ -538,7 +538,7 @@ class DecisionRegister {
     return match ($state) {
       ConsensusRound::OPEN => $round['has_active_block']
         ? [$this->t('Blocked · still open'), $this->t('An active block prevents agreement. Responses can still change before closing.')]
-        : [$this->t('Open'), $this->t('Responses can change while the decision is open. Only everyone on its opening roster agreeing closes it early. Otherwise, it stays open until the deadline.')],
+        : [$this->t('Open'), $this->t('Responses can change while the decision is open. It closes early only if everyone who decides on it agrees. Otherwise, it stays open until the deadline.')],
       ConsensusRound::ENDED_PENDING => [$this->t('Ended · result being recorded'), $this->t('The deadline has passed. Responses are closed while the result is recorded.')],
       ConsensusRound::AGREED => [$this->t('Agreed'), ($round['closed_reason'] ?? NULL) === ConsensusRound::REASON_ALL_AGREED
         ? $this->t('Everyone on the opening roster agreed, so it closed early.')
@@ -598,7 +598,7 @@ class DecisionRegister {
     $model['closed_line'] = $terminal ? $this->t('Closed: @closed', ['@closed' => $this->when($model['closed_at'])]) : NULL;
     $model['final_line'] = $terminal ? $this->t('Responses are final.') : NULL;
     $model['pending_line'] = $model['state'] === ConsensusRound::ENDED_PENDING ? $this->t('This is not a final result. Check this page again shortly.') : NULL;
-    $model['closes_line'] = $model['closes_on_agree'] ? $this->t("Everyone else on this decision's roster has agreed. If you agree, it will close and everyone's responses will be final.") : NULL;
+    $model['closes_line'] = $model['closes_on_agree'] ? $this->t("Everyone else who decides on it has agreed. If you agree, it will close and everyone's responses will be final.") : NULL;
     foreach (['responses', 'history'] as $list) {
       foreach ($model[$list] as $index => $row) {
         $model[$list][$index]['label'] = $this->t('@name: @choice', ['@name' => $row['name'], '@choice' => $this->choiceLabel($row['choice'])]);

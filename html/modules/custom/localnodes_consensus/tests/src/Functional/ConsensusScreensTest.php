@@ -149,7 +149,7 @@ final class ConsensusScreensTest extends BrowserTestBase {
       $default = $this->container->get('localnodes_consensus.current_eligible_reader')->defaultVisibility($this->fresh($a));
       $this->assertSession()->checkboxChecked('edit-visibility-' . $default);
       $this->assertSession()->fieldValueEquals('facilitator', (string) $this->people['A_roster']->id());
-      $this->assertSession()->pageTextContains('Everyday and money decisions need at least two-thirds of the roster to respond within 7 days.');
+      $this->assertSession()->pageTextContains('Everyday and money decisions need at least two-thirds of the people who decide to respond within 7 days.');
       $this->assertNoRuleInputs('#localnodes-consensus-open-round-form', ['proposed']);
 
       // Everyday: lands on its page, with the text and the line.
@@ -338,7 +338,7 @@ final class ConsensusScreensTest extends BrowserTestBase {
     });
     $this->asPersona($this->people['A_member'], function () use ($respond, $round): void {
       $this->drupalGet($respond);
-      $this->assertSession()->pageTextContains("Everyone else on this decision's roster has agreed. If you agree, it will close and everyone's responses will be final.");
+      $this->assertSession()->pageTextContains("Everyone else who decides on it has agreed. If you agree, it will close and everyone's responses will be final.");
       $this->submitForm(['choice' => 'agree'], 'Save response');
       $this->assertSame('agreed', $this->fresh($round)->getStatus());
       $this->assertSession()->pageTextContains('Responses are final.');

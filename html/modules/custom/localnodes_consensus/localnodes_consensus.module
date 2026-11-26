@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupRelationshipInterface;
 use Drupal\localnodes_consensus\Entity\ConsensusNotice;
@@ -54,18 +55,49 @@ function localnodes_consensus_group_content_delete(GroupRelationshipInterface $r
 }
 
 /**
+ * Implements hook_ENTITY_TYPE_insert() for group_content.
+ *
+ * In a Group where every way in needs approval or an invite, a new member
+ * decides at once: they are put on the roster with the reason code
+ * "automatic" (RosterManager::approveAutomatically()). Nothing is written
+ * over an existing entry. A failure is logged and never undoes the
+ * membership; the cron catch-up puts the member on later.
+ */
+function localnodes_consensus_group_content_insert(GroupRelationshipInterface $relationship): void {
+  if ($relationship->getPluginId() !== 'group_membership') {
+    return;
+  }
+  $group = $relationship->getGroup();
+  $account = $relationship->getEntity();
+  if (!$group instanceof GroupInterface || !$account instanceof AccountInterface) {
+    return;
+  }
+  try {
+    \Drupal::service('localnodes_consensus.roster')->approveAutomatically($group, $account);
+  }
+  catch (\Throwable $e) {
+    \Drupal::logger('localnodes_consensus')->error('A new member was not put on the roster (Group @gid, account @uid): @message', [
+      '@gid' => $group->id(),
+      '@uid' => $account->id(),
+      '@message' => $e->getMessage(),
+    ]);
+  }
+}
+
+/**
  * Implements hook_cron().
  *
  * Closes decision rounds whose deadline has passed, withdraws open
  * rounds whose opening roster lost a member and sends the roster
  * event for endings a membership delete recorded quietly. Then delivers
  * pending decision notices, so a round closed by this sweep is announced
- * in the same run. Each step is guarded on its own, so one failing
+ * in the same run, and puts earlier members of Groups whose every way in
+ * needs approval or an invite on the roster, a batch a pass. Each step is guarded on its own, so one failing
  * never starves the other. The worker container runs cron after each pass,
  * about once a minute.
  */
 function localnodes_consensus_cron(): void {
-  foreach (['localnodes_consensus.due_round_sweeper' => 'sweep', 'localnodes_consensus.notifier' => 'deliverPending'] as $service => $method) {
+  foreach (['localnodes_consensus.due_round_sweeper' => 'sweep', 'localnodes_consensus.notifier' => 'deliverPending', 'localnodes_consensus.roster' => 'catchUpAutomatic'] as $service => $method) {
     try {
       \Drupal::service($service)->$method();
     }
