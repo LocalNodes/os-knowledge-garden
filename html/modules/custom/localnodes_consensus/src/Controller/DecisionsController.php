@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace Drupal\localnodes_consensus\Controller;
 
+use Drupal\Core\Access\AccessManagerInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Link;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\localnodes_consensus\Access\CurrentEligibleReader;
 use Drupal\localnodes_consensus\Entity\ConsensusNotice;
 use Drupal\localnodes_consensus\Entity\ConsensusRound;
 use Drupal\localnodes_consensus\Record\DecisionRecordInterface;
 use Drupal\localnodes_consensus\Service\DecisionRegister;
+use Drupal\localnodes_consensus\Service\RosterManager;
 use Drupal\localnodes_group_setup\Service\GroupScope;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -32,6 +36,8 @@ class DecisionsController extends ControllerBase {
     protected readonly DecisionRegister $decisions,
     protected readonly GroupScope $groupScope,
     protected readonly CurrentEligibleReader $reader,
+    protected readonly RosterManager $roster,
+    protected readonly AccessManagerInterface $accessManager,
   ) {}
 
   /**
@@ -42,6 +48,8 @@ class DecisionsController extends ControllerBase {
       $container->get('localnodes_consensus.decision_register'),
       $container->get('localnodes_group_setup.group_scope'),
       $container->get('localnodes_consensus.current_eligible_reader'),
+      $container->get('localnodes_consensus.roster'),
+      $container->get('access_manager'),
     );
   }
 
@@ -58,10 +66,72 @@ class DecisionsController extends ControllerBase {
    * The Group's register, built for the current user.
    */
   public function register(GroupInterface $group): array {
-    $build = $this->decisions->registerBuild($group, $this->currentUser());
-    $build['#cache']['contexts'][] = 'user';
-    $build['#cache']['tags'][] = 'group_content_list';
+    $account = $this->currentUser();
+    $build = $this->decisions->registerBuild($group, $account);
+    $cacheability = (new CacheableMetadata())
+      ->addCacheContexts(['user'])
+      ->addCacheTags(['group_content_list']);
+    [$build['#who_decides'], $build['#reads_line']] = $this->whoDecides($group, $account, $cacheability);
+    $cacheability
+      ->merge(CacheableMetadata::createFromRenderArray($build))
+      ->applyTo($build);
     return $build;
+  }
+
+  /**
+   * One sentence while nobody in the Group is among the people who decide.
+   *
+   * Whoever may open the list of the people who decide reads that nobody
+   * can propose a decision yet, with a link to that list. Any other current
+   * member reads that the organizer has not chosen yet. Anyone else, and
+   * everyone once the list holds someone, reads nothing here. "Organizer"
+   * is the list page's own access, asked of the router, not a second rule.
+   * The sentence names nobody. A member also reads, under it, that they can
+   * read every decision shared with the group, as on the approved canvas.
+   *
+   * @return array{0: array, 1: array}
+   *   The sentence, and the member's reading line; each may be empty.
+   */
+  protected function whoDecides(GroupInterface $group, AccountInterface $account, CacheableMetadata $cacheability): array {
+    $cacheability->addCacheableDependency($group)->addCacheTags([
+      'config:localnodes_group_setup.settings',
+      'group_content_list:plugin:group_membership:group:' . $group->id(),
+      'localnodes_roster_entry_list',
+      'user_list',
+    ]);
+    if ($this->roster->currentRoster($group) !== []) {
+      return [[], []];
+    }
+    $organizer = $this->accessManager->checkNamedRoute('localnodes_consensus.roster', ['group' => $group->id()], $account, TRUE);
+    $cacheability->addCacheableDependency($organizer);
+    if ($organizer->isAllowed()) {
+      return [[
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#attributes' => ['class' => ['decision-register__who-decides']],
+        'text' => ['#plain_text' => $this->t('Nobody can propose a decision yet.') . ' '],
+        'link' => Link::fromTextAndUrl($this->t('Add the people who decide.'), Url::fromRoute('localnodes_consensus.roster', ['group' => $group->id()]))->toRenderable(),
+      ], [],
+      ];
+    }
+    // A member: whoever reads the Group's own items, asked of the one reader.
+    $member = $this->reader->access($group, $account, CurrentEligibleReader::GROUP);
+    $cacheability->addCacheableDependency($member);
+    if ($member->isAllowed()) {
+      return [[
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#attributes' => ['class' => ['decision-register__who-decides']],
+        '#value' => $this->t('In this group, the organizer chooses who decides. Nobody has been chosen yet.'),
+      ], [
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#attributes' => ['class' => ['decision-register__reads']],
+        '#value' => $this->t('You can read every decision shared with this group.'),
+      ],
+      ];
+    }
+    return [[], []];
   }
 
   /**

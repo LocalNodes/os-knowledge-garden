@@ -154,7 +154,7 @@ const STATES: State[] = [
     marker: /field is required\./,
   },
   { screen: 'meeting', state: 'report', persona: 'roster02', path: () => `/decision/meeting/${s.report}`, marker: PROVENANCE, decision: true },
-  { screen: 'register', state: 'empty', persona: 'roster01', path: () => `/group/${g('D')}/decisions`, marker: 'No decisions recorded yet', decision: true },
+  { screen: 'register', state: 'empty', persona: 'roster01', path: () => `/group/${g('D')}/decisions`, marker: 'No decisions yet' },
   { screen: 'register', state: 'filled', persona: 'roster01', path: () => `/group/${g('C')}/decisions`, marker: 'Recorded results', decision: true },
   { screen: 'notices', state: 'list', persona: 'roster02', path: () => '/decision-notices', marker: 'Open the decision' },
   { screen: 'refused', state: '403', persona: 'outsider', path: () => `/decision/${r('agreed')}`, marker: /./, status: 403 },

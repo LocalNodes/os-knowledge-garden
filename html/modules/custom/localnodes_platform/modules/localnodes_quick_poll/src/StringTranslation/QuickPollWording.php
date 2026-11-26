@@ -7,25 +7,27 @@ namespace Drupal\localnodes_quick_poll\StringTranslation;
 use Drupal\Core\StringTranslation\Translator\StaticTranslation;
 
 /**
- * Rewords the poll module's strings so a quick poll never reads as a vote.
+ * Rewords the poll module's sentences so a quick poll never reads as a vote.
  *
  * A quick poll is an informal check on how members lean. Words like "vote"
  * would make it look like the group deciding something, which it is not, so
- * every poll string that says "vote" is replaced here, in every language.
+ * the poll module's sentences that say "vote" are replaced here, in every
+ * language.
  *
- * This works on the exact source strings, so it applies wherever they are
- * used. Among the modules this site ships, only the poll module and the
- * Voting API's admin listing use them; another module that later uses the
- * bare word "Vote" through t() would show "Answer" instead.
+ * This works on exact source strings, so it applies wherever a string is
+ * used. Only strings no other module of this site uses belong here. The bare
+ * words "Vote" and "Votes", and the count "1 vote" / "@count votes", are
+ * also the group voting pages' own words (their tab, title, heading and
+ * counts) and the Voting API's labels, so they are not in this list: the
+ * poll's answer button, its counts and its admin listing are reworded where
+ * the poll builds them (localnodes_quick_poll.module, PollAnswersListBuilder).
  */
 final class QuickPollWording extends StaticTranslation {
 
   /**
-   * The poll module's strings and their replacements.
+   * The poll module's own sentences and their replacements.
    */
   private const WORDING = [
-    'Vote' => 'Answer',
-    'Votes' => 'Answers',
     'Cancel vote' => 'Take back my answer',
     'View poll' => 'Back to the question',
     'View results' => 'See answers so far',
@@ -33,7 +35,6 @@ final class QuickPollWording extends StaticTranslation {
     'Your vote was cancelled.' => 'Your answer was taken back.',
     'Your vote could not be recorded because you did not select any of the choices.' => 'Pick one of the choices first.',
     'Your vote for this poll has already been submitted.' => 'You have already answered this question.',
-    "1 vote\x03@count votes" => "1 answer\x03@count answers",
     'Total votes: @votes' => 'Answers: @votes',
     'Total votes' => 'Answers',
     'Are you sure you want to delete this vote for %poll' => 'Are you sure you want to remove this answer to %poll?',

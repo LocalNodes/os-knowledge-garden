@@ -33,3 +33,8 @@ services:
   localnodes_consensus.decision_register:
     class: Drupal\localnodes_consensus\Service\DecisionRegister
     arguments: ['@entity_type.manager', '@datetime.time', '@date.formatter', '@localnodes_consensus.current_eligible_reader']
+  localnodes_consensus.group_page_blocks_override:
+    class: Drupal\localnodes_consensus\Config\GroupPageBlocksOverride
+    arguments: ['@config.storage']
+    tags:
+      - { name: config.factory.override, priority: 5 }

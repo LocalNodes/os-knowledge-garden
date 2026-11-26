@@ -146,7 +146,7 @@ test.describe('group templates journey', () => {
     const A = s.groups.A;
     const open = await as(browser, 'roster01', `/group/${A}/decisions`);
     let page = open.page;
-    await page.getByRole('link', { name: 'Start a decision', exact: true }).click();
+    await page.getByRole('link', { name: 'Propose a decision', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/group/${A}/decisions/new$`));
     // The changed rule shows on the open screen.
     await expect(page.locator(CONTENT).getByText(new RegExp(`within ${ids.days} days`)).first()).toBeVisible();
@@ -412,7 +412,7 @@ test.describe('group templates journey', () => {
     await expect(roster.page.getByText('The roster change is recorded.')).toBeVisible();
     await roster.done();
     const reg = await as(browser, rosterOut, `/group/${A}/decisions`);
-    await expect(reg.page.getByRole('link', { name: 'Start a decision', exact: true })).toHaveCount(0);
+    await expect(reg.page.getByRole('link', { name: 'Propose a decision', exact: true })).toHaveCount(0);
     await reg.done();
     const newer = await as(browser, rosterOut, `/group/${A}/decisions/new`);
     expect(isRefusal(newer.page, newer.response) || !newer.page.url().endsWith('/decisions/new'), 'no open screen after roster removal').toBe(true);

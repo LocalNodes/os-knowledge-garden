@@ -154,7 +154,7 @@ final class ConsensusAccessTest extends BrowserTestBase {
         "No register for an unlisted Group type (status $status at $path)"
       );
       $this->assertStringNotContainsString('Open decisions', $text);
-      $this->assertStringNotContainsString('No decisions recorded yet', $text);
+      $this->assertStringNotContainsString('No decisions yet', $text);
       $this->assertStringNotContainsString(self::TITLE_WORD, $text);
     });
   }

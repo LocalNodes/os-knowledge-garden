@@ -575,13 +575,17 @@ final class DecisionRegisterTest extends ConsensusRecordTestBase {
 
   /**
    * The register: open apart from recorded, the line once, the empty state.
+   *
+   * The empty state carries the approved canvas's words and no record line
+   * (there is no record to describe).
    */
   public function testRegisterRendersOpenApartFromRecorded(): void {
     [$a, $manager, ['ada' => $ada, 'bo' => $bo]] = $this->setUpGroup('Willow', ['ada', 'bo']);
     [, $text, $build] = $this->renderRegister($a, $ada);
-    $this->assertStringContainsString('No decisions recorded yet', $text);
-    $this->assertStringContainsString('Start a round or record a decision from a group meeting.', $text);
-    $this->assertSame(1, substr_count($text, static::LINE));
+    $this->assertStringContainsString('No decisions yet', $text);
+    $this->assertStringContainsString('A decision is something this group agrees on together, such as a rule, a plan or how to spend money. One of the people who decide proposes it, and the others respond.', $text);
+    $this->assertDoesNotMatchRegularExpression('/\\b(round|recorded)\\b/i', $text, 'The empty state says neither round nor recorded');
+    $this->assertSame(0, substr_count($text, static::LINE), 'No record line on the empty page');
     $this->assertPerUserCache($build, ['group:' . $a->id(), 'localnodes_consensus_round_list', 'localnodes_meeting_report_list', 'localnodes_consensus_response_list'], 'Empty register');
 
     $open = $this->lifecycle()->open($a, $ada, 'everyday', "Paint the hallway\nUse the leftover sage paint", ['visibility' => 'group']);
@@ -593,7 +597,7 @@ final class DecisionRegisterTest extends ConsensusRecordTestBase {
     $report = $this->meetings()->record($a, $manager, $this->reportValues($bo, ['visibility' => 'group']));
 
     [$html, $text, $build] = $this->renderRegister($a, $ada);
-    $this->assertStringNotContainsString('No decisions recorded yet', $text);
+    $this->assertStringNotContainsString('No decisions yet', $text);
     $this->assertSame(1, substr_count($text, static::LINE), 'The non-authority line, once');
     $open_at = strpos($text, 'Open decisions');
     $recorded_at = strpos($text, 'Recorded results');
@@ -635,7 +639,7 @@ final class DecisionRegisterTest extends ConsensusRecordTestBase {
 
     // Another Group's member gets an empty register for this Group.
     [, , ['quinn' => $quinn]] = $this->setUpGroup('Juniper', ['quinn']);
-    $this->assertStringContainsString('No decisions recorded yet', $this->renderRegister($a, $quinn)[1]);
+    $this->assertStringContainsString('No decisions yet', $this->renderRegister($a, $quinn)[1]);
   }
 
   /**

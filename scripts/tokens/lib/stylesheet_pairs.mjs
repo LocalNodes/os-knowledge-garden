@@ -137,6 +137,8 @@ const P5_NAV = ['navbar-bg', 'navbar-active-bg', 'navbar-sec-bg', 'second-line-n
 
 const APP_COVER = '.socialblue--sky .cover:not(.cover-img)';
 const APP_TABS = '.socialblue--sky .navbar-secondary';
+const MORE = '.navbar-secondary .navbar-nav .caret > .ln-tabs-more';
+const ACTIONS_BTN = '.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions .btn';
 
 /**
  * Partner map: PARTNERS[stylesheet][single selector][kind]. See the header for the shapes. Selectors are written as
@@ -300,6 +302,44 @@ export const PARTNERS = {
     '.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a': text(PAGE, "the overflow list is socialblue's white dropdown; a hovered row takes a light fill, so the three light surfaces are measured"),
     '.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a:hover': text(PAGE, 'the overflow list is socialblue\'s white dropdown; a hovered row takes a light fill'),
     '.navbar-secondary.navbar-secondary .navbar-nav .hidden-list li a:focus': text(PAGE, 'the overflow list is socialblue\'s white dropdown; a focused row takes a light fill'),
+    // The "More" button group-tabs.js puts inside socialblue's caret: it has its own white fill, and its word, its
+    // arrow (currentColor) and its focus ring (4px inside, from its own :focus-visible rule) are drawn on that fill.
+    [MORE]: {
+      ...text(['own'], 'the word "More" sits on the white fill of the same rule'),
+      ...fillOf({ under: ['text-muted', 'text-strong', { fg: 'focus', kind: 'focus' }] }, 'the word, its arrow and its inset focus ring are drawn on the button\'s own white fill'),
+    },
+    [`${MORE}:hover`]: text([on(MORE, 'surface', 'overrides')], 'a hovered "More" keeps the button\'s own white fill'),
+    [`${MORE}[aria-expanded="true"]`]: text([on(MORE, 'surface', 'overrides')], 'an open "More" keeps the button\'s own white fill'),
+    [`${MORE}:focus-visible`]: ring(
+      [on(MORE, 'surface', 'overrides')],
+      [on(MORE, 'surface', 'overrides')],
+      'the ring is drawn 4px inside the button (outline-offset -4px !important in the same rule), on its own white fill',
+    ),
+    // A group page's actions in the left column ("Propose a decision", "Record a meeting"): filled buttons in the
+    // complementary column, which socialblue draws white (cards--sky.css: .content-merged--sky--complementary
+    // background #fff). The text is on the button's own fill; the edge is the fill colour, against that white column.
+    [ACTIONS_BTN]: {
+      ...text(['own'], 'the button text sits on the primary fill of the same rule'),
+      ...fillOf({ under: ['on-primary'] }, 'the button text is drawn on the primary fill'),
+      ...border(['surface'], 'the edge is the fill colour, against the white complementary column around the button'),
+    },
+    [`${ACTIONS_BTN}:hover`]: {
+      ...text(['own'], 'a hovered button\'s text sits on the darker fill of the same rule'),
+      ...fillOf({ under: ['on-primary'] }, 'the button text is drawn on the darker fill'),
+      ...border(['surface'], 'the edge is the fill colour, against the white complementary column'),
+    },
+    [`${ACTIONS_BTN}:focus-visible`]: {
+      ...text(['own'], 'a focused button\'s text sits on the darker fill of the same rule'),
+      ...fillOf({ under: ['on-primary'] }, 'the button text is drawn on the darker fill'),
+      ...border(['surface'], 'the edge is the fill colour, against the white complementary column'),
+    },
+    // The empty Decisions page's panel (decision-register.html.twig): a tinted box straight on the page body, which
+    // ln-app-look.css paints the canvas (the main column has no card). Its heading, sentence and the who-decides line
+    // with its link are drawn on the tint; its edge sits between the tint and the canvas page.
+    '.decision-register__empty': {
+      ...fillOf({ under: ['text', 'text-strong', 'link'] }, 'the heading, the sentence and the who-decides line (with its link) are drawn on the tint fill'),
+      ...border(['canvas', 'tint'], 'the edge sits between the panel\'s tint fill and the canvas page body around it'),
+    },
     // Header name and footer.
     '.navbar-brand .ln-site-name': text(
       ['targets.socialblue.navbar-bg'],
