@@ -4,6 +4,27 @@ localnodes_consensus.decisions:
   title: 'Decisions'
   weight: 55
 
+# The pages under the Decisions tab keep it marked as the group's current
+# tab. Their own row of tabs is not shown
+# (localnodes_consensus_preprocess_menu_local_tasks()).
+localnodes_consensus.open_task:
+  route_name: localnodes_consensus.open
+  parent_id: localnodes_consensus.decisions
+  title: 'Propose a decision'
+  weight: 100
+
+localnodes_consensus.roster_task:
+  route_name: localnodes_consensus.roster
+  parent_id: localnodes_consensus.decisions
+  title: 'The people who decide'
+  weight: 101
+
+localnodes_consensus.meeting_task:
+  route_name: localnodes_consensus.meeting
+  parent_id: localnodes_consensus.decisions
+  title: 'Record a meeting'
+  weight: 102
+
 localnodes_consensus.round:
   route_name: entity.localnodes_consensus_round.canonical
   base_route: entity.localnodes_consensus_round.canonical

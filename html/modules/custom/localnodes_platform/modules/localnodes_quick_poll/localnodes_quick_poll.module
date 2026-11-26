@@ -16,6 +16,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\localnodes_quick_poll\Entity\PollAnswersListBuilder;
 use Drupal\localnodes_quick_poll\Form\QuickPollForm;
 use Drupal\poll\PollInterface;
 
@@ -177,6 +178,7 @@ function localnodes_quick_poll_entity_type_alter(array &$entity_types): void {
   if (isset($entity_types['poll'])) {
     $entity_types['poll']->setFormClass('default', QuickPollForm::class);
     $entity_types['poll']->setFormClass('edit', QuickPollForm::class);
+    $entity_types['poll']->setListBuilderClass(PollAnswersListBuilder::class);
   }
 }
 
@@ -209,6 +211,7 @@ function localnodes_quick_poll_block_access(BlockInterface $block, string $opera
  * never allow. Give a member who has not answered that way back.
  */
 function localnodes_quick_poll_form_poll_view_form_alter(array &$form, FormStateInterface $form_state): void {
+  _localnodes_quick_poll_answer_words($form, $form_state);
   if (isset($form['actions']['vote']['#submit']) && \Drupal::currentUser()->isAuthenticated()) {
     $form['actions']['vote']['#submit'] = array_map(
       fn ($handler) => $handler === '::save' ? '_localnodes_quick_poll_save_answer' : $handler,
@@ -240,6 +243,44 @@ function localnodes_quick_poll_form_poll_view_form_alter(array &$form, FormState
     ],
     '#weight' => 0,
   ];
+}
+
+/**
+ * Words the poll's answer button and its counts as answers, on its own form.
+ *
+ * "Vote", "1 vote" and "@count votes" are also the group voting pages' own
+ * words, so QuickPollWording leaves them alone and they are reworded here,
+ * where the poll builds them: the button reads "Answer" and each choice's
+ * count "1 answer" or "@count answers".
+ *
+ * The poll module tells someone who sends an answer form after they have
+ * already answered by comparing the pressed button with "Vote"; with the
+ * button reading "Answer" that comparison never matches, so the same
+ * message is given here instead.
+ */
+function _localnodes_quick_poll_answer_words(array &$form, FormStateInterface $form_state): void {
+  if (isset($form['actions']['vote'])) {
+    $form['actions']['vote']['#value'] = t('Answer');
+  }
+  if (!isset($form['results']['#results'])) {
+    return;
+  }
+  if (empty($form['results']['#block'])) {
+    foreach ($form['results']['#results'] as &$meter) {
+      if (isset($meter['#value'], $meter['#percentage'])) {
+        $meter['#display_value'] = t('@percentage%', ['@percentage' => $meter['#percentage']])
+          . ' (' . \Drupal::translation()->formatPlural((int) $meter['#value'], '1 answer', '@count answers') . ')';
+      }
+    }
+    unset($meter);
+  }
+  $poll = $form['poll']['#value'] ?? NULL;
+  if ($poll instanceof PollInterface && \Drupal::request()->isMethod('POST') && $poll->hasUserVoted()) {
+    $input = $form_state->getUserInput();
+    if (isset($input['op']) && $input['op'] === (string) t('Answer')) {
+      \Drupal::messenger()->addError(t('Your vote for this poll has already been submitted.'));
+    }
+  }
 }
 
 /**

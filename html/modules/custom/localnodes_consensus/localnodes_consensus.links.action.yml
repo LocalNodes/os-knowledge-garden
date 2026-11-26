@@ -1,6 +1,6 @@
 localnodes_consensus.open:
   route_name: localnodes_consensus.open
-  title: 'Start a decision'
+  title: 'Propose a decision'
   appears_on:
     - localnodes_consensus.decisions
 

@@ -12,7 +12,14 @@
  *   state_label, visibility_label (what the Group allows now) and lines.
  * - recorded: closed rounds and meeting reports, newest first, the same way.
  * - non_authority_line: the sentence saying a record moves no money, as its
- *   own render element, printed once.
+ *   own render element, printed once under the decisions (not on the empty
+ *   page, which has no record to describe).
+ * - who_decides: while nobody is among the people who decide, one sentence
+ *   for the organizer (with a link to that list) or for a member; empty
+ *   otherwise. On the empty page it sits in the panel that says what a
+ *   decision is, as on the approved canvas.
+ * - reads_line: for a member, under that panel, that they can read every
+ *   decision shared with the group; empty otherwise.
  *
  * Items hold no decision text past a round's title; each links to its own
  * page.
@@ -20,9 +27,14 @@
 #}
 <section class="decision-register">
   {% if open is empty and recorded is empty %}
-    <p class="decision-register__empty">{{ 'No decisions recorded yet'|t }}</p>
-    <p>{{ 'Start a round or record a decision from a group meeting.'|t }}</p>
+    <div class="decision-register__empty">
+      <h3>{{ 'No decisions yet'|t }}</h3>
+      <p>{{ 'A decision is something this group agrees on together, such as a rule, a plan or how to spend money. One of the people who decide proposes it, and the others respond.'|t }}</p>
+      {{ who_decides }}
+    </div>
+    {{ reads_line }}
   {% else %}
+    {{ who_decides }}
     <h2>{{ 'Open decisions'|t }}</h2>
     {% if open is empty %}
       <p>{{ 'Nothing is open right now.'|t }}</p>
@@ -57,6 +69,6 @@
         {% endfor %}
       </ul>
     {% endif %}
+    {{ non_authority_line }}
   {% endif %}
-  {{ non_authority_line }}
 </section>

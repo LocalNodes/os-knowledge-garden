@@ -1,0 +1,73 @@
+--- a/modules/social_features/social_group/src/CurrentGroupProvider.php
++++ b/modules/social_features/social_group/src/CurrentGroupProvider.php
+@@ -151,6 +151,8 @@
+   /**
+    * Resolves the group from AJAX request view_path when applicable.
+    *
++   * The group is returned only when the current user may view it.
++   *
+    * @return \Drupal\group\Entity\GroupInterface|null
+    *   The group from the matched view_path route, or NULL.
+    */
+@@ -168,7 +170,9 @@
+     try {
+       $match = $this->router->match($view_path);
+       $group = $match['group'] ?? NULL;
+-      return $group !== NULL ? $this->ensureGroupEntity($group) : NULL;
++      $group = $group !== NULL ? $this->ensureGroupEntity($group) : NULL;
++      // Only a group the current user may view.
++      return $group !== NULL && $group->access('view') ? $group : NULL;
+     }
+     catch (ResourceNotFoundException | MethodNotAllowedException) {
+       return NULL;
+--- a/modules/social_features/social_group/src/Plugin/Block/GroupHeroBlock.php
++++ b/modules/social_features/social_group/src/Plugin/Block/GroupHeroBlock.php
+@@ -80,6 +80,11 @@
+     }
+     // Cache contexts.
+     $build['#cache']['contexts'][] = 'url.path';
++    // A group not taken from the route is shown only to those who may view
++    // it, so that header is not cached.
++    if ($this->routeMatch->getParameter('group') === NULL) {
++      $build['#cache']['max-age'] = 0;
++    }
+ 
+     return $build;
+   }
+--- a/modules/social_features/social_group/tests/src/Unit/CurrentGroupProviderTest.php
++++ b/modules/social_features/social_group/tests/src/Unit/CurrentGroupProviderTest.php
+@@ -240,6 +240,7 @@
+     $this->currentRequest = $request;
+ 
+     $group = $this->createMock(GroupInterface::class);
++    $group->method('access')->with('view')->willReturn(TRUE);
+     $this->router->method('match')->with('/group/1')->willReturn(['group' => 1]);
+     $this->groupStorage->method('load')->with(1)->willReturn($group);
+ 
+@@ -248,6 +249,26 @@
+   }
+ 
+   /**
++   * Tests that a group the current user may not view is not returned.
++   *
++   * @covers ::getCurrentGroup
++   */
++  public function testGetCurrentGroupSkipsGroupTheUserMayNotView(): void {
++    $request = new Request();
++    $request->headers->set('X-Requested-With', 'XMLHttpRequest');
++    $request->query->set('view_path', '/group/1');
++    $this->currentRequest = $request;
++
++    $group = $this->createMock(GroupInterface::class);
++    $group->method('access')->with('view')->willReturn(FALSE);
++    $this->router->method('match')->with('/group/1')->willReturn(['group' => 1]);
++    $this->groupStorage->method('load')->with(1)->willReturn($group);
++
++    $provider = $this->createProvider();
++    $this->assertNull($provider->getCurrentGroup());
++  }
++
++  /**
+    * Tests that route takes precedence over entity and AJAX.
+    *
+    * @covers ::getCurrentGroup

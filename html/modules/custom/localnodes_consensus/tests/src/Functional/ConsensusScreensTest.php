@@ -71,13 +71,13 @@ final class ConsensusScreensTest extends BrowserTestBase {
     // The empty register, and its action links for those who may use them.
     $this->asPersona($this->people['A_manager'], function () use ($register, $open_path, $meeting_path): void {
       $this->drupalGet($register);
-      $this->assertSession()->pageTextContains('Start a round or record a decision from a group meeting.');
+      $this->assertSession()->pageTextContains('No decisions yet');
       $this->assertSession()->linkByHrefExists($meeting_path);
       $this->assertSession()->linkByHrefNotExists($open_path);
     });
     $this->asPersona($this->people['A_roster'], function () use ($register, $open_path, $meeting_path): void {
       $this->drupalGet($register);
-      $this->assertSession()->linkExists('Start a decision');
+      $this->assertSession()->linkExists('Propose a decision');
       $this->assertSession()->linkByHrefExists($open_path);
       $this->assertSession()->linkByHrefNotExists($meeting_path);
     });

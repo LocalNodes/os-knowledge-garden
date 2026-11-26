@@ -8,6 +8,7 @@
 declare(strict_types=1);
 
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Render\Element;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupRelationshipInterface;
 use Drupal\localnodes_consensus\Entity\ConsensusNotice;
@@ -168,7 +169,8 @@ function localnodes_consensus_mail(string $key, array &$message, array $params):
  * replace non_authority_line and add keyed render arrays to panels, ordered
  * by #weight and printed after the record body; this module names no panel.
  * decision_register is the Group's register: its open part apart from its
- * recorded results, with the non-authority line once.
+ * recorded results, with the non-authority line once, and who_decides, the
+ * sentence shown while nobody is among the people who decide.
  */
 function localnodes_consensus_theme(): array {
   return [
@@ -190,9 +192,71 @@ function localnodes_consensus_theme(): array {
         'open' => [],
         'recorded' => [],
         'non_authority_line' => [],
+        'who_decides' => [],
+        'reads_line' => [],
       ],
     ],
   ];
+}
+
+/**
+ * The group pages under the Decisions and Set up tabs.
+ */
+const LOCALNODES_CONSENSUS_GROUP_PAGES = [
+  'localnodes_consensus.decisions',
+  'localnodes_consensus.open',
+  'localnodes_consensus.roster',
+  'localnodes_consensus.meeting',
+  'localnodes_group_setup.setup',
+];
+
+/**
+ * Implements hook_preprocess_HOOK() for page.
+ *
+ * On the group pages under the Decisions and Set up tabs the theme's title
+ * would sit under the tab bar, so it is left out and the page's title opens
+ * its content instead, as the Fund tab's own heading does.
+ */
+function localnodes_consensus_preprocess_page(array &$variables): void {
+  $match = \Drupal::routeMatch();
+  if (!in_array($match->getRouteName(), LOCALNODES_CONSENSUS_GROUP_PAGES, TRUE) || !isset($variables['page']['content'])) {
+    return;
+  }
+  // The theme's titles would sit under the tab bar next to the group's
+  // header: they are left out on these routes (and only here, so an error
+  // page at a similar address keeps its title).
+  unset($variables['page']['hero']['socialblue_pagetitleblock'], $variables['page']['title']['socialblue_pagetitleblock_content']);
+  if (isset($variables['page']['title']) && !Element::children($variables['page']['title'])) {
+    unset($variables['page']['title']);
+  }
+  $route = $match->getRouteObject();
+  $title = $route ? \Drupal::service('title_resolver')->getTitle(\Drupal::request(), $route) : NULL;
+  if ($title === NULL || $title === '') {
+    return;
+  }
+  // First in the region: the region's blocks are already in order.
+  $variables['page']['content'] = [
+    'localnodes_consensus_title' => [
+      '#type' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => is_array($title) ? \Drupal::service('renderer')->renderInIsolation($title) : $title,
+      '#attributes' => ['class' => ['localnodes-group-page-title']],
+    ],
+  ] + $variables['page']['content'];
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for menu_local_tasks.
+ *
+ * The pages under a group's Decisions tab show the group's tabs with
+ * Decisions marked, and no second row: their child tabs exist only to keep
+ * Decisions marked, as the Fund tab's pages do.
+ */
+function localnodes_consensus_preprocess_menu_local_tasks(array &$variables): void {
+  $route = \Drupal::routeMatch()->getRouteName();
+  if (in_array($route, LOCALNODES_CONSENSUS_GROUP_PAGES, TRUE)) {
+    $variables['secondary'] = [];
+  }
 }
 
 /**

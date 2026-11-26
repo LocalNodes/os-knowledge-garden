@@ -38,7 +38,7 @@ localnodes_consensus.open:
   path: '/group/{group}/decisions/new'
   defaults:
     _form: '\Drupal\localnodes_consensus\Form\OpenRoundForm'
-    _title: 'Start a decision'
+    _title: 'Propose a decision'
   requirements:
     _entity_access: 'group.view'
     _custom_access: '\Drupal\localnodes_consensus\Form\OpenRoundForm::access'

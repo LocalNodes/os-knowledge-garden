@@ -183,24 +183,66 @@ html:has(.ai-deepchat.chat-container) {
   scroll-padding-bottom: var(--ln-chat-clearance);
 }
 
-/* The group tab bar's overflow (22-30 KB-08). group-tabs.js puts a button
-   named "More group pages" inside socialblue's caret, which draws the arrow
-   with its borders and has no size of its own: the button is a 44px target
-   centred on the arrow, transparent so the arrow shows through. */
-.navbar-secondary .navbar-nav .caret > .ln-tabs-more {
-  position: absolute;
-  top: -22px;
-  left: -16px;
-  width: 44px;
-  height: 44px;
-  margin: 0;
-  padding: 0;
+/* The group tab bar's overflow (22-30 KB-08). socialblue draws its "more
+   tabs" arrow as a white border triangle, made for a dark bar; on the app
+   look's white bar it can't be seen, which left an empty box. group-tabs.js
+   puts a button that reads "More" inside socialblue's caret; here the caret
+   loses its triangle, and the button shows the word and its own arrow in the
+   tab text colour, at least 44px square, on the bar's own white. */
+.socialblue--sky .navbar-secondary.navbar-secondary .navbar-nav .caret {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  width: auto;
+  height: auto;
   border: 0;
-  background: transparent;
+  transform: none;
+}
+[dir='rtl'] .socialblue--sky .navbar-secondary.navbar-secondary .navbar-nav .caret {
+  right: auto;
+  left: 0;
+}
+.socialblue--sky .navbar-secondary.navbar-secondary .navbar-nav .caret.active {
+  transform: none;
+}
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  background: var(--ln-color-surface);
+  color: var(--ln-color-text-muted);
+  font: inherit;
   cursor: pointer;
 }
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more:hover,
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more[aria-expanded="true"] {
+  color: var(--ln-color-text-strong);
+}
 .navbar-secondary .navbar-nav .caret > .ln-tabs-more::after {
-  content: none;
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more[aria-expanded="true"]::after {
+  margin-top: 4px;
+  transform: rotate(-135deg);
+}
+/* The light-surface ring, inside the button: the ring for dark bars that
+   ln-overrides.css gives .navbar-secondary is near-white on this white bar. */
+.navbar-secondary .navbar-nav .caret > .ln-tabs-more:focus-visible {
+  outline-color: var(--ln-color-focus) !important;
+  outline-offset: -4px !important;
 }
 /* socialblue draws the list's links in a light grey on white (2.8:1). The
    muted text token is 7.46:1 on white (WCAG 1.4.3). The doubled class outranks
@@ -410,4 +452,66 @@ form .form-control::placeholder {
   .container--navbar > .navbar-user {
     flex-shrink: 0;
   }
+}
+
+/*
+ * A group page's actions in the left column (the Decisions page's "Propose
+ * a decision" and "Record a meeting") sit in a card as full-width buttons,
+ * like the Fund page's add buttons. The theme's own action template sets
+ * the link's classes, so the look is set here. With no action for this person, nothing is drawn: no empty
+ * card.
+ */
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions:empty {
+  display: none;
+}
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions {
+  display: block;
+  margin: 0;
+  padding: 20px 1.875rem;
+  list-style: none;
+}
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions > li {
+  display: block;
+  padding: 0;
+}
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions > li + li {
+  margin-top: 10px;
+}
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions .btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 0;
+  padding: 6px 12px;
+  border-color: var(--ln-color-primary);
+  background-color: var(--ln-color-primary);
+  color: var(--ln-color-on-primary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions .btn:hover,
+.socialblue--sky .content-merged--sky .region--complementary-top > .local-actions .btn:focus-visible {
+  border-color: var(--ln-color-primary-strong);
+  background-color: var(--ln-color-primary-strong);
+  color: var(--ln-color-on-primary);
+}
+
+/*
+ * The empty Decisions page's panel, as drawn on the approved canvas
+ * "Decisions in Every Group": a light tinted box with a small heading.
+ */
+.decision-register__empty {
+  margin: 0 0 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--ln-color-border-control);
+  border-radius: 4px;
+  background: var(--ln-color-tint);
+}
+.decision-register__empty h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.decision-register__empty p {
+  margin: 6px 0;
 }
