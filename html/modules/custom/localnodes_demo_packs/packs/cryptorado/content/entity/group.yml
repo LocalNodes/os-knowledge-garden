@@ -1,0 +1,82 @@
+---
+# Practice show site: the Commons and two groups. Each group is loaded by its organizer, who is also a member.
+# Denver Blockchain and Boulder Blockchain are real names the owner chose for this practice show site;
+# each has one line saying its page is a sample, and nothing else here is about them (PackFictionalTest::OWNER_NAMED_REAL_GROUPS).
+# No group is marked community_template: no community template fits a site of like groups.
+1e8ce9d5-b1bf-4783-ab91-641e69f6d853:
+  uuid: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  langcode: "en"
+  image: null
+  image_alt: ""
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  created: "now|00:00"
+  label: "Commons"
+  type: "flexible_group"
+  field_flexible_group_visibility: "public"
+  field_group_allowed_join_method: "direct"
+  field_group_allowed_visibility:
+  - public
+  - community
+  - group
+  description: "<p>Sample group: the shared space for everyone on this practice site. Every event, page and member on this site is a made-up sample.</p>"
+  members:
+  - 2a27b688-1230-419b-ac89-441ca6a778ad
+  - c34d0dd6-1597-460f-906a-6b37b0a8db5c
+  - af0f6327-28f5-46d0-9717-24654756fb14
+  - f5bf2851-1459-4844-af7d-3692c8116d88
+  - 2ca839f7-7f7c-4929-90ea-88d4f28fb967
+  - b69a3637-dd49-4dd1-ae42-334dfecebb38
+  - d0d1e8df-0647-4a06-82bd-8e924b2647c5
+  - b4100482-a544-4882-b2f4-73db28e61cbd
+  managers:
+  - 2a27b688-1230-419b-ac89-441ca6a778ad
+
+998cecc0-a853-40c0-b722-2b4d8d271ae3:
+  uuid: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  langcode: "en"
+  image: null
+  image_alt: ""
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  created: "now|00:00"
+  label: "Denver Blockchain"
+  type: "flexible_group"
+  field_flexible_group_visibility: "public"
+  field_group_allowed_join_method: "direct"
+  field_group_allowed_visibility:
+  - public
+  - community
+  - group
+  description: "<p>Sample practice page on this demo site: its events, pages and members are made up, not this group's own.</p>"
+  members:
+  - c34d0dd6-1597-460f-906a-6b37b0a8db5c
+  - f5bf2851-1459-4844-af7d-3692c8116d88
+  - 2ca839f7-7f7c-4929-90ea-88d4f28fb967
+  - b69a3637-dd49-4dd1-ae42-334dfecebb38
+  - 2a27b688-1230-419b-ac89-441ca6a778ad
+  managers:
+  - c34d0dd6-1597-460f-906a-6b37b0a8db5c
+
+38c423c6-25c9-437a-bc9e-8dfaa43ad879:
+  uuid: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  langcode: "en"
+  image: null
+  image_alt: ""
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  created: "now|00:00"
+  label: "Boulder Blockchain"
+  type: "flexible_group"
+  field_flexible_group_visibility: "public"
+  field_group_allowed_join_method: "direct"
+  field_group_allowed_visibility:
+  - public
+  - community
+  - group
+  description: "<p>Sample practice page on this demo site: its events, pages and members are made up, not this group's own.</p>"
+  members:
+  - af0f6327-28f5-46d0-9717-24654756fb14
+  - d0d1e8df-0647-4a06-82bd-8e924b2647c5
+  - b4100482-a544-4882-b2f4-73db28e61cbd
+  - 2ca839f7-7f7c-4929-90ea-88d4f28fb967
+  - 2a27b688-1230-419b-ac89-441ca6a778ad
+  managers:
+  - af0f6327-28f5-46d0-9717-24654756fb14

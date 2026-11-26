@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\localnodes_platform\Unit;
 
+use Drupal\Core\Config\Config;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -110,6 +112,12 @@ final class HouseRolePrivacyTest extends UnitTestCase {
     $container = new ContainerBuilder();
     $container->set('entity_type.manager', $entities);
     $container->set('user.permissions', $permissions);
+    // A site without the group overview view: that step leaves it alone.
+    $overview = $this->createMock(Config::class);
+    $overview->method('isNew')->willReturn(TRUE);
+    $configs = $this->createMock(ConfigFactoryInterface::class);
+    $configs->method('getEditable')->with('views.view.groups_overview')->willReturn($overview);
+    $container->set('config.factory', $configs);
     \Drupal::setContainer($container);
     _localnodes_platform_protect_private_groups();
     $this->assertSame(['view users', 'block users', 'view blocked user', 'access content', 'export localnodes site'], $state['sitemanager']);

@@ -1,0 +1,201 @@
+---
+# Events: every one is a made-up sample, public, in its group, dated from the install day so it stays upcoming.
+# Every group here is open, so each event is open to sign-ups from people outside its group (field_event_enroll_outside_group).
+# No event states an end time, so each end equals its start. Created 14 days back, so the posts lead the stream.
+8e50d9d2-3a14-4d00-abf7-c705b754068d:
+  uuid: "8e50d9d2-3a14-4d00-abf7-c705b754068d"
+  title: "Sample: newcomers' coffee"
+  type: "event"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  body: "<p>Sample event, made up for this practice site. An easy first meetup for anyone curious. Come and say hello.</p>"
+  field_event_address: {}
+  field_event_date: "+3 day|18:00"
+  field_event_date_end: "+3 day|18:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a cafe downtown"
+  field_content_visibility: "public"
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+18874275-7a90-4c4f-8e61-3b7b39d82ecd:
+  uuid: "18874275-7a90-4c4f-8e61-3b7b39d82ecd"
+  title: "Sample: build night"
+  type: "event"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  body: "<p>Sample event, made up for this practice site. Bring a laptop and a small project, or help someone else with theirs.</p>"
+  field_event_address: {}
+  field_event_date: "+10 day|18:30"
+  field_event_date_end: "+10 day|18:30"
+  image: null
+  image_alt: ""
+  field_event_location: "a shared office space"
+  field_content_visibility: "public"
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+add64cb2-cb7b-4b98-8dda-25a9529a7177:
+  uuid: "add64cb2-cb7b-4b98-8dda-25a9529a7177"
+  title: "Sample: short talks evening"
+  type: "event"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  body: "<p>Sample event, made up for this practice site. Three ten-minute talks from members, then questions over tea.</p>"
+  field_event_address: {}
+  field_event_date: "+17 day|19:00"
+  field_event_date_end: "+17 day|19:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a library meeting room"
+  field_content_visibility: "public"
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+4fd12a38-08ae-456e-be28-972c94cdcc8d:
+  uuid: "4fd12a38-08ae-456e-be28-972c94cdcc8d"
+  title: "Sample: weekend walk and talk"
+  type: "event"
+  langcode: "en"
+  uid: "c34d0dd6-1597-460f-906a-6b37b0a8db5c"
+  body: "<p>Sample event, made up for this practice site. A slow walk with time to talk. Wear good shoes.</p>"
+  field_event_address: {}
+  field_event_date: "+24 day|10:00"
+  field_event_date_end: "+24 day|10:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a park by the river"
+  field_content_visibility: "public"
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+b7d032a2-558f-49f3-9a1d-cc836f81ddae:
+  uuid: "b7d032a2-558f-49f3-9a1d-cc836f81ddae"
+  title: "Sample: study group"
+  type: "event"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  body: "<p>Sample event, made up for this practice site. Bring a question you have been stuck on and work through it together.</p>"
+  field_event_address: {}
+  field_event_date: "+5 day|18:00"
+  field_event_date_end: "+5 day|18:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a cafe near the campus"
+  field_content_visibility: "public"
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+03b6cc10-b6f2-4a09-8588-7a68521b4cfa:
+  uuid: "03b6cc10-b6f2-4a09-8588-7a68521b4cfa"
+  title: "Sample: project show and tell"
+  type: "event"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  body: "<p>Sample event, made up for this practice site. Five minutes each to show something you made, finished or not.</p>"
+  field_event_address: {}
+  field_event_date: "+12 day|18:30"
+  field_event_date_end: "+12 day|18:30"
+  image: null
+  image_alt: ""
+  field_event_location: "a coworking room"
+  field_content_visibility: "public"
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+a4e80a11-3c26-4a7e-a36e-80fb2fe53bc1:
+  uuid: "a4e80a11-3c26-4a7e-a36e-80fb2fe53bc1"
+  title: "Sample: reading circle"
+  type: "event"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  body: "<p>Sample event, made up for this practice site. We read one short article beforehand and talk it over.</p>"
+  field_event_address: {}
+  field_event_date: "+19 day|19:00"
+  field_event_date_end: "+19 day|19:00"
+  image: null
+  image_alt: ""
+  field_event_location: "the back room of a bookshop"
+  field_content_visibility: "public"
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0:
+  uuid: "4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0"
+  title: "Sample: morning trail meetup"
+  type: "event"
+  langcode: "en"
+  uid: "af0f6327-28f5-46d0-9717-24654756fb14"
+  body: "<p>Sample event, made up for this practice site. An easy hike, then coffee for anyone who wants it.</p>"
+  field_event_address: {}
+  field_event_date: "+26 day|09:00"
+  field_event_date_end: "+26 day|09:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a trailhead parking lot"
+  field_content_visibility: "public"
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+f5dc6b02-387e-474b-9a2c-22530d2d85b6:
+  uuid: "f5dc6b02-387e-474b-9a2c-22530d2d85b6"
+  title: "Sample: get-together for all groups"
+  type: "event"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  body: "<p>Sample event, made up for this practice site. Members of every group meet, share what is coming up and plan together.</p>"
+  field_event_address: {}
+  field_event_date: "+8 day|18:00"
+  field_event_date_end: "+8 day|18:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a community hall"
+  field_content_visibility: "public"
+  group: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+3674a478-7937-400e-9ad3-5b9f6cc4a756:
+  uuid: "3674a478-7937-400e-9ad3-5b9f6cc4a756"
+  title: "Sample: organizers' planning hour"
+  type: "event"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  body: "<p>Sample event, made up for this practice site. Organizers compare dates so events do not clash.</p>"
+  field_event_address: {}
+  field_event_date: "+15 day|17:00"
+  field_event_date_end: "+15 day|17:00"
+  image: null
+  image_alt: ""
+  field_event_location: "online"
+  field_content_visibility: "public"
+  group: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"
+
+bcb8295f-7ffc-43f8-a576-04dc50224182:
+  uuid: "bcb8295f-7ffc-43f8-a576-04dc50224182"
+  title: "Sample: help desk for new members"
+  type: "event"
+  langcode: "en"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  body: "<p>Sample event, made up for this practice site. Drop in with questions about the site, events or groups.</p>"
+  field_event_address: {}
+  field_event_date: "+30 day|12:00"
+  field_event_date_end: "+30 day|12:00"
+  image: null
+  image_alt: ""
+  field_event_location: "a cafe downtown"
+  field_content_visibility: "public"
+  group: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  field_event_enroll_outside_group: true
+  created: "-14 day|09:00"

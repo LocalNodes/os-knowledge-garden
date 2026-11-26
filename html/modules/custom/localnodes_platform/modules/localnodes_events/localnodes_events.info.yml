@@ -1,0 +1,8 @@
+name: 'LocalNodes Events'
+type: module
+description: 'Events: who may open an event''s attendee list, the calendar file, the organizer''s notice.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - social:social_event
+  - social:social_event_managers

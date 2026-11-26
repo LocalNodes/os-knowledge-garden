@@ -116,7 +116,8 @@
             "goalgorilla/open_social": {
                 "CommentGroupContentFormatter: preserve #comment_type and #comment_display_mode keys": "patches/group-core-comments-missing-comment-preprocess-keys.patch",
                 "New private messages keep their recipients (private_message 3.x reads the members value unflattened)": "patches/social-private-message-keep-recipients.patch",
-                "Group header blocks check the visitor's access to the group": "patches/social-group-header-blocks-check-access.patch"
+                "Group header blocks check the visitor's access to the group": "patches/social-group-header-blocks-check-access.patch",
+                "The group choice on a content form checks the visitor's access to the group": "patches/social-group-choice-checks-access.patch"
             },
             "drupal/ai_vdb_provider_qdrant": {
                 "Fix double-MD5 in deleteFromCollection causing silent delete failures": "patches/qdrant-provider-fix-double-md5-delete.patch"

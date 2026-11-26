@@ -20,7 +20,11 @@ use Drupal\social_demo\Plugin\DemoContent\Event;
 class PackEvent extends Event {
 
   use ResolvesPackTokens;
-  use StampsChangedTime;
+  // The trait's getEntry() stamps changed with created; this class's own
+  // getEntry() calls it, so the stamp is kept.
+  use StampsChangedTime {
+    getEntry as stampedEntry;
+  }
 
   /**
    * {@inheritdoc}
@@ -30,6 +34,22 @@ class PackEvent extends Event {
    */
   protected function createEventDate($date_string) {
     return DemoDate::dateTime((string) $date_string, $this->packAnchor());
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A pack event may say whether people outside its group may sign up
+   * (field_event_enroll_outside_group). The event form sets it; a loaded event
+   * skips the form, so the pack states it. An event that does not state it
+   * keeps the field's default.
+   */
+  protected function getEntry(array $item) {
+    $entry = $this->stampedEntry($item);
+    if (array_key_exists('field_event_enroll_outside_group', $item)) {
+      $entry['field_event_enroll_outside_group'] = (bool) $item['field_event_enroll_outside_group'];
+    }
+    return $entry;
   }
 
 }

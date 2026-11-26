@@ -919,6 +919,9 @@ function localnodes_platform_module_implements_alter(array &$implementations, $h
 function localnodes_platform_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
   \Drupal\localnodes_platform\Mention\HouseMentions::alterForm($form, $form_state);
   \Drupal::service('localnodes_platform.house_departure_forms')->alter($form, $form_state);
+  if ($form_id === 'views_exposed_form') {
+    \Drupal\localnodes_platform\Account\PeopleGroupFilter::alterForm($form, \Drupal::currentUser());
+  }
   if (in_array($form_id, ['enroll_action_form', 'event_an_enroll_action_form'], TRUE)) {
     \Drupal::service('localnodes_platform.event_participation_form_guard')->alter($form, $form_state);
   }
@@ -980,6 +983,7 @@ function localnodes_platform_activity_access(EntityInterface $activity, $operati
 /** Implements hook_views_pre_view(). */
 function localnodes_platform_views_pre_view(\Drupal\views\ViewExecutable $view, $display_id, array &$args): void {
   \Drupal\localnodes_platform\Plugin\views\filter\ActivityRecipientOnlyFilter::refuseOtherMembersPage($view, (string) $display_id, $args);
+  \Drupal\localnodes_platform\Account\PeopleGroupFilter::preView($view, \Drupal::currentUser());
 }
 
 /**

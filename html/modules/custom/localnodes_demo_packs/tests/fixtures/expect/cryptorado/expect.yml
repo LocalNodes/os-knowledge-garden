@@ -1,0 +1,73 @@
+# What the practice show site pack must hold once loaded. Same format as the smoke pack's expect.yml.
+counts:
+  user: 8
+  group: 3
+  topic: 4
+  event: 11
+  event_enrollment: 27
+  post: 4
+  comment: 0
+  like: 0
+  poll: 0
+  howto: 10
+visibility:
+  - id: visitor-sees-group-event
+    persona: anonymous
+    uuid: 8e50d9d2-3a14-4d00-abf7-c705b754068d
+    sees: true
+  - id: visitor-sees-group-page
+    persona: anonymous
+    uuid: 329f02c9-4b8f-4aae-ad1a-d3661bda3365
+    sees: true
+  - id: visitor-sees-other-group-event
+    persona: anonymous
+    uuid: b7d032a2-558f-49f3-9a1d-cc836f81ddae
+    sees: true
+  - id: outsider-sees-group-page
+    persona: b69a3637-dd49-4dd1-ae42-334dfecebb38
+    uuid: 691c86d9-10e7-48a9-8b50-6a83fe9ffd1a
+    sees: true
+  - id: visitor-misses-members-page
+    persona: anonymous
+    uuid: 1bc338fb-8eb5-49fa-b2fd-9ddd5bc4c874
+    sees: false
+  - id: outsider-misses-members-page
+    persona: af0f6327-28f5-46d0-9717-24654756fb14
+    uuid: 1bc338fb-8eb5-49fa-b2fd-9ddd5bc4c874
+    sees: false
+  - id: member-sees-members-page
+    persona: b69a3637-dd49-4dd1-ae42-334dfecebb38
+    uuid: 1bc338fb-8eb5-49fa-b2fd-9ddd5bc4c874
+    sees: true
+listings:
+  - persona: af0f6327-28f5-46d0-9717-24654756fb14
+    group: 998cecc0-a853-40c0-b722-2b4d8d271ae3
+    hidden_titles:
+      - "Sample: notes for members of this group"
+left_out:
+  - id: funds-at-provisioning
+    text: "Practice funds and group decisions are turned on when the site is made, not by this pack."
+search_hidden: []
+likes: {}
+going:
+  8e50d9d2-3a14-4d00-abf7-c705b754068d: 3
+  18874275-7a90-4c4f-8e61-3b7b39d82ecd: 2
+  add64cb2-cb7b-4b98-8dda-25a9529a7177: 4
+  4fd12a38-08ae-456e-be28-972c94cdcc8d: 1
+  b7d032a2-558f-49f3-9a1d-cc836f81ddae: 2
+  03b6cc10-b6f2-4a09-8588-7a68521b4cfa: 3
+  a4e80a11-3c26-4a7e-a36e-80fb2fe53bc1: 2
+  4c66c535-5a2e-44f2-b0ff-4458a7c1b2b0: 3
+  f5dc6b02-387e-474b-9a2c-22530d2d85b6: 4
+  3674a478-7937-400e-9ad3-5b9f6cc4a756: 2
+  bcb8295f-7ffc-43f8-a576-04dc50224182: 1
+poll_votes: {}
+sections:
+  People: loaded
+  Groups: loaded
+  Pages: loaded
+  Posts: loaded
+  Events: loaded
+  Funds:
+    pending: practice funds turned on when the site is made
+  Walk: test_only

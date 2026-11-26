@@ -932,7 +932,8 @@ class OrganizerCommands extends DrushCommands {
       if (!$privileged) {
         $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple($account->getRoles());
         foreach ($roles as $role) {
-          if ($role->isAdmin()) {
+          // The administrator role is named; it no longer holds every permission.
+          if ($role->isAdmin() || $role->id() === 'administrator') {
             $privileged = TRUE;
             break;
           }

@@ -1,0 +1,40 @@
+---
+# Posts: field_visibility 1 is public. Each is a made-up sample. The welcome post is in no group, so it leads the front page.
+2f116782-f10a-47bb-b933-8861ac1fa296:
+  uuid: "2f116782-f10a-47bb-b933-8861ac1fa296"
+  langcode: "en"
+  type: "post"
+  uid: "2a27b688-1230-419b-ac89-441ca6a778ad"
+  field_visibility: 1
+  created: "+0 day|09:00"
+  field_post: "<p>Sample post: welcome to this practice site. Every event, page and member here is a made-up sample. The Denver Blockchain and Boulder Blockchain pages are placeholders; nothing on them comes from the groups themselves. Open the events page to see what is coming up.</p>"
+
+a5ac987c-7ba0-4fc6-aa1f-49f194ee4e71:
+  uuid: "a5ac987c-7ba0-4fc6-aa1f-49f194ee4e71"
+  langcode: "en"
+  type: "post"
+  uid: "f5bf2851-1459-4844-af7d-3692c8116d88"
+  field_visibility: 1
+  created: "-1 day|09:00"
+  group: "998cecc0-a853-40c0-b722-2b4d8d271ae3"
+  field_post: "<p>Sample post: who is coming to the newcomers' coffee? I will be there early.</p>"
+
+3a71b2da-86c5-479a-be0d-e08f281ab7aa:
+  uuid: "3a71b2da-86c5-479a-be0d-e08f281ab7aa"
+  langcode: "en"
+  type: "post"
+  uid: "d0d1e8df-0647-4a06-82bd-8e924b2647c5"
+  field_visibility: 1
+  created: "-1 day|10:00"
+  group: "38c423c6-25c9-437a-bc9e-8dfaa43ad879"
+  field_post: "<p>Sample post: the study group has room for a few more people.</p>"
+
+e2ee539c-e87e-48e7-b400-bab5521b24f0:
+  uuid: "e2ee539c-e87e-48e7-b400-bab5521b24f0"
+  langcode: "en"
+  type: "post"
+  uid: "b4100482-a544-4882-b2f4-73db28e61cbd"
+  field_visibility: 1
+  created: "-2 day|09:00"
+  group: "1e8ce9d5-b1bf-4783-ab91-641e69f6d853"
+  field_post: "<p>Sample post: the events page lists every sample event from all three groups.</p>"

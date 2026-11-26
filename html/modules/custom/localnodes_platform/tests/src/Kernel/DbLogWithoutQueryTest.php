@@ -67,6 +67,26 @@ final class DbLogWithoutQueryTest extends KernelTestBase {
   }
 
   /**
+   * A page's or reply's title is not stored; the action is.
+   */
+  public function testPageAndReplyTitlesAreNotLogged(): void {
+    $this->container->get('request_stack')->push(Request::create('https://site.test/node/add/topic'));
+    $this->container->get('logger.factory')->get('content')->info('@type: added %title.', ['@type' => 'topic', '%title' => self::URL_CANARY]);
+    $this->container->get('logger.factory')->get('comment')->info('Comment posted: %subject.', ['%subject' => self::REFERER_CANARY]);
+    $this->container->get('logger.factory')->get('group_content')->notice('@type: deleted %title.', ['@type' => 'flexible_group-group_node-topic', '%title' => 'QZXGRP5150']);
+    $this->container->get('logger.factory')->get('gate_a_test')->info('Other %title.', ['%title' => 'Kept']);
+    $rows = $this->container->get('database')->select('watchdog', 'w')
+      ->fields('w', ['type', 'variables'])
+      ->execute()
+      ->fetchAllKeyed();
+    $this->assertStringNotContainsString(self::URL_CANARY, $rows['content']);
+    $this->assertStringContainsString('topic', $rows['content']);
+    $this->assertStringNotContainsString(self::REFERER_CANARY, $rows['comment']);
+    $this->assertStringContainsString('Kept', $rows['gate_a_test']);
+    $this->assertStringNotContainsString('QZXGRP5150', $rows['group_content']);
+  }
+
+  /**
    * A URL without a query string is stored unchanged.
    */
   public function testRowWithoutQueryIsUnchanged(): void {

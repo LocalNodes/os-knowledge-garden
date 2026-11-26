@@ -26,7 +26,7 @@ services:
       # the status report; demo sites (DEMO_MODULE != none) are exempt.
       GEMINI_KEY_TIER: ${GEMINI_KEY_TIER:-}
       DEMO_MODULE: ${DEMO_MODULE:-none}
-      # With DEMO_MODULE=localnodes_demo_packs: the pack to load (lanternrow, maplestreet, mallowbend, thawfest).
+      # With DEMO_MODULE=localnodes_demo_packs: the pack to load (lanternrow, maplestreet, mallowbend, thawfest, cryptorado).
       DEMO_PACK: ${DEMO_PACK:-}
       DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-LocalNodes}
       DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}

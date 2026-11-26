@@ -44,6 +44,8 @@ dependencies:
   - social:social_event_addtocal
   # Month calendar of the events each visitor may see.
   - localnodes_platform:localnodes_events_calendar
+  # Events: who reaches an event's attendee list.
+  - localnodes_platform:localnodes_events
   # Informal quick questions in a group, for its members only.
   - localnodes_platform:localnodes_quick_poll
   # Group set-up and decision records, enabled on fresh install.

@@ -158,6 +158,12 @@ final class GroupVisibilityFormTest extends BrowserTestBase {
    * settings page, never the waiting line nor the developer line (that one
    * is for drush and the log), status 409, never "unexpected error"; the
    * group stays public and no lock is left.
+   *
+   * No group role a site ships holds the revert right, and the site
+   * administrator role has no rights in a group it is not in. An
+   * administrator outside the group gets no Revert control and does not read
+   * the older version. The group's organizer is given the right here, so the
+   * refusal is still proven through the form.
    */
   public function testRevertToMembersOnlyRevisionIsRefusedPlainly(): void {
     $group = $this->group('Seed library', 'public');
@@ -168,21 +174,41 @@ final class GroupVisibilityFormTest extends BrowserTestBase {
     // then saved as a new revision; then public again, as a new revision.
     $members = $storage->loadUnchanged($group->id());
     $members->set(self::VISIBILITY, 'members');
+    $members->set('label', 'Seed library members circle');
     $this->assertCount(0, $members->validate()->getByField(self::VISIBILITY), 'Nothing waits.');
     $members->setNewRevision(TRUE);
     $members->save();
     $members_revision = (int) $members->getRevisionId();
     $public = $storage->loadUnchanged($group->id());
     $public->set(self::VISIBILITY, 'public');
+    $public->set('label', 'Seed library');
     $public->setNewRevision(TRUE);
     $public->save();
     $this->assertSame('public', $this->stored($group));
     $this->assertSame([], $this->locks($fund_id));
 
+    $revert = '/group/' . $group->id() . '/revisions/' . $members_revision . '/revert';
+
+    // An administrator outside the group: no Revert control, and nothing of
+    // the older version is shown.
     $admin = $this->createUser([], 'site_admin', FALSE, ['roles' => ['administrator']]);
     $this->assertInstanceOf(UserInterface::class, $admin);
     $this->drupalLogin($admin);
-    $this->drupalGet('/group/' . $group->id() . '/revisions/' . $members_revision . '/revert');
+    $this->drupalGet($revert);
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->addressEquals('/group/' . $group->id() . '/about');
+    $this->assertSession()->pageTextContains('Seed library');
+    $this->assertSession()->buttonNotExists('Revert');
+    $this->assertSession()->pageTextNotContains('members circle');
+
+    // The group's organizer, given the revert right in the group.
+    $organizer_roles = array_keys($group->getMember($this->manager)->getRoles(FALSE));
+    $this->assertContains('flexible_group-group_manager', $organizer_roles, 'The site manager organizes the group.');
+    $this->container->get('entity_type.manager')->getStorage('group_role')->load('flexible_group-group_manager')
+      ->grantPermission('revert group revisions')
+      ->save();
+    $this->drupalLogin($this->manager);
+    $this->drupalGet($revert);
     $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([], 'Revert');
 

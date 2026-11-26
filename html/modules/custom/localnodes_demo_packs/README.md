@@ -4,7 +4,7 @@
 
 It loads one fictional community pack onto a fresh LocalNodes site. `DEMO_PACK` chooses the pack. Each pack is a directory under `packs/` holding the same YAML files social_demo reads (users, groups, pages, events, posts, polls). The module's plugins are subclasses of social_demo's loaders, so a pack is data only. The group loader does one thing more: it records the pack's community-wide group (below).
 
-- Everything in the packs is made up: no real person, event, organisation, address or place.
+- Everything in the packs is made up: no real person, event, organisation, address or place. One exception: the practice show site pack `cryptorado` names two real groups the owner chose for it, "Denver Blockchain" and "Boulder Blockchain". Each has one line saying its page is a sample, not the group's own; everything else in that pack says "Sample" too, and the fiction test allows those two whole names in that pack only (`PackFictionalTest::OWNER_NAMED_REAL_GROUPS`).
 - Seeded accounts use `.example` addresses, so no mail reaches anyone. The platform's reserved-recipient filter drops any mail to `.example`, `.test`, `.invalid` and `.localhost` addresses.
 - The member how-to pages are not pack content. localnodes_platform creates them on every site at install (`content/site_guide.yml` and `content/site_guide_tour.yml` in that module).
 - Once the pack is loaded, the entrypoint uninstalls this module and social_demo. The content stays. social_demo's messenger hides every status message ("saved", join confirmations) while it is enabled, and a demo site must show them. A redeploy does not enable the module again.
@@ -30,7 +30,7 @@ Set these in Coolify. The names are the ones in `docker-compose.yaml`.
 | Setting | Value on a demo site | Why |
 |---------|----------------------|-----|
 | `DEMO_MODULE` | `localnodes_demo_packs` | Selects this loader. |
-| `DEMO_PACK` | `lanternrow`, `maplestreet`, `mallowbend` or `thawfest` | The pack directory under `packs/`. It must be lower-case letters, digits and underscores, and the directory must exist. Otherwise the install stops before any module is enabled. |
+| `DEMO_PACK` | `lanternrow`, `maplestreet`, `mallowbend`, `thawfest` or `cryptorado` | The pack directory under `packs/`. It must be lower-case letters, digits and underscores, and the directory must exist. Otherwise the install stops before any module is enabled. |
 | `DRUPAL_SITE_NAME`, `SITE_NAME` | the site's name (table below) | Shown in the header and in mail. |
 | `SERVICE_FQDN_OPENSOCIAL` | the site's address (table below) | Coolify's routing. |
 | `RESEND_API_KEY` | leave unset | A second barrier to mail, behind the reserved-recipient filter. |
@@ -40,14 +40,14 @@ Set these in Coolify. The names are the ones in `docker-compose.yaml`.
 | `AI_PROVIDER` | leave unset | Unset keeps Gemini. Only `openrouter` changes the provider. |
 | `GEMINI_API_KEY` | the demo key, set in Coolify only | The assistant and the tier 2 checks need it. |
 | `GEMINI_KEY_TIER` | `paid` when the key's Cloud project has billing on | Declares the key's data tier. A demo site is exempt from the tier check, but declaring it keeps the status report clean. |
-| `WEB3_ENABLED` | `false` on all four sites | The default. A pack loads no fund, and the loader makes no network call. |
+| `WEB3_ENABLED` | `false` on the first four sites; Cryptorado is provisioned with practice funds on (the workflow's `web3` input `practice`) | A pack loads no fund, and the loader makes no network call. Practice funds and group decisions come from provisioning, not from the pack. |
 | `WORKER_ENABLED`, `WORKER_INTERVAL` | on, default interval | Cron indexes the content and sends queued mail through the filter. |
 | `LOCALNODES_DEFER_INDEXING` | leave unset | The entrypoint sets it for the load only. |
 | `PROVISION_*` | leave unset | These belong to sign-up runs, not to demos. |
 
 Qdrant and Solr hosts are fixed to the compose services.
 
-## The four sites
+## The sites
 
 | Site | `DEMO_PACK` | Address | Walk-through user | Export owner |
 |------|-------------|---------|-------------------|--------------|
@@ -55,8 +55,13 @@ Qdrant and Solr hosts are fixed to the compose services.
 | Maple Street Neighbors | `maplestreet` | `maplestreet.localnodes.xyz` | Zora Bennett | Dalia Reed |
 | Mallow Bend Farmers' Market | `mallowbend` | `mallowbend.localnodes.xyz` | Carys Bellamy | Maren Pike |
 | Thawfest | `thawfest` | not chosen yet | Suri | Mara, only if the export step is shown |
+| Cryptorado | `cryptorado` | not chosen yet | Jonah Wilder | Tamsin Reyes |
 
-All names are fictional.
+All names are fictional, except the two real group names of the Cryptorado pack (above).
+
+Only `lanternrow` and `cryptorado` ship a pack directory. The workflow offers the other three, and its "Check the demo pack ships" step refuses them before any app is made.
+
+Cryptorado is a practice show site for an events pitch: its events are public, in their groups, from a few days to about a month ahead, so each group's events tab and the site's events page are full for a visitor who is not signed in. Each of its events is open to sign-ups from people outside its group (`field_event_enroll_outside_group`), because all its groups are open; a pack never sets that on an event in a members-only group (`PackOpenEventsTest`). It holds no decision records (decision records are left out of every pack, see below).
 
 ## What a visitor sees, and the monthly reinstall
 

@@ -1,0 +1,13 @@
+# Assistant rows for the practice show site pack, run on a site by scripts/check_demo_pack.php.
+- id: meetup-start
+  as: b69a3637-dd49-4dd1-ae42-334dfecebb38
+  group: 998cecc0-a853-40c0-b722-2b4d8d271ae3
+  question: How do the meetups usually start?
+  cites:
+    - 329f02c9-4b8f-4aae-ad1a-d3661bda3365
+  must_say:
+    - ten minutes of introductions
+  must_not_say:
+    - turned on when the site is made
+  forbidden: []
+  needs: []

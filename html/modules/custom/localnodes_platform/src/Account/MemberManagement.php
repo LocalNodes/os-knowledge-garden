@@ -30,7 +30,7 @@ final class MemberManagement {
     $roles = \Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple($target->getRoles());
     foreach ($roles as $role) {
       $result->addCacheableDependency($role);
-      if ($role->isAdmin()) {
+      if ($role->isAdmin() || $role->id() === 'administrator') {
         return AccessResult::forbidden()->inheritCacheability($result);
       }
     }
@@ -43,7 +43,7 @@ final class MemberManagement {
       $administrator = FALSE;
       foreach (\Drupal::entityTypeManager()->getStorage('user_role')->loadMultiple($actor->getRoles()) as $role) {
         $result->addCacheableDependency($role);
-        if ($role->isAdmin()) $administrator = TRUE;
+        if ($role->isAdmin() || $role->id() === 'administrator') $administrator = TRUE;
       }
       if (!$administrator) return AccessResult::forbidden()->inheritCacheability($result);
     }
