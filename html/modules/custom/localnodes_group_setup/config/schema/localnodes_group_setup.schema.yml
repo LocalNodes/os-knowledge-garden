@@ -1,0 +1,109 @@
+localnodes_group_setup.settings:
+  type: config_object
+  label: 'Group set-up settings'
+  mapping:
+    group_types:
+      type: sequence
+      label: 'Group types that can take a Group template, keyed by Group type id'
+      sequence:
+        type: string
+        label: 'Id of the role a member holds individually to confirm a template (the manager role)'
+
+localnodes_group_setup.decision_rule:
+  type: mapping
+  label: 'Decision rule for one type of decision'
+  mapping:
+    method:
+      type: string
+      label: 'How the Group decides'
+    quorum_numerator:
+      type: integer
+      label: 'Share of the opening roster that must respond: parts'
+    quorum_denominator:
+      type: integer
+      label: 'Share of the opening roster that must respond: out of'
+    threshold_numerator:
+      type: integer
+      label: 'Share of responses that must agree (voting methods only): parts'
+      nullable: true
+    threshold_denominator:
+      type: integer
+      label: 'Share of responses that must agree (voting methods only): out of'
+      nullable: true
+    response_days:
+      type: integer
+      label: 'Days people can respond'
+
+localnodes_group_setup.template.*:
+  type: config_object
+  label: 'Group template definition'
+  mapping:
+    id:
+      type: string
+      label: 'Template id'
+    version:
+      type: integer
+      label: 'Version'
+    kind:
+      type: string
+      label: 'Kind of Group'
+    label:
+      type: label
+      label: 'Name'
+    description:
+      type: text
+      label: 'Description'
+    words:
+      type: mapping
+      label: 'Words for this kind of Group'
+      mapping:
+        group_noun:
+          type: label
+          label: 'What a Group of this kind is called'
+        manager_role:
+          type: label
+          label: 'What the manager role is called'
+        member_role:
+          type: label
+          label: 'What a member is called'
+    roles_shown:
+      type: sequence
+      label: 'Roles the template shows'
+      sequence:
+        type: string
+        label: 'Role (manager or member)'
+    decision_rules:
+      type: mapping
+      label: 'Starting decision rules the manager confirms'
+      mapping:
+        path:
+          type: string
+          label: 'simple (one shared rule) or advanced (one rule per type)'
+        everyday:
+          type: localnodes_group_setup.decision_rule
+          label: 'Everyday decisions'
+        money:
+          type: localnodes_group_setup.decision_rule
+          label: 'Money decisions'
+        rule_change:
+          type: localnodes_group_setup.decision_rule
+          label: 'Changing the rules'
+    starter:
+      type: sequence
+      label: 'Starter pages'
+      sequence:
+        type: mapping
+        label: 'Starter page'
+        mapping:
+          key:
+            type: string
+            label: 'Key'
+          type:
+            type: string
+            label: 'Content type'
+          title:
+            type: label
+            label: 'Title'
+          body:
+            type: text
+            label: 'Body'

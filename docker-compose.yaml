@@ -180,17 +180,21 @@ services:
       start_period: 10s
 
   # One relayer per community (D-01): it pays gas for sponsored governance transactions from its
-  # own key, generated at provisioning (provision-instance.yml) and held only as an env secret
-  # of this service. No ports are published (TM-87): the server binds 0.0.0.0 inside the image,
-  # so it must stay on the compose network, where only the opensocial service calls it.
-  # WEB3_ENABLED is the same variable the opensocial service reads. Off (the default) means the
-  # relayer runs keyless: it ignores the key and answers 503 web3_disabled to everything but
-  # /healthz (25-05). Funding any relayer with real money is the maintainer's call; nothing here does it.
+  # own key, held only as an env secret of this service. The service runs unless
+  # FEE_WALLET_SCALE=0: unset or empty means 1 (it runs), and only an explicit 0 stops it, so a
+  # missing or ignored setting keeps today's behaviour. Provisioning writes FEE_WALLET_SCALE=0
+  # with a funds-off site and 1 with practice funds (the funds-on workflow also writes 1). With
+  # funds off it runs keyless and idle: WEB3_ENABLED is false, no key or token is made anywhere,
+  # and it answers /healthz only. No ports are published: the
+  # server binds 0.0.0.0 inside the image, so it must stay on the compose network, where only the
+  # opensocial service calls it. Funding any relayer with real money is the maintainer's call;
+  # nothing here does it.
   # The image is pinned by digest: commit 550c0f2 of github.com/LocalNodes/gas-sponsor-relayer,
   # built and published by that repo's image workflow. To move to a newer build, take the digest
   # from that run's summary, check it with `docker buildx imagetools inspect`, and change it here.
   gas-sponsor-relayer:
     image: ghcr.io/localnodes/gas-sponsor-relayer@sha256:b9361ab86c9838ef2a2dffe10a51d88d397e0b595284625e4276656c918bd476
+    scale: ${FEE_WALLET_SCALE:-1}
     environment:
       WEB3_ENABLED: ${WEB3_ENABLED:-false}
       SPONSOR_RELAYER_PRIVATE_KEY: ${SPONSOR_RELAYER_PRIVATE_KEY:-}

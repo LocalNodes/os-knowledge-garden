@@ -1,0 +1,606 @@
+name: Turn group funds on (practice)
+
+# Writes the practice group funds settings again for ONE existing site that was created with group funds on, and
+# redeploys it. One dispatch, one subdomain. It writes the same settings the provisioning workflow writes for a
+# practice sign-up (provision-instance.yml, web3 = practice), in the same order, with the same shared bash.
+#
+# Keys: a secret name is written only by the run that creates its row; an existing row is
+# never replaced or deleted by a workflow, whatever it reads as. The rows of a new site are created with the site,
+# so this means the run that creates the site, and this workflow never creates one: it never makes, writes or
+# deletes the fee wallet key or token. So:
+#   - a site created without group funds (WEB3_ENABLED is not true) is refused before any write with exactly
+#     "Funds cannot be turned on for a site that was created without them. Create the site again with funds on."
+#     Before launch every site is throwaway, so that is the route;
+#   - a site with group funds on whose key or token is not shown as held (empty, missing, unreadable, two different
+#     values) is refused before any write: only the site's owner places keys;
+#   - a site that holds its key and token keeps both; the run writes the other practice settings and redeploys.
+# Practice only: test-network money, Ethereum Sepolia through a public keyless RPC. There is deliberately no input
+# for the network or the RPC. A site on a real network is a manual job, not this workflow.
+#
+# Which app: exactly one Coolify application with a domain URL that is https and whose host
+# is exactly <subdomain>.localnodes.xyz (letter case ignored, an optional :443, no userinfo, any
+# path ignored). A look-alike never counts: another host with this name in its path, this name
+# before an @, http, another port, a longer or shorter domain. Zero apps, several apps, a list that
+# cannot be read and a domain value in a shape the finder does not know all stop the run before
+# anything is written. The list is never printed.
+#
+# The workflow never deletes an app, and never writes or deletes a key or token. It writes settings only through
+# the shared functions below.
+#
+# The bash functions in "Turn group funds on (practice)" are a byte-for-byte copy of the ones in
+# provision-instance.yml's "Configure environment variables" step; the practice RPC literal is the
+# same string. scripts/ops/tests/funds-on-workflow.test.sh checks both against provision-instance.yml
+# and runs this whole workflow against a fake Coolify. It has never been dispatched: everything it
+# claims is proven only against that fake.
+#
+# What "done" means: the settings were saved and read back, the redeploy finished and the site
+# answers. It does not prove the fee account works on a site that was already handed over: on such
+# a site the entrypoint only warns when the group funds modules fail to start and skips its
+# readiness check. The Summary says so in plain words. The sign-up app is not told anything here.
+#
+# Unverified against a real host: nobody has yet seen what the real Coolify sends for an empty setting. A row whose
+# value comes back as null counts as unclear: the run stops before any write ("did not clearly show <name>"), and
+# nothing held is lost. The first practice provisioning of the staging site is the check.
+#
+# Every workflow input and secret reaches the shell through env: only and is expanded as a quoted
+# variable. No expression appears inside a run: block, so an input is data, never shell source. The
+# only input is the site's subdomain; no key, token or address is ever printed or put in the summary.
+
+on:
+  workflow_dispatch:
+    inputs:
+      subdomain:
+        description: 'Subdomain of the site to turn practice group funds on for (e.g., "portland" for portland.localnodes.xyz). No personal data'
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: funds-on-${{ inputs.subdomain }}
+  cancel-in-progress: false
+
+env:
+  COOLIFY_API: https://coolify.localnodes.xyz/api/v1
+
+jobs:
+  funds_on:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+    steps:
+      - name: Validate input
+        env:
+          SUBDOMAIN_INPUT: ${{ inputs.subdomain }}
+        run: |
+          SUBDOMAIN="$SUBDOMAIN_INPUT"
+          # The same rules as provision-instance.yml "Validate inputs": lowercase, alphanumeric + hyphens
+          # only, no leading/trailing hyphen. Bash =~ tests the whole string (grep would accept a multi-line
+          # value whose first line matches, which would then inject extra lines into $GITHUB_ENV).
+          if [[ ! "$SUBDOMAIN" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+            echo "::error::Invalid subdomain. Use lowercase letters, numbers, and hyphens only. Nothing was changed."
+            exit 1
+          fi
+          # Reserved subdomains
+          for reserved in www api coolify mail smtp; do
+            if [ "$SUBDOMAIN" = "$reserved" ]; then
+              echo "::error::Subdomain '$SUBDOMAIN' is reserved. Nothing was changed."
+              exit 1
+            fi
+          done
+          echo "SUBDOMAIN=$SUBDOMAIN" >> "$GITHUB_ENV"
+          echo "FQDN=${SUBDOMAIN}.localnodes.xyz" >> "$GITHUB_ENV"
+
+      - name: Find the site's app
+        run: |
+          # The one app on this site. The list goes to a file and is never printed.
+          LIST_FILE="$(mktemp)"
+          trap 'rm -f "$LIST_FILE"' EXIT
+          curl -sS --fail-with-body -o "$LIST_FILE" "$COOLIFY_API/applications" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Accept: application/json" \
+            || { echo "::error::Could not list the Coolify applications. Nothing was changed."; exit 1; }
+          # An app counts when one of its domain URLs is https and its host is exactly $fqdn: the text between
+          # https:// and the first /, ? or #, lowercased, with one optional :443 dropped, must equal $fqdn.
+          # Userinfo (an @), another port and any other character make it unequal, so a look-alike never
+          # counts; anything after the host is ignored. A body that is not a list, a domains value that is not
+          # JSON and a domains shape the finder does not know are errors (the list is "could not be read"),
+          # never "found 0". Supported domains shapes: null or "" (none); a list of {name, domain} objects,
+          # native or as a JSON string; an object of {domain} objects keyed by service name (Coolify's stored
+          # form), native or as a JSON string. One domain may hold several URLs separated by commas.
+          MATCHES=$(jq -c --arg fqdn "$FQDN" '
+            def site_urls:
+              (.docker_compose_domains
+               | if . == null or . == "" then []
+                 else (if type == "string" then fromjson else . end)
+                      | if type == "array" then .
+                        elif type == "object" then [.[]]
+                        else error("unsupported domains shape") end
+                      | if all(.[]; type == "object") then . else error("unsupported domains shape") end
+                 end)
+              | [.[] | .domain
+                 | if . == null or . == "" then empty
+                   elif type == "string" then (split(",")[] | sub("^\\s+"; "") | sub("\\s+$"; ""))
+                   else error("unsupported domain type") end];
+            def site_host:
+              if (.[:8] | ascii_downcase) == "https://"
+              then (.[8:] | split("/")[0] // "" | split("?")[0] // "" | split("#")[0] // "" | ascii_downcase | if endswith(":443") then .[:-4] else . end)
+              else "" end;
+            if type != "array" then error("not a list") else . end
+            | [.[]
+               | select(any(site_urls[]; site_host == $fqdn))]
+          ' "$LIST_FILE" 2>/dev/null) \
+            || { echo "::error::The Coolify application list could not be read. Nothing was changed."; exit 1; }
+          # jq prints nothing for an empty or whitespace-only body and still exits 0: not a count, not readable
+          COUNT=$(printf '%s' "$MATCHES" | jq -er 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
+            || { echo "::error::The Coolify application list could not be read. Nothing was changed."; exit 1; }
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::Expected exactly one app on $FQDN, found $COUNT. Nothing was changed."
+            exit 1
+          fi
+          APP_UUID=$(printf '%s' "$MATCHES" | jq -r '.[0].uuid | if type == "string" then . else "" end')
+          if [[ ! "$APP_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
+            echo "::error::The app's id could not be read. Nothing was changed."
+            exit 1
+          fi
+          echo "APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
+          echo "Found the app on $FQDN"
+
+      - name: Turn group funds on (practice)
+        env:
+          # Must equal PRACTICE_RPC_URL in provision-instance.yml's "Configure environment variables"
+          # step (the test checks it): practice sites talk to Ethereum Sepolia through the same
+          # public keyless RPC. No key, so nothing to mask.
+          PRACTICE_RPC_URL: "https://eth-sepolia-testnet.api.pocket.network"
+          # Every run here is a later run (it never creates a site): a held fee wallet key and token are kept
+          # and never written, so the address stewards were shown stays the same (check_secret, created_here).
+          REUSE: "true"
+        run: |
+          # Group funds settings (practice) for the one app found above: the same writes and read-backs a practice
+          # sign-up gets, through the same functions (copied from provision-instance.yml). The held key and
+          # token are kept and never written; the address stewards were shown stays the same. Nothing here
+          # funds the fee wallet.
+          ENVS_URL="$COOLIFY_API/applications/$APP_UUID/envs"
+          RESP_FILE="$(mktemp)"
+          # env_request METHOD [URL]: sends the JSON body on stdin (never on the command
+          # line), writes the response body to $RESP_FILE and prints the HTTP status.
+          # If curl itself exits nonzero (network, TLS, write error...), it prints
+          # "curl-exit-N" instead, whatever HTTP code curl reported, so callers fail.
+          env_request() {
+            local CODE RC=0
+            CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' -X "$1" "${2:-$ENVS_URL}" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              --data-binary @-) || RC=$?
+            if [ "$RC" -ne 0 ]; then
+              printf 'curl-exit-%s' "$RC"
+            else
+              printf '%s' "$CODE"
+            fi
+          }
+
+          # update_env KEY VALUE [secret]: persist one production env var or return nonzero.
+          #  - With a third argument "secret" the variable is written is_shown_once and is_literal:
+          #    Coolify shows it once and never reads it back, and it is stored as typed (an
+          #    organizer's AI key, the per-provision token). verify_env checks such keys by presence.
+          #  - PATCH updates an existing variable (Coolify answers 201).
+          #  - POST is used only when PATCH reports the variable itself is missing.
+          #  - A 409 on POST means a concurrent create won the race: retry PATCH, bounded.
+          #  - Any other status (5xx, 401, 422, app-not-found 404) or a nonzero curl exit fails.
+          update_env() {
+            local KEY="$1" BODY HTTP_CODE ATTEMPT
+            BODY=$(K="$KEY" V="$2" S="${3:-}" jq -n \
+              '{key: env.K, value: env.V} + (if env.S == "secret" then {is_shown_once: true, is_literal: true} else {} end)')
+            for ATTEMPT in 1 2 3; do
+              HTTP_CODE=$(printf '%s' "$BODY" | env_request PATCH)
+              case "$HTTP_CODE" in
+                200|201) echo "  Updated $KEY"; return 0 ;;
+                404)
+                  if ! jq -e '.message == "Environment variable not found."' "$RESP_FILE" >/dev/null 2>&1; then
+                    echo "::error::$KEY: PATCH returned 404 that is not a missing variable"
+                    return 1
+                  fi ;;
+                *) echo "::error::$KEY: PATCH failed ($HTTP_CODE)"; return 1 ;;
+              esac
+              HTTP_CODE=$(printf '%s' "$BODY" | env_request POST)
+              case "$HTTP_CODE" in
+                200|201) echo "  Created $KEY"; return 0 ;;
+                409) echo "  $KEY was created concurrently; retrying PATCH ($ATTEMPT/3)"; sleep 2 ;;
+                *) echo "::error::$KEY: POST failed ($HTTP_CODE)"; return 1 ;;
+              esac
+            done
+            echo "::error::$KEY: still conflicting after 3 attempts"
+            return 1
+          }
+
+          # Delete duplicate env vars (Coolify creates one per compose service
+          # that references the same ${VAR}, resulting in duplicates).
+          # Each DELETE must succeed (curl exit 0 and HTTP 200/204), and the list is read
+          # back until no key appears twice. Stragglers from async compose parsing get
+          # up to 3 delete rounds; anything left at the final read-back fails the step.
+          # A duplicate is a second row of the same key AND the same preview flag: a preview copy
+          # is never a duplicate of a production row, so the two kinds are counted apart and
+          # preview copies are no longer removed here. Treating them as duplicates of each other
+          # once deleted a held production value (the site's fee wallet key) behind an empty
+          # preview row.
+          # Every read must pass values_readable, or the cleanup stops before any DELETE. On every run but the one
+          # that created this app (created_here), rows of the six secret names (secret_names) are left out: nothing
+          # under a secret name is ever deleted by a later run, whatever it reads as. Then, in
+          # every round and before any DELETE, every group of duplicates (any key) is checked: a row
+          # with no value field or a value that is not a string (null included) stops the cleanup, and
+          # so do two rows holding different non-empty values: a person has to choose, and nothing is
+          # deleted. Otherwise the kept row is one holding the group's value (they are all equal), or
+          # the first row when every row is empty, and every row deleted is empty or equal to the kept
+          # one. List order never decides between two values. Prints key names and row ids only.
+          list_dupes() {
+            printf '%s' "$1" | jq -r '[group_by([.key, (.is_preview | not | not)])[] | select(length > 1) | .[0].key] | unique | .[]'
+          }
+          dedup_envs() {
+            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND VERDICT WHY WHICH
+            # Rounds 1-3 read, then delete; round 4 only reads back the third round's result.
+            for ROUND in 1 2 3 4; do
+              ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+                -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
+              values_readable "$ENV_VARS" \
+                || { echo "::error::The env var list could not be read (empty, not a list, or no value this token can read); duplicate cleanup stopped."; return 1; }
+              if ! created_here; then
+                ENV_VARS=$(printf '%s' "$ENV_VARS" | S="$(secret_names)" jq -c '(env.S | fromjson) as $s | [.[] | select(.key | IN($s[]) | not)]') \
+                  || { echo "::error::Could not parse env var list"; return 1; }
+              fi
+              DUPES=$(list_dupes "$ENV_VARS") || { echo "::error::Could not parse env var list"; return 1; }
+              if [ -z "$DUPES" ]; then
+                [ "$ROUND" -eq 1 ] && echo "  No duplicates found" || echo "  Verified: no duplicates remain"
+                return 0
+              fi
+              [ "$ROUND" -eq 4 ] && break
+
+              # Before any DELETE of this round: look at every group of duplicates. Prints only a
+              # verdict word and the key name, never a value.
+              VERDICT=$(printf '%s' "$ENV_VARS" | jq -r '
+                group_by([.key, (.is_preview | not | not)])[]
+                | select(length > 1)
+                | .[0].key as $k
+                | if any(.[]; (has("value") | not) or ((.value | type) != "string")) then "unreadable " + $k
+                  elif ([.[] | .value | select(. != "")] | unique | length) > 1 then "split " + $k
+                  else empty end') || { echo "::error::Could not parse env var list"; return 1; }
+              if [ -n "$VERDICT" ]; then
+                while read -r WHY WHICH; do
+                  case "$WHY" in
+                    split) echo "::error::$WHICH has two different saved values; no duplicate was deleted. A person has to choose which one to keep." ;;
+                    unreadable) echo "::error::$WHICH has duplicate rows whose values cannot be read (the API token needs read:sensitive); no duplicate was deleted." ;;
+                  esac
+                done <<<"$VERDICT"
+                return 1
+              fi
+
+              # Per key and preview flag, every row but the kept one: each is empty or equal to it.
+              UUIDS=$(printf '%s' "$ENV_VARS" | jq -r '
+                group_by([.key, (.is_preview | not | not)])[]
+                | select(length > 1)
+                | (([.[] | select(.value != "")] | .[0]) // .[0]) as $keep
+                | .[] | select(.uuid != $keep.uuid) | .uuid + " " + .key') || { echo "::error::Could not parse env var list"; return 1; }
+              while read -r UUID KEY; do
+                [ -n "$UUID" ] || continue
+                RC=0
+                HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$ENVS_URL/$UUID" \
+                  -H "Authorization: Bearer $COOLIFY_TOKEN" < /dev/null) || RC=$?
+                if [ "$RC" -ne 0 ] || { [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; }; then
+                  echo "::error::Deleting duplicate $KEY ($UUID) failed (curl exit $RC, HTTP $HTTP_CODE)"
+                  return 1
+                fi
+                echo "  Deleted duplicate $KEY ($UUID)"
+              done <<<"$UUIDS"
+            done
+            echo "::error::Duplicate env vars remain after 3 cleanup rounds:" $DUPES
+            return 1
+          }
+
+          # values_readable LIST: true only when LIST is one JSON document, a list, every item an
+          # object, and at least one production row holds a non-empty string value: proof that this
+          # token reads values at all, so an answer whose hidden values come back as empty strings
+          # never reads as "nothing held". jq prints nothing.
+          values_readable() {
+            printf '%s' "$1" | jq -se 'length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object"))
+              and (.[0] | any(.[]; (.is_preview | not) and (.value | type) == "string" and .value != ""))' >/dev/null 2>&1
+          }
+
+          # secret_names: the six keys and passwords, as a JSON list. The rule: a secret name is
+          # written only by the run that creates its row; an existing row is never replaced or deleted by a workflow,
+          # whatever it reads as. The rows of a new site are created with the site, so this means the run that creates the
+          # site. Every later run (a retry that reuses the app, funds-on) writes and deletes nothing under these names.
+          secret_names() {
+            printf '%s' '["DRUPAL_ADMIN_PASS","DB_PASSWORD","DB_ROOT_PASSWORD","DRUPAL_HASH_SALT","SPONSOR_RELAYER_PRIVATE_KEY","SPONSOR_RELAYER_TOKEN"]'
+          }
+
+          # created_here: true only on the run that created this app: CREATED_APP_UUID (the Create step's own output in this
+          # run, steps.create.outputs.app_uuid; no input, variable or earlier run can set it) names this very app, and the run
+          # is not a retry that reuses an app. funds-on never sets it.
+          created_here() {
+            [ "${REUSE:-}" != "true" ] && [ -n "${CREATED_APP_UUID:-}" ] && [ "${CREATED_APP_UUID:-}" = "${APP_UUID:-}" ]
+          }
+
+          # check_secret KEY DEFAULT: called once per secret name the step needs, as a plain statement, before the step's first
+          # write. One read of the app's settings; it prints nothing on stdout and never a value, and it never writes.
+          # The answer counts only when it is one JSON document, a list of objects whose keys are strings, with at least one
+          # production row holding a non-empty string (this token reads values at all). Then, over the production rows of KEY:
+          #   on the run that created this app (created_here): passes only when every row holds "" or DEFAULT (the
+          #     docker-compose.yaml default; no row included): what a new app is known to show. The caller makes the secret.
+          #   on every other run: passes only when the name is listed and every row holds one same value, a non-empty string
+          #     other than DEFAULT: the secret is held and is kept. The caller writes nothing under the name.
+          # Anything else refuses with one fixed line naming the key, status 1. The caller runs under bash -e, so the step stops.
+          # Plain statement only: callers must not put this in an if condition or behind && or ||.
+          check_secret() {
+            local KEY="$1" ENV_VARS VERDICT OWN=no
+            if created_here; then OWN=yes; fi
+            ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json" 2>/dev/null) || ENV_VARS=""
+            VERDICT=$(printf '%s' "$ENV_VARS" | K="$KEY" D="$2" jq -sr '
+              if length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object" and (.key | type) == "string")) then .[0] else error("shape") end
+              | [.[] | select(.is_preview | not)] as $prod
+              | if any($prod[]; (.value | type) == "string" and .value != "") then . else error("unreadable") end
+              | [$prod[] | select(.key == env.K)] as $rows
+              | if all($rows[]; has("value") and (.value | type) == "string") then . else error("unclear") end
+              | [$rows[].value] as $v
+              | if all($v[]; . == "" or . == env.D) then "empty"
+                elif all($v[]; . != "" and . != env.D) and ($v | unique | length) == 1 then "held"
+                else "mixed" end' 2>/dev/null) || VERDICT=""
+            case "$OWN:$VERDICT" in
+              yes:empty|no:held) return 0 ;;
+              yes:held|yes:mixed) echo "::error::The app this run just created already shows a value for $KEY, so this run does not write it. Nothing was stored or sent." >&2 ;;
+              no:empty) echo "::error::This app's settings do not show $KEY as held. Only the run that creates a site writes its keys and passwords: create the site again, or the site's owner must place the key. Nothing was stored or sent." >&2 ;;
+              *) echo "::error::This app's settings did not clearly show $KEY. Nothing was stored or sent." >&2 ;;
+            esac
+            return 1
+          }
+
+          # verify_env KEY EXPECTED [secret]: read the saved production value back and compare it
+          # inside jq. The expected value travels via the environment and is never printed.
+          # With "secret" only the presence of exactly one production variable is checked: a
+          # write-once value is hidden on read, and the key itself must never be passed around.
+          verify_env() {
+            local KEY="$1" ENV_VARS
+            ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json") || { echo "::error::Could not read env vars back"; return 1; }
+            if [ "${3:-}" = "secret" ]; then
+              if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1' >/dev/null 2>&1; then
+                echo "::error::$KEY: expected exactly one production variable"
+                return 1
+              fi
+              echo "  Verified $KEY (present; value not read back)"
+              return 0
+            fi
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" jq -e '[.[] | select(.key == env.K and (.is_preview | not))] | length == 1 and (.[0] | has("value"))' >/dev/null 2>&1; then
+              echo "::error::$KEY: expected exactly one readable production variable (the API token needs read:sensitive)"
+              return 1
+            fi
+            if ! printf '%s' "$ENV_VARS" | K="$KEY" WANT="$2" jq -e '[.[] | select(.key == env.K and (.is_preview | not))][0].value == env.WANT' >/dev/null 2>&1; then
+              echo "::error::$KEY: saved value does not match what this run set"
+              return 1
+            fi
+            echo "  Verified $KEY"
+          }
+
+          # turn_on_practice_funds: group funds and decisions on, against Ethereum Sepolia (test-network
+          # money only) through a public keyless RPC, plus this site's own fee wallet:
+          # a fresh sending key and a fresh bearer token, made here and never shown. K is the
+          # key (0x plus 64 hex) and T the token (64 hex). Both are masked before anything else uses
+          # them, stored only as Coolify env vars (the relayer container reads the key, the app
+          # container only the token), and unset once verify_practice_funds has read them back by value.
+          # Neither is echoed, written to a file
+          # or put in Drupal config. The relayer's address is shown to stewards on the Network fee
+          # account page; funding it with real money is the maintainer's call, and this function funds
+          # nothing. Only the run that created the app (created_here) makes and writes the key and token; every
+          # later run keeps the pair the site holds (check_secret has passed it before the first write) and writes
+          # nothing under either name, so the address stewards were shown stays the same. The key and token are
+          # written without the secret flag so a later run can see that they are held.
+          # The order is the point: WEB3_ENABLED=true first, so a run that stops anywhere
+          # later leaves a held true, and a funds-off retry of the same app is refused on it; the key
+          # and token next; FEE_WALLET_SCALE=1 last, the setting that keeps the relayer service running.
+          # Plain statements only: callers must not put this in an if condition or behind && or ||.
+          turn_on_practice_funds() {
+            update_env "WEB3_ENABLED" "true"
+            update_env "SIWE_CHAIN_ID" "11155111"
+            update_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            # A pilot's email sign-in uses WaaP's production service, so
+            # members' wallets never sit on staging; settings.php reads WAAP_ENVIRONMENT. Demos
+            # and manual runs never get this write and use the module default (production from
+            # the siwe_login release after beta11; staging before it).
+            update_env "WAAP_ENVIRONMENT" "production"
+            if created_here; then
+              K="0x$(openssl rand -hex 32)"
+              T="$(openssl rand -hex 32)"
+              if [ "${#K}" -ne 66 ] || [ "${#T}" -ne 64 ]; then
+                echo "::error::Could not generate the relayer key and token."
+                exit 1
+              fi
+              echo "::add-mask::$K"
+              echo "::add-mask::${K#0x}"
+              echo "::add-mask::$T"
+              update_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
+              update_env "SPONSOR_RELAYER_TOKEN" "$T"
+            fi
+            update_env "FEE_WALLET_SCALE" "1"
+          }
+
+          # verify_practice_funds: read back what turn_on_practice_funds wrote, every value by value (on the run
+          # that created the app the key and token too: verify_env compares inside jq and prints no value), so a
+          # setting that did not stick or came back different fails here, not on the host. A later run wrote no key
+          # or token, so it reads none back. Then the key and token are unset.
+          verify_practice_funds() {
+            if created_here; then
+              verify_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
+              verify_env "SPONSOR_RELAYER_TOKEN" "$T"
+            fi
+            verify_env "WEB3_ENABLED" "true"
+            verify_env "SIWE_CHAIN_ID" "11155111"
+            verify_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            verify_env "WAAP_ENVIRONMENT" "production"
+            verify_env "FEE_WALLET_SCALE" "1"
+            unset K T
+          }
+
+          # Pre-write check: nothing is written until the app's settings have been read and passed. One read,
+          # one jq program; the list is never printed and the program prints only a verdict word, so no
+          # key lands in a variable of its own. jq's own error text is dropped (it can quote a value).
+          # A held key this run cannot read must never be replaced, and this check stops that before
+          # any write; so a production row
+          # of one of the five settings this workflow writes (the mode, the key, the token, the fee service
+          # setting, the network) without a value field stops the run. Here a null value counts as empty;
+          # check_secret refuses a key or token row holding null.
+          # A site created without group funds (no production WEB3_ENABLED row holding "true") is refused with one
+          # fixed line before anything else is judged: this workflow never makes a key.
+          # A person decides which of two production rows is the real key or
+          # token before any key is written. The shared cleanup would keep the row that holds a value,
+          # but two production rows with different contents mean something went wrong that a person
+          # should look at; equal copies go ahead. Empty is read as (.value // "") like the shared
+          # cleanup reads it, so an empty row and a null row are not different.
+          # Practice only. A production SIWE_CHAIN_ID that holds anything but empty or the
+          # practice network stops the run; the workflow has no input for the network or the RPC, and
+          # would otherwise write the practice network over a real one.
+          ENVS_NOW=$(curl -sS --fail-with-body "$ENVS_URL" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Accept: application/json") \
+            || { echo "::error::Could not read this app's settings. Nothing was changed."; exit 1; }
+          # The same answer must be one list in which this token reads at least one value (values_readable),
+          # before the duplicate cleanup and every write: an answer whose hidden values come back as empty
+          # strings stops here, so a held key the run cannot see is never deleted or replaced.
+          values_readable "$ENVS_NOW" \
+            || { echo "::error::Could not read this app's settings; the API token needs read:sensitive. Nothing was changed."; exit 1; }
+          VERDICT=$(printf '%s' "$ENVS_NOW" | jq -r '
+            if type != "array" then error("not a list") else . end
+            | [.[] | select(.is_preview | not)] as $prod
+            | if any($prod[]; (.key | IN("WEB3_ENABLED", "SPONSOR_RELAYER_PRIVATE_KEY", "SPONSOR_RELAYER_TOKEN", "FEE_WALLET_SCALE", "SIWE_CHAIN_ID")) and (has("value") | not))
+              then error("unreadable") else . end
+            | if any($prod[]; .key == "WEB3_ENABLED" and .value == "true") | not
+              then "nofunds"
+              elif ([$prod[] | select(.key | IN("SPONSOR_RELAYER_PRIVATE_KEY", "SPONSOR_RELAYER_TOKEN"))] | group_by(.key) | any(.[]; length > 1 and ([.[] | (.value // "")] | unique | length) > 1))
+              then "split"
+              elif any($prod[]; .key == "SIWE_CHAIN_ID" and (.value // "" | tostring) != "" and (.value // "" | tostring) != "11155111")
+              then "other"
+              else "ok" end
+          ' 2>/dev/null) || VERDICT=""
+          unset ENVS_NOW
+          case "$VERDICT" in
+            ok) ;;
+            nofunds)
+              echo "::error::Funds cannot be turned on for a site that was created without them. Create the site again with funds on."
+              exit 1 ;;
+            split)
+              echo "::error::This app holds more than one fee wallet key or token. Nothing was changed."
+              exit 1 ;;
+            other)
+              echo "::error::This app is set up for another network; this workflow only turns on practice funds. Nothing was changed."
+              exit 1 ;;
+            *)
+              echo "::error::Could not read this app's settings; the API token needs read:sensitive. Nothing was changed."
+              exit 1 ;;
+          esac
+
+          # The key and token, before the first write: this run never creates a site, so it keeps a pair the site
+          # holds and refuses anything else (check_secret); only the site's owner places a key.
+          echo "Checking the fee wallet key and token..."
+          check_secret SPONSOR_RELAYER_PRIVATE_KEY ""
+          check_secret SPONSOR_RELAYER_TOKEN ""
+
+          echo "Cleaning duplicate env vars (pass 1)..."
+          dedup_envs
+
+          echo "Turning group funds on (practice)..."
+          turn_on_practice_funds
+
+          echo "Cleaning duplicate env vars (pass 2)..."
+          dedup_envs
+
+          echo "Reading the settings back..."
+          verify_practice_funds
+
+          rm -f "$RESP_FILE"
+          echo "Group funds settings saved and read back"
+
+      - name: Redeploy
+        run: |
+          # Coolify >= 4.2 requires POST to /deploy?uuid=...&force=true (GET returns 405); 4.1 accepts GET or POST.
+          # force=true makes the site's existing app rebuild and restart with the settings this run
+          # just saved.
+          # The reply is parsed from a file and never printed.
+          RESP_FILE=$(mktemp)
+          HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' -X POST "$COOLIFY_API/deploy?uuid=$APP_UUID&force=true" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Accept: application/json") || HTTP_CODE="curl-error"
+
+          # Response is { "deployments": [...] } (no .data wrapper)
+          DEPLOY_UUID=$(jq -r '.deployments[0].deployment_uuid // empty' "$RESP_FILE" 2>/dev/null || true)
+          rm -f "$RESP_FILE"
+          if [ -z "$DEPLOY_UUID" ] || [[ ! "$DEPLOY_UUID" =~ ^[A-Za-z0-9]+$ ]]; then
+            echo "::error::Failed to trigger deployment (HTTP $HTTP_CODE, no deployment uuid in the reply)"
+            exit 1
+          fi
+
+          echo "DEPLOY_UUID=$DEPLOY_UUID" >> "$GITHUB_ENV"
+          echo "Deployment triggered: $DEPLOY_UUID"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to finish (build + container start, up to 5 min)..."
+          STATUS="unknown"
+          for i in $(seq 1 30); do
+            sleep 10
+            # Response is flat object with .status at root (no .data wrapper)
+            STATUS=$(curl -s "$COOLIFY_API/deployments/$DEPLOY_UUID" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+
+            echo "  [$((i * 10))s] Status: $STATUS"
+            if [ "$STATUS" = "finished" ]; then
+              echo "Deployment complete"
+              break
+            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "cancelled" ]; then
+              echo "::error::Deployment $STATUS"
+              exit 1
+            fi
+          done
+          # Deadline: anything but "finished" (still queued/in progress, or unreadable) fails the run
+          if [ "$STATUS" != "finished" ]; then
+            echo "::error::Deployment did not finish within 5 min (last status: $STATUS)"
+            exit 1
+          fi
+
+      - name: Wait for the site to answer
+        run: |
+          echo "Waiting for Drupal install + healthcheck (up to 10 min)..."
+          for i in $(seq 1 60); do
+            sleep 10
+            HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' "https://$FQDN/user/login" 2>/dev/null || echo "000")
+            echo "  [$((i * 10))s] https://$FQDN -> HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Site is live at https://$FQDN"
+              break
+            fi
+          done
+
+          # Deadline: no HTTP 200 within 10 min fails the run, so the summary never reports a site
+          # that is not serving
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Site not healthy after 10 min (last HTTP $HTTP_CODE at https://$FQDN/user/login)"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          # The summary holds no key, token or address (stewards find the address on the site's
+          # Network fee account page). printf only, no heredoc.
+          {
+            printf '## Group funds turned on (practice)\n\n'
+            printf '| | |\n|---|---|\n'
+            printf '| **URL** | https://%s |\n' "$FQDN"
+            printf '| **Coolify UUID** | `%s` |\n' "$APP_UUID"
+            printf '\n### What done means\n'
+            printf -- '- Group funds: on, practice (test-network money only)\n'
+            printf -- '- %s\n' "Done means the settings were saved and read back, the redeploy finished and the site answers. It does not prove the network fee account works on a site that was already handed over: open the site's Network fee account page, which shows the account's address once it runs. The sign-up app is not told this address."
+            printf -- '- Manage via [Coolify Dashboard](https://coolify.localnodes.xyz)\n'
+          } >> "$GITHUB_STEP_SUMMARY"

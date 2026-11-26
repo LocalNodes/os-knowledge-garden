@@ -1,0 +1,48 @@
+localnodes_consensus.decision_rule:
+  type: mapping
+  label: 'Decision rule for one type of decision'
+  mapping:
+    method:
+      type: string
+      label: 'How the Group decides'
+    quorum_numerator:
+      type: integer
+      label: 'Share of the opening roster that must respond: parts'
+    quorum_denominator:
+      type: integer
+      label: 'Share of the opening roster that must respond: out of'
+    threshold_numerator:
+      type: integer
+      label: 'Share of responses that must agree (voting methods only): parts'
+      nullable: true
+    threshold_denominator:
+      type: integer
+      label: 'Share of responses that must agree (voting methods only): out of'
+      nullable: true
+    response_days:
+      type: integer
+      label: 'Days people can respond'
+
+localnodes_consensus.settings:
+  type: config_object
+  label: 'Consensus settings'
+  mapping:
+    group_visibility_field:
+      type: string
+      label: 'Group field holding the Group''s own visibility'
+    decision_rules:
+      type: mapping
+      label: 'Decision rules for a Group with no rules version of its own'
+      mapping:
+        path:
+          type: string
+          label: 'simple (one shared rule) or advanced (one rule per type)'
+        everyday:
+          type: localnodes_consensus.decision_rule
+          label: 'Everyday decisions'
+        money:
+          type: localnodes_consensus.decision_rule
+          label: 'Money decisions'
+        rule_change:
+          type: localnodes_consensus.decision_rule
+          label: 'Changing the rules'

@@ -1,0 +1,113 @@
+{#
+/**
+ * @file
+ * One decision record: an online round or a human-confirmed meeting report.
+ *
+ * Available variables:
+ * - round: the round, or NULL for a meeting report.
+ * - record: the record shown.
+ * - round_id: the round's id, or NULL for a meeting report.
+ * - decision_type: everyday, money or rule_change, or NULL for a report.
+ * - state: the round's state, or meeting_report.
+ * - model: what the page shows, with its words.
+ * - non_authority_line: the sentence saying a record moves no money, as its
+ *   own render element. Another module may replace it.
+ * - panels: a container that other modules fill with keyed render arrays,
+ *   ordered by weight, printed after the record body.
+ *
+ * Every stored value is printed through autoescape; nothing is marked safe.
+ */
+#}
+<article class="consensus-record consensus-record--{{ state|clean_class }}">
+  {% if model.kind == 'round' %}
+    <p class="consensus-record__type">{{ model.type_label }}</p>
+    <h2 class="consensus-record__state">{{ model.state_label }}</h2>
+    {% if model.state_line %}
+      <p class="consensus-record__state-line">{{ model.state_line }}</p>
+    {% endif %}
+    {% if model.pending_line %}
+      <p class="consensus-record__pending">{{ model.pending_line }}</p>
+    {% endif %}
+    <div class="consensus-record__text">{{ model.text|nl2br }}</div>
+    {% if model.amount_line %}
+      <p class="consensus-record__amount">{{ model.amount_line }}</p>
+    {% endif %}
+    {% if model.rules_lines %}
+      <h3>{{ 'Proposed rules'|t }}</h3>
+      <ul class="consensus-record__rules">
+        {% for line in model.rules_lines %}
+          <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <p class="consensus-record__people">{{ model.people_line }}</p>
+    <p class="consensus-record__counts">{{ model.counts_line }}</p>
+    <p class="consensus-record__deadline">{{ model.deadline_line }}</p>
+    {% if model.closed_line %}
+      <p class="consensus-record__closed">{{ model.closed_line }}</p>
+    {% endif %}
+    {% if model.closed_note %}
+      <p class="consensus-record__note">{{ 'Reason given:'|t }} {{ model.closed_note }}</p>
+    {% endif %}
+    {% if model.final_line %}
+      <p class="consensus-record__final">{{ model.final_line }}</p>
+    {% endif %}
+    {% if model.closes_line %}
+      <p class="consensus-record__closes-on-agree">{{ model.closes_line }}</p>
+    {% endif %}
+    {% if model.predecessor %}
+      <p class="consensus-record__link">{{ 'This round replaces an earlier one.'|t }} <a href="{{ model.predecessor.url }}">{{ 'View linked round'|t }}</a></p>
+    {% endif %}
+    {% if model.successor %}
+      <p class="consensus-record__link">{{ 'A linked new round replaced this one.'|t }} <a href="{{ model.successor.url }}">{{ 'View linked round'|t }}</a></p>
+    {% endif %}
+    <h3>{{ 'Responses'|t }}</h3>
+    {% if model.names_line %}
+      <p class="consensus-record__names-hidden">{{ model.names_line }}</p>
+    {% elseif model.responses %}
+      <ul class="consensus-record__responses">
+        {% for row in model.responses %}
+          <li>{{ row.label }} · {{ row.time }}{% if row.reason %} <q>{{ row.reason }}</q>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>{{ 'No responses yet.'|t }}</p>
+    {% endif %}
+    {% if model.earlier %}
+      <h3>{{ 'Earlier responses'|t }}</h3>
+      <p>{{ 'Changed responses are kept here.'|t }}</p>
+      <ul class="consensus-record__history">
+        {% for row in model.earlier %}
+          <li>{{ row.label }} · {{ row.time }}{% if row.reason %} <q>{{ row.reason }}</q>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% else %}
+    <h2 class="consensus-record__state">{{ 'Meeting report'|t }}</h2>
+    <p class="consensus-record__provenance">{{ model.provenance_line }}</p>
+    <dl class="consensus-record__facts">
+      <dt>{{ 'Decision title'|t }}</dt>
+      <dd>{{ model.title }}</dd>
+      <dt>{{ 'What was decided?'|t }}</dt>
+      <dd>{{ model.decision_text|nl2br }}</dd>
+      <dt>{{ 'Meeting date'|t }}</dt>
+      <dd>{{ model.meeting_date_label }}</dd>
+      <dt>{{ 'Who made the decision?'|t }}</dt>
+      <dd>{{ model.deciding_body }}</dd>
+      <dt>{{ 'Decision method'|t }}</dt>
+      <dd>{{ model.method }}</dd>
+      <dt>{{ 'Source or minutes'|t }}</dt>
+      <dd>{{ model.minutes|nl2br }}</dd>
+      {% if model.confirmer %}
+        <dt>{{ 'Confirmed by'|t }}</dt>
+        <dd>{{ model.confirmer }}</dd>
+      {% endif %}
+      <dt>{{ model.names_hidden ? 'Recorded'|t : 'Recorded by'|t }}</dt>
+      <dd>{{ model.recorded_line }}</dd>
+      <dt>{{ 'Who can read this?'|t }}</dt>
+      <dd>{{ model.visibility_label }}</dd>
+    </dl>
+  {% endif %}
+  {{ non_authority_line }}
+  {{ panels }}
+</article>

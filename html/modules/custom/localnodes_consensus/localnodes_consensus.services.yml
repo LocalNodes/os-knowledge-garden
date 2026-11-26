@@ -1,0 +1,35 @@
+services:
+  localnodes_consensus.decision_rules:
+    class: Drupal\localnodes_consensus\Service\DecisionRulesManager
+    arguments: ['@entity_type.manager', '@config.factory', '@lock', '@datetime.time']
+  localnodes_consensus.roster:
+    class: Drupal\localnodes_consensus\Service\RosterManager
+    arguments: ['@entity_type.manager', '@localnodes_group_setup.group_scope', '@event_dispatcher', '@database', '@lock', '@datetime.time', '@current_user']
+  localnodes_consensus.current_eligible_reader:
+    class: Drupal\localnodes_consensus\Access\CurrentEligibleReader
+    arguments: ['@localnodes_group_setup.group_scope', '@config.factory', '@entity_type.manager']
+  localnodes_consensus.round_lifecycle:
+    class: Drupal\localnodes_consensus\Service\RoundLifecycle
+    arguments: ['@entity_type.manager', '@localnodes_consensus.decision_rules', '@localnodes_consensus.roster', '@localnodes_group_setup.group_scope', '@localnodes_consensus.current_eligible_reader', '@event_dispatcher', '@datetime.time', '@database', '@lock']
+  localnodes_consensus.proposal_source:
+    class: Drupal\localnodes_consensus\Feed\RoundProposalSource
+    arguments: ['@entity_type.manager', '@localnodes_consensus.current_eligible_reader']
+    tags:
+      - { name: localnodes_proposal_feed.source }
+  localnodes_consensus.round_roster_invalidator:
+    class: Drupal\localnodes_consensus\Service\RoundRosterInvalidator
+    arguments: ['@entity_type.manager', '@localnodes_consensus.round_lifecycle', '@database']
+    tags:
+      - { name: event_subscriber }
+  localnodes_consensus.due_round_sweeper:
+    class: Drupal\localnodes_consensus\Service\DueRoundSweeper
+    arguments: ['@entity_type.manager', '@localnodes_consensus.round_lifecycle', '@localnodes_consensus.roster', '@datetime.time', '@logger.factory']
+  localnodes_consensus.notifier:
+    class: Drupal\localnodes_consensus\Notification\ConsensusNotifier
+    arguments: ['@entity_type.manager', '@keyvalue.database', '@plugin.manager.mail', '@localnodes_consensus.current_eligible_reader', '@datetime.time', '@lock', '@logger.factory']
+  localnodes_consensus.meeting_records:
+    class: Drupal\localnodes_consensus\Service\MeetingRecords
+    arguments: ['@entity_type.manager', '@localnodes_group_setup.group_scope', '@localnodes_consensus.current_eligible_reader', '@datetime.time']
+  localnodes_consensus.decision_register:
+    class: Drupal\localnodes_consensus\Service\DecisionRegister
+    arguments: ['@entity_type.manager', '@datetime.time', '@date.formatter', '@localnodes_consensus.current_eligible_reader']

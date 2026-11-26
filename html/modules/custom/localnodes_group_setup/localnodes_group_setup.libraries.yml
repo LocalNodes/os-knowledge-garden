@@ -1,0 +1,7 @@
+form_announce:
+  version: VERSION
+  js:
+    js/form-announce.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

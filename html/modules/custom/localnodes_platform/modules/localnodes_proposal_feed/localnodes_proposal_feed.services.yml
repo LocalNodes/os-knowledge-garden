@@ -1,0 +1,7 @@
+services:
+  # Every proposal kind registers one source adapter: a service tagged
+  # localnodes_proposal_feed.source that implements ProposalSourceInterface.
+  localnodes_proposal_feed.sources:
+    class: Drupal\localnodes_proposal_feed\ProposalSourceCollector
+    tags:
+      - { name: service_collector, tag: localnodes_proposal_feed.source, call: addSource }

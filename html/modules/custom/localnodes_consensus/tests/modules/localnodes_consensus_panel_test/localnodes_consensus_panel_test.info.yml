@@ -1,0 +1,8 @@
+name: 'LocalNodes Consensus panel test'
+type: module
+description: 'Test-only: another module adding keyed panels to the decision record and replacing its non-authority line, as other modules may.'
+core_version_requirement: ^10 || ^11
+package: Testing
+hidden: true
+dependencies:
+  - localnodes_consensus:localnodes_consensus

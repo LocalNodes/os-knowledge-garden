@@ -1,0 +1,5 @@
+services:
+  localnodes_proposal_feed_test.fixture_source:
+    class: Drupal\localnodes_proposal_feed_test\FixtureProposalSource
+    tags:
+      - { name: localnodes_proposal_feed.source }

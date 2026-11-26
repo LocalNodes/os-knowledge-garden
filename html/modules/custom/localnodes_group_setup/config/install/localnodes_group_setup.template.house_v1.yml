@@ -1,0 +1,75 @@
+# The house Group template (house_v1), the id the shipped single_house and
+# housing_coop community templates name. A Group manager confirms it once in
+# the site; its values are copied into the Group's set-up record then and
+# never re-applied. Raise the version whenever these values change.
+#
+# Starter pages are original, plainly fictional and marked not adopted; each is
+# created as a Topic that only the Group's members can read.
+#
+# decision_rules are the starting rules the manager confirms (or changes
+# first, on the simple path with one shared rule or the advanced path with
+# one rule per type). They are handed once to the consensus module, which
+# owns the live rules; set-up keeps only its copy of what was confirmed.
+# Quorum is a share of the opening roster, rounded up when a decision opens;
+# consensus has no threshold. Response days: 7, and 14 for changing the rules.
+id: house_v1
+version: 1
+kind: house
+label: 'House'
+description: 'A shared place for your documents and decisions, shaped around your house’s rules.'
+words:
+  group_noun: house
+  manager_role: Organizer
+  member_role: 'House member'
+roles_shown:
+  - manager
+  - member
+decision_rules:
+  path: simple
+  everyday:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 7
+  money:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 7
+  rule_change:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 14
+starter:
+  -
+    key: house_rules
+    type: topic
+    title: 'House rules (example, not adopted)'
+    body: "Example · not adopted. This fictional sample is a starting point. Replace it with your house’s own rules.\n\nQuiet hours are 10 PM to 7 AM on weeknights.\nWhoever uses the kitchen leaves it clean the same evening.\nOvernight guests are fine; a guest staying more than three nights is mentioned to the house first.\nShared chores rotate weekly on the list by the back door."
+  -
+    key: bylaws
+    type: topic
+    title: 'House bylaws (example, not adopted)'
+    body: "Example · not adopted. This fictional sample is a starting point. Replace it with the agreements your house actually makes.\n\nMembers: everyone living in the house is a house member.\nOrganizer: one member keeps the roster and the house’s records up to date.\nMeetings: the house meets once a month and keeps notes in the library.\nDecisions: decisions follow the house’s rules for deciding, which the house can change by deciding to."
+  -
+    key: meeting_notes
+    type: topic
+    title: 'Meeting notes (example, not adopted)'
+    body: "Example · not adopted. A fictional page showing one way to keep meeting notes.\n\nDate: the first Sunday of the month.\nPresent: who came.\nTopics: the back steps, the summer garden, the shared freezer.\nAgreed: who will do what, and by when.\nNext meeting: date and who keeps the notes."
+  -
+    key: maintenance
+    type: topic
+    title: 'Repair request guide (example, not adopted)'
+    body: "Example · not adopted. A fictional maintenance guide to adapt.\n\nFor a repair, add the issue to the maintenance list and include a photo if you have one.\nSay where the problem is and since when.\nIf water or electricity is involved, tell the organizer straight away."
+  -
+    key: shared_spending
+    type: topic
+    title: 'Shared spending guide (example, not adopted)'
+    body: "Example · not adopted. A fictional guide to reimbursements to replace with your own.\n\nKeep the receipt for anything bought for the house.\nPost the receipt here with what it was for.\nLarger purchases are agreed by the house first, under its rules for money decisions."

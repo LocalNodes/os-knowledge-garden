@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - localnodes_consensus
+    - ultimate_cron
+title: 'Close decisions that reached their deadline'
+id: localnodes_consensus_cron
+weight: 0
+module: localnodes_consensus
+callback: localnodes_consensus_cron
+scheduler:
+  id: simple
+  configuration:
+    rules:
+      - '* * * * *'
+launcher:
+  id: serial
+logger:
+  id: database

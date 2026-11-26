@@ -1,0 +1,23 @@
+localnodes_consensus.decisions:
+  route_name: localnodes_consensus.decisions
+  base_route: entity.group.canonical
+  title: 'Decisions'
+  weight: 55
+
+localnodes_consensus.round:
+  route_name: entity.localnodes_consensus_round.canonical
+  base_route: entity.localnodes_consensus_round.canonical
+  title: 'Decision'
+  weight: 0
+
+localnodes_consensus.respond:
+  route_name: localnodes_consensus.respond
+  base_route: entity.localnodes_consensus_round.canonical
+  title: 'Respond'
+  weight: 10
+
+localnodes_consensus.change:
+  route_name: localnodes_consensus.change
+  base_route: entity.localnodes_consensus_round.canonical
+  title: 'Withdraw or replace'
+  weight: 20
