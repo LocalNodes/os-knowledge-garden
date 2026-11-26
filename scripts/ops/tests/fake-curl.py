@@ -16,7 +16,7 @@ $FAKE_SCENARIO picks the failure mode:
   readback_wrong  GET returns a different IMAGE_TAG than was saved
   readback_wrong_backup  GET returns a different AI_BACKUP_MODEL than was saved (23-40)
   readback_wrong_scale  GET returns FEE_WALLET_SCALE rows with a different value than was saved
-  drop_relayer_key  GET leaves out every SPONSOR_RELAYER_PRIVATE_KEY row (the key did not stick)
+  drop_relayer_key  once the key has been written, GET leaves out every SPONSOR_RELAYER_PRIVATE_KEY row (the key did not stick)
   drop_scale      GET leaves out every FEE_WALLET_SCALE row (the setting did not stick)
   fail_key        a PATCH or POST of SPONSOR_RELAYER_PRIVATE_KEY answers 503; other keys behave as ok
   late_key_row    once a PATCH or POST of SPONSOR_RELAYER_PRIVATE_KEY has succeeded, the first GET /envs after it
@@ -50,6 +50,8 @@ $FAKE_SCENARIO picks the failure mode:
   deploy_stuck    GET /deployments/{uuid} keeps answering "in_progress"
   deploy_garbage  GET /deployments/{uuid} answers non-JSON
   site503         the site's /user/login keeps answering 503
+  empty_twin_after  once the admin password is written, the next GET /envs adds a second production DRUPAL_ADMIN_PASS row with
+                  no saved value (null) behind ours (a twin holding nothing that turns up after the write)
   dupes_after     a stale DRUPAL_ADMIN_PASS row appears ahead of ours on the first list after
                   the password is written (i.e. before the second dedup),
                   so dedup keeps the stale one (the read-back must catch it)
@@ -62,6 +64,19 @@ $FAKE_SCENARIO picks the failure mode:
   reuse_dup       ... as routed by two apps, one of them tagged with the fixture provision id
   list_garbage    GET /applications answers 200 with a body that is not JSON
   create_fail     POST /applications/public answers 200 without a uuid
+  create_409_id   POST /applications/public answers 409 with a uuid in the body (no app was created)
+  create_200_id   POST /applications/public answers 200 (not "created") with a uuid in the body
+  create_two      POST /applications/public answers 201 with two JSON objects, each with a uuid
+  create_list     POST /applications/public answers 201 with a list of two objects, each with a uuid
+  compose_late    the first 2 GET /envs answer the empty list (Coolify has not yet read the compose file); later reads
+                  answer the store
+  compose_partial the first 2 GET /envs leave out every row of the six secret names; later reads answer the store
+  compose_after_write  Coolify 4.7.6 as read (unverified): once the run has written anything, the next GET /envs first runs
+                  the compose load: for every name in $FAKE_STATE/compose_names.json that has no production row, it adds
+                  one with no saved value (null) and a preview copy; a name that has a row is left as it is (firstOrCreate)
+  fill_after_delete  once a DELETE has removed a row, the next GET /envs first gives the production DRUPAL_ADMIN_PASS row a
+                  value (a row that came to hold something between the cleanup and the write)
+  copies          a POST also adds a preview copy holding the same value (Coolify 4.7.6's created hook, as read)
   deploy_fail     POST /deploy answers 200 without a deployment uuid
   deploy_cancelled  GET /deployments/{uuid} answers "cancelled"
   callback_down   POST /api/provision-callback: curl exits 7 (the sign-up app is unreachable)
@@ -224,8 +239,28 @@ elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_em
         status, resp, raw = 200, None, ""
     else:
         status, resp = 200, {"message": "Unauthenticated."}
+elif url and url.endswith("/envs") and method == "GET" and scenario == "compose_late" and counter("compose") < 2:
+    status, resp = 200, []
 elif url and url.endswith("/envs") and method == "GET":
     envs = load()
+    if scenario == "compose_partial" and counter("compose") < 2:
+        envs = [e for e in envs if e["key"] not in ("DRUPAL_ADMIN_PASS", "DB_PASSWORD", "DB_ROOT_PASSWORD", "DRUPAL_HASH_SALT",
+                                                    "SPONSOR_RELAYER_PRIVATE_KEY", "SPONSOR_RELAYER_TOKEN")]
+    if scenario == "fill_after_delete" and os.path.exists(os.path.join(state_dir, "deleted-one")) \
+            and not os.path.exists(os.path.join(state_dir, "filled")):
+        open(os.path.join(state_dir, "filled"), "w").close()
+        for e in envs:
+            if e["key"] == "DRUPAL_ADMIN_PASS" and prod(e):
+                e["value"] = "appeared-between-reads"
+        save(envs)
+    if scenario == "compose_after_write" and os.path.exists(os.path.join(state_dir, "any-written")) \
+            and not os.path.exists(os.path.join(state_dir, "compose-loaded")):
+        open(os.path.join(state_dir, "compose-loaded"), "w").close()
+        for name in json.load(open(os.path.join(state_dir, "compose_names.json"))):
+            if not any(e["key"] == name and prod(e) for e in envs):
+                envs.append({"uuid": "load-" + name, "key": name, "value": None, "is_preview": False})
+                envs.append({"uuid": "loadp-" + name, "key": name, "value": None, "is_preview": True})
+        save(envs)
     if scenario == "late_key_row" and os.path.exists(os.path.join(state_dir, "key-written")) and counter("late") == 0:
         envs.insert(0, {"uuid": "late1", "key": "SPONSOR_RELAYER_PRIVATE_KEY", "value": "0x" + "ef" * 32, "is_preview": False})
         save(envs)
@@ -247,7 +282,7 @@ elif url and url.endswith("/envs") and method == "GET":
         envs = [e for e in envs if e["key"] not in six]
     if scenario == "readback_wrong_key" and os.path.exists(os.path.join(state_dir, "key-written")):
         envs = [dict(e, value="0x" + "12" * 32) if e["key"] == "SPONSOR_RELAYER_PRIVATE_KEY" else e for e in envs]
-    if scenario == "drop_relayer_key":
+    if scenario == "drop_relayer_key" and os.path.exists(os.path.join(state_dir, "key-written")):
         envs = [e for e in envs if e["key"] != "SPONSOR_RELAYER_PRIVATE_KEY"]
     if scenario == "drop_scale":
         envs = [e for e in envs if e["key"] != "FEE_WALLET_SCALE"]
@@ -255,6 +290,9 @@ elif url and url.endswith("/envs") and method == "GET":
         envs = [dict(e, value="7") if e["key"] == "FEE_WALLET_SCALE" else e for e in envs]
     envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} if e.get("is_shown_once") else e for e in envs]
     written = os.path.exists(os.path.join(state_dir, "pass-written"))
+    if scenario == "empty_twin_after" and written and counter("twin") == 0:
+        envs.append({"uuid": "twin1", "key": "DRUPAL_ADMIN_PASS", "value": None, "is_preview": False})
+        save(envs)
     if scenario == "dupes_after" and written and counter("stale") == 0:
         envs.insert(0, {"uuid": "stale1", "key": "DRUPAL_ADMIN_PASS", "value": "compose-default", "is_preview": False})
         save(envs)
@@ -262,6 +300,7 @@ elif url and url.endswith("/envs") and method == "GET":
 elif url and url.endswith("/envs") and method == "PATCH":
     data = json.loads(body)
     envs = load()
+    open(os.path.join(state_dir, "any-written"), "w").close()
     if scenario == "all503":
         status, resp = 503, {"message": "Service Unavailable"}
     elif scenario == "app404":
@@ -288,6 +327,7 @@ elif url and url.endswith("/envs") and method == "PATCH":
 elif url and url.endswith("/envs") and method == "POST":
     data = json.loads(body)
     envs = load()
+    open(os.path.join(state_dir, "any-written"), "w").close()
     if scenario in ("all503", "post503"):
         status, resp = 503, {"message": "Service Unavailable"}
     elif scenario == "fail_key" and data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
@@ -301,6 +341,9 @@ elif url and url.endswith("/envs") and method == "POST":
     else:
         envs.append({"uuid": "new-" + data["key"], "key": data["key"], "value": data["value"], "is_preview": False,
                      "is_shown_once": bool(data.get("is_shown_once")), "is_literal": bool(data.get("is_literal"))})
+        if scenario == "copies" and not any(e["key"] == data["key"] and e.get("is_preview") for e in envs):
+            envs.append({"uuid": "copy-" + data["key"], "key": data["key"], "value": data["value"], "is_preview": True,
+                         "is_shown_once": bool(data.get("is_shown_once")), "is_literal": bool(data.get("is_literal"))})
         save(envs)
         if data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
             open(os.path.join(state_dir, "key-written"), "w").close()
@@ -314,6 +357,7 @@ elif url and "/envs/" in url and method == "DELETE":
     else:
         if scenario != "delete_noop" and not (scenario == "delete_late" and counter("del-" + uuid) < 2):
             save([e for e in load() if e["uuid"] != uuid])
+            open(os.path.join(state_dir, "deleted-one"), "w").close()
         status, resp = 200, {"message": "Environment variable deleted."}
 elif url and "/deployments/" in url:
     status = 200
@@ -330,6 +374,14 @@ elif url and url.endswith("/applications/public") and method == "POST":
     loc = json.loads(body).get("docker_compose_location", "")
     if scenario == "create_fail":
         status, resp = 200, {"message": "Something broke SHOULD-NOT-LEAK-CREATE"}
+    elif scenario == "create_409_id":
+        status, resp = 409, {"message": "Application already exists", "uuid": "existing123"}
+    elif scenario == "create_200_id":
+        status, resp = 200, {"uuid": "app123"}
+    elif scenario == "create_two":
+        status, raw = 201, '{"uuid":"app123"} {"uuid":"app456"}'
+    elif scenario == "create_list":
+        status, resp = 201, [{"uuid": "app123"}, {"uuid": "app456"}]
     elif re.match(r"^/[a-zA-Z0-9._\-/~@+]+$", loc):
         status, resp = 201, {"uuid": "app123"}
     else:

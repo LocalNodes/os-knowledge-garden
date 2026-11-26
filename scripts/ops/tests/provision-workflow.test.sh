@@ -78,8 +78,9 @@ for k in DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT; do
   COMPOSE_DEFAULTS="$(jq -c --arg k "$k" --arg v "$d" '. + {($k): $v}' <<<"$COMPOSE_DEFAULTS")"
 done
 
-# A fresh Coolify app as the compose parse leaves it: compose defaults, one duplicate,
-# and a preview copy of the admin password.
+# A fresh Coolify app as the compose parse leaves it: compose defaults, one duplicate of a plain setting, the fee
+# wallet rows empty (the token's twice), and a preview copy of the admin password. Every one of the six key and
+# password names is listed, so the creating run's wait for the compose file ends at once.
 reset_state() {
   rm -rf "$WORK/state"; mkdir -p "$WORK/state"
   cat > "$WORK/state/envs.json" <<'JSON'
@@ -92,7 +93,10 @@ reset_state() {
  {"uuid":"u6","key":"DB_ROOT_PASSWORD","value":"FROM-COMPOSE","is_preview":false},
  {"uuid":"u7","key":"DRUPAL_HASH_SALT","value":"FROM-COMPOSE","is_preview":false},
  {"uuid":"u8","key":"GEMINI_API_KEY","value":"","is_preview":false},
- {"uuid":"u9","key":"DB_PASSWORD","value":"FROM-COMPOSE","is_preview":false},
+ {"uuid":"u9","key":"DRUPAL_SITE_NAME","value":"LocalNodes","is_preview":false},
+ {"uuid":"u10","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},
+ {"uuid":"u11","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
+ {"uuid":"u12","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
  {"uuid":"p3","key":"DRUPAL_ADMIN_PASS","value":"FROM-COMPOSE","is_preview":true}
 ]
 JSON
@@ -114,6 +118,10 @@ JSON
 # (the DB passwords, hash salt and admin password: every site holds these). A later run keeps them.
 seed_old_secrets() {
   reset_state
+  # an older host's second production row of the database password (u9), holding the same value; the fee wallet rows
+  # are left to each case
+  jq '[.[] | select(.uuid | IN("u9", "u10", "u11", "u12") | not)] + [{"uuid":"u9","key":"DB_PASSWORD","value":"changeme","is_preview":false}]' \
+    "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
   jq 'map(if .key == "DB_PASSWORD" then .value = "olddbpass" elif .key == "DB_ROOT_PASSWORD" then .value = "oldrootpass"
             elif .key == "DRUPAL_HASH_SALT" then .value = "oldsalt" elif .key == "DRUPAL_ADMIN_PASS" and (.is_preview | not) then .value = "oldadminpass" else . end)' \
     "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
@@ -544,15 +552,15 @@ check "curl exit 23 with HTTP 200 fails update_env" '[ $RC -ne 0 ] && grep -q "P
 check "  ...and nothing after the first variable is written" '[ "$(grep -c "^PATCH" "$WORK/state/requests.log")" -eq 1 ]'
 
 reset_state; run_step "Configure environment variables" delete503 "${CONFIG_DEFAULTS[@]}"
-check "DELETE 503 on a duplicate fails the step" '[ $RC -ne 0 ] && grep -q "Deleting duplicate DB_PASSWORD (u9) failed (curl exit 0, HTTP 503)" <<<"$OUT"'
-check "  ...without claiming the delete happened" '! grep -q "Deleted duplicate DB_PASSWORD" <<<"$OUT"'
+check "DELETE 503 on a duplicate fails the step" '[ $RC -ne 0 ] && grep -q "Deleting duplicate DRUPAL_SITE_NAME (u9) failed (curl exit 0, HTTP 503)" <<<"$OUT"'
+check "  ...without claiming the delete happened" '! grep -q "Deleted duplicate DRUPAL_SITE_NAME" <<<"$OUT"'
 check "  ...and before any value is written or deployed" '! grep -qE "^(PATCH|POST) " "$WORK/state/requests.log"'
 
 reset_state; run_step "Configure environment variables" delete_curl23 "${CONFIG_DEFAULTS[@]}"
 check "DELETE with HTTP 200 but curl exit 23 fails the step" '[ $RC -ne 0 ] && grep -q "failed (curl exit 23, HTTP 200)" <<<"$OUT"'
 
 reset_state; run_step "Configure environment variables" delete_noop "${CONFIG_DEFAULTS[@]}"
-check "DELETE that reports 200 but removes nothing is caught by read-back" '[ $RC -ne 0 ] && grep -q "Duplicate env vars remain after 3 cleanup rounds: DB_PASSWORD" <<<"$OUT"'
+check "DELETE that reports 200 but removes nothing is caught by read-back" '[ $RC -ne 0 ] && grep -q "Duplicate env vars remain after 3 cleanup rounds: DRUPAL_SITE_NAME" <<<"$OUT"'
 check "  ...after exactly 3 bounded rounds" '[ "$(grep -c "^DELETE .*/u9 " "$WORK/state/requests.log")" -eq 3 ]'
 
 reset_state; run_step "Configure environment variables" delete_late "${CONFIG_DEFAULTS[@]}"
@@ -575,11 +583,21 @@ check "IMAGE_TAG read back different from the pin fails" '[ $RC -ne 0 ] && grep 
 
 reset_state; run_step "Configure environment variables" dupes_after "${CONFIG_DEFAULTS[@]}"
 PASSWD="$(jq -r '.[] | select(.uuid == "u3") | .value' "$WORK/state/envs.json" 2>/dev/null)"
-check "a stale admin password row that appears ahead of ours is never chosen by list order: the cleanup stops on two different values" '[ $RC -ne 0 ] && grep -qxF "::error::DRUPAL_ADMIN_PASS has two different saved values; no duplicate was deleted. A person has to choose which one to keep." <<<"$OUT" && ! grep -q "^DELETE .*/envs/stale1 " "$WORK/state/requests.log" && ! grep -q "^DELETE .*/envs/u3 " "$WORK/state/requests.log"'
+check "a stale admin password row that appears after the run wrote ours: nothing under the name is deleted after the write, and the read-back stops the run" '[ $RC -ne 0 ] && grep -qxF "::error::DRUPAL_ADMIN_PASS: expected exactly one production variable" <<<"$OUT" && ! grep -q "^DELETE .*/envs/stale1 " "$WORK/state/requests.log" && ! grep -q "^DELETE .*/envs/u3 " "$WORK/state/requests.log"'
 check "  ...without printing any password" '! grep -qE "[0-9a-f]{32}" <<<"$(grep -v "^::add-mask::" <<<"$OUT")"'
 
-reset_state; run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}"
-check "token without read:sensitive fails closed: the key check cannot read the admin password row, before any write" '[ $RC -ne 0 ] && grep -qxF "$(line_unclear DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all'
+HIDDEN_LINE="::error::This token is not shown this app's saved values, so the run cannot check or read back its settings; the duplicate cleanup stopped and deleted nothing. The owner must give the Coolify API token the ability to read saved values (read:sensitive), then create the site again."
+for W3 in off practice; do
+  reset_state; BEFORE="$(jq -cS . "$WORK/state/envs.json")"
+  STEP_FLAGS=-e run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=$W3 PRACTICE_RPC_URL="https://rpc.test"
+  check "token without read:sensitive ($W3), the run that created the app: the key check passes (a row it cannot see holds no key of a new app), then the cleanup stops with the one token line and the names-and-kinds line, before any write, the app as it was" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$HIDDEN_LINE" <<<"$OUT" && grep -q "^What this run saw (names and kinds only, no values): a list of " <<<"$OUT" && [ "$(grep -c "^::error::" <<<"$OUT")" -eq 1 ] && no_writes_at_all && [ "$(jq -cS . "$WORK/state/envs.json")" = "$BEFORE" ]'
+  # the next run of the same sign-up reuses that app: refused before any write
+  : > "$WORK/state/requests.log"; : > "$WORK/github_env"
+  STEP_FLAGS=-e run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=$W3 PRACTICE_RPC_URL="https://rpc.test"
+  check "  ...($W3) the next run, which reuses that app, is refused before any write, the app as it was" \
+    '[ $RC -ne 0 ] && grep -qxF "::error::Could not read this app'"'"'s settings, or this token cannot read their values; nothing was stored or sent." <<<"$OUT" && no_writes_at_all && [ "$(jq -cS . "$WORK/state/envs.json")" = "$BEFORE" ]'
+done
 
 echo "# Configure environment variables: group funds and decisions"
 # The practice RPC is read from the step's env, as GitHub would pass it
@@ -616,10 +634,10 @@ done
 # The scale row and the key are checked after the write: a fake that drops or changes them fails the step
 reset_state; run_step "Configure environment variables" drop_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
 check "a FEE_WALLET_SCALE that did not stick fails practice with env_failed" \
-  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
 reset_state; run_step "Configure environment variables" drop_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "  ...and a FEE_WALLET_SCALE=0 that did not stick fails off with env_failed too (the off branch verifies it)" \
-  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
 reset_state; run_step "Configure environment variables" readback_wrong_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
 check "a FEE_WALLET_SCALE read back with another value fails practice with env_failed" \
   '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: saved value does not match" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
@@ -742,7 +760,7 @@ for W3 in off ""; do
     '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qF "$UNREAD_MSG" <<<"$OUT" && no_writes && [ "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" = "0x$HK" ]'
 done
 reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-check "a relayer key that did not stick fails the read-back" '[ $RC -ne 0 ] && grep -q "SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+check "a relayer key that did not stick fails the read-back" '[ $RC -ne 0 ] && grep -q "SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
 reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "  ...but web3 off does not check it (off changes nothing)" '[ $RC -eq 0 ] && ! grep -q "Verified SPONSOR_RELAYER" <<<"$OUT"'
 
@@ -971,6 +989,7 @@ seed_old_pair() {  # the same app, as a practice first provisioning left it
 }
 reset_parsed() {  # a new app as Coolify's compose parse leaves it, with the empty relayer rows (the token twice)
   reset_state
+  jq '[.[] | select(.uuid | IN("u10", "u11", "u12") | not)]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
   add_rows '[{"uuid":"pk1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},
              {"uuid":"pt1","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
              {"uuid":"pt2","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false}]'
@@ -1016,9 +1035,10 @@ done
 check "  ...with funds on (practice) the key and token too, once each, one row each; off writes neither" \
   'reset_parsed; run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"; [ $RC -eq 0 ] && [ "$(writes_of SPONSOR_RELAYER_PRIVATE_KEY)" -eq 1 ] && [ "$(writes_of SPONSOR_RELAYER_TOKEN)" -eq 1 ] && [ "$(prod_rows SPONSOR_RELAYER_TOKEN)" -eq 1 ] && [[ "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" =~ ^0x[0-9a-f]{64}$ ]]'
 reset_state; jq --arg re "^($SIX_SECRETS)\$" '[.[] | select(.key | test($re) | not)]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+BEFORE="$(store)"
 run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-check "first provisioning with no rows of the six names: each is made once (one value sent, one row holding it)" \
-  '[ $RC -eq 0 ] && each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN'
+check "first provisioning while the host never lists the six names: the wait ends after its limit with the one plain line, before any write, the app as it was" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::The host had not finished reading the site'"'"'s settings after 180 seconds. Nothing was stored or sent." <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ] && [ "$(grep -c "^GET .*/envs " "$WORK/state/requests.log")" -eq 37 ]'
 # The run that creates the app refuses a name that already shows a real-looking value: a new app shows none
 reset_state; jq 'map(if .uuid == "u6" then .value = "not-from-compose" else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 BEFORE="$(store)"
@@ -1103,9 +1123,9 @@ check "cleanup (2c): two database password rows holding different values: refuse
 # (3) a late straggler with another value on the creating run: two different values stop the cleanup before any DELETE
 reset_state
 STEP_FLAGS=-e run_step "Configure environment variables" late_key_row "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-LATE="0x$(printf 'ef%.0s' $(seq 32))"; OWN="$(row_value new-SPONSOR_RELAYER_PRIVATE_KEY)"
-check "cleanup (3): a late production key row with another value stops pass 2 with the fixed split error and env_failed" \
-  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::SPONSOR_RELAYER_PRIVATE_KEY has two different saved values; no duplicate was deleted. A person has to choose which one to keep." <<<"$OUT"'
+LATE="0x$(printf 'ef%.0s' $(seq 32))"; OWN="$(row_value u10)"
+check "cleanup (3): a late production key row with another value: pass 2 deletes nothing under the name after the write, and the read-back stops the run with env_failed" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one production variable" <<<"$OUT"'
 check "  ...no DELETE comes after the run wrote the key, and both key rows are still stored" \
   'awk "/^(PATCH|POST) .*\/envs SPONSOR_RELAYER_PRIVATE_KEY\$/ {seen = 1} seen && /^DELETE / {bad = 1} END {exit bad}" "$WORK/state/requests.log" && [ "$(prod_rows SPONSOR_RELAYER_PRIVATE_KEY)" -eq 2 ]'
 check "  ...neither key value reaches the output outside ::add-mask:: lines" \
@@ -1147,7 +1167,7 @@ for SC in envs_empty_at_6 envs_blank_at_6; do
   seed_old_pair; BEFORE="$(store)"
   practice_retry "$SC"
   check "key check (7, $SC): a practice retry whose key read (the sixth) is that answer is refused naming the key, before any write" \
-    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_unclear SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::This app'"'"'s settings did not come back as one readable list, so SPONSOR_RELAYER_PRIVATE_KEY was not checked. Nothing was stored or sent." <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
 done
 # (8) A retry reads the app's settings first, before any write: the answer must be one list in which this token reads at
 #     least one value. Values left out and values sent back as empty strings stop it at that first read.
@@ -1194,6 +1214,109 @@ reset_state; BEFORE="$(store)"
 STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2 CREATED_APP_UUID=app123
 check "flag: REUSE=true next to a matching CREATED_APP_UUID is a later run: refused on a new app's rows, before any write" \
   '[ $RC -ne 0 ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+
+# The Create step's answer: only the host's own "created" (curl exit 0, HTTP 201, one object with one id) makes this
+# run the one that created the app. Every other answer stops the step with no output and no APP_UUID.
+for SC in create_409_id create_200_id create_two create_list; do
+  reset_state; run_step "Create Coolify application" "$SC" PROVISION_ID_INPUT="$PID"
+  check "flag ($SC): an answer other than one created app gives no output and no APP_UUID, and the step fails" \
+    '[ $RC -ne 0 ] && [ ! -s "$WORK/github_output" ] && ! grep -q "^APP_UUID=" "$WORK/github_env" && [ "$(genv FAIL_REASON)" = create_failed ]'
+done
+
+# (H) The real host's shape (Coolify 4.7.6, from its source; unverified until a run): a new compose app lists every name
+#     the compose file uses with no saved value (null), each with a preview copy, and the site address rows with text.
+echo "# Configure environment variables: a new app as Coolify 4.7.6 lists it"
+COMPOSE_NAMES="$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*' "$REPO/docker-compose.yaml" | sed 's/^\${//' | sort -u | grep -v '^SERVICE_' | jq -Rsc 'split("\n") | map(select(. != ""))')"
+reset_476() {  # reset_476 [NAME...] -> the store as 4.7.6 is read to list a new app; the names given are left out
+  reset_state
+  L="$COMPOSE_NAMES" X="$(printf '%s\n' "$@" | jq -Rsc 'split("\n") | map(select(. != ""))')" jq -n '
+    [(env.L | fromjson)[] | select(IN((env.X | fromjson)[]) | not) | . as $n
+      | {uuid: ("c-" + $n), key: $n, value: null, is_preview: false}, {uuid: ("cp-" + $n), key: $n, value: null, is_preview: true}]
+    + [{uuid: "sf", key: "SERVICE_FQDN_OPENSOCIAL", value: "demo.localnodes.xyz", is_preview: false},
+       {uuid: "su", key: "SERVICE_URL_OPENSOCIAL", value: "https://demo.localnodes.xyz", is_preview: false}]' > "$WORK/state/envs.json"
+  printf '%s' "$COMPOSE_NAMES" > "$WORK/state/compose_names.json"
+}
+previews_untouched() {  # every preview copy of the six names still holds nothing
+  [ "$(jq --arg re "^($SIX_SECRETS)\$" '[.[] | select(.is_preview and (.key | test($re)) and .value != null)] | length' "$WORK/state/envs.json")" -eq 0 ]
+}
+for W3 in practice off; do
+  reset_476
+  STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=$W3 PRACTICE_RPC_URL="$WF_RPC"
+  check "4.7.6 ($W3): the run that created the app passes its key check on rows with no saved value and succeeds" \
+    '[ $RC -eq 0 ] && ! grep -q "did not clearly show" <<<"$OUT"'
+  check "  ...($W3) each database and admin secret made once (one value sent, one site row holding it), no DELETE at all" \
+    'each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT && ! grep -q "^DELETE " "$WORK/state/requests.log"'
+  check "  ...($W3) a site row and its preview copy are not duplicates: every preview copy of the six names is left as it was (nothing)" \
+    'previews_untouched && [ "$(jq "[.[] | select(.is_preview)] | length" "$WORK/state/envs.json")" -eq "$(jq length <<<"$COMPOSE_NAMES")" ]'
+done
+check "  ...practice: the key and token made once each, one site row each" \
+  'reset_476; STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"; [ $RC -eq 0 ] && each_once SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN && previews_untouched'
+reset_476; BEFORE="$(store)"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "4.7.6: a run that reuses such an app (nothing made yet) is refused before any write, the app as it was" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+check "  ...and its refusal says what it saw, names and kinds only" \
+  'grep -qxF "What this run saw (names and kinds only, no values): a list of $(jq length "$WORK/state/envs.json") rows, 0 without a value field, 0 not objects; DRUPAL_ADMIN_PASS: null, preview null; DB_PASSWORD: null, preview null; DB_ROOT_PASSWORD: null, preview null; DRUPAL_HASH_SALT: null, preview null; SPONSOR_RELAYER_PRIVATE_KEY: null, preview null; SPONSOR_RELAYER_TOKEN: null, preview null" <<<"$OUT"'
+reset_476; jq 'map(if .uuid == "cp-DB_PASSWORD" then .value = "preview-only-value" else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "4.7.6: a preview row holding a value is never read as the site's value: the creating run goes ahead and the preview row is left as it was" \
+  '[ $RC -eq 0 ] && [ "$(row_value cp-DB_PASSWORD)" = preview-only-value ] && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]]'
+
+# The compose file is read by a job that runs after the app is made: the run waits for it, bounded
+for SC in compose_late compose_partial; do
+  reset_476
+  STEP_FLAGS=-e run_step "Configure environment variables" "$SC" "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+  check "wait ($SC): the first reads do not list the six names yet; the run waits, then succeeds and makes each once" \
+    '[ $RC -eq 0 ] && each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN && [ "$(awk "/^(PATCH|POST) /{exit} /^GET .*\/envs /{n++} END{print n+0}" "$WORK/state/requests.log")" -ge 4 ]'
+done
+reset_476
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "wait: on a list that is already complete the run reads it twice before its key check" \
+  '[ $RC -eq 0 ] && grep -q "^Waiting for Coolify to read the site'"'"'s settings from the compose file...$" <<<"$OUT"'
+seed_old_secrets
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "wait: a run that reuses its app does not wait (its compose file was read long ago)" \
+  '! grep -q "^Waiting for Coolify" <<<"$OUT"'
+# The compose job arriving after the run's writes (as 4.7.6 is read: it finds a name's row and changes nothing, adds rows
+# only for names without one)
+reset_476 IMAGE_TAG MAIL_FROM DRUPAL_SITE_NAME
+STEP_FLAGS=-e run_step "Configure environment variables" compose_after_write "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "late compose job: the run succeeds, the values it wrote are kept, one site row each, and the job's late rows add no second row under any name" \
+  '[ $RC -eq 0 ] && [ -e "$WORK/state/compose-loaded" ] && each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN && [ "$(stored IMAGE_TAG)" = 9b8e2a1 ] && [ "$(prod_rows IMAGE_TAG)" -eq 1 ] && [ "$(jq "[group_by(.key, (.is_preview | not | not))[] | select(length > 1)] | length" "$WORK/state/envs.json")" -eq 0 ]'
+
+# Duplicates under the six names on the run that created the app: deleted only while every row of the name holds nothing,
+# only before the run's first write; a duplicate holding a value is never deleted
+reset_476; add_rows '[{"uuid":"c2-SPONSOR_RELAYER_TOKEN","key":"SPONSOR_RELAYER_TOKEN","value":null,"is_preview":false}]'
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "twin: two token rows holding nothing on the new app: one is deleted before the first write, the token is then written once" \
+  '[ $RC -eq 0 ] && awk "/^DELETE .*\/envs\/c2?-SPONSOR_RELAYER_TOKEN /{d = NR} /^(PATCH|POST) /{if (!w) w = NR} END{exit !(d && d < w)}" "$WORK/state/requests.log" && each_once SPONSOR_RELAYER_TOKEN'
+for V in '"held-value-0004"' '"changeme"'; do
+  reset_476; add_rows '[{"uuid":"c2-DB_PASSWORD","key":"DB_PASSWORD","value":'"$V"',"is_preview":false}]'; BEFORE="$(store)"
+  STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+  check "twin ($V): a database password row holding a value beside an empty one on the new app: no row deleted, nothing written, the app as it was" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && no_writes_at_all && [ "$(store)" = "$BEFORE" ] && ! grep -q "held-value-0004" <<<"$OUT"'
+done
+seed_old_secrets; BEFORE="$(secret_rows)"
+retry ok off
+check "twin: a reusing run deletes nothing under the six names (two equal database password rows kept)" \
+  '[ $RC -eq 0 ] && [ "$(secret_rows)" = "$BEFORE" ] && ! grep -qE "^DELETE .*/envs/(u5|u9) " "$WORK/state/requests.log"'
+reset_476
+STEP_FLAGS=-e run_step "Configure environment variables" empty_twin_after "${SIGNUP[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "twin after the write: an admin password row holding nothing that turns up after the run wrote ours is not deleted; the read-back stops the run" \
+  '[ $RC -ne 0 ] && grep -qxF "::error::DRUPAL_ADMIN_PASS: expected exactly one production variable" <<<"$OUT" && ! grep -q "^DELETE .*/envs/twin1 " "$WORK/state/requests.log" && [ "$(row_count twin1)" -eq 1 ]'
+# A key or password row with no value field on the app the run just created, other rows readable: not held, the run
+# makes it (the cleanup does not read one such row as "this token is shown no values")
+reset_476; jq 'map(if .uuid == "c-DB_PASSWORD" then del(.value) else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "one row without a value field on the new app (others readable): the creating run makes it once and succeeds" \
+  '[ $RC -eq 0 ] && each_once DB_PASSWORD && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]]'
+POLL_CURL="$(step_script "Configure environment variables" | grep -A1 "ROWS_NOW=\$(curl" | head -1)"
+check "wait: each read of the wait gives up on its own (connect and total time limits), and the wait also ends by the clock" \
+  'grep -q -- "--connect-timeout 10 --max-time 20" <<<"$POLL_CURL" && step_script "Configure environment variables" | grep -qF "[ \$((SECONDS - WAIT_START)) -ge \"\$COMPOSE_WAIT_LIMIT\" ]"'
+reset_476; add_rows '[{"uuid":"c2-SPONSOR_RELAYER_TOKEN","key":"SPONSOR_RELAYER_TOKEN","value":null,"is_preview":false}]'
+STEP_FLAGS=-e run_step "Configure environment variables" fill_after_delete "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "re-read: a name that comes to hold a value between the cleanup and the first write stops the run there, nothing written" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_taken DRUPAL_ADMIN_PASS)" <<<"$OUT" && ! grep -qE "^(PATCH|POST) " "$WORK/state/requests.log" && ! grep -q "appeared-between-reads" <<<"$OUT"'
 
 echo "# Deadlines fail the run"
 reset_state; run_step "Wait for deployment" ok
@@ -1272,7 +1395,7 @@ check "no echo in any run: block prints a raw Coolify reply (\$RESPONSE)" \
   '[ "$(jq -r ".jobs.provision.steps[] | .run // empty" "$WORK/wf.json" | grep -cE "echo.*[$][{]?RESPONSE")" -eq 0 ]'
 reset_state; run_step "Create Coolify application" create_fail
 check "a failed create logs the HTTP status and a fixed reason, not the body" \
-  '[ $RC -ne 0 ] && ! grep -q "SHOULD-NOT-LEAK" <<<"$OUT" && grep -qx "::error::Failed to create app (HTTP 200, no app uuid in the reply)" <<<"$OUT"'
+  '[ $RC -ne 0 ] && ! grep -q "SHOULD-NOT-LEAK" <<<"$OUT" && grep -qx "::error::Failed to create app (HTTP 200, no app uuid in a created reply)" <<<"$OUT"'
 reset_state; run_step "Deploy instance" deploy_fail
 check "a failed deploy trigger logs the HTTP status and a fixed reason, not the body" \
   '[ $RC -ne 0 ] && ! grep -q "SHOULD-NOT-LEAK" <<<"$OUT" && grep -qx "::error::Failed to trigger deployment (HTTP 200, no deployment uuid in the reply)" <<<"$OUT"'
