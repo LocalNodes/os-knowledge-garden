@@ -95,24 +95,24 @@ class DecisionRulesManager {
   }
 
   /**
-   * "Who needs at least what share of the roster to respond within N days."
+   * "Who needs at least what share of the people who decide to respond within N days."
    */
   protected function sentence(string $type, array $rule): TranslatableMarkup {
     $numerator = (int) ($rule['quorum_numerator'] ?? 0);
     $args = ['@share' => $this->share($numerator, (int) ($rule['quorum_denominator'] ?? 0)), '@days' => (int) ($rule['response_days'] ?? 0)];
     if ($numerator > 0 && $numerator === (int) ($rule['quorum_denominator'] ?? 0)) {
       return match ($type) {
-        'everyday_money' => $this->t('Everyday and money decisions need everyone on the roster to respond within @days days.', $args),
-        'everyday' => $this->t('Everyday decisions need everyone on the roster to respond within @days days.', $args),
-        'money' => $this->t('Money decisions need everyone on the roster to respond within @days days.', $args),
-        default => $this->t('Changing the rules needs everyone on the roster to respond within @days days.', $args),
+        'everyday_money' => $this->t('Everyday and money decisions need every one of the people who decide to respond within @days days.', $args),
+        'everyday' => $this->t('Everyday decisions need every one of the people who decide to respond within @days days.', $args),
+        'money' => $this->t('Money decisions need every one of the people who decide to respond within @days days.', $args),
+        default => $this->t('Changing the rules needs every one of the people who decide to respond within @days days.', $args),
       };
     }
     return match ($type) {
-      'everyday_money' => $this->t('Everyday and money decisions need at least @share of the roster to respond within @days days.', $args),
-      'everyday' => $this->t('Everyday decisions need at least @share of the roster to respond within @days days.', $args),
-      'money' => $this->t('Money decisions need at least @share of the roster to respond within @days days.', $args),
-      default => $this->t('Changing the rules needs at least @share of the roster to respond within @days days.', $args),
+      'everyday_money' => $this->t('Everyday and money decisions need at least @share of the people who decide to respond within @days days.', $args),
+      'everyday' => $this->t('Everyday decisions need at least @share of the people who decide to respond within @days days.', $args),
+      'money' => $this->t('Money decisions need at least @share of the people who decide to respond within @days days.', $args),
+      default => $this->t('Changing the rules needs at least @share of the people who decide to respond within @days days.', $args),
     };
   }
 

@@ -46,7 +46,10 @@ class OpenRoundForm extends ConsensusFormBase {
     $current = $this->rules->currentRules($group);
     unset($current['version_id']);
 
-    $form['intro'] = ['#markup' => '<p>' . $this->t('Describe the decision in your own words. Opening it keeps this text, its rules and the current roster together.') . '</p>'];
+    $form['intro'] = [
+      '#type' => 'item',
+      '#markup' => '<p>' . $this->t('Describe the decision in your own words. Opening it keeps this text, its rules and the current list of the people who decide together.') . '</p>',
+    ];
     $form['type'] = [
       '#type' => 'radios',
       '#title' => $this->t('Type of decision'),
@@ -88,7 +91,7 @@ class OpenRoundForm extends ConsensusFormBase {
     ];
     $form['non_authority'] = $this->nonAuthority();
     $form['actions'] = ['#type' => 'actions'];
-    $form['actions']['submit'] = ['#type' => 'submit', '#value' => $this->t('Open decision')];
+    $form['actions']['submit'] = ['#type' => 'submit', '#value' => $this->t('Open decision'), '#button_type' => 'primary'];
     return $form;
   }
 

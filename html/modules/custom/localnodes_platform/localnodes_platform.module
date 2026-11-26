@@ -30,6 +30,8 @@ function localnodes_platform_action_info_alter(array &$definitions): void {
   foreach ([
     'user_block_user_action' => \Drupal\localnodes_platform\Plugin\Action\BlockMember::class,
     'user_unblock_user_action' => \Drupal\localnodes_platform\Plugin\Action\UnblockMember::class,
+    // The people list's Add members to group, for the groups a person runs.
+    'social_group_add_members_to_group_action' => \Drupal\localnodes_platform\Plugin\Action\AddMembersToRunGroup::class,
   ] as $id => $class) {
     if (isset($definitions[$id])) $definitions[$id]['class'] = $class;
   }

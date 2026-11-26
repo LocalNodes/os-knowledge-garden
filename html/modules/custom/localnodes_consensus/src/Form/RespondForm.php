@@ -43,12 +43,13 @@ class RespondForm extends ConsensusFormBase {
     $form_state->set('round_id', (int) $round->id());
     $form['#cache']['max-age'] = 0;
     $form['intro'] = [
-      '#markup' => '<p>' . $this->t('Responses can change while the decision is open. Only everyone on its roster agreeing closes it early; otherwise it stays open until its deadline.') . '</p>',
+      '#type' => 'item',
+      '#markup' => '<p>' . $this->t('Responses can change while the decision is open. It closes early only if everyone who decides on it agrees; otherwise it stays open until its deadline.') . '</p>',
       '#weight' => -20,
     ];
     if ($this->register->closesOnAgree($round, $this->currentUser())) {
       $form['closes'] = [
-        '#markup' => '<p><strong>' . $this->t("Everyone else on this decision's roster has agreed. If you agree, it will close and everyone's responses will be final.") . '</strong></p>',
+        '#markup' => '<p><strong>' . $this->t("Everyone else who decides on it has agreed. If you agree, it will close and everyone's responses will be final.") . '</strong></p>',
         '#weight' => -10,
       ];
     }
@@ -72,7 +73,7 @@ class RespondForm extends ConsensusFormBase {
     ];
     $form['non_authority'] = $this->nonAuthority();
     $form['actions'] = ['#type' => 'actions', '#weight' => 50];
-    $form['actions']['submit'] = ['#type' => 'submit', '#value' => $this->t('Save response')];
+    $form['actions']['submit'] = ['#type' => 'submit', '#value' => $this->t('Save response'), '#button_type' => 'primary'];
     return $form;
   }
 

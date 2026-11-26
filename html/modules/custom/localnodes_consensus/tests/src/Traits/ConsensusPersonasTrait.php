@@ -129,7 +129,7 @@ trait ConsensusPersonasTrait {
       'uid' => $owner->id(),
       'field_flexible_group_visibility' => $own,
       'field_group_allowed_visibility' => array_map(fn (string $value) => ['value' => $value], $allowed),
-      'field_group_allowed_join_method' => 'added',
+      'field_group_allowed_join_method' => 'direct',
     ]);
     $group->save();
     return $group;
