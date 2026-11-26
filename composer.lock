@@ -5331,22 +5331,22 @@
         },
         {
             "name": "drupal/group_treasury",
-            "version": "1.0.0-alpha9",
+            "version": "1.0.0-alpha10",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/group_treasury.git",
-                "reference": "1.0.0-alpha9"
+                "reference": "1.0.0-alpha10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha9.zip",
-                "reference": "1.0.0-alpha9",
-                "shasum": "ead5f8bea2d8588d509b10b66af9c23eb538a2b4"
+                "url": "https://ftp.drupal.org/files/projects/group_treasury-1.0.0-alpha10.zip",
+                "reference": "1.0.0-alpha10",
+                "shasum": "a3e29697cae9ffeb48cef8a57fca78ebe7141264"
             },
             "require": {
                 "drupal/core": "^10",
                 "drupal/group": "*",
-                "drupal/safe_smart_accounts": "^1.0.0-alpha6",
+                "drupal/safe_smart_accounts": "^1.0.0-alpha9",
                 "php": ">=8.2"
             },
             "require-dev": {
@@ -5355,8 +5355,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha9",
-                    "datestamp": "1795560437",
+                    "version": "1.0.0-alpha10",
+                    "datestamp": "1795670362",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -5387,7 +5387,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/group_treasury"
             },
-            "published-time": "2026-11-24T22:46:56+00:00"
+            "published-time": "2026-11-26T05:19:01+00:00"
         },
         {
             "name": "drupal/hux",
@@ -7713,17 +7713,17 @@
         },
         {
             "name": "drupal/safe_smart_accounts",
-            "version": "1.0.0-alpha8",
+            "version": "1.0.0-alpha9",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/safe_smart_accounts.git",
-                "reference": "1.0.0-alpha8"
+                "reference": "1.0.0-alpha9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha8.zip",
-                "reference": "1.0.0-alpha8",
-                "shasum": "d4f26d96a1befb639329807c75035b7974d012e9"
+                "url": "https://ftp.drupal.org/files/projects/safe_smart_accounts-1.0.0-alpha9.zip",
+                "reference": "1.0.0-alpha9",
+                "shasum": "c4bf443b1b411f6692ac786a662a34b4f8b12082"
             },
             "require": {
                 "brick/math": "^0.17 || ^1.0",
@@ -7738,8 +7738,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "1.0.0-alpha8",
-                    "datestamp": "1795601893",
+                    "version": "1.0.0-alpha9",
+                    "datestamp": "1795670329",
                     "security-coverage": {
                         "status": "not-covered",
                         "message": "Project has not opted into security advisory coverage!"
@@ -7770,7 +7770,7 @@
             "support": {
                 "source": "https://git.drupalcode.org/project/safe_smart_accounts"
             },
-            "published-time": "2026-11-25T10:16:52+00:00"
+            "published-time": "2026-11-26T05:18:29+00:00"
         },
         {
             "name": "drupal/search_api",
