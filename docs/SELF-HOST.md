@@ -90,7 +90,7 @@ You can leave the mail and AI keys empty for now (step 6). Leave other settings 
 
 Do not change `DB_PASSWORD`, `DB_ROOT_PASSWORD` or `DRUPAL_HASH_SALT` after the first start. The database keeps the first passwords, and a different salt can break sign-in links.
 
-`WEB3_ENABLED` is off by default; leave it off for a library-only site. On a fresh site with `WEB3_ENABLED=true`, members also get a **Sign in** button that opens WaaP for email or Google sign-in; the existing email-and-password form stays available. Leave `WAAP_ENVIRONMENT` blank for a live site: the default is WaaP's production service. Set `WAAP_ENVIRONMENT=staging` only on a test site, since accounts on the two services are separate. No WalletConnect project ID is needed for email or Google; set `WALLETCONNECT_PROJECT_ID` if you also want the **Browser Wallet** choice inside WaaP. WalletConnect's QR-code option is unavailable in this build. See the [WaaP setup reference](https://docs.waap.human.tech/for-apps/methods/evm) (checked 2026-11-11); test sign-in on your site's address before inviting members.
+`WEB3_ENABLED` is off by default; leave it off for a library-only site. On a fresh site with `WEB3_ENABLED=true`, members also get a **Sign in** button that opens WaaP for email or Google sign-in; the existing email-and-password form stays available. Leave `WAAP_ENVIRONMENT` blank for a live site: the default is WaaP's production service. Set `WAAP_ENVIRONMENT=staging` only on a test site, since accounts on the two services are separate. No WalletConnect project ID is needed for email or Google; set `WALLETCONNECT_PROJECT_ID` if you also want the **Browser Wallet** choice inside WaaP. WalletConnect's QR-code option is unavailable in this build. See the [WaaP setup reference](https://docs.waap.human.tech/for-apps/methods/evm) (checked 2026-11-11); test sign-in on your site's address before inviting members. The fee wallet service (`gas-sponsor-relayer`) runs unless `FEE_WALLET_SCALE=0` is set in the same file; unset means it runs. With funds off, set `FEE_WALLET_SCALE=0` so it is not started (left running with funds off it stays keyless and idle). With group funds on (`WEB3_ENABLED=true`), leave `FEE_WALLET_SCALE` unset or set it to `1`. Setting up its key is not covered by this guide.
 
 ## 3. Make the site reachable
 
@@ -117,7 +117,7 @@ Leave that terminal open. After the site starts, open `http://localhost:8080` on
 
 ## 4. Start it
 
-For a library-only site use this four-service command; starting everything also starts an unused payments helper.
+For a library-only site use this four-service command.
 
 ```sh
 docker compose up -d mariadb solr qdrant opensocial

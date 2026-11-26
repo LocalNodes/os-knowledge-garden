@@ -1,0 +1,6 @@
+# Group types whose Groups can take a Group template, each mapped to the id of
+# the role a member must hold individually (not through a site role) to
+# confirm one: the Group's manager role. A Group of a type not listed here is
+# refused. This file is the only place these ids appear.
+group_types:
+  flexible_group: flexible_group-group_manager

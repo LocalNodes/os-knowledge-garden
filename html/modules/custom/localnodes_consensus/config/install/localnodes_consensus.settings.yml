@@ -1,0 +1,33 @@
+# The Group field holding the Group's own visibility (Open Social: public,
+# community or members). Decision items never reach a wider audience than
+# their Group: a members-only Group allows "This group only", a community
+# Group at most "Whole community". A Group without this field allows only
+# "This group only".
+group_visibility_field: field_flexible_group_visibility
+# Decision rules a Group reads while it has no rules version of its own:
+# one shared rule on the simple path, consensus,
+# at least two-thirds of the opening roster responds (rounded up when a
+# decision opens), no threshold, and 7, 7 and 14 days to respond.
+decision_rules:
+  path: simple
+  everyday:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 7
+  money:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 7
+  rule_change:
+    method: consensus
+    quorum_numerator: 2
+    quorum_denominator: 3
+    threshold_numerator: null
+    threshold_denominator: null
+    response_days: 14

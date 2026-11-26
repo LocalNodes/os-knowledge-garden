@@ -1,0 +1,22 @@
+services:
+  localnodes_group_setup.group_scope:
+    class: Drupal\localnodes_group_setup\Service\GroupScope
+    arguments: ['@config.factory', '@entity_type.manager']
+
+  localnodes_group_setup.application_manager:
+    class: Drupal\localnodes_group_setup\Service\TemplateApplicationManager
+    arguments:
+      - '@entity_type.manager'
+      - '@config.factory'
+      - '@localnodes_group_setup.group_scope'
+      - '@lock'
+      - '@datetime.time'
+      - '@uuid'
+      - '@logger.channel.localnodes_group_setup'
+      # Optional: localnodes_consensus owns the live decision rules. Absent
+      # when that module is off; set-up then applies without a rules link.
+      - '@?localnodes_consensus.decision_rules'
+
+  logger.channel.localnodes_group_setup:
+    parent: logger.channel_base
+    arguments: ['localnodes_group_setup']

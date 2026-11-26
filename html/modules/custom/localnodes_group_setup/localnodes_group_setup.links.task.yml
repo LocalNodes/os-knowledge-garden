@@ -1,0 +1,5 @@
+localnodes_group_setup.setup:
+  route_name: localnodes_group_setup.setup
+  base_route: entity.group.canonical
+  title: 'Set up'
+  weight: 60

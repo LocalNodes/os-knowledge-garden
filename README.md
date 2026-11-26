@@ -6,6 +6,8 @@ A community library with an AI assistant that answers questions using your group
 
 To start a community site on your own server with Docker Compose, follow [docs/SELF-HOST.md](docs/SELF-HOST.md). To move an existing LocalNodes site, use the `RESTORE.md` inside its export archive (`drush localnodes:export`). To keep a running site current, read [docs/hosting/UPDATES.md](docs/hosting/UPDATES.md).
 
+Hosted sites are made by the provisioning workflow (`.github/workflows/provision-instance.yml`). Their keys and passwords follow one rule: A secret name is written only by the run that creates its row; an existing row is never replaced or deleted by a workflow, whatever it reads as. The rows of a new site are created with the site, so this means the run that creates the site. A retry keeps the keys and passwords a site holds; a site whose first provisioning was interrupted, or a site created without group funds, is created again rather than repaired by a workflow.
+
 ## Quick Start (for development)
 
 Prerequisites: [DDEV](https://ddev.readthedocs.io/en/stable/users/install/ddev-installation/) and a [Gemini API key](https://aistudio.google.com/apikey) (free tier works).

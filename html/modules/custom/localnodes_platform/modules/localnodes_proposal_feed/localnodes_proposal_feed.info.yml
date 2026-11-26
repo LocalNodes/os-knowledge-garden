@@ -1,0 +1,7 @@
+name: 'LocalNodes Proposal Feed'
+type: module
+description: 'Every proposal, a payment or a decision, as one card in its group''s activity feed, with a discussion.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - group:group

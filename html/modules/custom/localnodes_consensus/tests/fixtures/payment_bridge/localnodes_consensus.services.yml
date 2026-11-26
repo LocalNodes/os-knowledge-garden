@@ -1,0 +1,14 @@
+# PLANTED FIXTURE for NoPaymentBridgeTest: never loaded by Drupal.
+#
+# A bridge that would turn a closed decision into a payment: it listens for
+# the feed's close event and calls a payment-enqueue stub. The static test
+# must reject this file; the production services file must pass.
+services:
+  localnodes_consensus.decision_rules:
+    class: Drupal\localnodes_consensus\Service\DecisionRulesManager
+    arguments: ['@entity_type.manager', '@config.factory', '@lock', '@datetime.time']
+  localnodes_consensus.payment_bridge:
+    class: Drupal\localnodes_consensus\Bridge\ClosedDecisionPaymentBridge
+    arguments: ['@localnodes_web3.payment_enqueue_stub', '@queue']
+    tags:
+      - { name: kernel.event_listener, event: localnodes_proposal_feed.closed, method: enqueuePayment }

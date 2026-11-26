@@ -12,6 +12,22 @@ name: Provision LocalNodes Instance
 # variable: changing it takes a reviewed commit, and scripts/ops/tests/provision-workflow.test.sh
 # checks it against teardown-instance.yml's SIGNUP_ORIGIN and the callback_url that
 # localnodes-onboarding's dispatcher sends (server/utils/github.ts, dispatchWorkflow).
+#
+# Keys and passwords: a secret name is written only by the run that creates its row; an
+# existing row is never replaced or deleted by a workflow, whatever it reads as. The rows of a new site are created
+# with the site, so this means the run that creates the site: only a run whose Create step made this app (its
+# output, CREATED_APP_UUID) makes the admin password, the database passwords, the hash salt and, with funds on, the
+# fee wallet key and token, and only over what a new app shows (empty or the compose default). A retry that
+# reuses its app keeps each one the site holds and writes nothing under it; where a name reads empty, at its
+# default, unreadable or not at all, the retry stops before its first write: an interrupted first provisioning is
+# not resumed, the site is created again (sites are throwaway before launch). The cleanup on a retry deletes
+# nothing under the six names.
+#
+# Unverified against a real host: nobody has yet seen what the real Coolify sends for an empty setting. If it sends
+# null, the first provisioning stops ("did not clearly show <name>", before any write; or, in the duplicate
+# cleanup, "has duplicate rows whose values cannot be read": every app holds two empty SPONSOR_RELAYER_TOKEN rows),
+# the site gets no key or password, and nothing held is lost. The first practice provisioning of the staging site
+# is the check.
 
 on:
   workflow_dispatch:
@@ -360,6 +376,14 @@ jobs:
             exit 1
           }
 
+          # Only a list of applications is read: an empty answer, or one that is not a list, never
+          # reads as "nothing on the domain". The step stops here and no app is taken over or made.
+          printf '%s' "$APPS" | jq -e 'type == "array"' >/dev/null 2>&1 || {
+            echo "::error::The Coolify application list could not be read."
+            echo "FAIL_REASON=coolify_unreachable" >> "$GITHUB_ENV"
+            exit 1
+          }
+
           # Applications list is a plain array (no .data wrapper). Every app whose domains mention
           # the FQDN counts, as a substring: a format surprise then blocks instead of colliding.
           # A list that is not JSON must not read as "free".
@@ -428,6 +452,10 @@ jobs:
           fi
 
           echo "APP_UUID=$APP_UUID" >> "$GITHUB_ENV"
+          # The proof that THIS run created the app: a step output, which only this step can set and which no input,
+          # variable or retry can carry. The Configure step reads it as CREATED_APP_UUID; only with it are the
+          # site's keys and passwords made (created_here).
+          echo "app_uuid=$APP_UUID" >> "$GITHUB_OUTPUT"
           echo "Created application $APP_UUID"
 
       - name: Configure environment variables
@@ -449,6 +477,9 @@ jobs:
           # Practice sites' chain RPC: Pocket Network's public keyless Ethereum Sepolia portal,
           # so a practice site needs no RPC account. No key, so nothing to mask.
           PRACTICE_RPC_URL: "https://eth-sepolia-testnet.api.pocket.network"
+          # Set only when the Create step ran in THIS run and created the app (empty on a retry that reuses one): the
+          # one proof that this run may make the site's keys and passwords (created_here). Nothing else sets it.
+          CREATED_APP_UUID: ${{ steps.create.outputs.app_uuid }}
         run: |
           # The shared callback secret (the repository secret) is not read here and never reaches a container:
           # each site gets only its own per-provision token (PROVISION_TOKEN, masked, from the
@@ -457,7 +488,7 @@ jobs:
           #
           # Every failure in this step (update_env, dedup_envs and verify_env all `return 1`
           # under set -e) is one reason for the sign-up app: the environment did not stick.
-          trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "FAIL_REASON=env_failed" >> "$GITHUB_ENV"; fi' EXIT
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "FAIL_REASON=env_failed" >> "$GITHUB_ENV"; fi; exit "$rc"' EXIT
 
           # An OpenRouter site always runs on the organizer's own key: the platform holds no
           # OpenRouter key to give it. Refused before anything is written.
@@ -537,16 +568,36 @@ jobs:
           # Each DELETE must succeed (curl exit 0 and HTTP 200/204), and the list is read
           # back until no key appears twice. Stragglers from async compose parsing get
           # up to 3 delete rounds; anything left at the final read-back fails the step.
+          # A duplicate is a second row of the same key AND the same preview flag: a preview copy
+          # is never a duplicate of a production row, so the two kinds are counted apart and
+          # preview copies are no longer removed here. Treating them as duplicates of each other
+          # once deleted a held production value (the site's fee wallet key) behind an empty
+          # preview row.
+          # Every read must pass values_readable, or the cleanup stops before any DELETE. On every run but the one
+          # that created this app (created_here), rows of the six secret names (secret_names) are left out: nothing
+          # under a secret name is ever deleted by a later run, whatever it reads as. Then, in
+          # every round and before any DELETE, every group of duplicates (any key) is checked: a row
+          # with no value field or a value that is not a string (null included) stops the cleanup, and
+          # so do two rows holding different non-empty values: a person has to choose, and nothing is
+          # deleted. Otherwise the kept row is one holding the group's value (they are all equal), or
+          # the first row when every row is empty, and every row deleted is empty or equal to the kept
+          # one. List order never decides between two values. Prints key names and row ids only.
           list_dupes() {
-            printf '%s' "$1" | jq -r '[.[].key] | group_by(.) | .[] | select(length > 1) | .[0]'
+            printf '%s' "$1" | jq -r '[group_by([.key, (.is_preview | not | not)])[] | select(length > 1) | .[0].key] | unique | .[]'
           }
           dedup_envs() {
-            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND
+            local ENV_VARS DUPES KEY UUIDS UUID HTTP_CODE RC ROUND VERDICT WHY WHICH
             # Rounds 1-3 read, then delete; round 4 only reads back the third round's result.
             for ROUND in 1 2 3 4; do
               ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
                 -H "Authorization: Bearer $COOLIFY_TOKEN" \
                 -H "Accept: application/json") || { echo "::error::Could not list env vars"; return 1; }
+              values_readable "$ENV_VARS" \
+                || { echo "::error::The env var list could not be read (empty, not a list, or no value this token can read); duplicate cleanup stopped."; return 1; }
+              if ! created_here; then
+                ENV_VARS=$(printf '%s' "$ENV_VARS" | S="$(secret_names)" jq -c '(env.S | fromjson) as $s | [.[] | select(.key | IN($s[]) | not)]') \
+                  || { echo "::error::Could not parse env var list"; return 1; }
+              fi
               DUPES=$(list_dupes "$ENV_VARS") || { echo "::error::Could not parse env var list"; return 1; }
               if [ -z "$DUPES" ]; then
                 [ "$ROUND" -eq 1 ] && echo "  No duplicates found" || echo "  Verified: no duplicates remain"
@@ -554,21 +605,103 @@ jobs:
               fi
               [ "$ROUND" -eq 4 ] && break
 
-              for KEY in $DUPES; do
-                UUIDS=$(printf '%s' "$ENV_VARS" | jq -r --arg k "$KEY" '[.[] | select(.key == $k)][1:][].uuid')
-                for UUID in $UUIDS; do
-                  RC=0
-                  HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$ENVS_URL/$UUID" \
-                    -H "Authorization: Bearer $COOLIFY_TOKEN") || RC=$?
-                  if [ "$RC" -ne 0 ] || { [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; }; then
-                    echo "::error::Deleting duplicate $KEY ($UUID) failed (curl exit $RC, HTTP $HTTP_CODE)"
-                    return 1
-                  fi
-                  echo "  Deleted duplicate $KEY ($UUID)"
-                done
-              done
+              # Before any DELETE of this round: look at every group of duplicates. Prints only a
+              # verdict word and the key name, never a value.
+              VERDICT=$(printf '%s' "$ENV_VARS" | jq -r '
+                group_by([.key, (.is_preview | not | not)])[]
+                | select(length > 1)
+                | .[0].key as $k
+                | if any(.[]; (has("value") | not) or ((.value | type) != "string")) then "unreadable " + $k
+                  elif ([.[] | .value | select(. != "")] | unique | length) > 1 then "split " + $k
+                  else empty end') || { echo "::error::Could not parse env var list"; return 1; }
+              if [ -n "$VERDICT" ]; then
+                while read -r WHY WHICH; do
+                  case "$WHY" in
+                    split) echo "::error::$WHICH has two different saved values; no duplicate was deleted. A person has to choose which one to keep." ;;
+                    unreadable) echo "::error::$WHICH has duplicate rows whose values cannot be read (the API token needs read:sensitive); no duplicate was deleted." ;;
+                  esac
+                done <<<"$VERDICT"
+                return 1
+              fi
+
+              # Per key and preview flag, every row but the kept one: each is empty or equal to it.
+              UUIDS=$(printf '%s' "$ENV_VARS" | jq -r '
+                group_by([.key, (.is_preview | not | not)])[]
+                | select(length > 1)
+                | (([.[] | select(.value != "")] | .[0]) // .[0]) as $keep
+                | .[] | select(.uuid != $keep.uuid) | .uuid + " " + .key') || { echo "::error::Could not parse env var list"; return 1; }
+              while read -r UUID KEY; do
+                [ -n "$UUID" ] || continue
+                RC=0
+                HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$ENVS_URL/$UUID" \
+                  -H "Authorization: Bearer $COOLIFY_TOKEN" < /dev/null) || RC=$?
+                if [ "$RC" -ne 0 ] || { [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; }; then
+                  echo "::error::Deleting duplicate $KEY ($UUID) failed (curl exit $RC, HTTP $HTTP_CODE)"
+                  return 1
+                fi
+                echo "  Deleted duplicate $KEY ($UUID)"
+              done <<<"$UUIDS"
             done
             echo "::error::Duplicate env vars remain after 3 cleanup rounds:" $DUPES
+            return 1
+          }
+
+          # values_readable LIST: true only when LIST is one JSON document, a list, every item an
+          # object, and at least one production row holds a non-empty string value: proof that this
+          # token reads values at all, so an answer whose hidden values come back as empty strings
+          # never reads as "nothing held". jq prints nothing.
+          values_readable() {
+            printf '%s' "$1" | jq -se 'length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object"))
+              and (.[0] | any(.[]; (.is_preview | not) and (.value | type) == "string" and .value != ""))' >/dev/null 2>&1
+          }
+
+          # secret_names: the six keys and passwords, as a JSON list. The rule: a secret name is
+          # written only by the run that creates its row; an existing row is never replaced or deleted by a workflow,
+          # whatever it reads as. The rows of a new site are created with the site, so this means the run that creates the
+          # site. Every later run (a retry that reuses the app, funds-on) writes and deletes nothing under these names.
+          secret_names() {
+            printf '%s' '["DRUPAL_ADMIN_PASS","DB_PASSWORD","DB_ROOT_PASSWORD","DRUPAL_HASH_SALT","SPONSOR_RELAYER_PRIVATE_KEY","SPONSOR_RELAYER_TOKEN"]'
+          }
+
+          # created_here: true only on the run that created this app: CREATED_APP_UUID (the Create step's own output in this
+          # run, steps.create.outputs.app_uuid; no input, variable or earlier run can set it) names this very app, and the run
+          # is not a retry that reuses an app. funds-on never sets it.
+          created_here() {
+            [ "${REUSE:-}" != "true" ] && [ -n "${CREATED_APP_UUID:-}" ] && [ "${CREATED_APP_UUID:-}" = "${APP_UUID:-}" ]
+          }
+
+          # check_secret KEY DEFAULT: called once per secret name the step needs, as a plain statement, before the step's first
+          # write. One read of the app's settings; it prints nothing on stdout and never a value, and it never writes.
+          # The answer counts only when it is one JSON document, a list of objects whose keys are strings, with at least one
+          # production row holding a non-empty string (this token reads values at all). Then, over the production rows of KEY:
+          #   on the run that created this app (created_here): passes only when every row holds "" or DEFAULT (the
+          #     docker-compose.yaml default; no row included): what a new app is known to show. The caller makes the secret.
+          #   on every other run: passes only when the name is listed and every row holds one same value, a non-empty string
+          #     other than DEFAULT: the secret is held and is kept. The caller writes nothing under the name.
+          # Anything else refuses with one fixed line naming the key, status 1. The caller runs under bash -e, so the step stops.
+          # Plain statement only: callers must not put this in an if condition or behind && or ||.
+          check_secret() {
+            local KEY="$1" ENV_VARS VERDICT OWN=no
+            if created_here; then OWN=yes; fi
+            ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Accept: application/json" 2>/dev/null) || ENV_VARS=""
+            VERDICT=$(printf '%s' "$ENV_VARS" | K="$KEY" D="$2" jq -sr '
+              if length == 1 and (.[0] | type == "array") and (.[0] | all(type == "object" and (.key | type) == "string")) then .[0] else error("shape") end
+              | [.[] | select(.is_preview | not)] as $prod
+              | if any($prod[]; (.value | type) == "string" and .value != "") then . else error("unreadable") end
+              | [$prod[] | select(.key == env.K)] as $rows
+              | if all($rows[]; has("value") and (.value | type) == "string") then . else error("unclear") end
+              | [$rows[].value] as $v
+              | if all($v[]; . == "" or . == env.D) then "empty"
+                elif all($v[]; . != "" and . != env.D) and ($v | unique | length) == 1 then "held"
+                else "mixed" end' 2>/dev/null) || VERDICT=""
+            case "$OWN:$VERDICT" in
+              yes:empty|no:held) return 0 ;;
+              yes:held|yes:mixed) echo "::error::The app this run just created already shows a value for $KEY, so this run does not write it. Nothing was stored or sent." >&2 ;;
+              no:empty) echo "::error::This app's settings do not show $KEY as held. Only the run that creates a site writes its keys and passwords: create the site again, or the site's owner must place the key. Nothing was stored or sent." >&2 ;;
+              *) echo "::error::This app's settings did not clearly show $KEY. Nothing was stored or sent." >&2 ;;
+            esac
             return 1
           }
 
@@ -600,44 +733,105 @@ jobs:
             echo "  Verified $KEY"
           }
 
-          # pick_secret KEY NEW DEFAULT: the value to store for a generated secret. A reused app
-          # (REUSE=true) already runs a database made with the secrets its first attempt generated,
-          # and MariaDB only reads them when its volume is created, so a retry must keep the ones the
-          # app holds. Only a value that is still empty or the docker-compose.yaml default (DEFAULT)
-          # is replaced. A fresh app always gets NEW. Prints the value for the caller to capture;
-          # the caller masks it.
-          pick_secret() {
-            local KEY="$1" ENV_VARS OLD
-            if [ "${REUSE:-}" = "true" ]; then
-              ENV_VARS=$(curl -sS --fail-with-body "$ENVS_URL" \
-                -H "Authorization: Bearer $COOLIFY_TOKEN" \
-                -H "Accept: application/json") || { echo "::error::Could not read env vars" >&2; return 1; }
-              OLD=$(printf '%s' "$ENV_VARS" | K="$KEY" jq -r '[.[] | select(.key == env.K and (.is_preview | not))][0].value // ""') || return 1
-              if [ -n "$OLD" ] && [ "$OLD" != "$3" ]; then
-                printf '%s' "$OLD"
-                return 0
+          # turn_on_practice_funds: group funds and decisions on, against Ethereum Sepolia (test-network
+          # money only) through a public keyless RPC, plus this site's own fee wallet:
+          # a fresh sending key and a fresh bearer token, made here and never shown. K is the
+          # key (0x plus 64 hex) and T the token (64 hex). Both are masked before anything else uses
+          # them, stored only as Coolify env vars (the relayer container reads the key, the app
+          # container only the token), and unset once verify_practice_funds has read them back by value.
+          # Neither is echoed, written to a file
+          # or put in Drupal config. The relayer's address is shown to stewards on the Network fee
+          # account page; funding it with real money is the maintainer's call, and this function funds
+          # nothing. Only the run that created the app (created_here) makes and writes the key and token; every
+          # later run keeps the pair the site holds (check_secret has passed it before the first write) and writes
+          # nothing under either name, so the address stewards were shown stays the same. The key and token are
+          # written without the secret flag so a later run can see that they are held.
+          # The order is the point: WEB3_ENABLED=true first, so a run that stops anywhere
+          # later leaves a held true, and a funds-off retry of the same app is refused on it; the key
+          # and token next; FEE_WALLET_SCALE=1 last, the setting that keeps the relayer service running.
+          # Plain statements only: callers must not put this in an if condition or behind && or ||.
+          turn_on_practice_funds() {
+            update_env "WEB3_ENABLED" "true"
+            update_env "SIWE_CHAIN_ID" "11155111"
+            update_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            # A pilot's email sign-in uses WaaP's production service, so
+            # members' wallets never sit on staging; settings.php reads WAAP_ENVIRONMENT. Demos
+            # and manual runs never get this write and use the module default (production from
+            # the siwe_login release after beta11; staging before it).
+            update_env "WAAP_ENVIRONMENT" "production"
+            if created_here; then
+              K="0x$(openssl rand -hex 32)"
+              T="$(openssl rand -hex 32)"
+              if [ "${#K}" -ne 66 ] || [ "${#T}" -ne 64 ]; then
+                echo "::error::Could not generate the relayer key and token."
+                exit 1
               fi
+              echo "::add-mask::$K"
+              echo "::add-mask::${K#0x}"
+              echo "::add-mask::$T"
+              update_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
+              update_env "SPONSOR_RELAYER_TOKEN" "$T"
             fi
-            printf '%s' "$2"
+            update_env "FEE_WALLET_SCALE" "1"
+          }
+
+          # verify_practice_funds: read back what turn_on_practice_funds wrote, every value by value (on the run
+          # that created the app the key and token too: verify_env compares inside jq and prints no value), so a
+          # setting that did not stick or came back different fails here, not on the host. A later run wrote no key
+          # or token, so it reads none back. Then the key and token are unset.
+          verify_practice_funds() {
+            if created_here; then
+              verify_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
+              verify_env "SPONSOR_RELAYER_TOKEN" "$T"
+            fi
+            verify_env "WEB3_ENABLED" "true"
+            verify_env "SIWE_CHAIN_ID" "11155111"
+            verify_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
+            verify_env "WAAP_ENVIRONMENT" "production"
+            verify_env "FEE_WALLET_SCALE" "1"
+            unset K T
           }
 
           # A retry reuses its own half-made app. One that ran with group funds and decisions on
-          # (WEB3_ENABLED=true) may already have the web3 modules installed, and a retry with them
-          # off would leave them installed, skip the readiness check and report ready. So that
-          # change is refused before any setting is written. The other way round is allowed: the
-          # held false is also the compose default, so it can be an attempt that stopped before
-          # writing its mode, and on a redeploy with true the entrypoint turns the modules on and
-          # checks them before ready.
-          # The mode must read as exactly true or false; an unreadable, empty or non-list answer
-          # stops the workflow here. Any production copy holding true counts, since duplicates
-          # are only removed further down.
-          if [ "${REUSE:-}" = "true" ] && [ "${WEB3_INPUT:-}" != "practice" ]; then
-            HELD_UNREADABLE="::error::Could not read this app's settings to check its group funds mode; nothing was changed."
+          # may already hold part of the fee wallet: WEB3_ENABLED=true (the web3 modules may be
+          # installed, and a retry with them off would leave them installed, skip the readiness
+          # check and report ready), a relayer key or token (a steward may have been shown the
+          # address it makes), or a FEE_WALLET_SCALE that is neither empty nor 0 (the fee service is set to
+          # run). There is no
+          # delete-env helper, and removing a key a steward may have been shown is worse than
+          # refusing, so a retry with funds off is refused before any setting is written.
+          # The other way round is allowed: a held false is also the compose default, so it can be an
+          # attempt that stopped before writing its mode, and on a redeploy with true the entrypoint
+          # turns the modules on and checks them before ready.
+          # Only a non-empty value counts: Coolify's compose parse leaves empty (and duplicated empty)
+          # relayer rows on every fresh app, and a preview copy is not what the site runs on.
+          # A mode, key, token or scale row with no readable value (the API token lacks
+          # read:sensitive) is refused too, here before any write. The mode must read as a list; an unreadable, empty or non-list
+          # answer stops the workflow here. Any production copy holding a value counts, since
+          # duplicates are only removed further down. jq prints only true or false.
+          # Before any write of this step, on every retry (practice or off): the settings must read as one
+          # list in which this token reads at least one value (values_readable). Otherwise the step stops
+          # here, before the duplicate cleanup and every other write, so a held key or password the run
+          # cannot see is never deleted or replaced. A fresh app holds none yet; the cleanup's own read
+          # makes the same check before any DELETE.
+          if [ "${REUSE:-}" = "true" ]; then
+            HELD_UNREADABLE="::error::Could not read this app's settings, or this token cannot read their values; nothing was stored or sent."
             HELD_ENVS=$(curl -sS --fail-with-body "$ENVS_URL" \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               -H "Accept: application/json") || { echo "$HELD_UNREADABLE"; exit 1; }
+            values_readable "$HELD_ENVS" || { echo "$HELD_UNREADABLE"; exit 1; }
+          fi
+          if [ "${REUSE:-}" = "true" ] && [ "${WEB3_INPUT:-}" != "practice" ]; then
             HELD_WEB3=$(printf '%s' "$HELD_ENVS" \
-              | jq -r 'if type == "array" then ([.[] | select(.key == "WEB3_ENABLED" and (.is_preview | not)) | .value] | any(. == "true")) else error("not a list") end') \
+              | jq -r '
+                  if type != "array" then error("not a list") else . end
+                  | [.[] | select(.is_preview | not)
+                         | select(.key | IN("WEB3_ENABLED", "SPONSOR_RELAYER_PRIVATE_KEY", "SPONSOR_RELAYER_TOKEN", "FEE_WALLET_SCALE"))] as $h
+                  | if ($h | all(has("value"))) then
+                      ($h | any((.key == "WEB3_ENABLED" and .value == "true")
+                                or (.key == "FEE_WALLET_SCALE" and ((.value // "" | tostring) != "") and ((.value // "" | tostring) != "0"))
+                                or (.key != "WEB3_ENABLED" and .key != "FEE_WALLET_SCALE" and ((.value // "") != ""))))
+                    else error("unreadable") end') \
               || { echo "$HELD_UNREADABLE"; exit 1; }
             unset HELD_ENVS
             # jq prints nothing for an empty or whitespace-only body and still exits 0
@@ -649,6 +843,24 @@ jobs:
               echo "::error::This app was set up with group funds and decisions on (practice); a retry with them off is refused. Retry with practice, or start a new sign-up."
               exit 1
             fi
+          fi
+
+          unset HELD_ENVS
+
+          # Keys and passwords, before the step's first write, on every path: a secret name
+          # is written only by the run that creates its row; an existing row is never replaced or deleted by a
+          # workflow, whatever it reads as. The rows of a new site are created with the site, so only the run that
+          # created this app makes them, and only over what a new app shows (empty or the compose default). A retry
+          # keeps each one the site holds and refuses anything else: an interrupted first provisioning is not
+          # resumed; the site is created again (sites are throwaway before launch).
+          echo "Checking the site's keys and passwords..."
+          check_secret DRUPAL_ADMIN_PASS ""
+          check_secret DB_PASSWORD changeme
+          check_secret DB_ROOT_PASSWORD rootpassword
+          check_secret DRUPAL_HASH_SALT generate-random
+          if [ "${WEB3_INPUT:-}" = "practice" ]; then
+            check_secret SPONSOR_RELAYER_PRIVATE_KEY ""
+            check_secret SPONSOR_RELAYER_TOKEN ""
           fi
 
           echo "Cleaning duplicate env vars (pass 1)..."
@@ -734,11 +946,13 @@ jobs:
               update_env "AI_BACKUP_MODEL" "$OPENROUTER_BACKUP_MODEL"
             fi
           fi
-          # Random per-run admin password: masked in logs, stored only in the Coolify app env, never printed.
-          # A reused app keeps the one it holds (pick_secret).
-          ADMIN_PASS="$(pick_secret DRUPAL_ADMIN_PASS "$(openssl rand -hex 16)" admin)"
-          echo "::add-mask::$ADMIN_PASS"
-          update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          # Random admin password, made only by the run that created the app: masked in logs, stored only in the
+          # Coolify app env, never printed. A retry keeps the one the site holds and writes nothing.
+          if created_here; then
+            ADMIN_PASS="$(openssl rand -hex 16)"
+            echo "::add-mask::$ADMIN_PASS"
+            update_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          fi
           # AI key (D-21). An organizer's own key is written write-once (is_shown_once, is_literal)
           # and only its presence is checked later; it is never echoed. A retry after the manifest
           # ack carries no key (organizer source, empty value): the reused app already holds it, so
@@ -765,55 +979,33 @@ jobs:
             update_env "GEMINI_KEY_TIER" "$GEMINI_KEY_TIER_INPUT"
           fi
 
-          # Generate unique secrets for this instance
-          # (a reused app keeps the ones it holds: its database was made with them)
-          DB_PASS="$(pick_secret DB_PASSWORD "$(openssl rand -hex 16)" changeme)"
-          DB_ROOT_PASS="$(pick_secret DB_ROOT_PASSWORD "$(openssl rand -hex 16)" rootpassword)"
-          HASH_SALT="$(pick_secret DRUPAL_HASH_SALT "$(openssl rand -hex 32)" generate-random)"
-          echo "::add-mask::$DB_PASS"
-          echo "::add-mask::$DB_ROOT_PASS"
-          echo "::add-mask::$HASH_SALT"
-          update_env "DB_PASSWORD" "$DB_PASS"
-          update_env "DB_ROOT_PASSWORD" "$DB_ROOT_PASS"
-          update_env "DRUPAL_HASH_SALT" "$HASH_SALT"
-          unset DB_PASS DB_ROOT_PASS HASH_SALT
-
-          # This instance's own gas-sponsor relayer (25-09, D-01, GAS-01): a fresh sending key and
-          # a fresh bearer token, made here and never shown. K is the key (0x plus 64 hex) and T
-          # the token (64 hex). Both are masked before anything else uses them, stored only as
-          # Coolify env vars (the relayer container reads the key, the app container only the
-          # token), and unset straight after. Neither is echoed, written to a file or put in
-          # Drupal config. The relayer's address is shown to stewards on the Network fee account
-          # page; funding it with real money is the maintainer's call, and this step funds nothing.
-          # (a reused app keeps the pair it holds, so the address stewards were shown stays the same)
-          K="$(pick_secret SPONSOR_RELAYER_PRIVATE_KEY "0x$(openssl rand -hex 32)" "")"
-          T="$(pick_secret SPONSOR_RELAYER_TOKEN "$(openssl rand -hex 32)" "")"
-          if [ "${#K}" -ne 66 ] || [ "${#T}" -ne 64 ]; then
-            echo "::error::Could not generate the relayer key and token."
-            exit 1
+          # Unique secrets for this instance, made only by the run that created the app (a retry keeps the ones the
+          # site holds and writes nothing: its database was made with them)
+          if created_here; then
+            DB_PASS="$(openssl rand -hex 16)"
+            DB_ROOT_PASS="$(openssl rand -hex 16)"
+            HASH_SALT="$(openssl rand -hex 32)"
+            echo "::add-mask::$DB_PASS"
+            echo "::add-mask::$DB_ROOT_PASS"
+            echo "::add-mask::$HASH_SALT"
+            update_env "DB_PASSWORD" "$DB_PASS"
+            update_env "DB_ROOT_PASSWORD" "$DB_ROOT_PASS"
+            update_env "DRUPAL_HASH_SALT" "$HASH_SALT"
+            unset DB_PASS DB_ROOT_PASS HASH_SALT
           fi
-          echo "::add-mask::$K"
-          echo "::add-mask::${K#0x}"
-          echo "::add-mask::$T"
-          update_env "SPONSOR_RELAYER_PRIVATE_KEY" "$K"
-          update_env "SPONSOR_RELAYER_TOKEN" "$T"
-          unset K T
 
           # Group funds and decisions. practice turns the web3 stack on against Ethereum Sepolia,
-          # test-network money only, through a public keyless RPC (no key to hold). off, or the
-          # input left out, writes false; a reused app that holds true never gets here with off
-          # (refused above). Both services read WEB3_ENABLED (docker-compose.yaml).
+          # test-network money only, through a public keyless RPC (no key to hold), and makes this
+          # site's fee wallet (turn_on_practice_funds). off, or the input left out, writes false and
+          # FEE_WALLET_SCALE=0 and nothing else: no relayer key and no token, so a funds-off
+          # site holds no sending key and its fee service is set not to run. A reused app that holds true, a
+          # key, a token or a FEE_WALLET_SCALE other than 0 never gets here with off (refused above). Both services read
+          # WEB3_ENABLED (docker-compose.yaml).
           if [ "${WEB3_INPUT:-}" = "practice" ]; then
-            update_env "WEB3_ENABLED" "true"
-            update_env "SIWE_CHAIN_ID" "11155111"
-            update_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
-            # A pilot's email sign-in uses WaaP's production service, so
-            # members' wallets never sit on staging; settings.php reads WAAP_ENVIRONMENT. Demos
-            # and manual runs never get this write and use the module default (production from
-            # the siwe_login release after beta11; staging before it).
-            update_env "WAAP_ENVIRONMENT" "production"
+            turn_on_practice_funds
           else
             update_env "WEB3_ENABLED" "false"
+            update_env "FEE_WALLET_SCALE" "0"
           fi
 
           # Organizer provisioning env vars (entrypoint handles user creation + email)
@@ -844,7 +1036,9 @@ jobs:
 
           # Read back what the deploy will use; a pin or password that did not stick fails here
           echo "Verifying saved values..."
-          verify_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          if created_here; then
+            verify_env "DRUPAL_ADMIN_PASS" "$ADMIN_PASS"
+          fi
           if [ -n "$IMAGE_TAG_INPUT" ]; then
             verify_env "IMAGE_TAG" "$IMAGE_TAG_INPUT"
           fi
@@ -859,16 +1053,12 @@ jobs:
             verify_env "$SECRET_AI_NAME" "" secret
           fi
           if [ "${WEB3_INPUT:-}" = "practice" ]; then
-            # The relayer pair is never read back by value; a practice site needs it, so check
-            # that exactly one of each was saved. Off sign-ups skip it: with Web3 off nothing reads the pair.
-            verify_env "SPONSOR_RELAYER_PRIVATE_KEY" "" secret
-            verify_env "SPONSOR_RELAYER_TOKEN" "" secret
-            verify_env "WEB3_ENABLED" "true"
-            verify_env "SIWE_CHAIN_ID" "11155111"
-            verify_env "SIWE_CHAIN_RPC_URL" "$PRACTICE_RPC_URL"
-            verify_env "WAAP_ENVIRONMENT" "production"
+            # A practice site needs the pair and the fee service setting, so check they were saved (the
+            # pair by value, on the run that made it). Off sign-ups write no key or token and check the mode and the setting.
+            verify_practice_funds
           else
             verify_env "WEB3_ENABLED" "false"
+            verify_env "FEE_WALLET_SCALE" "0"
           fi
           # The backup pair, under the same condition it was written with (23-40)
           if [ "${AI_PROVIDER:-}" = "openrouter" ] && [ -n "${OPENROUTER_BACKUP_MODEL:-}" ]; then

@@ -760,6 +760,18 @@ check "entrypoint carries an EXIT trap and the six reason codes" "yes yes yes ye
 W3ADDR="0x00000000000000000000000000000000000000A1"
 W3="WEB3_ENABLED=true WEB3_CHECK_WAIT=0"
 w3_checks() { n="$(calls "$1" "localnodes-web3:check")"; echo "${n:-0}"; }               # w3_checks DIR
+# The fee module rule, held by these runs: gas_sponsor (and its fee page) comes in only as localnodes_web3's
+# dependency, so no drush call of any run names it, and a funds-off run (WEB3_ENABLED unset or false, fresh
+# install or redeploy) names localnodes_web3 in no drush call either. Every 0 is read next to the run's exit
+# code and a count that proves the run reached its drush steps, so a run that never started cannot pass.
+names() {  # names DIR MODULE -> how many drush calls in DIR/seq name MODULE as a word (en, pm:enable, php:eval, a comma list...)
+  [ -f "$1/seq" ] || { echo no-seq; return; }
+  grep -cE "^drush .*(^|[^A-Za-z0-9_])$2([^A-Za-z0-9_]|\$)" "$1/seq"
+}
+enabled() {  # enabled DIR MODULE -> how many drush en calls in DIR/seq name MODULE
+  [ -f "$1/seq" ] || { echo no-seq; return; }
+  grep -cE "^drush en (.*[ ,])?$2([ ,]|\$)" "$1/seq"
+}
 before() {  # before DIR A B -> yes when the first seq line starting with A comes before the first with B
   local a b; a="$(grep -n -m1 "^$2" "$1/seq" | cut -d: -f1)"; b="$(grep -n -m1 "^$3" "$1/seq" | cut -d: -f1)"
   [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ] && echo yes || echo no
@@ -770,6 +782,7 @@ check "practice, check passes: exit 0, creating_user then ready, one check" "0 c
 check "practice, check passes: ready carries relayer_address" "\"$W3ADDR\" attempt,provision_id,relayer_address,site_url,source,status" "$(cb_get "$t" 2 relayer_address) $(cb_keys "$t" 2)"
 check "practice: localnodes_web3 enabled, check before the install marker" "yes yes" "$(before "$t" "drush en localnodes_web3" "drush localnodes-web3:check") $(before "$t" "drush localnodes-web3:check" "drush state:set localnodes.install_complete")"
 check "practice: creating_user carries no relayer_address" null "$(cb_get "$t" 1 relayer_address)"
+check "practice: localnodes_web3 enabled once, no drush call names gas_sponsor" "1 0" "$(enabled "$t" localnodes_web3) $(names "$t" gas_sponsor)"
 # 11b. Check fails: no marker, no ready, one failed with web3_check_failed, after the retries.
 t="$(new_site)"; rc="$(run_ep "$t" $ORG $CB $W3)"
 check "practice, check fails: non-zero, creating_user then failed, reason web3_check_failed" "yes creating_user,failed \"web3_check_failed\"" "$(nonzero "$rc") $(cb_statuses "$t") $(cb_get "$t" 2 reason)"
@@ -780,6 +793,7 @@ rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=2)"
 check "practice, restart still failing: resume path, no ready on any run, still no marker" "yes yes 0 no" "$(nonzero "$rc") $(has "$t/out" "RESUMING INSTALL") $(grep -c '"status":"ready"' "$t/callbacks") $([ -e "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
 # ...and once the check passes, the next restart sends ready with the address and writes the marker.
 touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
+check "practice, the install and its two restarts: localnodes_web3 enabled on each (three), no drush call names gas_sponsor" "3 0" "$(grep -c '^drush en localnodes_web3' "$t/seq") $(names "$t" gas_sponsor)"
 check "practice, restart passing: exit 0, last callback ready with the address, marker written" "0 ready \"$W3ADDR\" yes" "$rc $(cb_statuses "$t" | sed 's/.*,//') $(cb_get "$t" "$(cbs "$t")" relayer_address) $([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no)"
 # 11d. Malformed check output (not 0x + 40 hex) is a failure.
 t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 WEB3_CHECK_TRIES=1 W3_OUT='0x123 key=abc')"
@@ -796,6 +810,7 @@ check "practice redeploy, check fails: exit 0, one failed callback, fixed line, 
 check "practice redeploy, check fails: reason web3_check_failed, the contract keys only" "\"web3_check_failed\" $FAILED_KEYS" "$(cb_get "$t" 1 reason) $(cb_keys "$t" 1)"
 touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3)"
 check "practice redeploy, check passes: ready with the address" "0 failed,ready \"$W3ADDR\"" "$rc $(cb_statuses "$t") $(cb_get "$t" 2 relayer_address)"
+check "practice redeploys: localnodes_web3 enabled on each (two), no drush call names gas_sponsor" "2 0" "$(enabled "$t" localnodes_web3) $(names "$t" gas_sponsor)"
 # 11g. Redeploy whose enable fails: a warning, not silence, and the start-up goes on. A site
 #     not yet handed over says so with web3_enable_failed; the check does not run.
 t="$(rsite)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB $W3 FAIL_EN_W3=1)"
@@ -813,13 +828,25 @@ check "practice redeploy, organizer activated: no check, no callback" "0 0 0" "$
 # 11i. Web3 off (the default) is unchanged: no check anywhere, ready without the address.
 t="$(new_site)"; touch "$t/w3_ok"; rc="$(run_ep "$t" $ORG $CB)"
 check "web3 off: no check, ready body as before (no relayer_address)" "0 0 attempt,provision_id,site_url,source,status" "$rc $(w3_checks "$t") $(cb_keys "$t" 2)"
+check "web3 off (unset), fresh install: installed, no drush call names localnodes_web3 or gas_sponsor" "0 1 0 0" "$rc $(calls "$t" site:install) $(names "$t" localnodes_web3) $(names "$t" gas_sponsor)"
 t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB)"
 check "web3 off redeploy: no check, ready resent as before" "0 0 ready" "$rc $(w3_checks "$t") $(cb_statuses "$t")"
+check "web3 off (unset), redeploy: database updated, no drush call names localnodes_web3 or gas_sponsor" "0 1 0 0" "$rc $(calls "$t" updatedb) $(names "$t" localnodes_web3) $(names "$t" gas_sponsor)"
+t="$(rsite)"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=false)"
+check "WEB3_ENABLED=false, redeploy: database updated, no check, no drush call names localnodes_web3 or gas_sponsor" "0 1 0 0 0" "$rc $(calls "$t" updatedb) $(w3_checks "$t") $(names "$t" localnodes_web3) $(names "$t" gas_sponsor)"
 t="$(new_site)"; rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=false)"
 check "WEB3_ENABLED=false: no enable, no check" "0 0 0" "$rc $(grep -c '^drush en localnodes_web3' "$t/seq") $(w3_checks "$t")"
+check "WEB3_ENABLED=false, fresh install: installed, no drush call names localnodes_web3 or gas_sponsor" "0 1 0 0" "$rc $(calls "$t" site:install) $(names "$t" localnodes_web3) $(names "$t" gas_sponsor)"
+# The resume path (installed, no completion marker) has drush steps of its own before the post-install steps.
+for W3MODE in unset false; do
+  t="$(new_site)"; touch "$t/installed"; echo 18 > "$t/nodes"
+  if [ "$W3MODE" = unset ]; then rc="$(run_ep "$t" $ORG $CB)"; else rc="$(run_ep "$t" $ORG $CB WEB3_ENABLED=false)"; fi
+  check "web3 $W3MODE, resumed install: resumed and finished, no drush call names localnodes_web3 or gas_sponsor" "0 yes yes 0 0" "$rc $(has "$t/out" "RESUMING INSTALL") $([ -s "$t/state/localnodes.install_complete" ] && echo yes || echo no) $(names "$t" localnodes_web3) $(names "$t" gas_sponsor)"
+done
 # 11j. A manual run with web3 on (staging, demos) is untouched: enable, but no check, no callback.
 t="$(new_site)"; rc="$(run_ep "$t" $ORG $W3)"
 check "manual run with web3 on: enabled, no check, no callback" "0 1 0 0" "$rc $(grep -c '^drush en localnodes_web3' "$t/seq") $(w3_checks "$t") $(cbs "$t")"
+check "manual run with web3 on: no drush call names gas_sponsor" 0 "$(names "$t" gas_sponsor)"
 
 # 12. An index step that never returns does not stop the install: the
 # entrypoint gives search-api:index a time bound (INSTALL_INDEX_TIMEOUT), and

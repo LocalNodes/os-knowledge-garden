@@ -1,0 +1,10 @@
+name: 'LocalNodes Group Setup'
+type: module
+description: 'Lets a Group manager confirm a Group template once: the Group gets its set-up record and fictional starter pages, and its starting decision rules are handed to the consensus module when that is on.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - group:group
+  - group:gnode
+  - drupal:node
+  - social:social_topic

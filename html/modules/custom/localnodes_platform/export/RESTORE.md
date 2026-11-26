@@ -160,7 +160,7 @@ Use your ordinary member account for everyday work.
 - **Mail.** The site's own sender address is still the old one. Change it under *Administration › Configuration › System › Basic site settings* to the address in `MAIL_FROM`, at a domain verified in your Resend account.
 - **Domain and HTTPS.** Step 7 of the self-hosting guide.
 - **Backups and updates.** The "Running it" section of the guide.
-- **Web3.** If `WEB3_ENABLED` is `true` above, the site also uses the `gas-sponsor-relayer` service in `docker-compose.yaml`. That part is not covered by these steps; ask LocalNodes before you rely on it.
+- **Web3.** If `WEB3_ENABLED` is `true` above, the site also uses the `gas-sponsor-relayer` service in `docker-compose.yaml`, which runs unless `FEE_WALLET_SCALE=0` is set next to `WEB3_ENABLED=false`; leave it unset with `WEB3_ENABLED=true`. That part is not covered by these steps; ask LocalNodes before you rely on it.
 
 ## If something goes wrong
 

@@ -98,6 +98,11 @@ MEMBER_SPECS.push('tour-motion.spec.ts');
 // rings and the bar's fit, signed out and as the member.
 ANONYMOUS_SPECS.push('search-pill.spec.ts');
 MEMBER_SPECS.push('search-pill.spec.ts');
+// Group templates: a fictional Group's journey from set-up to the
+// register, notices and its starter library; each test opens its own persona.
+MEMBER_SPECS.push('group-templates.spec.ts');
+// Group templates: axe, keyboard, reflow and reduced motion on each screen of that journey.
+MEMBER_SPECS.push('group-templates.a11y.spec.ts');
 
 // LN_RECORD=1 records a trace and a video of every test. The CLI's
 // --trace flag also works; there's no CLI flag for video.

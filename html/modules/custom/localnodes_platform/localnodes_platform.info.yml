@@ -46,3 +46,6 @@ dependencies:
   - localnodes_platform:localnodes_events_calendar
   # Informal quick questions in a group, for its members only.
   - localnodes_platform:localnodes_quick_poll
+  # Group set-up and decision records, enabled on fresh install.
+  - localnodes_group_setup:localnodes_group_setup
+  - localnodes_consensus:localnodes_consensus

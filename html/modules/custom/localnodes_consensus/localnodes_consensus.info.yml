@@ -1,0 +1,11 @@
+name: 'LocalNodes Consensus'
+type: module
+description: 'Records how each Group decides: its live decision rules (module defaults until Group set-up hands over its confirmed rules, then a new version only with an agreed rule-change decision) and its decision rounds.'
+core_version_requirement: ^10
+package: 'LocalNodes'
+dependencies:
+  - group:group
+  - localnodes_group_setup:localnodes_group_setup
+  - localnodes_platform:localnodes_proposal_feed
+  - social:social_group
+  - social:entity_access_by_field

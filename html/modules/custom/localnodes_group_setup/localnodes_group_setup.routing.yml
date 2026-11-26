@@ -1,0 +1,13 @@
+localnodes_group_setup.setup:
+  path: '/group/{group}/setup'
+  defaults:
+    _form: '\Drupal\localnodes_group_setup\Form\TemplatePickerForm'
+    _title: 'Set up this group'
+  requirements:
+    _entity_access: 'group.view'
+    _custom_access: '\Drupal\localnodes_group_setup\Form\TemplatePickerForm::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group

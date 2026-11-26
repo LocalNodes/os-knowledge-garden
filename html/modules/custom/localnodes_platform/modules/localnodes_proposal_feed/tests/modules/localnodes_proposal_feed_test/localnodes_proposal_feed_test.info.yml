@@ -1,0 +1,8 @@
+name: 'LocalNodes Proposal Feed test'
+type: module
+description: 'A fixture proposal source for the proposal feed tests.'
+core_version_requirement: ^10
+package: 'Testing'
+hidden: true
+dependencies:
+  - localnodes_platform:localnodes_proposal_feed

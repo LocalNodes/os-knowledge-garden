@@ -25,6 +25,14 @@ FAIL=0
 ok()   { PASS=$((PASS + 1)); echo "ok   - $1"; }
 nok()  { FAIL=$((FAIL + 1)); echo "FAIL - $1"; }
 check() { if eval "$2"; then ok "$1"; else nok "$1"; fi; }
+# no_writes_at_all: requests.log has no PATCH, POST or DELETE
+no_writes_at_all() { ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log"; }
+# The six secret names: written only by the run that creates the site
+SIX_SECRETS='DRUPAL_ADMIN_PASS|DB_PASSWORD|DB_ROOT_PASSWORD|DRUPAL_HASH_SALT|SPONSOR_RELAYER_PRIVATE_KEY|SPONSOR_RELAYER_TOKEN'
+# The three refusal lines of check_secret, by key
+line_missing() { printf '%s' "::error::This app's settings do not show $1 as held. Only the run that creates a site writes its keys and passwords: create the site again, or the site's owner must place the key. Nothing was stored or sent."; }
+line_taken()   { printf '%s' "::error::The app this run just created already shows a value for $1, so this run does not write it. Nothing was stored or sent."; }
+line_unclear() { printf '%s' "::error::This app's settings did not clearly show $1. Nothing was stored or sent."; }
 
 # Provision contract v1 fixtures (23-03 interfaces block)
 PID="k3Jx9_Qm-2LpWv7RtYd4Nz"
@@ -56,6 +64,20 @@ step_script() {  # step_script NAME -> the step's run: text on stdout, nonzero w
   jq -j --arg n "$1" '[.jobs.provision.steps[] | select(.name == $n)] | if length == 0 then (("no step " + $n + "\n") | halt_error(1)) else .[0].run end' "$WORK/wf.json"
 }
 
+# The compose defaults of the four generated secrets, read from docker-compose.yaml (${KEY:-default}), never typed here.
+COMPOSE_FILE="${COMPOSE_FILE:-$REPO/docker-compose.yaml}"
+compose_default() {  # compose_default KEY -> the default docker-compose.yaml gives the key; nonzero when it names none
+  local d
+  d="$(grep -m1 -oE "\\\$\\{$1:-[^}]*\\}" "$COMPOSE_FILE")" || return 1
+  d="${d#\$\{$1:-}"
+  printf '%s' "${d%\}}"
+}
+COMPOSE_DEFAULTS='{}'
+for k in DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT; do
+  d="$(compose_default "$k")" || { FAIL=$((FAIL + 1)); echo "FAIL - docker-compose.yaml names no default for $k"; continue; }
+  COMPOSE_DEFAULTS="$(jq -c --arg k "$k" --arg v "$d" '. + {($k): $v}' <<<"$COMPOSE_DEFAULTS")"
+done
+
 # A fresh Coolify app as the compose parse leaves it: compose defaults, one duplicate,
 # and a preview copy of the admin password.
 reset_state() {
@@ -64,16 +86,18 @@ reset_state() {
 [
  {"uuid":"u1","key":"DEMO_MODULE","value":"localnodes_demo","is_preview":false},
  {"uuid":"u2","key":"DRUPAL_SITE_NAME","value":"LocalNodes","is_preview":false},
- {"uuid":"u3","key":"DRUPAL_ADMIN_PASS","value":"compose-default","is_preview":false},
+ {"uuid":"u3","key":"DRUPAL_ADMIN_PASS","value":"FROM-COMPOSE","is_preview":false},
  {"uuid":"u4","key":"IMAGE_TAG","value":"latest","is_preview":false},
- {"uuid":"u5","key":"DB_PASSWORD","value":"changeme","is_preview":false},
- {"uuid":"u6","key":"DB_ROOT_PASSWORD","value":"rootpassword","is_preview":false},
- {"uuid":"u7","key":"DRUPAL_HASH_SALT","value":"generate-random","is_preview":false},
+ {"uuid":"u5","key":"DB_PASSWORD","value":"FROM-COMPOSE","is_preview":false},
+ {"uuid":"u6","key":"DB_ROOT_PASSWORD","value":"FROM-COMPOSE","is_preview":false},
+ {"uuid":"u7","key":"DRUPAL_HASH_SALT","value":"FROM-COMPOSE","is_preview":false},
  {"uuid":"u8","key":"GEMINI_API_KEY","value":"","is_preview":false},
- {"uuid":"u9","key":"DB_PASSWORD","value":"changeme","is_preview":false},
- {"uuid":"p3","key":"DRUPAL_ADMIN_PASS","value":"compose-default","is_preview":true}
+ {"uuid":"u9","key":"DB_PASSWORD","value":"FROM-COMPOSE","is_preview":false},
+ {"uuid":"p3","key":"DRUPAL_ADMIN_PASS","value":"FROM-COMPOSE","is_preview":true}
 ]
 JSON
+  D="$COMPOSE_DEFAULTS" jq '(env.D | fromjson) as $d | map(if .value == "FROM-COMPOSE" then .value = $d[.key] else . end)' \
+    "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
   : > "$WORK/state/requests.log"
   : > "$WORK/state/bodies.log"
   : > "$WORK/state/auth.log"
@@ -83,21 +107,33 @@ JSON
  "host_report_email":"$MANIFEST_HOST","community_template":"housing_coop"}
 JSON
   : > "$WORK/github_env"
+  : > "$WORK/github_output"
   : > "$WORK/summary.md"
+}
+# seed_old_secrets: the app as a complete first provisioning left it, with real values the database was created with
+# (the DB passwords, hash salt and admin password: every site holds these). A later run keeps them.
+seed_old_secrets() {
+  reset_state
+  jq 'map(if .key == "DB_PASSWORD" then .value = "olddbpass" elif .key == "DB_ROOT_PASSWORD" then .value = "oldrootpass"
+            elif .key == "DRUPAL_HASH_SALT" then .value = "oldsalt" elif .key == "DRUPAL_ADMIN_PASS" and (.is_preview | not) then .value = "oldadminpass" else . end)' \
+    "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 }
 
 # run_step STEP SCENARIO [NAME=VALUE ...] -> sets RC, OUT (stdout+stderr)
+# The Configure step gets CREATED_APP_UUID=app123 (the Create step's output in this run) unless the case passes REUSE=true
+# or its own CREATED_APP_UUID (an empty one included).
 run_step() {
-  local name="$1" scenario="$2"; shift 2
+  local name="$1" scenario="$2" own="CREATED_APP_UUID=app123" a; shift 2
+  for a in "$@"; do case "$a" in REUSE=true|CREATED_APP_UUID=*) own="CREATED_APP_UUID=" ;; esac; done
   step_script "$name" > "$WORK/step.sh" || { RC=99; OUT="extract failed"; return; }
   OUT="$(cd "$WORK" && env -i PATH="$WORK/bin:/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin" HOME="$WORK" \
     FAKE_STATE="$WORK/state" FAKE_SCENARIO="$scenario" \
     COOLIFY_API="http://coolify.test/api/v1" COOLIFY_TOKEN="test-token" SIGNUP_ORIGIN="https://cb.test" \
     COOLIFY_PROJECT="proj" COOLIFY_SERVER="srv" COOLIFY_ENV="production" \
     GIT_REPO="https://github.com/LocalNodes/os-knowledge-garden" GIT_BRANCH="main" \
-    GITHUB_ENV="$WORK/github_env" GITHUB_STEP_SUMMARY="$WORK/summary.md" \
+    GITHUB_ENV="$WORK/github_env" GITHUB_STEP_SUMMARY="$WORK/summary.md" GITHUB_OUTPUT="$WORK/github_output" \
     APP_UUID="app123" SUBDOMAIN="demo" FQDN="demo.localnodes.xyz" DEPLOY_UUID="dep123" \
-    "$@" bash --noprofile --norc ${STEP_FLAGS:--eo pipefail} "$WORK/step.sh" 2>&1)"
+    "$own" "$@" bash --noprofile --norc ${STEP_FLAGS:--eo pipefail} "$WORK/step.sh" 2>&1)"
   RC=$?
 }
 
@@ -497,10 +533,10 @@ reset_state; run_step "Configure environment variables" post409_once "${CONFIG_D
 check "409 from a concurrent create is retried and succeeds" '[ $RC -eq 0 ] && [ "$(stored ORGANIZER_EMAIL)" = o@example.org ]'
 
 # DEMO_MODULE_INPUT=none keeps MAIL_FROM out, and the fixture store holds every key up to the
-# relayer key (and no site name is set), so SPONSOR_RELAYER_PRIVATE_KEY (25-09) is the first
-# missing (POSTed) key
+# web3 mode (and no site name is set), so WEB3_ENABLED is the first missing (POSTed) key: the
+# relayer key is made only inside practice now, after the mode.
 reset_state; run_step "Configure environment variables" post409_always "${CONFIG_DEFAULTS[@]}" ORGANIZER_EMAIL=o@example.org DEMO_MODULE_INPUT=none SITE_NAME=
-check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* SPONSOR_RELAYER_PRIVATE_KEY$" "$WORK/state/requests.log")" -eq 3 ]'
+check "persistent 409 fails after 3 bounded attempts" '[ $RC -ne 0 ] && grep -q "still conflicting after 3 attempts" <<<"$OUT" && [ "$(grep -c "^POST .* WEB3_ENABLED$" "$WORK/state/requests.log")" -eq 3 ]'
 
 echo "# Configure environment variables: curl exit status and duplicate deletion"
 reset_state; run_step "Configure environment variables" curl23 "${CONFIG_DEFAULTS[@]}"
@@ -539,11 +575,11 @@ check "IMAGE_TAG read back different from the pin fails" '[ $RC -ne 0 ] && grep 
 
 reset_state; run_step "Configure environment variables" dupes_after "${CONFIG_DEFAULTS[@]}"
 PASSWD="$(jq -r '.[] | select(.uuid == "u3") | .value' "$WORK/state/envs.json" 2>/dev/null)"
-check "password lost to dedup (stale row kept) fails the read-back" '[ $RC -ne 0 ] && grep -q "DRUPAL_ADMIN_PASS: saved value does not match" <<<"$OUT"'
+check "a stale admin password row that appears ahead of ours is never chosen by list order: the cleanup stops on two different values" '[ $RC -ne 0 ] && grep -qxF "::error::DRUPAL_ADMIN_PASS has two different saved values; no duplicate was deleted. A person has to choose which one to keep." <<<"$OUT" && ! grep -q "^DELETE .*/envs/stale1 " "$WORK/state/requests.log" && ! grep -q "^DELETE .*/envs/u3 " "$WORK/state/requests.log"'
 check "  ...without printing any password" '! grep -qE "[0-9a-f]{32}" <<<"$(grep -v "^::add-mask::" <<<"$OUT")"'
 
 reset_state; run_step "Configure environment variables" hidden "${CONFIG_DEFAULTS[@]}"
-check "token without read:sensitive fails closed" '[ $RC -ne 0 ] && grep -q "needs read:sensitive" <<<"$OUT"'
+check "token without read:sensitive fails closed: the key check cannot read the admin password row, before any write" '[ $RC -ne 0 ] && grep -qxF "$(line_unclear DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all'
 
 echo "# Configure environment variables: group funds and decisions"
 # The practice RPC is read from the step's env, as GitHub would pass it
@@ -551,30 +587,66 @@ WF_RPC="$(jq -r '[.jobs.provision.steps[] | select(.name == "Configure environme
 check "the practice RPC is a public keyless https URL (no key in it)" '[[ "$WF_RPC" =~ ^https://[A-Za-z0-9.-]+$ ]]'
 check "both steps receive the input through env:" '[ "$(jq -r "[.jobs.provision.steps[] | select(.env.WEB3_INPUT == \"\${{ inputs.web3 }}\") | .name] | join(\",\")" "$WORK/wf.json")" = "Validate inputs,Configure environment variables" ]'
 check "the input is a choice of off or practice, default off" '[ "$(jq -c ".true.workflow_dispatch.inputs.web3 | [.type, .options, .default]" "$WORK/wf.json")" = "[\"choice\",[\"off\",\"practice\"],\"off\"]" ]'
-WEB3_KEYS='WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT'
-w3_written() {  # the web3 names this run wrote (PATCH or POST bodies), sorted, space separated
-  for k in $WEB3_KEYS; do grep -q "\"key\": *\"$k\"" "$WORK/state/bodies.log" && printf '%s ' "$k"; done
+WEB3_KEYS='WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN FEE_WALLET_SCALE'
+w3_written() {  # the web3 names this run wrote (a PATCH or POST line in requests.log), in WEB3_KEYS order, space separated
+  for k in $WEB3_KEYS; do grep -qE "^(PATCH|POST) .*/envs $k$" "$WORK/state/requests.log" && printf '%s ' "$k"; done
+}
+first_write() {  # first_write KEY -> the line number of the first PATCH or POST of KEY in requests.log (empty when never written)
+  grep -nE "^(PATCH|POST) .*/envs $1$" "$WORK/state/requests.log" | head -1 | cut -d: -f1
 }
 reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
 check "practice succeeds and reads the four values back" '[ $RC -eq 0 ] && grep -q "Verified WEB3_ENABLED" <<<"$OUT" && grep -q "Verified SIWE_CHAIN_ID" <<<"$OUT" && grep -q "Verified SIWE_CHAIN_RPC_URL" <<<"$OUT" && grep -q "Verified WAAP_ENVIRONMENT" <<<"$OUT"'
 check "  ...WEB3_ENABLED=true, SIWE_CHAIN_ID=11155111, SIWE_CHAIN_RPC_URL=the public RPC" '[ "$(stored WEB3_ENABLED)" = true ] && [ "$(stored SIWE_CHAIN_ID)" = 11155111 ] && [ "$(stored SIWE_CHAIN_RPC_URL)" = "$WF_RPC" ]'
 check "  ...WAAP_ENVIRONMENT=production (pilots use WaaP production)" '[ "$(stored WAAP_ENVIRONMENT)" = production ]'
-check "  ...exactly those web3 names were written" '[ "$(w3_written)" = "WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT " ]'
-check "  ...the relayer key and token are checked by presence" 'grep -q "Verified SPONSOR_RELAYER_PRIVATE_KEY (present; value not read back)" <<<"$OUT" && grep -q "Verified SPONSOR_RELAYER_TOKEN (present; value not read back)" <<<"$OUT"'
+check "  ...exactly those web3 names were written, the key, token and FEE_WALLET_SCALE included" '[ "$(w3_written)" = "WEB3_ENABLED SIWE_CHAIN_ID SIWE_CHAIN_RPC_URL WAAP_ENVIRONMENT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN FEE_WALLET_SCALE " ]'
+# The mode is written first; an attempt that dies later leaves a held true
+W_MODE="$(first_write WEB3_ENABLED)"; W_KEY="$(first_write SPONSOR_RELAYER_PRIVATE_KEY)"; W_TOK="$(first_write SPONSOR_RELAYER_TOKEN)"; W_PROF="$(first_write FEE_WALLET_SCALE)"
+check "  ...WEB3_ENABLED is written before the key, the token and FEE_WALLET_SCALE (requests.log order)" \
+  '[ -n "$W_MODE" ] && [ -n "$W_KEY" ] && [ -n "$W_TOK" ] && [ -n "$W_PROF" ] && [ "$W_MODE" -lt "$W_KEY" ] && [ "$W_MODE" -lt "$W_TOK" ] && [ "$W_MODE" -lt "$W_PROF" ]'
+check "  ...FEE_WALLET_SCALE is 1 and is verified by value" '[ "$(stored FEE_WALLET_SCALE)" = 1 ] && grep -qx "  Verified FEE_WALLET_SCALE" <<<"$OUT"'
+check "  ...the relayer key and token are read back by value" 'grep -qx "  Verified SPONSOR_RELAYER_PRIVATE_KEY" <<<"$OUT" && grep -qx "  Verified SPONSOR_RELAYER_TOKEN" <<<"$OUT"'
 RK="$(stored SPONSOR_RELAYER_PRIVATE_KEY)"; RT="$(stored SPONSOR_RELAYER_TOKEN)"
 check "  ...the relayer key and token appear in output only on ::add-mask:: lines" '[ -n "$RK" ] && [ "$(grep -F -e "${RK#0x}" -e "$RT" <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
 for W3 in off ""; do
   reset_state; run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT="$W3" PRACTICE_RPC_URL="$WF_RPC"
-  check "web3='$W3' succeeds and writes WEB3_ENABLED=false only" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(w3_written)" = "WEB3_ENABLED " ] && grep -q "Verified WEB3_ENABLED" <<<"$OUT"'
+  check "web3='$W3' succeeds and writes WEB3_ENABLED=false and FEE_WALLET_SCALE=0 only, and verifies both by value" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(stored FEE_WALLET_SCALE)" = 0 ] && [ "$(w3_written)" = "WEB3_ENABLED FEE_WALLET_SCALE " ] && grep -qx "  Verified WEB3_ENABLED" <<<"$OUT" && grep -qx "  Verified FEE_WALLET_SCALE" <<<"$OUT"'
+  check "  ...no PATCH or POST names the relayer key or the token (SC2, requests.log)" \
+    '! grep -qE "^(PATCH|POST) .*/envs (SPONSOR_RELAYER_PRIVATE_KEY|SPONSOR_RELAYER_TOKEN)$" "$WORK/state/requests.log"'
 done
+# The scale row and the key are checked after the write: a fake that drops or changes them fails the step
+reset_state; run_step "Configure environment variables" drop_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a FEE_WALLET_SCALE that did not stick fails practice with env_failed" \
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+reset_state; run_step "Configure environment variables" drop_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "  ...and a FEE_WALLET_SCALE=0 that did not stick fails off with env_failed too (the off branch verifies it)" \
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+reset_state; run_step "Configure environment variables" readback_wrong_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a FEE_WALLET_SCALE read back with another value fails practice with env_failed" \
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: saved value does not match" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+reset_state; run_step "Configure environment variables" readback_wrong_scale "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "  ...and a FEE_WALLET_SCALE read back with another value fails off with env_failed" \
+  '[ $RC -ne 0 ] && grep -q "FEE_WALLET_SCALE: saved value does not match" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+# Chain: practice attempt 1 dies writing the key, then an off attempt 2 on the same app. No reset between.
+reset_state; run_step "Configure environment variables" fail_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "chain: a practice attempt 1 that dies writing the key fails with env_failed and stores no key" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && [ -z "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" ]'
+: > "$WORK/state/requests.log"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
+check "  ...an off attempt 2 on the same app is refused with no PATCH, POST or DELETE" \
+  '[ $RC -ne 0 ] && grep -q "a retry with them off is refused" <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log"'
 # A new app (no REUSE) never holds a stale true, but off would still write false over one
 reset_state
 jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":"true","is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "off on an app holding WEB3_ENABLED=true sets it back to false" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ]'
+# A held fee wallet (throwaway values): the key 0x + ab x32, the token cd x32. Only a practice attempt makes these
+HK="$(printf 'ab%.0s' $(seq 32))"; HT="$(printf 'cd%.0s' $(seq 32))"
+add_rows() {  # add_rows JSON_ARRAY -> appends those rows to the fixture store (in order, after the rows it already holds)
+  R="$1" jq '. + (env.R | fromjson)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+}
 # A retry that reuses its own app: one set up with web3 on is never switched off
-hold_web3() {  # hold_web3 VALUE -> a fresh store whose app already holds WEB3_ENABLED=VALUE
-  reset_state
+hold_web3() {  # hold_web3 VALUE -> an app a first provisioning left (held secrets) that holds WEB3_ENABLED=VALUE
+  seed_old_secrets
   V="$1" jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":env.V,"is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 }
 for W3 in off ""; do
@@ -592,25 +664,85 @@ done
 for SC in envs_down envs_get503 envs_garbage envs_empty envs_blank; do
   hold_web3 true
   STEP_FLAGS=-e run_step "Configure environment variables" "$SC" "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
-  check "a reused app whose settings cannot be read ($SC) stops at the mode check before any write" \
-    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qF "Could not read this app'"'"'s settings to check its group funds mode; nothing was changed." <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log" && [ "$(stored WEB3_ENABLED)" = true ]'
+  check "a reused app whose settings cannot be read ($SC) stops at the first read before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::Could not read this app'"'"'s settings, or this token cannot read their values; nothing was stored or sent." <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log" && [ "$(stored WEB3_ENABLED)" = true ]'
 done
 reset_state
 jq '. + [{"uuid":"w1","key":"WEB3_ENABLED","value":"false","is_preview":false},{"uuid":"w2","key":"WEB3_ENABLED","value":"true","is_preview":false}]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
 STEP_FLAGS=-e run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "a reused app with a false copy ahead of a true one is still refused" \
   '[ $RC -ne 0 ] && grep -q "a retry with them off is refused" <<<"$OUT" && ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log"'
-hold_web3 true
+hold_web3 true; add_rows '[{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":false},{"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$HT"'","is_preview":false}]'
 run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-check "a reused practice app retried with practice goes ahead" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = true ]'
+check "a reused practice app holding its key and token, retried with practice, goes ahead" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = true ]'
 hold_web3 false
-run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-check "a reused app holding false (also the compose default) may be retried with practice" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = true ]'
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "a reused app holding false and no key, retried with practice, is refused before any write (only the run that creates a site writes its key)" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_missing SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT" && no_writes_at_all && [ "$(stored WEB3_ENABLED)" = false ]'
 hold_web3 false
 run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "a reused off app retried with off goes ahead" '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ]'
+# An off retry of an app that already holds any part of the fee wallet is refused before any write.
+# A held non-empty key or token, or a held FEE_WALLET_SCALE that is neither empty nor 0, counts; empty or null rows
+# (what Coolify's compose parse leaves), a held 0 and preview copies do not; a row with no readable value is refused too, before
+# any write.
+HELD_MSG="set up with group funds and decisions on (practice); a retry with them off is refused"
+UNREAD_MSG="Could not read this app's settings, or this token cannot read their values; nothing was stored or sent."
+off_retry() {  # off_retry SCENARIO WEB3_VALUE -> an attempt-2 retry of the same app, run as GitHub does (bash -e, no pipefail)
+  STEP_FLAGS=-e run_step "Configure environment variables" "$1" "${CONFIG_DEFAULTS[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT="$2" PRACTICE_RPC_URL="$WF_RPC"
+}
+no_writes() { ! grep -qE "^(PATCH|POST|DELETE) " "$WORK/state/requests.log"; }
+MODE_FALSE='{"uuid":"w1","key":"WEB3_ENABLED","value":"false","is_preview":false}'
+for W3 in off ""; do
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': an off retry of an app holding a relayer key is refused before any write, and the key stays" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -q "$HELD_MSG" <<<"$OUT" && no_writes && [ "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" = "0x$HK" ]'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$HT"'","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': an off retry of an app holding a relayer token is refused before any write, and the token stays" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -q "$HELD_MSG" <<<"$OUT" && no_writes && [ "$(stored SPONSOR_RELAYER_TOKEN)" = "$HT" ]'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"c1","key":"FEE_WALLET_SCALE","value":"1","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': an off retry of an app holding FEE_WALLET_SCALE=1 is refused before any write, and the setting stays" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -q "$HELD_MSG" <<<"$OUT" && no_writes && [ "$(stored FEE_WALLET_SCALE)" = 1 ]'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"c2","key":"FEE_WALLET_SCALE","value":"2","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': an off retry of an app holding any other FEE_WALLET_SCALE (2) is refused before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -q "$HELD_MSG" <<<"$OUT" && no_writes && [ "$(stored FEE_WALLET_SCALE)" = 2 ]'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"c3","key":"FEE_WALLET_SCALE","value":"0","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': an off retry of an app holding FEE_WALLET_SCALE=0 goes ahead (the fee service is already off) and writes the pair only" \
+    '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(stored FEE_WALLET_SCALE)" = 0 ] && [ "$(w3_written)" = "WEB3_ENABLED FEE_WALLET_SCALE " ]'
+  # Pitfall 5: the rows Coolify's compose parse makes are empty, duplicated, or null
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"e1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},
+    {"uuid":"e2","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},{"uuid":"e3","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
+    {"uuid":"e4","key":"FEE_WALLET_SCALE","value":"","is_preview":false},{"uuid":"e5","key":"FEE_WALLET_SCALE","value":"","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': empty and duplicated-empty rows (the scale row included) do not count: the off retry goes ahead and writes the pair only" \
+    '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(w3_written)" = "WEB3_ENABLED FEE_WALLET_SCALE " ]'
+  # A null row is not shown to mean empty: a duplicate group holding one stops the cleanup before any write
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"e4","key":"FEE_WALLET_SCALE","value":null,"is_preview":false},{"uuid":"e5","key":"FEE_WALLET_SCALE","value":"","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': a null scale row next to an empty one stops the cleanup with the unreadable line before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::FEE_WALLET_SCALE has duplicate rows whose values cannot be read (the API token needs read:sensitive); no duplicate was deleted." <<<"$OUT" && no_writes_at_all'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"v1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":true},
+    {"uuid":"v2","key":"FEE_WALLET_SCALE","value":"1","is_preview":true}]'
+  off_retry ok "$W3"
+  check "web3='$W3': a held value only on a preview row does not count: the off retry goes ahead" \
+    '[ $RC -eq 0 ] && [ "$(stored WEB3_ENABLED)" = false ] && [ "$(w3_written)" = "WEB3_ENABLED FEE_WALLET_SCALE " ]'
+  # A row that cannot be read is refused
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","is_preview":false}]'
+  off_retry ok "$W3"
+  check "web3='$W3': a relayer key row with no readable value is refused before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qF "$UNREAD_MSG" <<<"$OUT" && no_writes'
+  seed_old_secrets; add_rows "[$MODE_FALSE,"'{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":false}]'
+  off_retry hidden "$W3"
+  check "web3='$W3': the hidden scenario (a token without read:sensitive) with a held key is refused the same way, and the key stays" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qF "$UNREAD_MSG" <<<"$OUT" && no_writes && [ "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" = "0x$HK" ]'
+done
 reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
-check "a relayer key that did not stick fails the presence check" '[ $RC -ne 0 ] && grep -q "SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
+check "a relayer key that did not stick fails the read-back" '[ $RC -ne 0 ] && grep -q "SPONSOR_RELAYER_PRIVATE_KEY: expected exactly one readable production variable" <<<"$OUT" && [ "$(genv FAIL_REASON)" = env_failed ]'
 reset_state; run_step "Configure environment variables" drop_relayer_key "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=off PRACTICE_RPC_URL="$WF_RPC"
 check "  ...but web3 off does not check it (off changes nothing)" '[ $RC -eq 0 ] && ! grep -q "Verified SPONSOR_RELAYER" <<<"$OUT"'
 
@@ -802,6 +934,14 @@ reset_state; run_step "Check subdomain availability" list_garbage "${RETRY[@]}"
 check "an unreadable application list fails with coolify_unreachable (it must not read as free)" '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = coolify_unreachable ]'
 check "  ...no application or app uuid text from Coolify reaches the log on a reuse" \
   'reset_state; run_step "Check subdomain availability" reuse "${RETRY[@]}"; ! grep -q "ln-provision" <<<"$OUT"'
+# An application list answered with an empty body, or with something that is not a list ({}), is not "nothing on the domain":
+# the step stops with the fixed error and coolify_unreachable, and no app is taken over or made.
+for BODY in '' '{}'; do
+  reset_state; printf '%s' "$BODY" > "$WORK/state/apps.json"
+  run_step "Check subdomain availability" ok "${RETRY[@]}"
+  check "an application list answered with '${BODY:-an empty body}' stops with the fixed error and coolify_unreachable (it must not read as free)" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = coolify_unreachable ] && grep -qxF "::error::The Coolify application list could not be read." <<<"$OUT" && ! grep -q "is available" <<<"$OUT" && [ -z "$(genv REUSE)" ] && [ -z "$(genv APP_UUID)" ]'
+done
 
 reset_state; run_step "Create Coolify application" ok PROVISION_ID_INPUT="$PID"
 check "create tags the app with the description ln-provision:{provision_id}" \
@@ -817,35 +957,243 @@ DELETES="$(grep -vE '^\s*#' "$WF" | grep -E -- '(-X *|--request +)DELETE')"
 check "the workflow never deletes an application (its only DELETE calls are env-var rows under \$ENVS_URL)" \
   '[ -n "$DELETES" ] && [ -z "$(grep -v "ENVS_URL" <<<"$DELETES")" ]'
 
-echo "# A reused app keeps its generated secrets (its database already holds them)"
-# seed_old_secrets: the app as a first attempt left it, with real values the database was created with
-seed_old_secrets() {
-  reset_state
-  jq 'map(if .key == "DB_PASSWORD" then .value = "olddbpass" elif .key == "DB_ROOT_PASSWORD" then .value = "oldrootpass"
-            elif .key == "DRUPAL_HASH_SALT" then .value = "oldsalt" elif .key == "DRUPAL_ADMIN_PASS" and (.is_preview | not) then .value = "oldadminpass" else . end)
-      + [{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$(printf 'ab%.0s' $(seq 32))"'","is_preview":false},
-         {"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$(printf 'cd%.0s' $(seq 32))"'","is_preview":false}]' \
-    "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+echo "# Keys and passwords are written only by the run that creates the site"
+# A secret name is written only by the run that creates its row; an existing row is never replaced or deleted by a
+# workflow, whatever it reads as. The rows of a new site are created with the site, so this means the run that creates
+# the site (the Create step's output in the same run). Every later run keeps a name whose rows all hold one value and
+# refuses anything else before its first write. Every case compares the six names' stored rows (uuid and value) before
+# and after the run, so a DELETE or a write under one of them shows, whatever requests.log says.
+seed_old_pair() {  # the same app, as a practice first provisioning left it
+  seed_old_secrets
+  add_rows '[{"uuid":"w1","key":"WEB3_ENABLED","value":"true","is_preview":false},
+             {"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":false},
+             {"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$HT"'","is_preview":false}]'
 }
-seed_old_secrets; run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2
-check "on a reused app the database passwords, hash salt and admin password it already holds are kept" \
-  '[ $RC -eq 0 ] && [ "$(stored DB_PASSWORD)" = olddbpass ] && [ "$(stored DB_ROOT_PASSWORD)" = oldrootpass ] && [ "$(stored DRUPAL_HASH_SALT)" = oldsalt ] && [ "$(stored DRUPAL_ADMIN_PASS)" = oldadminpass ]'
+reset_parsed() {  # a new app as Coolify's compose parse leaves it, with the empty relayer rows (the token twice)
+  reset_state
+  add_rows '[{"uuid":"pk1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},
+             {"uuid":"pt1","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
+             {"uuid":"pt2","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false}]'
+}
+secret_rows() { jq -cS --arg re "^($SIX_SECRETS)\$" '[.[] | select(.key | test($re))] | sort_by(.uuid)' "$WORK/state/envs.json"; }
+store() { jq -cS . "$WORK/state/envs.json"; }
+clear_logs() { : > "$WORK/state/requests.log"; : > "$WORK/state/bodies.log"; : > "$WORK/github_env"; : > "$WORK/github_output"; }
+no_secret_sent() { ! jq -Rr 'fromjson? | .key? // empty' "$WORK/state/bodies.log" | grep -qxE "$SIX_SECRETS"; }
+no_secret_request() { ! grep -qE "^(PATCH|POST) [^ ]*/envs ($SIX_SECRETS)\$" "$WORK/state/requests.log"; }
+writes_of() { grep -cE "^(PATCH|POST) [^ ]*/envs $1\$" "$WORK/state/requests.log"; }
 sent_only() {  # sent_only KEY VALUE -> every body sent for KEY (and there is one) carries exactly VALUE
   jq -s -e --arg k "$1" --arg v "$2" '[.[] | select(.key == $k)] | length > 0 and all(.value == $v)' "$WORK/state/bodies.log" >/dev/null
 }
-check "  ...and the only values sent for them are the held ones (no new secret is ever offered to the app)" \
-  'sent_only DB_PASSWORD olddbpass && sent_only DB_ROOT_PASSWORD oldrootpass && sent_only DRUPAL_HASH_SALT oldsalt && sent_only DRUPAL_ADMIN_PASS oldadminpass'
-check "  ...the relayer key and token it holds are kept as well" \
-  'sent_only SPONSOR_RELAYER_PRIVATE_KEY "0x$(printf "ab%.0s" $(seq 32))" && sent_only SPONSOR_RELAYER_TOKEN "$(printf "cd%.0s" $(seq 32))" && [ "$(stored SPONSOR_RELAYER_TOKEN)" = "$(printf "cd%.0s" $(seq 32))" ]'
-check "  ...a kept secret is masked and never printed" \
-  '[ "$(grep -F -e olddbpass -e oldrootpass -e oldadminpass -e oldsalt <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
-check "  ...the admin password read-back still passes (it checks the kept value)" 'grep -q "Verified DRUPAL_ADMIN_PASS" <<<"$OUT"'
-reset_state; run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2
-check "a reused app whose secrets are still the compose defaults gets fresh ones" \
-  '[ $RC -eq 0 ] && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]] && [[ "$(stored DRUPAL_HASH_SALT)" =~ ^[0-9a-f]{64}$ ]]'
-seed_old_secrets; run_step "Configure environment variables" ok "${SIGNUP[@]}"
-check "a fresh app (no REUSE) always gets newly generated secrets" \
-  '[ $RC -eq 0 ] && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]] && [[ "$(stored DRUPAL_ADMIN_PASS)" =~ ^[0-9a-f]{32}$ ]]'
+deleted() { grep -qE "^DELETE .*/envs/$1 " "$WORK/state/requests.log"; }
+row_value() { U="$1" jq -r '[.[] | select(.uuid == env.U)][0].value // ""' "$WORK/state/envs.json"; }
+row_count() { U="$1" jq -r '[.[] | select(.uuid == env.U)] | length' "$WORK/state/envs.json"; }
+prod_rows() { K="$1" jq -r '[.[] | select(.key == env.K and (.is_preview | not))] | length' "$WORK/state/envs.json"; }
+# each_once KEY...: one production row each, and every body sent for it carries the one value stored (a missing row is a
+# PATCH that answers 404, then a POST, of the same body)
+each_once() {
+  local k
+  for k in "$@"; do
+    { [ "$(prod_rows "$k")" -eq 1 ] && [ "$(jq -s --arg k "$k" '[.[] | select(.key == $k) | .value] | unique | length' "$WORK/state/bodies.log")" -eq 1 ] \
+      && jq -s -e --arg k "$k" --arg v "$(stored "$k")" '[.[] | select(.key == $k)] | length > 0 and all(.value == $v)' "$WORK/state/bodies.log" >/dev/null; } || return 1
+  done
+}
+none_deleted() { local u; for u in $(jq -r ".[].uuid" <<<"$1"); do deleted "$u" && return 1; done; return 0; }  # none_deleted ROWS_JSON
+none_shown() { local v; while IFS= read -r v; do [ -n "$v" ] && grep -qF -- "$v" <<<"$OUT" && return 1; done < <(jq -r '.[].value // empty' <<<"$1"); return 0; }  # none_shown ROWS_JSON
+retry() {  # retry SCENARIO WEB3 -> attempt 2 of the sign-up on the app the store holds, run as GitHub does (bash -e)
+  STEP_FLAGS=-e run_step "Configure environment variables" "$1" "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2 WEB3_INPUT="$2" PRACTICE_RPC_URL="$WF_RPC"
+}
+practice_retry() { retry "$1" practice; }
+HELD_TRUE='{"uuid":"w1","key":"WEB3_ENABLED","value":"true","is_preview":false}'
+S1='{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"0x'"$HK"'","is_preview":false}'
+S2='{"uuid":"s2","key":"SPONSOR_RELAYER_TOKEN","value":"'"$HT"'","is_preview":false}'
+
+# (A) The first provisioning makes each secret once
+for W3 in practice off; do
+  reset_parsed; run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT="$W3" PRACTICE_RPC_URL="$WF_RPC"
+  check "first provisioning ($W3): the run that creates the app succeeds and makes each database and admin secret once (one value sent, one row holding it, new random values)" \
+    '[ $RC -eq 0 ] && each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT && [[ "$(stored DB_PASSWORD)" =~ ^[0-9a-f]{32}$ ]] && [[ "$(stored DRUPAL_HASH_SALT)" =~ ^[0-9a-f]{64}$ ]] && [[ "$(stored DRUPAL_ADMIN_PASS)" =~ ^[0-9a-f]{32}$ ]]'
+done
+check "  ...with funds on (practice) the key and token too, once each, one row each; off writes neither" \
+  'reset_parsed; run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"; [ $RC -eq 0 ] && [ "$(writes_of SPONSOR_RELAYER_PRIVATE_KEY)" -eq 1 ] && [ "$(writes_of SPONSOR_RELAYER_TOKEN)" -eq 1 ] && [ "$(prod_rows SPONSOR_RELAYER_TOKEN)" -eq 1 ] && [[ "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" =~ ^0x[0-9a-f]{64}$ ]]'
+reset_state; jq --arg re "^($SIX_SECRETS)\$" '[.[] | select(.key | test($re) | not)]' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "first provisioning with no rows of the six names: each is made once (one value sent, one row holding it)" \
+  '[ $RC -eq 0 ] && each_once DRUPAL_ADMIN_PASS DB_PASSWORD DB_ROOT_PASSWORD DRUPAL_HASH_SALT SPONSOR_RELAYER_PRIVATE_KEY SPONSOR_RELAYER_TOKEN'
+# The run that creates the app refuses a name that already shows a real-looking value: a new app shows none
+reset_state; jq 'map(if .uuid == "u6" then .value = "not-from-compose" else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+BEFORE="$(store)"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}"
+check "the creating run finds a value already under DB_ROOT_PASSWORD: refused with its line, before any write, the store as it was" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_taken DB_ROOT_PASSWORD)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+
+# (B) A second run keeps what the first made: nothing written or deleted under the six names
+for W3 in practice off; do
+  reset_parsed; run_step "Configure environment variables" ok "${SIGNUP[@]}" WEB3_INPUT="$W3" PRACTICE_RPC_URL="$WF_RPC"
+  FIRST_RC=$RC; BEFORE="$(secret_rows)"; clear_logs
+  retry ok "$W3"
+  check "second run ($W3): the first run succeeded, the retry succeeds and keeps every secret: the six names' rows are as the first run left them" \
+    '[ "$FIRST_RC" -eq 0 ] && [ $RC -eq 0 ] && [ "$(secret_rows)" = "$BEFORE" ]'
+  check "  ...no write, no body and no DELETE under any of the six names" \
+    'no_secret_request && no_secret_sent && none_deleted "$BEFORE"'
+  check "  ...no held secret value appears anywhere in the output (a kept value never reaches the shell)" 'none_shown "$BEFORE"'
+done
+# A later run with equal duplicate rows of a held secret keeps both and deletes neither; a non-secret duplicate is still cleaned
+seed_old_secrets; add_rows '[{"uuid":"m1","key":"MAIL_FROM","value":"","is_preview":false},{"uuid":"m2","key":"MAIL_FROM","value":"","is_preview":false}]'
+BEFORE="$(secret_rows)"
+retry ok off
+check "a later run on two equal DB_PASSWORD rows keeps both (no DELETE under a secret name) and still cleans a duplicate of another setting" \
+  '[ $RC -eq 0 ] && [ "$(secret_rows)" = "$BEFORE" ] && ! deleted u5 && ! deleted u9 && { deleted m1 || deleted m2; } && no_secret_request'
+
+# (C) An interrupted first provisioning is not resumed: a retry that finds a name empty or at its default refuses, and the row stays
+reset_parsed; BEFORE="$(store)"
+retry ok off
+check "interrupted before any secret was written (every row as the compose parse left it): the retry is refused with the create-again line" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT"'
+check "  ...before any write of any kind: the store is as it was (the empty rows kept)" 'no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+reset_parsed; STEP_FLAGS=-e run_step "Configure environment variables" fail_key "${SIGNUP[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+FIRST_RC=$RC; BEFORE="$(store)"; clear_logs
+practice_retry ok
+check "interrupted at the key write (the database and admin secrets made, the key row left empty): the first run failed, the retry is refused naming the key" \
+  '[ "$FIRST_RC" -ne 0 ] && [ "$(row_value pk1)" = "" ] && [ "$(row_count pk1)" -eq 1 ] && [ $RC -ne 0 ] && grep -qxF "$(line_missing SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT"'
+check "  ...before any write of any kind: the empty key row and every made secret are as the first run left them" 'no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+
+# (D) Selective blanking by NAME: the host sends "" for the six secret names, every other setting reads as stored. A later
+#     run then cannot see what is held: it refuses before any write, and nothing is replaced or deleted.
+for SETUP in seed_old_pair "seed_old_secrets; add_rows \"[\$HELD_TRUE,\"'{\"uuid\":\"e1\",\"key\":\"SPONSOR_RELAYER_PRIVATE_KEY\",\"value\":\"\",\"is_preview\":false},'\"\$S1,\$S2]\""; do
+  eval "$SETUP"; BEFORE="$(store)"
+  practice_retry selective
+  check "selective ($SETUP): a practice retry is refused with the create-again line, before any write, the store as it was" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+done
+seed_old_secrets; BEFORE="$(store)"
+retry selective off
+check "selective: an off retry whose app holds the database and admin secrets is refused before any write, the store as it was" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+seed_old_pair; BEFORE="$(store)"
+practice_retry secrets_absent
+check "secrets_absent: a host that leaves the six names out of the list: refused before any write, the store as it was" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+seed_old_pair; BEFORE="$(secret_rows)"
+practice_retry masked
+check "masked: a host that shows the six names as ******** : the retry keeps them and writes nothing under them" \
+  '[ $RC -eq 0 ] && [ "$(secret_rows)" = "$BEFORE" ] && no_secret_request && no_secret_sent'
+
+# (E) The cleanup on a later run deletes nothing under a secret name; an unclear row refuses at the key check first
+seed_old_secrets; add_rows "[$HELD_TRUE,"'{"uuid":"v1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":true},
+  {"uuid":"v2","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":true},'"$S1,$S2]"
+BEFORE="$(secret_rows)"
+practice_retry ok
+check "cleanup (1): empty preview rows listed before the held key and token: the retry succeeds, nothing under the six names deleted or written" \
+  '[ $RC -eq 0 ] && [ "$(secret_rows)" = "$BEFORE" ] && no_secret_request && no_secret_sent'
+seed_old_secrets; add_rows "[$HELD_TRUE,"'{"uuid":"e1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},'"$S1,$S2]"
+BEFORE="$(store)"
+practice_retry ok
+check "cleanup (2): an empty production key row ahead of the held key: refused before any write (unclear), both rows kept" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_unclear SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+seed_old_secrets; jq 'map(if .uuid == "u5" then .value = "" else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+BEFORE="$(store)"
+retry ok off
+check "cleanup (2b): an empty database password row ahead of the held one: refused before any write, both rows kept" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_unclear DB_PASSWORD)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+seed_old_secrets; jq 'map(if .uuid == "u9" then .value = "otherdbpass" else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+BEFORE="$(store)"
+retry ok off
+check "cleanup (2c): two database password rows holding different values: refused before any write, both rows kept" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_unclear DB_PASSWORD)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+# (3) a late straggler with another value on the creating run: two different values stop the cleanup before any DELETE
+reset_state
+STEP_FLAGS=-e run_step "Configure environment variables" late_key_row "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+LATE="0x$(printf 'ef%.0s' $(seq 32))"; OWN="$(row_value new-SPONSOR_RELAYER_PRIVATE_KEY)"
+check "cleanup (3): a late production key row with another value stops pass 2 with the fixed split error and env_failed" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "::error::SPONSOR_RELAYER_PRIVATE_KEY has two different saved values; no duplicate was deleted. A person has to choose which one to keep." <<<"$OUT"'
+check "  ...no DELETE comes after the run wrote the key, and both key rows are still stored" \
+  'awk "/^(PATCH|POST) .*\/envs SPONSOR_RELAYER_PRIVATE_KEY\$/ {seen = 1} seen && /^DELETE / {bad = 1} END {exit bad}" "$WORK/state/requests.log" && [ "$(prod_rows SPONSOR_RELAYER_PRIVATE_KEY)" -eq 2 ]'
+check "  ...neither key value reaches the output outside ::add-mask:: lines" \
+  '[ -n "$OWN" ] && [ "$(grep -F -e "${LATE#0x}" -e "${OWN#0x}" <<<"$OUT" | grep -vc "^::add-mask::")" -eq 0 ]'
+# (4) hidden values with duplicate key rows: refused at the key check before any write
+seed_old_secrets
+add_rows "[$HELD_TRUE,"'{"uuid":"e1","key":"SPONSOR_RELAYER_PRIVATE_KEY","is_preview":false},{"uuid":"s1","key":"SPONSOR_RELAYER_PRIVATE_KEY","is_preview":false},'"$S2]"
+BEFORE="$(store)"
+practice_retry ok
+check "cleanup (4): key rows whose values cannot be read (other rows readable): refused before any write, every row kept" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_unclear SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+# (5) on the creating run, empty duplicate key and token rows from the compose parse are still cleaned, preview copies are not touched
+reset_state
+add_rows '[{"uuid":"e1","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},{"uuid":"e2","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":false},
+  {"uuid":"t1","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},{"uuid":"t2","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":false},
+  {"uuid":"pk","key":"SPONSOR_RELAYER_PRIVATE_KEY","value":"","is_preview":true},{"uuid":"pt","key":"SPONSOR_RELAYER_TOKEN","value":"","is_preview":true}]'
+run_step "Configure environment variables" ok "${CONFIG_DEFAULTS[@]}" WEB3_INPUT=practice PRACTICE_RPC_URL="$WF_RPC"
+check "cleanup (5): on the creating run, empty duplicate key and token rows are cleaned: one production row of each is left, holding this run's value" \
+  '[ $RC -eq 0 ] && [ "$(prod_rows SPONSOR_RELAYER_PRIVATE_KEY)" -eq 1 ] && [ "$(prod_rows SPONSOR_RELAYER_TOKEN)" -eq 1 ] && [ -n "$(stored SPONSOR_RELAYER_PRIVATE_KEY)" ] && [ -n "$(stored SPONSOR_RELAYER_TOKEN)" ] && grep -q "Verified: no duplicates remain" <<<"$OUT"'
+check "cleanup (5b): the empty preview key and token rows are still stored (production and preview rows never dedup against each other)" \
+  '[ "$(row_count pk)" -eq 1 ] && [ "$(row_count pt)" -eq 1 ]'
+# (6) the cleanup's own read on a retry answers 200 with an empty or whitespace-only body (after the first read and the key
+#     checks passed: a practice retry reads once, then six key checks, then the cleanup; an off retry once, four, the cleanup)
+EMPTY_LIST_MSG="::error::The env var list could not be read (empty, not a list, or no value this token can read); duplicate cleanup stopped."
+for SC in envs_empty_at_8 envs_blank_at_8; do
+  seed_old_pair; BEFORE="$(store)"
+  practice_retry "$SC"
+  check "cleanup (6, $SC): a practice retry whose cleanup read is that answer stops with the fixed error and env_failed, before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$EMPTY_LIST_MSG" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+done
+for SC in envs_empty_at_6 envs_blank_at_6; do
+  seed_old_secrets; BEFORE="$(store)"
+  retry "$SC" off
+  check "cleanup (6, $SC): an off retry whose cleanup read is that answer stops with the fixed error, before any write" \
+    '[ $RC -ne 0 ] && grep -qxF "$EMPTY_LIST_MSG" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+done
+# (7) a key check's own read answers 200 with an empty or whitespace-only body: unclear, refused, nothing written
+for SC in envs_empty_at_6 envs_blank_at_6; do
+  seed_old_pair; BEFORE="$(store)"
+  practice_retry "$SC"
+  check "key check (7, $SC): a practice retry whose key read (the sixth) is that answer is refused naming the key, before any write" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_unclear SPONSOR_RELAYER_PRIVATE_KEY)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+done
+# (8) A retry reads the app's settings first, before any write: the answer must be one list in which this token reads at
+#     least one value. Values left out and values sent back as empty strings stop it at that first read.
+GUARD_LINE="::error::Could not read this app's settings, or this token cannot read their values; nothing was stored or sent."
+only_one_read() { no_writes_at_all && [ "$(grep -c "^GET [^ ]*/envs " "$WORK/state/requests.log")" -eq 1 ]; }
+for SC in hidden blanked; do
+  seed_old_pair; BEFORE="$(store)"
+  practice_retry "$SC"
+  check "first read (8, $SC): a practice retry stops with the fixed line and env_failed, one read, no write, the store as it was" \
+    '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$GUARD_LINE" <<<"$OUT" && only_one_read && [ "$(store)" = "$BEFORE" ]'
+  seed_old_secrets; BEFORE="$(store)"
+  retry "$SC" off
+  check "first read (8, $SC): an off retry stops the same way, the store as it was" \
+    '[ $RC -ne 0 ] && grep -qxF "$GUARD_LINE" <<<"$OUT" && only_one_read && [ "$(store)" = "$BEFORE" ]'
+done
+# (9) A database password row with no value field on a retry: refused at its key check, before any write
+seed_old_secrets
+jq '[.[] | select(.uuid != "u9")] | map(if .uuid == "u5" then del(.value) else . end)' "$WORK/state/envs.json" > "$WORK/e.json" && mv "$WORK/e.json" "$WORK/state/envs.json"
+BEFORE="$(store)"
+retry ok off
+check "key check (9): a database password row this token cannot read is refused naming it, before any write, the store as it was" \
+  '[ $RC -ne 0 ] && [ "$(genv FAIL_REASON)" = env_failed ] && grep -qxF "$(line_unclear DB_PASSWORD)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+
+# (F) Only the Create step's own output in this run counts as "this run created the app"
+CREATE_ID="$(jq -r '[.jobs.provision.steps[] | select(.name == "Create Coolify application")][0].id // ""' "$WORK/wf.json")"
+CONF_FLAG="$(jq -r '[.jobs.provision.steps[] | select(.name == "Configure environment variables")][0].env.CREATED_APP_UUID // ""' "$WORK/wf.json")"
+check "flag: the Configure step's CREATED_APP_UUID is exactly the Create step's output (\${{ steps.create.outputs.app_uuid }}), and the Create step's id is create" \
+  '[ "$CREATE_ID" = create ] && [ "$CONF_FLAG" = "\${{ steps.create.outputs.app_uuid }}" ]'
+check "flag: no input, workflow env, job env or other step env names CREATED_APP_UUID" \
+  '[ "$(jq "[(.[\"true\"] // .on).workflow_dispatch.inputs // {} | keys[] | ascii_upcase | select(. == \"CREATED_APP_UUID\")] + [(.env // {}), (.jobs[].env // {}) | keys[] | select(. == \"CREATED_APP_UUID\")] + [.jobs.provision.steps[] | select(.name != \"Configure environment variables\") | (.env // {}) | keys[] | select(. == \"CREATED_APP_UUID\")] | length" "$WORK/wf.json")" -eq 0 ]'
+check "flag: no step writes CREATED_APP_UUID or app_uuid to GITHUB_ENV, and only the Create step writes app_uuid to GITHUB_OUTPUT" \
+  '! grep -qE "CREATED_APP_UUID.*GITHUB_ENV|app_uuid.*GITHUB_ENV" "$WF" && [ "$(jq -r "[.jobs.provision.steps[] | select((.run // \"\") | test(\"app_uuid=.*GITHUB_OUTPUT\")) | .name] | join(\",\")" "$WORK/wf.json")" = "Create Coolify application" ]'
+check "flag: the Create step runs only when REUSE is not true" \
+  '[ "$(jq -r "[.jobs.provision.steps[] | select(.name == \"Create Coolify application\") | .if] | .[0]" "$WORK/wf.json")" = "env.REUSE != '"'"'true'"'"'" ]'
+reset_state; run_step "Create Coolify application" ok PROVISION_ID_INPUT="$PID"
+check "flag: the Create step's output names the app it created" '[ $RC -eq 0 ] && grep -qx "app_uuid=app123" "$WORK/github_output"'
+for FLAG in "CREATED_APP_UUID=" "CREATED_APP_UUID=app999"; do
+  reset_state; BEFORE="$(store)"
+  STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" "$FLAG"
+  check "flag ($FLAG): without the Create step's output naming this app, a run on a new app makes no secret: refused before any write" \
+    '[ $RC -ne 0 ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
+done
+reset_state; BEFORE="$(store)"
+STEP_FLAGS=-e run_step "Configure environment variables" ok "${SIGNUP[@]}" REUSE=true ATTEMPT_INPUT=2 CREATED_APP_UUID=app123
+check "flag: REUSE=true next to a matching CREATED_APP_UUID is a later run: refused on a new app's rows, before any write" \
+  '[ $RC -ne 0 ] && grep -qxF "$(line_missing DRUPAL_ADMIN_PASS)" <<<"$OUT" && no_writes_at_all && [ "$(store)" = "$BEFORE" ]'
 
 echo "# Deadlines fail the run"
 reset_state; run_step "Wait for deployment" ok

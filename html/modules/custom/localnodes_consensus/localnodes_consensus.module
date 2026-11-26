@@ -1,0 +1,243 @@
+<?php
+
+/**
+ * @file
+ * Hooks for LocalNodes Consensus.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\group\Entity\GroupInterface;
+use Drupal\group\Entity\GroupRelationshipInterface;
+use Drupal\localnodes_consensus\Entity\ConsensusNotice;
+use Drupal\localnodes_consensus\Entity\ConsensusResponse;
+use Drupal\localnodes_consensus\Entity\ConsensusRound;
+use Drupal\localnodes_consensus\Entity\MeetingReport;
+use Drupal\localnodes_consensus\Notification\ConsensusNotifier;
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for group_content.
+ *
+ * When a Group membership ends by any entity-API path (a manager removes
+ * it, the member leaves, the account or the Group is deleted), the roster
+ * records the ending once, dated now, if the account was on it. The
+ * row is written inside Group's delete transaction, so rejoining before
+ * anything else looks does not bring standing back. Nothing is announced
+ * here: an event sent from inside this transaction reaches listeners from
+ * core's post-commit callbacks, where a listener that saves throws. The
+ * roster event and the withdrawal of affected open rounds come later,
+ * outside any transaction, from the cron sweep or the next response or
+ * finalize(), which read this row and its time. A failure is logged and
+ * never undoes the membership delete; the lazy check then records the
+ * ending when it finds it.
+ */
+function localnodes_consensus_group_content_delete(GroupRelationshipInterface $relationship): void {
+  if ($relationship->getPluginId() !== 'group_membership') {
+    return;
+  }
+  $group = $relationship->getGroup();
+  if (!$group instanceof GroupInterface) {
+    return;
+  }
+  try {
+    \Drupal::service('localnodes_consensus.roster')->recordMembershipEnded($group, (int) $relationship->getEntityId(), NULL, FALSE);
+  }
+  catch (\Throwable $e) {
+    \Drupal::logger('localnodes_consensus')->error('A Group membership ending was not recorded (Group @gid, account @uid): @message', [
+      '@gid' => $group->id(),
+      '@uid' => $relationship->getEntityId(),
+      '@message' => $e->getMessage(),
+    ]);
+  }
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Closes decision rounds whose deadline has passed, withdraws open
+ * rounds whose opening roster lost a member and sends the roster
+ * event for endings a membership delete recorded quietly. Then delivers
+ * pending decision notices, so a round closed by this sweep is announced
+ * in the same run. Each step is guarded on its own, so one failing
+ * never starves the other. The worker container runs cron after each pass,
+ * about once a minute.
+ */
+function localnodes_consensus_cron(): void {
+  foreach (['localnodes_consensus.due_round_sweeper' => 'sweep', 'localnodes_consensus.notifier' => 'deliverPending'] as $service => $method) {
+    try {
+      \Drupal::service($service)->$method();
+    }
+    catch (\Throwable $e) {
+      \Drupal::logger('localnodes_consensus')->error('Cron step @service failed: @message', [
+        '@service' => $service,
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+}
+
+/**
+ * Implements hook_modules_installed().
+ *
+ * Makes sure the database key-value table exists once this module is on.
+ * Notices are recorded inside a round's save transaction, and if that write
+ * had to create the table, MySQL would commit the transaction then and
+ * there. A real site has the table from installation, so this changes
+ * nothing there; a kernel test, whose own key-value service lives in
+ * memory, gets the table before its first round.
+ */
+function localnodes_consensus_modules_installed(array $modules, bool $is_syncing): void {
+  if (in_array('localnodes_consensus', $modules, TRUE)) {
+    $store = \Drupal::service('keyvalue.database')->get(ConsensusNotifier::COLLECTION);
+    $store->set('table_check', TRUE);
+    $store->delete('table_check');
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for localnodes_consensus_round.
+ *
+ * Records the opening notice for delivery by cron. The pending write shares
+ * the opening's transaction, so a rolled-back opening records nothing.
+ */
+function localnodes_consensus_localnodes_consensus_round_insert(ConsensusRound $round): void {
+  \Drupal::service('localnodes_consensus.notifier')->record('opened:' . $round->id(), (int) $round->id(), ConsensusNotice::OPENED);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update() for localnodes_consensus_round.
+ *
+ * The one terminal save records a closing notice: withdrawn or replaced
+ * rounds give kind withdrawn_replaced, every other ending gives closed. The
+ * key carries the round id with the closure key, which alone is the same
+ * for the same outcome on different rounds.
+ */
+function localnodes_consensus_localnodes_consensus_round_update(ConsensusRound $round): void {
+  $original = $round->original ?? NULL;
+  if (!$original instanceof ConsensusRound || $original->isTerminal() || !$round->isTerminal()) {
+    return;
+  }
+  $kind = in_array($round->getClosedState(), [ConsensusRound::WITHDRAWN, ConsensusRound::REPLACED], TRUE) ? ConsensusNotice::WITHDRAWN_REPLACED : ConsensusNotice::CLOSED;
+  \Drupal::service('localnodes_consensus.notifier')->record('closed:' . $round->id() . ':' . $round->getClosureKey(), (int) $round->id(), $kind);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for localnodes_consensus_response.
+ *
+ * A new block row on an open round records a block notice, keyed by the
+ * row's id, so a later block by the same member is a new occurrence and a
+ * changed answer that is not a block records nothing.
+ */
+function localnodes_consensus_localnodes_consensus_response_insert(ConsensusResponse $response): void {
+  if ($response->getChoice() !== ConsensusResponse::BLOCK) {
+    return;
+  }
+  $round = $response->get('round')->entity;
+  if (!$round instanceof ConsensusRound || $round->isTerminal()) {
+    return;
+  }
+  \Drupal::service('localnodes_consensus.notifier')->record('block:' . $response->id(), (int) $round->id(), ConsensusNotice::BLOCK);
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * One key per notice kind. The email holds the kind's words, the Group's
+ * name and one link to the round's own page, nothing else: no decision
+ * text, title, amount, count or name.
+ */
+function localnodes_consensus_mail(string $key, array &$message, array $params): void {
+  $words = ConsensusNotice::words($key, (string) ($params['group'] ?? ''), ['langcode' => $message['langcode'] ?? NULL]);
+  if ($words === NULL) {
+    return;
+  }
+  [$heading, $line] = $words;
+  $message['subject'] = (string) $heading;
+  $message['body'][] = (string) $line;
+  $message['body'][] = (string) t('Open decision: @url', ['@url' => (string) ($params['url'] ?? '')], ['langcode' => $message['langcode'] ?? NULL]);
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * consensus_record is one record page, a round or a meeting report. Its
+ * top-level variables are round (the round, or NULL for a meeting report),
+ * record, round_id, decision_type, state (meeting_report for a report),
+ * model, non_authority_line and panels. Another module's preprocess may
+ * replace non_authority_line and add keyed render arrays to panels, ordered
+ * by #weight and printed after the record body; this module names no panel.
+ * decision_register is the Group's register: its open part apart from its
+ * recorded results, with the non-authority line once.
+ */
+function localnodes_consensus_theme(): array {
+  return [
+    'consensus_record' => [
+      'variables' => [
+        'round' => NULL,
+        'record' => NULL,
+        'round_id' => NULL,
+        'decision_type' => NULL,
+        'state' => NULL,
+        'model' => [],
+        'non_authority_line' => [],
+        'panels' => [],
+      ],
+    ],
+    'decision_register' => [
+      'variables' => [
+        'group' => NULL,
+        'open' => [],
+        'recorded' => [],
+        'non_authority_line' => [],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Prepares variables for the consensus_record template.
+ *
+ * Fills the default non-authority line and an empty panels container. This
+ * runs before every module's own preprocess, so either can be replaced.
+ */
+function template_preprocess_consensus_record(array &$variables): void {
+  if (empty($variables['non_authority_line'])) {
+    $variables['non_authority_line'] = \Drupal::service('localnodes_consensus.decision_register')->nonAuthorityLine();
+  }
+  $variables['panels'] = (is_array($variables['panels']) ? $variables['panels'] : []) + [
+    '#type' => 'container',
+    '#attributes' => ['class' => ['consensus-record__panels']],
+  ];
+}
+
+/**
+ * Prepares variables for the decision_register template.
+ */
+function template_preprocess_decision_register(array &$variables): void {
+  if (empty($variables['non_authority_line'])) {
+    $variables['non_authority_line'] = \Drupal::service('localnodes_consensus.decision_register')->nonAuthorityLine();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for localnodes_consensus_round.
+ *
+ * The round's page body is its record, built for the current user.
+ */
+function localnodes_consensus_localnodes_consensus_round_view(array &$build, ConsensusRound $round, EntityViewDisplayInterface $display, string $view_mode): void {
+  $build['consensus_record'] = \Drupal::service('localnodes_consensus.decision_register')->recordBuild($round, \Drupal::currentUser());
+  // A save lands here: its status is announced.
+  $build['#attached']['library'][] = 'localnodes_group_setup/form_announce';
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view() for localnodes_meeting_report.
+ *
+ * The report's page body is its record, built for the current user.
+ */
+function localnodes_consensus_localnodes_meeting_report_view(array &$build, MeetingReport $report, EntityViewDisplayInterface $display, string $view_mode): void {
+  $build['consensus_record'] = \Drupal::service('localnodes_consensus.decision_register')->recordBuild($report, \Drupal::currentUser());
+  // A save lands here: its status is announced.
+  $build['#attached']['library'][] = 'localnodes_group_setup/form_announce';
+}

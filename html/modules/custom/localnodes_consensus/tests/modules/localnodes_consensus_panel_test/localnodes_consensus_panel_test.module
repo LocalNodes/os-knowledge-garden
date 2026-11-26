@@ -1,0 +1,39 @@
+<?php
+
+/**
+ * @file
+ * Test-only preprocess for the decision record template.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_preprocess_HOOK() for consensus_record.
+ *
+ * On a money round, adds two keyed panels out of weight order and replaces
+ * the non-authority line, as a later module on agreed money records will.
+ * It notes what it was given, so the test can check the variables.
+ */
+function localnodes_consensus_panel_test_preprocess_consensus_record(array &$variables): void {
+  $round = $variables['round'] ?? NULL;
+  \Drupal::state()->set('localnodes_consensus_panel_test.seen', [
+    'round' => is_object($round) ? get_class($round) . ':' . $round->id() : NULL,
+    'round_id' => $variables['round_id'] ?? NULL,
+    'decision_type' => $variables['decision_type'] ?? NULL,
+    'state' => $variables['state'] ?? NULL,
+    'panels_type' => $variables['panels']['#type'] ?? NULL,
+    'line_is_array' => is_array($variables['non_authority_line'] ?? NULL),
+  ]);
+  if (($variables['decision_type'] ?? NULL) !== 'money') {
+    return;
+  }
+  $variables['panels']['localnodes_consensus_panel_test_late'] = [
+    '#markup' => 'Panel weighed fifty',
+    '#weight' => 50,
+  ];
+  $variables['panels']['localnodes_consensus_panel_test_early'] = [
+    '#markup' => 'Panel weighed ten',
+    '#weight' => 10,
+  ];
+  $variables['non_authority_line'] = ['#markup' => 'A line from another module.'];
+}

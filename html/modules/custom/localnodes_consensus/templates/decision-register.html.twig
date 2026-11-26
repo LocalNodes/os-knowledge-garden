@@ -1,0 +1,62 @@
+{#
+/**
+ * @file
+ * A Group's Decisions register: open decisions apart from recorded results.
+ *
+ * Available variables:
+ * - group: the Group.
+ * - open: rounds still open, or ended and waiting for their result, newest
+ *   first. Each has id and kind ('round' or 'meeting_report', also on the
+ *   list item as data-decision-id and data-decision-kind, for other modules),
+ *   url, label (a round's short title, the first line of its text),
+ *   state_label, visibility_label (what the Group allows now) and lines.
+ * - recorded: closed rounds and meeting reports, newest first, the same way.
+ * - non_authority_line: the sentence saying a record moves no money, as its
+ *   own render element, printed once.
+ *
+ * Items hold no decision text past a round's title; each links to its own
+ * page.
+ */
+#}
+<section class="decision-register">
+  {% if open is empty and recorded is empty %}
+    <p class="decision-register__empty">{{ 'No decisions recorded yet'|t }}</p>
+    <p>{{ 'Start a round or record a decision from a group meeting.'|t }}</p>
+  {% else %}
+    <h2>{{ 'Open decisions'|t }}</h2>
+    {% if open is empty %}
+      <p>{{ 'Nothing is open right now.'|t }}</p>
+    {% else %}
+      <ul class="decision-register__open">
+        {% for item in open %}
+          <li data-decision-id="{{ item.id }}" data-decision-kind="{{ item.kind }}">
+            <a href="{{ item.url }}">{{ item.label }}</a>
+            <span class="decision-register__state">{{ item.state_label }}</span>
+            <span class="decision-register__visibility">{{ item.visibility_label }}</span>
+            {% for line in item.lines %}
+              <p>{{ line }}</p>
+            {% endfor %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <h2>{{ 'Recorded results'|t }}</h2>
+    {% if recorded is empty %}
+      <p>{{ 'No results recorded yet.'|t }}</p>
+    {% else %}
+      <ul class="decision-register__recorded">
+        {% for item in recorded %}
+          <li data-decision-id="{{ item.id }}" data-decision-kind="{{ item.kind }}">
+            <a href="{{ item.url }}">{{ item.label }}</a>
+            <span class="decision-register__state">{{ item.state_label }}</span>
+            <span class="decision-register__visibility">{{ item.visibility_label }}</span>
+            {% for line in item.lines %}
+              <p>{{ line }}</p>
+            {% endfor %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+  {{ non_authority_line }}
+</section>

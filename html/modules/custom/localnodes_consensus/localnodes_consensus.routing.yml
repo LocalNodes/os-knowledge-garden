@@ -1,0 +1,91 @@
+localnodes_consensus.decisions:
+  path: '/group/{group}/decisions'
+  defaults:
+    _controller: '\Drupal\localnodes_consensus\Controller\DecisionsController::register'
+    _title: 'Decisions'
+  requirements:
+    _entity_access: 'group.view'
+    _custom_access: '\Drupal\localnodes_consensus\Controller\DecisionsController::registerAccess'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_consensus.notices:
+  path: '/decision-notices'
+  defaults:
+    _controller: '\Drupal\localnodes_consensus\Controller\DecisionsController::notices'
+    _title: 'Your notices'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+localnodes_consensus.roster:
+  path: '/group/{group}/decisions/roster'
+  defaults:
+    _form: '\Drupal\localnodes_consensus\Form\RosterForm'
+    _title: 'Roster'
+  requirements:
+    _entity_access: 'group.view'
+    _custom_access: '\Drupal\localnodes_consensus\Form\RosterForm::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_consensus.open:
+  path: '/group/{group}/decisions/new'
+  defaults:
+    _form: '\Drupal\localnodes_consensus\Form\OpenRoundForm'
+    _title: 'Start a decision'
+  requirements:
+    _entity_access: 'group.view'
+    _custom_access: '\Drupal\localnodes_consensus\Form\OpenRoundForm::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_consensus.meeting:
+  path: '/group/{group}/decisions/meeting'
+  defaults:
+    _form: '\Drupal\localnodes_consensus\Form\MeetingReportForm'
+    _title: 'Record a meeting decision'
+  requirements:
+    _entity_access: 'group.view'
+    _custom_access: '\Drupal\localnodes_consensus\Form\MeetingReportForm::access'
+    group: \d+
+  options:
+    parameters:
+      group:
+        type: entity:group
+
+localnodes_consensus.respond:
+  path: '/decision/{localnodes_consensus_round}/respond'
+  defaults:
+    _form: '\Drupal\localnodes_consensus\Form\RespondForm'
+    _title: 'Respond'
+  requirements:
+    _entity_access: 'localnodes_consensus_round.view'
+    _custom_access: '\Drupal\localnodes_consensus\Form\RespondForm::access'
+    localnodes_consensus_round: \d+
+  options:
+    parameters:
+      localnodes_consensus_round:
+        type: entity:localnodes_consensus_round
+
+localnodes_consensus.change:
+  path: '/decision/{localnodes_consensus_round}/change'
+  defaults:
+    _form: '\Drupal\localnodes_consensus\Form\RoundChangeForm'
+    _title: 'Withdraw or replace'
+  requirements:
+    _entity_access: 'localnodes_consensus_round.view'
+    _custom_access: '\Drupal\localnodes_consensus\Form\RoundChangeForm::access'
+    localnodes_consensus_round: \d+
+  options:
+    parameters:
+      localnodes_consensus_round:
+        type: entity:localnodes_consensus_round

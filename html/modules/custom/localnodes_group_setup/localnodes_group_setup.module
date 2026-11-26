@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Hooks for Group set-up.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\localnodes_group_setup\Form\AnnouncedForm;
+use Drupal\localnodes_group_setup\Form\AnnouncedFormInterface;
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Set-up and decision forms get radiogroups and announced errors and
+ * statuses.
+ */
+function localnodes_group_setup_form_alter(array &$form, FormStateInterface $form_state, string $form_id): void {
+  if ($form_state->getFormObject() instanceof AnnouncedFormInterface) {
+    AnnouncedForm::alter($form);
+  }
+}

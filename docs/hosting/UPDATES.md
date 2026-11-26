@@ -115,6 +115,8 @@ docker compose pull opensocial && docker compose up -d opensocial
 docker compose logs opensocial
 ```
 
+The fee wallet service runs unless `FEE_WALLET_SCALE=0` is set in the site's settings file, so a site with group funds on needs no setting for it and a funds-off site keeps `FEE_WALLET_SCALE=0`. These commands update only `opensocial` and leave the fee wallet service as it is.
+
 `docker compose up -d` reports success as soon as the container is created. A site that then stops still shows success there, so read the logs.
 
 On a site whose installation finished, the log shows `=== EXISTING INSTALL ===`, then `Running database updates...` (with a table of any updates and a notice for each one it ran), a cache rebuild, `=== EXISTING INSTALL READY ===` and `Starting Apache...`. Startup applies the database updates and rebuilds caches before the web server starts. In one test it ran several updates from a few modules. The container is replaced by the update, so its log holds this start only. If the container was only restarted, older starts are in the log too, so read from the last `=== EXISTING INSTALL ===`.

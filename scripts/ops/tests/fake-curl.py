@@ -15,12 +15,33 @@ $FAKE_SCENARIO picks the failure mode:
   post409_always  POST always answers 409 and the key never appears
   readback_wrong  GET returns a different IMAGE_TAG than was saved
   readback_wrong_backup  GET returns a different AI_BACKUP_MODEL than was saved (23-40)
+  readback_wrong_scale  GET returns FEE_WALLET_SCALE rows with a different value than was saved
+  drop_relayer_key  GET leaves out every SPONSOR_RELAYER_PRIVATE_KEY row (the key did not stick)
+  drop_scale      GET leaves out every FEE_WALLET_SCALE row (the setting did not stick)
+  fail_key        a PATCH or POST of SPONSOR_RELAYER_PRIVATE_KEY answers 503; other keys behave as ok
+  late_key_row    once a PATCH or POST of SPONSOR_RELAYER_PRIVATE_KEY has succeeded, the first GET /envs after it
+                  puts one more production SPONSOR_RELAYER_PRIVATE_KEY row (uuid late1, another value) at the front
+                  of the stored list: a straggler with a different value
   hidden          GET omits `value` (token without read:sensitive)
+  blanked         GET sends every `value` as an empty string (hidden values that come back as empty, not left out)
+  selective       GET sends `value` as an empty string only for rows of the six secret names (the admin password, the
+                  database passwords, the hash salt, the relayer key and token); every other row reads as stored
+  masked          GET sends `value` as "********" only for rows of the six secret names; every other row reads as stored
+  secrets_absent  GET leaves out every row of the six secret names; every other row reads as stored
+  readback_wrong_key  GET returns every SPONSOR_RELAYER_PRIVATE_KEY row with another value than the one stored
   envs_get503     the first GET /envs answers 503; later reads work
   envs_garbage    the first GET /envs answers 200 with a body that is not JSON; later reads work
   envs_down       the first GET /envs gets no answer (curl exits 7, prints nothing); later reads work
   envs_empty      the first GET /envs answers 200 with an empty body; later reads work
   envs_blank      the first GET /envs answers 200 with a whitespace-only body; later reads work
+  envs_empty_third, envs_blank_third  the same on the third GET /envs
+  envs_empty_at_N, envs_blank_at_N  the same on the Nth GET /envs (N counted from 1); every other read works
+  envs_empty_second  the second GET /envs answers 200 with an empty body; every other read works (the first read
+                  is a pre-write check that passes, the second the duplicate cleanup's own read)
+  envs_blank_second  the same with a whitespace-only body
+  envs_empty_at_key  the first GET /envs after WAAP_ENVIRONMENT is written (the key step's own read) answers 200 with an
+                  empty body; every other read works
+  envs_error_at_key  the same read answers 200 with an error body that is not a list ({"message": "Unauthenticated."})
   delete503       DELETE answers 503 and removes nothing
   delete_noop     DELETE answers 200 but removes nothing (only the read-back can tell)
   delete_curl23   DELETE answers 200 but curl exits 23
@@ -46,6 +67,10 @@ $FAKE_SCENARIO picks the failure mode:
   callback_down   POST /api/provision-callback: curl exits 7 (the sign-up app is unreachable)
   ack_down        POST /api/provision-manifest/ack: curl exits 7 (the sign-up app is unreachable)
   ack_401         POST /api/provision-manifest/ack answers 401 with a body that must never be echoed
+
+When no scenario above answers GET /applications, the JSON in $FAKE_STATE/apps.json is the answer when that
+file exists (funds-on-workflow.test.sh writes it: any JSON, an object or a non-list included, or an empty or
+whitespace-only body, which is sent as is), else the empty list. provision-workflow.test.sh never writes it.
 
 An env written with is_shown_once true is stored with that flag, and GET /envs then leaves out its
 `value` (Coolify hides write-once values on read; research Pitfall 13), so only a presence check
@@ -169,6 +194,12 @@ elif url and url.endswith("/applications") and method == "GET":
             resp.append({"uuid": "other2", "description": "someone else", "docker_compose_domains": domains})
     elif scenario == "list_garbage":
         status, resp = 200, None
+    elif os.path.exists(os.path.join(state_dir, "apps.json")):
+        apps_text = open(os.path.join(state_dir, "apps.json")).read()
+        if apps_text.strip() == "":
+            status, resp, raw = 200, None, apps_text  # an empty or whitespace-only 200 body, sent as is
+        else:
+            status, resp = 200, json.loads(apps_text)
     else:
         status, resp = 200, []
 elif url and url.endswith("/envs") and method == "GET" and scenario == "envs_down" and counter("envs_get") == 0:
@@ -180,16 +211,48 @@ elif url and url.endswith("/envs") and method == "GET" and scenario == "envs_gar
     status, resp = 200, None
 elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_empty", "envs_blank") and counter("envs_get") == 0:
     status, resp, raw = 200, None, ("" if scenario == "envs_empty" else " \n\t \n")
+elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_empty_second", "envs_blank_second") and counter("envs_get") == 1:
+    status, resp, raw = 200, None, ("" if scenario == "envs_empty_second" else " \n\t \n")
+elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_empty_third", "envs_blank_third") and counter("envs_get") == 2:
+    status, resp, raw = 200, None, ("" if scenario == "envs_empty_third" else " \n\t \n")
+elif url and url.endswith("/envs") and method == "GET" and scenario.startswith(("envs_empty_at_", "envs_blank_at_")) \
+        and scenario.rsplit("_", 1)[1].isdigit() and counter("envs_nth") == int(scenario.rsplit("_", 1)[1]) - 1:
+    status, resp, raw = 200, None, ("" if scenario.startswith("envs_empty") else " \n\t \n")
+elif url and url.endswith("/envs") and method == "GET" and scenario in ("envs_empty_at_key", "envs_error_at_key") \
+        and os.path.exists(os.path.join(state_dir, "waap-written")) and counter("at_key") == 0:
+    if scenario == "envs_empty_at_key":
+        status, resp, raw = 200, None, ""
+    else:
+        status, resp = 200, {"message": "Unauthenticated."}
 elif url and url.endswith("/envs") and method == "GET":
     envs = load()
+    if scenario == "late_key_row" and os.path.exists(os.path.join(state_dir, "key-written")) and counter("late") == 0:
+        envs.insert(0, {"uuid": "late1", "key": "SPONSOR_RELAYER_PRIVATE_KEY", "value": "0x" + "ef" * 32, "is_preview": False})
+        save(envs)
     if scenario == "readback_wrong":
         envs = [dict(e, value="0000000") if e["key"] == "IMAGE_TAG" else e for e in envs]
     if scenario == "readback_wrong_backup":
         envs = [dict(e, value="fixture/other-model") if e["key"] == "AI_BACKUP_MODEL" else e for e in envs]
     if scenario == "hidden":
         envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} for e in envs]
+    if scenario == "blanked":
+        envs = [dict(e, value="") for e in envs]
+    six = ("DRUPAL_ADMIN_PASS", "DB_PASSWORD", "DB_ROOT_PASSWORD", "DRUPAL_HASH_SALT",
+           "SPONSOR_RELAYER_PRIVATE_KEY", "SPONSOR_RELAYER_TOKEN")
+    if scenario == "selective":
+        envs = [dict(e, value="") if e["key"] in six else e for e in envs]
+    if scenario == "masked":
+        envs = [dict(e, value="********") if e["key"] in six else e for e in envs]
+    if scenario == "secrets_absent":
+        envs = [e for e in envs if e["key"] not in six]
+    if scenario == "readback_wrong_key" and os.path.exists(os.path.join(state_dir, "key-written")):
+        envs = [dict(e, value="0x" + "12" * 32) if e["key"] == "SPONSOR_RELAYER_PRIVATE_KEY" else e for e in envs]
     if scenario == "drop_relayer_key":
         envs = [e for e in envs if e["key"] != "SPONSOR_RELAYER_PRIVATE_KEY"]
+    if scenario == "drop_scale":
+        envs = [e for e in envs if e["key"] != "FEE_WALLET_SCALE"]
+    if scenario == "readback_wrong_scale":
+        envs = [dict(e, value="7") if e["key"] == "FEE_WALLET_SCALE" else e for e in envs]
     envs = [{k: v for k, v in e.items() if k not in ("value", "real_value")} if e.get("is_shown_once") else e for e in envs]
     written = os.path.exists(os.path.join(state_dir, "pass-written"))
     if scenario == "dupes_after" and written and counter("stale") == 0:
@@ -203,6 +266,8 @@ elif url and url.endswith("/envs") and method == "PATCH":
         status, resp = 503, {"message": "Service Unavailable"}
     elif scenario == "app404":
         status, resp = 404, {"message": "Application not found"}
+    elif scenario == "fail_key" and data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
+        status, resp = 503, {"message": "Service Unavailable"}
     else:
         hit = [e for e in envs if e["key"] == data["key"] and prod(e)]
         if data["key"] == "DRUPAL_ADMIN_PASS":
@@ -213,6 +278,10 @@ elif url and url.endswith("/envs") and method == "PATCH":
                 if flag in data:
                     hit[0][flag] = data[flag]
             save(envs)
+            if data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
+                open(os.path.join(state_dir, "key-written"), "w").close()
+            if data["key"] == "WAAP_ENVIRONMENT":
+                open(os.path.join(state_dir, "waap-written"), "w").close()
             status, resp = 201, {"key": data["key"]}
         else:
             status, resp = 404, {"message": "Environment variable not found."}
@@ -220,6 +289,8 @@ elif url and url.endswith("/envs") and method == "POST":
     data = json.loads(body)
     envs = load()
     if scenario in ("all503", "post503"):
+        status, resp = 503, {"message": "Service Unavailable"}
+    elif scenario == "fail_key" and data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
         status, resp = 503, {"message": "Service Unavailable"}
     elif scenario == "post409_always":
         status, resp = 409, {"message": "Environment variable already exists. Use PATCH request to update it."}
@@ -231,6 +302,10 @@ elif url and url.endswith("/envs") and method == "POST":
         envs.append({"uuid": "new-" + data["key"], "key": data["key"], "value": data["value"], "is_preview": False,
                      "is_shown_once": bool(data.get("is_shown_once")), "is_literal": bool(data.get("is_literal"))})
         save(envs)
+        if data["key"] == "SPONSOR_RELAYER_PRIVATE_KEY":
+            open(os.path.join(state_dir, "key-written"), "w").close()
+        if data["key"] == "WAAP_ENVIRONMENT":
+            open(os.path.join(state_dir, "waap-written"), "w").close()
         status, resp = 201, {"uuid": "new-" + data["key"]}
 elif url and "/envs/" in url and method == "DELETE":
     uuid = url.rsplit("/", 1)[1]
