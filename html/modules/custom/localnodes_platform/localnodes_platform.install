@@ -147,62 +147,32 @@ function _localnodes_platform_protect_private_groups(): void {
 }
 
 /**
- * Site-wide roles do not read a group they are not in.
+ * The administrator role holds a fixed allow list.
  *
- * The administrator role keeps every permission the site defines except the
- * ones that reach into groups without membership. It is no longer an
- * all-permissions role, so each run grants the permissions of modules
- * enabled since. The recovery account (user 1) keeps Drupal's full access.
+ * The role is no longer an all-permissions role. It holds the permissions
+ * AdministratorPermissions allows, plus what this site added on purpose in
+ * localnodes_platform.settings:administrator_permissions_added, never a
+ * withheld one, and nothing else: a permission a later module adds waits
+ * until someone classifies it. Runs on install and after every later module
+ * install. The recovery account (user 1) keeps Drupal's full access.
  */
 function _localnodes_platform_narrow_administrator_role(): void {
   $role = \Drupal::entityTypeManager()->getStorage('user_role')->load('administrator');
   if ($role === NULL) return;
-  $changed = FALSE;
-  if ($role->isAdmin()) {
-    $role->setIsAdmin(FALSE);
-    $changed = TRUE;
+  $existing = array_keys(\Drupal::service('user.permissions')->getPermissions());
+  $target = \Drupal\localnodes_platform\Account\AdministratorPermissions::grantable($existing, \Drupal\localnodes_platform\Account\AdministratorPermissions::added());
+  $held = $role->getPermissions();
+  sort($target);
+  sort($held);
+  if (!$role->isAdmin() && $held === $target) return;
+  $role->setIsAdmin(FALSE);
+  foreach (array_diff($held, $target) as $permission) {
+    $role->revokePermission($permission);
   }
-  foreach (array_keys(\Drupal::service('user.permissions')->getPermissions()) as $permission) {
-    $withheld = _localnodes_platform_permission_reaches_into_groups((string) $permission);
-    if ($withheld && $role->hasPermission($permission)) {
-      $role->revokePermission($permission);
-      $changed = TRUE;
-    }
-    elseif (!$withheld && !$role->hasPermission($permission)) {
-      $role->grantPermission($permission);
-      $changed = TRUE;
-    }
+  foreach (array_diff($target, $held) as $permission) {
+    $role->grantPermission($permission);
   }
-  if ($changed) $role->save();
-}
-
-/** Permissions that open a group's pages, members or content to a non-member. */
-function _localnodes_platform_permission_reaches_into_groups(string $permission): bool {
-  return in_array($permission, [
-    'bypass node access',
-    'manage all groups',
-    // Group-level elsewhere; the members list also asks for it site-wide.
-    'administer members',
-    'administer group',
-    // Administration lists of content, notices, files, groups and
-    // memberships stay with the recovery account.
-    'administer post entities',
-    'administer comments',
-    'administer activity entities',
-    'edit activity entities',
-    'administer messages',
-    'overview messages',
-    'access files overview',
-    'access group overview',
-    'administer social_user_export',
-    'administer polls',
-    'view all published activity entities',
-    'administer safe smart accounts',
-    'view published queue storage entity entities',
-    'view unpublished queue storage entity entities',
-    'edit queue storage entity entities',
-    'administer queue storage entity entities',
-  ], TRUE) || preg_match('/^view \S+:group content$/', $permission) === 1;
+  $role->save();
 }
 
 /**

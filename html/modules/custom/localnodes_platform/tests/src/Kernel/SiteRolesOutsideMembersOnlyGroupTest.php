@@ -118,9 +118,11 @@ final class SiteRolesOutsideMembersOnlyGroupTest extends GroupAccessKernelTestBa
     $this->assertTrue($access->checkNamedRoute('entity.group.add_form', ['group_type' => 'flexible_group'], $admin), 'It creates a group.');
     $this->assertTrue($access->checkNamedRoute('entity.user.collection', [], $admin), 'It opens the people list.');
     $this->assertTrue($access->checkNamedRoute('user.admin_create', [], $admin), 'It adds a person.');
-    $this->assertTrue($access->checkNamedRoute('entity.user_role.collection', [], $admin), 'It manages roles.');
+    // Roles, permissions and modules stay with account 1.
+    $this->assertFalse($access->checkNamedRoute('entity.user_role.collection', [], $admin), 'It does not manage roles.');
+    $this->assertFalse($access->checkNamedRoute('user.admin_permissions', [], $admin), 'It does not change permissions.');
     $this->assertTrue($access->checkNamedRoute('system.site_information_settings', [], $admin), 'It opens the site settings.');
-    $this->assertTrue($access->checkNamedRoute('system.modules_list', [], $admin), 'It opens the modules page.');
+    $this->assertFalse($access->checkNamedRoute('system.modules_list', [], $admin), 'It does not turn modules on or off.');
 
     // Content outside members-only groups stays in its hands, reported or not.
     $page = Node::create([
@@ -135,8 +137,8 @@ final class SiteRolesOutsideMembersOnlyGroupTest extends GroupAccessKernelTestBa
     $this->assertTrue($reply->access('delete', $admin));
   }
 
-  /** Permissions of a module enabled later reach the role; withheld ones do not. */
-  public function testLaterModulePermissionsReachTheAdministratorRole(): void {
+  /** Permissions of a module enabled later wait until they are classified. */
+  public function testLaterModulePermissionsWaitForClassification(): void {
     $this->assertAdministratorRoleWithholdsGroupReach();
     // Keep profile-bundled modules discoverable across the installer's
     // container rebuild (as in HousePrivateLateModuleTest).
@@ -144,8 +146,8 @@ final class SiteRolesOutsideMembersOnlyGroupTest extends GroupAccessKernelTestBa
     $this->container->get('module_installer')->install(['contact']);
     $this->container = \Drupal::getContainer();
     $role = Role::load('administrator');
-    $this->assertTrue($role->hasPermission('access site-wide contact form'));
-    $this->assertTrue($role->hasPermission('administer contact forms'));
+    $this->assertFalse($role->hasPermission('access site-wide contact form'));
+    $this->assertFalse($role->hasPermission('administer contact forms'));
     $this->assertAdministratorRoleWithholdsGroupReach();
   }
 

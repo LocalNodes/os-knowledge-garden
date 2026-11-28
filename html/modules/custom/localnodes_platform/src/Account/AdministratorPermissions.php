@@ -1,0 +1,506 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\localnodes_platform\Account;
+
+use Drupal\Core\Session\AccountInterface;
+use Drupal\user\RoleInterface;
+
+/**
+ * The site administrator role's fixed allow list.
+ *
+ * The role gets only the permissions named here: the site manager's list
+ * (localnodes_platform.install) plus ALLOWED. Every other permission a site
+ * defines is withheld. WITHHELD names the ones that were looked at and kept
+ * from the role on purpose, with the reason. A permission on neither list is
+ * unclassified: the role does not get it, and the platform's tests fail
+ * until someone puts it on one list.
+ *
+ * Account 1 keeps Drupal's full access. One site can add an allowed or
+ * unclassified permission on purpose through the setting
+ * localnodes_platform.settings:administrator_permissions_added; a withheld
+ * permission cannot be added that way.
+ */
+final class AdministratorPermissions {
+
+  /** Why a permission is withheld, in a few words. */
+  public const REASONS = [
+    'roles' => 'Roles and permissions stay with account 1.',
+    'modules' => 'Modules, updates, configuration and background jobs stay with the host.',
+    'sign_in' => "Another person's password, email or sign-in stays with account 1.",
+    'code' => 'Text formats and site actions stay with account 1.',
+    'assistant' => "The assistant's providers, keys, tools and stored files stay with the host.",
+    'money' => 'Group money and votes are decided inside the group.',
+    'lists' => "A group's records are administered inside the group.",
+    'groups' => "Group content is for the group's members.",
+    'unused' => 'A member action this site does not give.',
+  ];
+
+  /** Every permission the role may hold on this site, keyed by name. */
+  public static function allowed(): array {
+    \Drupal::moduleHandler()->loadInclude('localnodes_platform', 'install');
+    return _localnodes_platform_house_role_allowed_permissions('sitemanager') + array_fill_keys(self::ALLOWED, TRUE);
+  }
+
+  /** The reason a permission is withheld, or NULL when it is not. */
+  public static function withheldReason(string $permission): ?string {
+    if (isset(self::WITHHELD[$permission])) {
+      return self::WITHHELD[$permission];
+    }
+    // Per-type group content permissions: one for each type of content.
+    return preg_match('/^view \S+:group content$/', $permission) === 1 ? 'groups' : NULL;
+  }
+
+  /** The permissions among $permissions that are on neither list. */
+  public static function unclassified(array $permissions): array {
+    $allowed = self::allowed();
+    return array_values(array_filter($permissions, static fn ($p) => !isset($allowed[$p]) && self::withheldReason((string) $p) === NULL));
+  }
+
+  /**
+   * What the role holds on a site that defines $existing.
+   *
+   * The allowed list, plus what the site added on purpose, less anything
+   * withheld; only permissions that exist.
+   */
+  public static function grantable(array $existing, array $added = []): array {
+    $allowed = self::allowed() + array_fill_keys(array_map('strval', $added), TRUE);
+    return array_values(array_filter($existing, static fn ($p) => isset($allowed[$p]) && self::withheldReason((string) $p) === NULL));
+  }
+
+  /** The site's own additions (localnodes_platform.settings). */
+  public static function added(): array {
+    $added = \Drupal::config('localnodes_platform.settings')->get('administrator_permissions_added');
+    return is_array($added) ? array_values(array_filter($added, 'is_string')) : [];
+  }
+
+  /**
+   * Whether an account other than account 1 may hand out $role.
+   *
+   * A role is handed out only when it is not an all-permissions role and it
+   * holds nothing the administrator role could not hold itself.
+   */
+  public static function mayHandOut(RoleInterface $role, AccountInterface $actor): bool {
+    if ((int) $actor->id() === 1) {
+      return TRUE;
+    }
+    if ($role->isAdmin() || $role->id() === 'administrator') {
+      return FALSE;
+    }
+    $permissions = $role->getPermissions();
+    return count(self::grantable($permissions, self::added())) === count($permissions);
+  }
+
+  /** Allowed beyond the site manager's list, grouped by what it is for. */
+  private const ALLOWED = [
+    // Site settings, menus, blocks, themes and page types.
+    'access block library',
+    'access font overview',
+    'access site in maintenance mode',
+    'access social_core dashboard',
+    'access tour',
+    'add font entities',
+    'administer block content',
+    'administer block types',
+    'administer blocks',
+    'administer comment types',
+    'administer content types',
+    'administer crop',
+    'administer crop types',
+    'administer font entities',
+    'administer image styles',
+    'administer improved theme settings',
+    'administer languages',
+    'administer like and dislike',
+    'administer media types',
+    'administer mentions',
+    'administer menu',
+    'administer message templates',
+    'administer meta tags',
+    'administer navigation settings',
+    'administer paragraphs settings',
+    'administer paragraphs types',
+    'administer profile settings',
+    'administer profile types',
+    'administer r4032login',
+    'administer redirect settings',
+    'administer redirects',
+    'administer site configuration',
+    'administer social_activity_filter',
+    'administer social_comment_upload settings',
+    'administer social_event settings',
+    'administer social_footer_block settings',
+    'administer social_tagging',
+    'administer social_topic settings',
+    'administer social_user settings',
+    'administer themes',
+    'administer url aliases',
+    'bypass social_core menu links access',
+    'create basic block content',
+    'create hero_call_to_action_block block content',
+    'create platform_intro block content',
+    'create url aliases',
+    'delete any basic block content',
+    'delete any basic block content revisions',
+    'delete any hero_call_to_action_block block content',
+    'delete any hero_call_to_action_block block content revisions',
+    'delete any platform_intro block content',
+    'delete any platform_intro block content revisions',
+    'delete font entities',
+    'edit any basic block content',
+    'edit any hero_call_to_action_block block content',
+    'edit any platform_intro block content',
+    'edit behavior plugin settings',
+    'edit font entities',
+    'link to any page',
+    'revert any basic block content revisions',
+    'revert any hero_call_to_action_block block content revisions',
+    'revert any platform_intro block content revisions',
+    'set social event managers settings',
+    'set social group settings',
+    'view any basic block content history',
+    'view any hero_call_to_action_block block content history',
+    'view any platform_intro block content history',
+    'view published font entities',
+    'view the administration theme',
+    'view unpublished font entities',
+    'view update notifications',
+    // People. Another person's password and email are closed by
+    // localnodes_platform_entity_field_access().
+    'access profile overview',
+    'administer profile',
+    'administer users',
+    'assign contentmanager role',
+    'assign sitemanager role',
+    'assign verified role',
+    'create profile profile',
+    'delete any profile profile',
+    'delete own profile profile',
+    'edit profile tags',
+    'social profile privacy always show full name',
+    'update any profile profile',
+    'update own profile profile',
+    'view any profile',
+    'view own profile',
+    'view own profile profile',
+    'view own unpublished profile',
+    'view profile email',
+    'view profile language',
+    'view user email addresses',
+    // Logs and the status report.
+    'access site reports',
+    // Moderating content the person can read.
+    // Replies outside every group (group_core_comments).
+    'delete all comments',
+    'access content overview',
+    'access cross-group posting',
+    'access taxonomy overview',
+    'administer nodes',
+    'administer taxonomy',
+    'bypass create group access',
+    'create any term',
+    'create terms in expertise',
+    'create terms in group_type',
+    'create terms in interests',
+    'create terms in profile_tag',
+    'create terms in social_tagging',
+    'create terms in topic_types',
+    'delete any event content',
+    'delete any page content',
+    'delete any post entities',
+    'delete any term',
+    'delete any topic content',
+    'delete event revisions',
+    'delete page revisions',
+    'delete term revisions in expertise',
+    'delete term revisions in group_type',
+    'delete term revisions in interests',
+    'delete term revisions in profile_tag',
+    'delete term revisions in social_tagging',
+    'delete term revisions in topic_types',
+    'delete terms in expertise',
+    'delete terms in group_type',
+    'delete terms in interests',
+    'delete terms in profile_tag',
+    'delete terms in social_tagging',
+    'delete terms in topic_types',
+    'delete topic revisions',
+    'edit any event content',
+    'edit any page content',
+    'edit any post entities',
+    'edit any topic content',
+    'edit terms in expertise',
+    'edit terms in group_type',
+    'edit terms in interests',
+    'edit terms in profile_tag',
+    'edit terms in social_tagging',
+    'edit terms in topic_types',
+    'enter all revision log entry',
+    'enter event revision log entry',
+    'enter page revision log entry',
+    'enter topic revision log entry',
+    'override all authored by option',
+    'override all authored on option',
+    'override all promote to front page option',
+    'override all published option',
+    'override all revision option',
+    'override all sticky option',
+    'override disabled public visibility',
+    'override event authored by option',
+    'override event authored on option',
+    'override event promote to front page option',
+    'override event revision option',
+    'override event sticky option',
+    'override page authored by option',
+    'override page authored on option',
+    'override page promote to front page option',
+    'override page revision option',
+    'override page sticky option',
+    'override topic authored by option',
+    'override topic authored on option',
+    'override topic promote to front page option',
+    'override topic revision option',
+    'override topic sticky option',
+    'reorder terms in any vocabulary',
+    'reorder terms in expertise',
+    'reorder terms in group_type',
+    'reorder terms in interests',
+    'reorder terms in profile_tag',
+    'reorder terms in social_tagging',
+    'reorder terms in topic_types',
+    'reset any vocabulary',
+    'reset expertise',
+    'reset group_type',
+    'reset interests',
+    'reset profile_tag',
+    'reset social_tagging',
+    'reset topic_types',
+    'revert all revisions',
+    'revert all taxonomy revisions',
+    'revert event revisions',
+    'revert page revisions',
+    'revert term revisions in expertise',
+    'revert term revisions in group_type',
+    'revert term revisions in interests',
+    'revert term revisions in profile_tag',
+    'revert term revisions in social_tagging',
+    'revert term revisions in topic_types',
+    'revert topic revisions',
+    'select any term',
+    'select any unpublished term',
+    'select terms in expertise',
+    'select terms in group_type',
+    'select terms in interests',
+    'select terms in profile_tag',
+    'select terms in social_tagging',
+    'select terms in topic_types',
+    'select unpublished terms in expertise',
+    'select unpublished terms in group_type',
+    'select unpublished terms in interests',
+    'select unpublished terms in profile_tag',
+    'select unpublished terms in social_tagging',
+    'select unpublished terms in topic_types',
+    'update any term',
+    'view all revisions',
+    'view all taxonomy revisions',
+    'view any term',
+    'view any term name',
+    'view any unpublished term',
+    'view any unpublished term name',
+    'view any vocabulary name',
+    'view event revisions',
+    'view page revisions',
+    'view term names in expertise',
+    'view term names in group_type',
+    'view term names in interests',
+    'view term names in profile_tag',
+    'view term names in social_tagging',
+    'view term names in topic_types',
+    'view term revisions in expertise',
+    'view term revisions in group_type',
+    'view term revisions in interests',
+    'view term revisions in profile_tag',
+    'view term revisions in social_tagging',
+    'view term revisions in topic_types',
+    'view terms in expertise',
+    'view terms in group_type',
+    'view terms in interests',
+    'view terms in profile_tag',
+    'view terms in social_tagging',
+    'view terms in topic_types',
+    'view topic revisions',
+    'view unpublished paragraphs',
+    'view unpublished post entities',
+    'view unpublished term names in expertise',
+    'view unpublished term names in group_type',
+    'view unpublished term names in interests',
+    'view unpublished term names in profile_tag',
+    'view unpublished term names in social_tagging',
+    'view unpublished term names in topic_types',
+    'view unpublished terms in expertise',
+    'view unpublished terms in group_type',
+    'view unpublished terms in interests',
+    'view unpublished terms in profile_tag',
+    'view unpublished terms in social_tagging',
+    'view unpublished terms in topic_types',
+    'view vocabulary labels',
+    'view vocabulary name of expertise',
+    'view vocabulary name of group_type',
+    'view vocabulary name of interests',
+    'view vocabulary name of profile_tag',
+    'view vocabulary name of social_tagging',
+    'view vocabulary name of topic_types',
+    // An ordinary member's own actions.
+    'add event enrollment entities',
+    'administer own comments',
+    'cancel own vote',
+    'create media',
+    'create polls',
+    'create safe smart accounts',
+    'create safe transactions',
+    'delete media',
+    'delete own ai file',
+    'delete own files',
+    'edit own polls',
+    'execute safe transactions',
+    'manage own safe smart accounts',
+    'sign safe transactions',
+    'siwe_login.manage_own_wallet',
+    'update media',
+    'use siwe authentication',
+    'use text format restricted_html',
+    'view like widget',
+    'view media',
+    'view own ai files',
+    'view own safe smart accounts',
+    'view own unpublished media',
+    'view poll results',
+    'view social_tagging',
+  ];
+
+  /** Withheld on purpose, with the reason (REASONS). */
+  private const WITHHELD = [
+    'administer permissions' => 'roles',
+    'administer visibility settings' => 'roles',
+    'assign administrator role' => 'roles',
+    'assign all roles' => 'roles',
+    'edit group types' => 'roles',
+    'administer advancedqueue' => 'modules',
+    'administer modules' => 'modules',
+    'administer search_api' => 'modules',
+    'administer software updates' => 'modules',
+    'administer ultimate cron' => 'modules',
+    'delete all revisions' => 'modules',
+    'delete all taxonomy revisions' => 'modules',
+    'delete orphan revisions' => 'modules',
+    'export configuration' => 'modules',
+    'import configuration' => 'modules',
+    'run cron jobs' => 'modules',
+    'synchronize configuration' => 'modules',
+    'view cron jobs' => 'modules',
+    'view debug information' => 'modules',
+    'administer account settings' => 'sign_in',
+    'administer key configuration overrides' => 'sign_in',
+    'administer keys' => 'sign_in',
+    'administer mailer' => 'sign_in',
+    'administer meeting_api_server' => 'sign_in',
+    'administer siwe login settings' => 'sign_in',
+    'administer social swiftmail' => 'sign_in',
+    'administer actions' => 'code',
+    'administer filters' => 'code',
+    'use text format email_html' => 'code',
+    'use text format full_html' => 'code',
+    'access ai files overview' => 'assistant',
+    'access ai tools overview' => 'assistant',
+    'administer ai' => 'assistant',
+    'administer ai prompt types' => 'assistant',
+    'administer ai providers' => 'assistant',
+    'use ai provider openrouter' => 'assistant',
+    'administer ai_agent' => 'assistant',
+    'administer ai_assistant' => 'assistant',
+    'administer guardrail sets' => 'assistant',
+    'administer guardrails' => 'assistant',
+    'administer modeler_api' => 'assistant',
+    'delete any ai file' => 'assistant',
+    'manage ai prompts' => 'assistant',
+    'modeler api administer ai_agents_agent' => 'assistant',
+    'modeler api collection ai_agents_agent' => 'assistant',
+    'modeler api delete ai_agents_agent' => 'assistant',
+    'modeler api edit ai_agents_agent' => 'assistant',
+    'modeler api edit ai_agents_agent with _form' => 'assistant',
+    'modeler api view ai_agents_agent' => 'assistant',
+    'view any ai file' => 'assistant',
+    'administer safe governance' => 'money',
+    'administer vote types' => 'money',
+    'administer voting api' => 'money',
+    'delete votes' => 'money',
+    'execute group_treasury transactions' => 'money',
+    'manage group_treasury' => 'money',
+    'propose group_treasury transactions' => 'money',
+    'sign group_treasury transactions' => 'money',
+    'view group_treasury' => 'money',
+    'access media overview' => 'lists',
+    'access poll overview' => 'lists',
+    'add activity entities' => 'lists',
+    'add queue storage entity entities' => 'lists',
+    'administer event enrollment entities' => 'lists',
+    'administer flaggings' => 'lists',
+    'administer flags' => 'lists',
+    'administer media' => 'lists',
+    'administer meeting_api_meeting entities' => 'lists',
+    'administer meeting_api_meeting types' => 'lists',
+    'delete activity entities' => 'lists',
+    'delete any file' => 'lists',
+    'delete any media' => 'lists',
+    'delete any video_recording_link media' => 'lists',
+    'delete any video_recording_link media revisions' => 'lists',
+    'delete event enrollment entities' => 'lists',
+    'delete queue storage entity entities' => 'lists',
+    'edit any video_recording_link media' => 'lists',
+    'edit event enrollment entities' => 'lists',
+    'manage event enrollment requests' => 'lists',
+    'manage everything enrollments' => 'lists',
+    'revert any video_recording_link media revisions' => 'lists',
+    'social profile privacy view hidden fields' => 'lists',
+    'update any media' => 'lists',
+    'view all media revisions' => 'lists',
+    'view any video_recording_link media revisions' => 'lists',
+    'view published event enrollment entities' => 'lists',
+    'view unpublished activity entities' => 'lists',
+    'view unpublished event enrollment entities' => 'lists',
+    'access files overview' => 'groups',
+    'access group overview' => 'groups',
+    'administer activity entities' => 'groups',
+    'administer comments' => 'groups',
+    'administer group' => 'groups',
+    'administer messages' => 'groups',
+    'administer polls' => 'groups',
+    'administer post entities' => 'groups',
+    'administer queue storage entity entities' => 'groups',
+    'administer safe smart accounts' => 'groups',
+    'bypass node access' => 'groups',
+    'edit activity entities' => 'groups',
+    'edit queue storage entity entities' => 'groups',
+    'manage all groups' => 'groups',
+    'overview messages' => 'groups',
+    'view all published activity entities' => 'groups',
+    'view node.event.field_content_visibility:group content' => 'groups',
+    'view node.page.field_content_visibility:group content' => 'groups',
+    'view node.topic.field_content_visibility:group content' => 'groups',
+    'view published queue storage entity entities' => 'groups',
+    'view unpublished queue storage entity entities' => 'groups',
+    'add or remove dislike votes on comment of comment' => 'unused',
+    'add or remove dislike votes on event of node' => 'unused',
+    'add or remove dislike votes on photo of post' => 'unused',
+    'add or remove dislike votes on post of post' => 'unused',
+    'add or remove dislike votes on post_comment of comment' => 'unused',
+    'add or remove dislike votes on topic of node' => 'unused',
+    'add or remove vote votes on comment of comment' => 'unused',
+    'add or remove vote votes on event of node' => 'unused',
+    'add or remove vote votes on photo of post' => 'unused',
+    'add or remove vote votes on post of post' => 'unused',
+    'add or remove vote votes on post_comment of comment' => 'unused',
+    'add or remove vote votes on topic of node' => 'unused',
+  ];
+}

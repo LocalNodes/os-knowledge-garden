@@ -127,7 +127,7 @@ final class HousePrivateAccountAccessTest extends GroupAccessKernelTestBase {
 
   public function testActualAdministratorMayManageAnOrganizer(): void {
     Role::create(['id' => 'recovery_administrator', 'label' => 'Recovery administrator', 'is_admin' => TRUE])->save();
-    $admin = $this->createUser([], 'recovery_admin', FALSE, ['roles' => ['recovery_administrator']]);
+    $admin = $this->createAsHost('recovery_admin', ['recovery_administrator']);
     $this->container->get('current_user')->setAccount($admin);
     $before = $this->credentials($this->manager);
     foreach (['user_block_user_action' => FALSE, 'user_unblock_user_action' => TRUE] as $id => $active) {
@@ -141,7 +141,7 @@ final class HousePrivateAccountAccessTest extends GroupAccessKernelTestBase {
   }
 
   public function testSiteAdministratorRoleKeepsItsPlaceAboveSiteManagers(): void {
-    $admin = $this->createUser([], 'site_administrator', FALSE, ['roles' => ['verified', 'administrator']]);
+    $admin = $this->createAsHost('site_administrator', ['verified', 'administrator']);
     $this->assertTrue($admin->hasPermission('block users'));
     foreach (['user_block_user_action', 'user_unblock_user_action'] as $id) {
       $action = $this->container->get('plugin.manager.action')->createInstance($id);
@@ -152,7 +152,7 @@ final class HousePrivateAccountAccessTest extends GroupAccessKernelTestBase {
 
   public function testStatusActionsProtectHostAdministratorsAndTheCurrentManager(): void {
     Role::create(['id' => 'custom_host_role', 'label' => 'Custom host role', 'is_admin' => TRUE])->save();
-    $admin = $this->createUser([], 'custom_admin', FALSE, ['roles' => ['custom_host_role']]);
+    $admin = $this->createAsHost('custom_admin', ['custom_host_role']);
     foreach ([$this->siteOwner, $admin, $this->manager] as $target) {
       foreach (['user_block_user_action', 'user_unblock_user_action'] as $id) {
         $action = $this->container->get('plugin.manager.action')->createInstance($id);
@@ -192,6 +192,23 @@ final class HousePrivateAccountAccessTest extends GroupAccessKernelTestBase {
 
   private function credentials(UserInterface $account): array {
     return [$account->getEmail(), $account->getPassword(), $account->getRoles()];
+  }
+
+  /**
+   * Creates an account as setup code does, with no one signed in.
+   *
+   * The signed-in site manager may not hand out these roles, so a
+   * role added while they are the current user would be taken back.
+   */
+  private function createAsHost(string $name, array $roles): UserInterface {
+    $current = $this->container->get('current_user')->getAccount();
+    $this->container->get('current_user')->setAccount(new \Drupal\Core\Session\AnonymousUserSession());
+    try {
+      return $this->createUser([], $name, FALSE, ['roles' => $roles]);
+    }
+    finally {
+      $this->container->get('current_user')->setAccount($current);
+    }
   }
 
 }

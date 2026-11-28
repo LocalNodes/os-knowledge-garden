@@ -6,6 +6,7 @@
  */
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -24,6 +25,7 @@ use Drupal\localnodes_platform\SignInMethod;
 use Drupal\symfony_mailer\EmailInterface;
 use Drupal\symfony_mailer\Exception\SkipMailException;
 use Drupal\user\UserInterface;
+use Drupal\views_bulk_operations\Plugin\views\field\ViewsBulkOperationsBulkForm;
 
 /** Implements hook_action_info_alter(). */
 function localnodes_platform_action_info_alter(array &$definitions): void {
@@ -45,6 +47,18 @@ function localnodes_platform_form_views_form_user_admin_people_page_1_alter(arra
     // all alters so both scoped actions survive without any account-edit grant.
     $form['#after_build'][] = '_localnodes_platform_member_status_actions_after_build';
   }
+  // Setting roles from the people list stays with account 1; the
+  // administrator gives roles on the person's account form.
+  elseif (!\Drupal\localnodes_platform\Account\AccountDoors::setsRolesDirectly($actor)) {
+    $form['#after_build'][] = '_localnodes_platform_role_actions_after_build';
+  }
+}
+
+/**
+ * Leaves the people list's add-role and remove-role actions out.
+ */
+function _localnodes_platform_role_actions_after_build(array $form, FormStateInterface $form_state): array {
+  return _localnodes_platform_filter_people_actions($form, $form_state, fn (?string $action_id): bool => !in_array($action_id, ['user_add_role_action', 'user_remove_role_action'], TRUE));
 }
 
 /** Keeps native People controls and their configured labels. */
@@ -56,6 +70,35 @@ function _localnodes_platform_member_status_actions_after_build(array $form, For
     $options[$id] = $action->label();
   }
   $select['#options'] = $options;
+  return $form;
+}
+
+/**
+ * Keeps the people list's actions for which $keep says yes.
+ *
+ * @see _localnodes_platform_member_status_actions_after_build()
+ */
+function _localnodes_platform_filter_people_actions(array $form, FormStateInterface $form_state, callable $keep): array {
+  $view = $form_state->getBuildInfo()['args'][0] ?? NULL;
+  foreach (($view->field ?? []) as $id => $field) {
+    if (!$field instanceof ViewsBulkOperationsBulkForm) {
+      continue;
+    }
+    $selected = $field->options['selected_actions'] ?? [];
+    foreach ([['header', $id, 'action'], ['bulk_actions_container', 'action']] as $path) {
+      $select = &NestedArray::getValue($form, $path);
+      if (!isset($select['#options'])) {
+        unset($select);
+        continue;
+      }
+      foreach (array_keys($select['#options']) as $key) {
+        if ($key !== '' && !$keep($selected[$key]['action_id'] ?? NULL)) {
+          unset($select['#options'][$key]);
+        }
+      }
+      unset($select);
+    }
+  }
   return $form;
 }
 
@@ -791,11 +834,24 @@ function localnodes_platform_user_login(UserInterface $account): void {
 /**
  * Implements hook_form_FORM_ID_alter() for user_form.
  *
+ * Another person's password and email fields are left out for anyone but
+ * account 1.
+ *
  * A member invited by email signs in for the first time from the welcome
  * mail, which opens this form to set a password. When they save it, they go
  * on to their invites list instead of staying here.
  */
 function localnodes_platform_form_user_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  // Another person's password and email stay with account 1. The email
+  // field follows its field access; the password field has none of its own.
+  $target = $form_state->getFormObject()->getEntity();
+  if ($target instanceof UserInterface && \Drupal\localnodes_platform\Account\AccountDoors::fieldAccess('edit', 'pass', \Drupal::currentUser(), $target)->isForbidden()) {
+    foreach (\Drupal\localnodes_platform\Account\AccountDoors::CLOSED_FIELDS as $field) {
+      if (isset($form['account'][$field])) {
+        $form['account'][$field]['#access'] = FALSE;
+      }
+    }
+  }
   $pass_reset = (bool) $form_state->get('user_pass_reset');
   $form_uid = $form_state->getFormObject()->getEntity()->id();
   if (!InviteLanding::isFirstPasswordForm($pass_reset, $form_uid, \Drupal::currentUser())) {
@@ -1156,4 +1212,46 @@ function _localnodes_platform_delete_conversation_files(string $type, EntityInte
     $texts->delete((string) $file->id());
     $file->delete();
   }
+}
+
+/**
+ * Implements hook_entity_field_access().
+ *
+ * Only account 1 changes another person's password or email.
+ */
+function localnodes_platform_entity_field_access($operation, \Drupal\Core\Field\FieldDefinitionInterface $field_definition, AccountInterface $account, ?\Drupal\Core\Field\FieldItemListInterface $items = NULL) {
+  if ($field_definition->getTargetEntityTypeId() !== 'user') {
+    return \Drupal\Core\Access\AccessResult::neutral();
+  }
+  $target = $items?->getEntity();
+  return \Drupal\localnodes_platform\Account\AccountDoors::fieldAccess((string) $operation, $field_definition->getName(), $account, $target instanceof UserInterface ? $target : NULL);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for user.
+ *
+ * Only account 1 edits or cancels account 1.
+ */
+function localnodes_platform_user_access(UserInterface $user, $operation, AccountInterface $account) {
+  return \Drupal\localnodes_platform\Account\AccountDoors::accountAccess($user, (string) $operation, $account);
+}
+
+/**
+ * Implements hook_role_delegation_assignable_roles_alter().
+ *
+ * Only roles holding nothing the administrator role could not hold are
+ * offered to anyone but account 1.
+ */
+function localnodes_platform_role_delegation_assignable_roles_alter(array &$assignable_roles, array $all_roles, AccountInterface $account): void {
+  \Drupal\localnodes_platform\Account\AccountDoors::assignableRoles($assignable_roles, $all_roles, $account);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for user.
+ *
+ * A role added by someone who may not hand it out is taken back, whatever
+ * screen or bulk action added it.
+ */
+function localnodes_platform_user_presave(UserInterface $account): void {
+  \Drupal\localnodes_platform\Account\AccountDoors::presave($account, \Drupal::currentUser());
 }
