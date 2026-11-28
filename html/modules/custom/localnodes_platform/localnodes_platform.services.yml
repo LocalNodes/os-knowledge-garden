@@ -134,6 +134,11 @@ services:
     class: Drupal\localnodes_platform\Routing\HouseRouteSubscriber
     tags:
       - { name: event_subscriber }
+  # The mention settings stay with the first account.
+  localnodes_platform.mention_settings_routes:
+    class: Drupal\localnodes_platform\Routing\MentionSettingsRouteSubscriber
+    tags:
+      - { name: event_subscriber }
 
   localnodes_platform.house_departure_forms:
     class: Drupal\localnodes_platform\Form\HouseDepartureForms

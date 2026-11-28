@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * @file
+ * A feature default that grants its new permission to the administrator role.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function localnodes_unclassified_permission_test_install(): void {
+  if ($role = \Drupal\user\Entity\Role::load('administrator')) {
+    $role->grantPermission('use the unclassified fixture feature')->save();
+  }
+}

@@ -1,0 +1,8 @@
+name: 'LocalNodes unclassified permission fixture'
+type: module
+description: 'Defines a permission nobody has classified for the administrator role, and grants it to that role on install as a feature default would.'
+package: Testing
+hidden: true
+core_version_requirement: ^10
+dependencies:
+  - drupal:user

@@ -1,3 +1,8 @@
 # The whole-site export (Export this site) is off until the scoped export
 # passes its review. Set to true, then rebuild caches, to turn it back on.
 export_enabled: false
+# Permissions this site gives the administrator role on purpose, beyond the
+# allow list in src/Account/AdministratorPermissions.php. A withheld
+# permission is never given, whatever this list says. Account 1 edits it;
+# it applies the next time a module is installed or the policy runs.
+administrator_permissions_added: []
